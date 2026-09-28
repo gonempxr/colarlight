@@ -1,0 +1,54 @@
+keys,en,ru,es,zh
+PER_SEC,%s/s,%s/с,%s/s,%s/秒
+LEVEL,Lv. %d,Ур. %d,Nv. %d,等级 %d
+STAGE_BOAT,Boat,Лодка,Barco,运输船
+STAGE_PLANT,Plant,Завод,Planta,加工厂
+DEPTH_SHELLS,Shell Shallows,Ракушечная отмель,Bajío de Conchas,贝壳浅滩
+DEPTH_CORAL,Coral Garden,Коралловый сад,Jardín de Coral,珊瑚花园
+DEPTH_PEARL,Pearl Ridge,Жемчужная гряда,Cresta de Perlas,珍珠岭
+DEPTH_COPPER,Copper Cliffs,Медные скалы,Acantilados de Cobre,铜矿崖
+DEPTH_EMERALD,Emerald Grotto,Изумрудный грот,Gruta Esmeralda,翡翠洞窟
+DEPTH_CRYSTAL,Crystal Abyss,Кристальная бездна,Abismo de Cristal,水晶深渊
+DEPTH_METERS,%d m,%d м,%d m,%d 米
+UPGRADE,Upgrade,Улучшить,Mejorar,升级
+OPEN,Unlock,Открыть,Desbloquear,解锁
+LOCKED_SOON,Unlock the depth above first,Сначала откройте глубину выше,Primero desbloquea la de arriba,请先解锁上一层
+HIRE,Hire,Нанять,Contratar,雇用
+MANAGER_DIVE,Foreman,Бригадир,Capataz,领班
+MANAGER_BOAT,Captain,Капитан,Capitán,船长
+MANAGER_PLANT,Chief,Начальник,Jefe,厂长
+MANAGER_HINT,Works on its own. Also offline.,Работает сам. Даже когда вас нет.,Trabaja solo. También sin conexión.,自动工作，离线时也在工作。
+TAP_HINT,Tap!,Тапни!,¡Toca!,点击！
+BOTTLENECK,Bottleneck,Узкое место,Cuello de botella,瓶颈
+RUSH,Rush ×2!,Рывок ×2!,¡Impulso ×2!,冲刺 ×2！
+BUY_MAX,MAX,МАКС,MÁX,最大
+STAT_OUTPUT,Output,Добыча,Producción,产量
+STAT_CARRY,Carries,Перевозит,Transporta,运输量
+STAT_PROCESS,Processes,Перерабатывает,Procesa,加工量
+STAT_DIVERS,Divers,Дайверы,Buzos,潜水员
+STAT_MILESTONE,×2 at level %d,×2 на уровне %d,×2 en el nivel %d,等级 %d 时 ×2
+DESC_DEPTH,"Divers dive here, chip off ore and bring it up to the raft.","Дайверы ныряют сюда, откалывают руду и поднимают её на плот.","Los buzos bajan aquí, pican mineral y lo suben a la balsa.",潜水员潜到这里凿取矿石，并运回木筏。
+DESC_BOAT,The boat carries ore from the raft to the shore.,Лодка возит руду с плота на берег.,El barco lleva el mineral de la balsa a la orilla.,运输船把矿石从木筏运到岸边。
+DESC_PLANT,The plant turns ore into coins.,Завод перерабатывает руду в монеты.,La planta convierte el mineral en monedas.,加工厂把矿石变成金币。
+ON_RAFT,On raft,На плоту,En la balsa,木筏上
+ON_DOCK,On dock,На причале,En el muelle,码头上
+PRESTIGE,Dive Deeper,Погружение,Inmersión,深潜
+PRESTIGE_DESC,"Reset all levels and start over in a new ocean. Your income is multiplied by ×%s forever.","Все уровни сбросятся, и вы начнёте в новом океане. Доход навсегда умножится на ×%s.","Se reinician los niveles y empiezas en un océano nuevo. Tus ingresos se multiplican por ×%s para siempre.",所有等级重置，在新的海洋重新开始。收入永久 ×%s。
+PRESTIGE_NEED_DEPTHS,Unlock all depths first,Сначала откройте все глубины,Primero desbloquea todas las profundidades,请先解锁所有深度
+PRESTIGE_GO,Dive for %s,Погрузиться за %s,Sumergirse por %s,花费 %s 深潜
+OCEAN,Ocean %d,Океан %d,Océano %d,海洋 %d
+OFFLINE,While you were away (%s) the crew earned,"Пока вас не было (%s), команда заработала","Mientras no estabas (%s), el equipo ganó",你离开期间（%s），团队赚到了
+COLLECT,Collect,Забрать,Recoger,领取
+SETTINGS,Settings,Настройки,Ajustes,设置
+LANGUAGE,Language,Язык,Idioma,语言
+SOUND,Sounds,Звуки,Sonidos,音效
+MUSIC,Music,Музыка,Música,音乐
+ON,On,Вкл,Sí,开
+OFF,Off,Выкл,No,关
+RESET,Reset progress,Сбросить прогресс,Reiniciar progreso,重置进度
+RESET_CONFIRM,Tap again to erase everything,"Нажмите ещё раз, чтобы стереть всё",Toca otra vez para borrar todo,再点一次以清除全部
+CLOSE,Close,Закрыть,Cerrar,关闭
+MILESTONE_TOAST,%s reached level %d: output ×2!,"%s: уровень %d, добыча ×2!",%s llegó al nivel %d: ¡producción ×2!,%s 达到等级 %d：产量 ×2！
+NEW_DIVER,A new diver joined!,Новый дайвер в команде!,¡Se unió un nuevo buzo!,新的潜水员加入了！
+NOT_ENOUGH,Not enough coins,Не хватает монет,No tienes suficientes monedas,金币不足
+CREDITS,Fonts: Nunito and Noto Sans SC (SIL Open Font License).,Шрифты: Nunito и Noto Sans SC (SIL Open Font License).,Fuentes: Nunito y Noto Sans SC (SIL Open Font License).,字体：Nunito 与 Noto Sans SC（SIL 开源字体许可证）。

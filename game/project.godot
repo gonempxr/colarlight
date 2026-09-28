@@ -12,6 +12,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Settings="*res://scripts/autoload/settings.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
 GameState="*res://scripts/autoload/game_state.gd"
 
 [display]
@@ -29,6 +31,7 @@ pointing/emulate_touch_from_mouse=false
 
 [internationalization]
 
+locale/translations=PackedStringArray("res://i18n/strings.en.translation", "res://i18n/strings.ru.translation", "res://i18n/strings.es.translation", "res://i18n/strings.zh.translation")
 locale/fallback="en"
 
 [rendering]
