@@ -12,6 +12,8 @@ static var _dragged_recently := false
 
 var content: Control
 var scroll := 0.0
+## Content is drawn this many times larger (PC screens show a closer view).
+var zoom := 1.0
 
 var _pressing := false
 var _press_y := 0.0
@@ -39,7 +41,7 @@ func set_content(node: Control) -> void:
 func max_scroll() -> float:
 	if content == null:
 		return 0.0
-	return maxf(0.0, content.size.y - size.y)
+	return maxf(0.0, content.size.y * zoom - size.y)
 
 
 func scroll_to(y: float) -> void:
@@ -115,6 +117,7 @@ func _process(delta: float) -> void:
 func _apply() -> void:
 	if content == null:
 		return
-	content.size.x = size.x
+	content.scale = Vector2(zoom, zoom)
+	content.size.x = size.x / zoom
 	scroll = clampf(scroll, 0.0, max_scroll())
 	content.position = Vector2(0, -scroll)

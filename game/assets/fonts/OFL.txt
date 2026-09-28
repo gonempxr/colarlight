@@ -1,7 +1,7 @@
 Fonts in this folder:
 
-Nunito (Nunito-Bold.ttf, Nunito-Black.ttf)
-Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+Rubik (Rubik-SemiBold.ttf, Rubik-ExtraBold.ttf)
+Copyright 2015 The Rubik Project Authors (https://github.com/googlefonts/rubik)
 
 Noto Sans SC (NotoSansSC-Bold-subset.ttf, a subset of the Bold weight)
 Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.

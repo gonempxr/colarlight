@@ -9,17 +9,17 @@ var _builder: Callable
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	var dim := ColorRect.new()
-	dim.color = Color(0.0, 0.02, 0.08, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.05, 0.03, 0.15, 0.6)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed: close())
 	add_child(dim)
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	_panel = PanelContainer.new()
@@ -55,6 +55,7 @@ func _notification(what: int) -> void:
 
 func title(text: String) -> Label:
 	var l := Label.new()
+	l.theme_type_variation = &"InkLabel"
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -64,8 +65,9 @@ func title(text: String) -> Label:
 	return l
 
 
-func text(value: String, size_px: int = 24, color: Color = Color(1, 1, 1, 0.9)) -> Label:
+func text(value: String, size_px: int = 24, color: Color = Art.INK) -> Label:
 	var l := Label.new()
+	l.theme_type_variation = &"InkLabel"
 	l.text = value
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -73,6 +75,12 @@ func text(value: String, size_px: int = 24, color: Color = Color(1, 1, 1, 0.9)) 
 	l.add_theme_color_override("font_color", color)
 	_box.add_child(l)
 	return l
+
+
+## Any control (previews, rows of options).
+func add(c: Control) -> Control:
+	_box.add_child(c)
+	return c
 
 
 func button(label: String, action: Callable, variation: StringName = &"") -> Button:

@@ -27,6 +27,7 @@ func _initialize() -> void:
 	change_scene_to_file("res://scenes/main.tscn")
 	await _frames(5)
 	main = current_scene
+	await test_title()
 	await test_tap_dive()
 	await test_upgrade_sheet()
 	await test_hire_manager()
@@ -72,6 +73,24 @@ func _click(canvas_pos: Vector2) -> void:
 
 func _center(c: Control) -> Vector2:
 	return c.get_global_rect().get_center()
+
+
+func test_title() -> void:
+	var title: Control = null
+	for c in main.get_children():
+		if c.get_script() and c.get_script().get_global_name() == "TitleScreen":
+			title = c
+	check(title != null, "title screen shows on start")
+	if title == null:
+		return
+	var row: Control = main._world.rows[0]
+	var p: Vector2 = _world_to_screen(row.position + Vector2(row.deposit_pos().x - 40, 150))
+	await _click(p)
+	check(gs.cycle_progress("d0") < 0.0, "title blocks taps on the scene")
+	await _click(_center(title._play))
+	await create_timer(0.8).timeout
+	await _frames(2)
+	check(not is_instance_valid(title) or not title.is_inside_tree(), "Play closes the title")
 
 
 func test_tap_dive() -> void:

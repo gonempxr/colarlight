@@ -1,12 +1,15 @@
 class_name ManagerBadge
 extends Control
 ## Round manager slot. Empty: a "+" with the hire price, tap to hire.
-## Hired: the manager's portrait.
+## Hired: the manager's portrait, blinking and reacting with the stage.
 
 const SIZE := 64.0
 
 var key := ""
+var world: World
 var _pressed := false
+var _t := 0.0
+var _sig := []
 
 
 func _init(stage_key: String) -> void:
@@ -14,13 +17,10 @@ func _init(stage_key: String) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(SIZE, SIZE + 18)
+	custom_minimum_size = Vector2(SIZE, SIZE + 20)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	tooltip_text = tr("MANAGER_HINT")
-
-
-func kind() -> String:
-	return key if key in ["boat", "plant"] else "dive"
+	_t = randf() * 10.0
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -38,31 +38,58 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+func _process(delta: float) -> void:
+	_t += delta
+	if not GameState.has_manager(key) or not is_visible_in_tree():
+		return
+	if not get_global_rect().intersects(get_viewport_rect()):
+		return
+	# Repaint only when the face actually changes (blink, mood, hop).
+	var w := _world()
+	var sig := [w.mood(key) if w else "", Chars.blinking(_t, key.hash() % 7), roundi(w.hop(key) * 0.4) if w else 0]
+	if sig != _sig:
+		_sig = sig
+		queue_redraw()
+
+
+func _tint() -> Color:
+	match key:
+		"boat":
+			return Color("8fd0ff")
+		"plant":
+			return Color("ffd98a")
+	return Art.DEPTH_STYLE[GameState.depth_index(key)]["water"].lightened(0.45)
+
+
 func _draw() -> void:
 	var c := Vector2(SIZE / 2.0, SIZE / 2.0)
-	var r := SIZE / 2.0 - 2.0
+	var r := SIZE / 2.0 - 1.0
 	var gs := GameState
-	var tint: Color
-	match kind():
-		"boat":
-			tint = Color("2f8cff")
-		"plant":
-			tint = Color("ffb627")
-		_:
-			var i := GameState.depth_index(key)
-			tint = Art.DEPTH_STYLE[i]["suit"]
 	if gs.has_manager(key):
-		Art.manager(self, c, r, kind(), tint)
+		var w := _world()
+		var emo := w.mood(key) if w else ""
+		if emo == "":
+			emo = "happy"
+		var hop := w.hop(key) * 0.4 if w else 0.0
+		Chars.portrait(self, c - Vector2(0, hop), r, Chars.manager_look(key), emo, Chars.blinking(_t, key.hash() % 7), _tint())
 		return
 	var can := gs.coins >= gs.manager_cost(key)
-	draw_circle(c, r, Color(0, 0, 0, 0.3))
-	draw_arc(c, r - 2, 0, TAU, 32, Art.GOLD if can else Color(1, 1, 1, 0.35), 4, true)
-	var plus := Art.GOLD if can else Color(1, 1, 1, 0.6)
-	draw_line(c + Vector2(-12, 0), c + Vector2(12, 0), plus, 6, true)
-	draw_line(c + Vector2(0, -12), c + Vector2(0, 12), plus, 6, true)
-	var font := UiTheme.heavy_font()
+	Art.toon(self, Art.circle_pts(c, r - 3.0, 32), Color("e9dcc4") if not can else Color("fff1c7"), 3.0, 0.0)
+	var dash := Art.GOLD_DARK if can else Art.INK_SOFT
+	for i in 12:
+		var a := TAU * i / 12.0
+		Art.arc(self, c, r - 9.0, a, a + TAU / 24.0, 4, dash, 3.0)
+	var plus := Art.GREEN if can else Color("b9bfd1")
+	Art.toon(self, Art.union([Art.rrect_pts(Rect2(c.x - 13, c.y - 4.5, 26, 9), 4.5), Art.rrect_pts(Rect2(c.x - 4.5, c.y - 13, 9, 26), 4.5)]), plus, 2.5, 0.0)
 	var txt := NumFormat.short(gs.manager_cost(key))
-	var fs := 17
-	var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	draw_string_outline(font, Vector2(c.x - tw / 2.0, SIZE + 14), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.6))
-	draw_string(font, Vector2(c.x - tw / 2.0, SIZE + 14), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.GOLD if can else Color(1, 1, 1, 0.7))
+	Art.text(self, Vector2(c.x, SIZE + 16), txt, 17, Art.GOLD if can else Art.WHITE, 5)
+
+
+func _world() -> World:
+	if world:
+		return world
+	var n := get_parent()
+	while n and not n is World:
+		n = n.get_parent()
+	world = n as World
+	return world

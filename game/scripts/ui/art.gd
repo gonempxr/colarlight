@@ -1,37 +1,49 @@
 class_name Art
 extends RefCounted
-## Palette and code-drawn sprites. Everything visual is drawn here so a
-## later swap to real sprites touches one file.
+## Palette and the "toon" drawing kit every sprite is built from:
+## a polygon gets a dark outline, a soft shadow band at the bottom and a
+## highlight band at the top. Geometry is computed once per shape and
+## cached, so sprites are drawn in local space and placed with push/pop.
 
-const SKY_TOP := Color("5ec6ff")
-const SKY_BOTTOM := Color("c9f3ff")
-const SEA_TOP := Color("22c3d3")
-const SEA_MID := Color("0f73a8")
-const SEA_DEEP := Color("0b3b7a")
-const SEA_ABYSS := Color("06163d")
-const SAND := Color("f4d58d")
-const SAND_DARK := Color("d9a95b")
-const GRASS := Color("5fd068")
-const WOOD := Color("b5783f")
-const WOOD_DARK := Color("7d4f26")
-const INK := Color("0b1a33")
+# --- Palette -------------------------------------------------------------------
+const INK := Color("241a3a")          # outlines, dark text
+const INK_SOFT := Color("6a5a80")
+const SHADE := Color("2d2060")        # shadows lean purple, not grey
 const WHITE := Color("ffffff")
+const CREAM := Color("fff6e4")
+const CREAM_DARK := Color("f1ddb9")
 const GOLD := Color("ffc93c")
-const GOLD_DARK := Color("d98e04")
-const GREEN := Color("35c46a")
-const GREEN_DARK := Color("1f8f4a")
-const RED := Color("ef4b4b")
-const PANEL := Color("0d2a55e6")
-const PANEL_LIGHT := Color("16427d")
+const GOLD_DARK := Color("e0921c")
+const GREEN := Color("5cd05f")
+const GREEN_DARK := Color("2f9a45")
+const BLUE := Color("3aa6f0")
+const CORAL := Color("ff7a59")
+const RED := Color("ef5350")
+const PURPLE := Color("8a6cf0")
+const TEAL := Color("2bc8b4")
+const SKY_TOP := Color("4fb3ee")
+const SKY_BOTTOM := Color("c4ecff")
+const SEA_TOP := Color("35c9d2")
+const SEA_MID := Color("1c88b6")
+const SEA_DEEP := Color("165290")
+const SEA_ABYSS := Color("0e2654")
+const SAND := Color("f8d898")
+const SAND_DARK := Color("e2aa62")
+const GRASS := Color("72d25a")
+const WOOD := Color("c98249")
+const WOOD_DARK := Color("8e552c")
+const METAL := Color("cbd5e1")
+const BRASS := Color("f5b843")
+const GLASS := Color("bff3ff")
 
-## Per dive site: rock, ore, glow and diver suit colors.
+## One look per dive site: rock, floor, ore colors, diver suit, cave water.
 const DEPTH_STYLE: Array[Dictionary] = [
-	{"rock": Color("3f7fb0"), "ore": Color("ffd6e0"), "ore2": Color("ff9fbc"), "suit": Color("ff8a3d")},
-	{"rock": Color("356f9f"), "ore": Color("ff6f91"), "ore2": Color("ffb347"), "suit": Color("ffd23f")},
-	{"rock": Color("2d5d8f"), "ore": Color("f2f6ff"), "ore2": Color("b9d4ff"), "suit": Color("ff5fa2")},
-	{"rock": Color("284c7c"), "ore": Color("e98a4f"), "ore2": Color("ffc08a"), "suit": Color("8be04e")},
-	{"rock": Color("233f6c"), "ore": Color("35e08f"), "ore2": Color("9bffcf"), "suit": Color("9b6bff")},
-	{"rock": Color("1e325c"), "ore": Color("8f7bff"), "ore2": Color("e2d9ff"), "suit": Color("2de2c5")},
+	{"rock": Color("e3aa6c"), "floor": Color("f8d898"), "ore": Color("ffc6d6"), "ore2": Color("ff8fb0"), "suit": Color("ff8a3d"), "water": Color("2a9cc6"), "deco": "shells"},
+	{"rock": Color("d9845c"), "floor": Color("f5c690"), "ore": Color("ff5d73"), "ore2": Color("ffa84a"), "suit": Color("ffd23f"), "water": Color("2283b6"), "deco": "coral"},
+	{"rock": Color("a88fc8"), "floor": Color("ded0ee"), "ore": Color("fbf8ff"), "ore2": Color("c6d4ff"), "suit": Color("ff6fae"), "water": Color("1f6aa8"), "deco": "pearls"},
+	{"rock": Color("927668"), "floor": Color("c8ab94"), "ore": Color("f08a45"), "ore2": Color("ffc185"), "suit": Color("7fd34e"), "water": Color("1a5692"), "deco": "wreck"},
+	{"rock": Color("51817c"), "floor": Color("8cb8aa"), "ore": Color("3ee08f"), "ore2": Color("b0ffd9"), "suit": Color("9b72ff"), "water": Color("15457c"), "deco": "kelp"},
+	{"rock": Color("45427a"), "floor": Color("7470b0"), "ore": Color("b58cff"), "ore2": Color("f0e3ff"), "suit": Color("2de2c5"), "water": Color("102e60"), "deco": "glow"},
 ]
 
 
@@ -44,202 +56,611 @@ static func water_color(t: float) -> Color:
 	return SEA_DEEP.lerp(SEA_ABYSS, clampf((t - 0.6) / 0.4, 0.0, 1.0))
 
 
-static func rounded_rect(ci: CanvasItem, rect: Rect2, radius: float, color: Color) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.set_corner_radius_all(int(radius))
-	sb.anti_aliasing = true
-	ci.draw_style_box(sb, rect)
+static func shade_of(c: Color, amount: float = 0.24) -> Color:
+	return Color(c.lerp(SHADE, amount), c.a)
 
 
-static func ellipse(ci: CanvasItem, center: Vector2, radii: Vector2, color: Color, rot: float = 0.0) -> void:
+# --- Shape builders (local space) ------------------------------------------------
+
+static func circle_pts(c: Vector2, r: float, n: int = 0) -> PackedVector2Array:
+	return ellipse_pts(c, Vector2(r, r), n)
+
+
+static func ellipse_pts(c: Vector2, radii: Vector2, n: int = 0, rot: float = 0.0) -> PackedVector2Array:
+	if n <= 0:
+		n = clampi(int(maxf(radii.x, radii.y) * 0.75), 12, 32)
 	var pts := PackedVector2Array()
-	for i in 24:
-		var a := TAU * i / 24.0
-		pts.append(center + Vector2(cos(a) * radii.x, sin(a) * radii.y).rotated(rot))
-	ci.draw_colored_polygon(pts, color)
+	for i in n:
+		var a := TAU * i / n
+		pts.append(c + Vector2(cos(a) * radii.x, sin(a) * radii.y).rotated(rot))
+	return pts
 
 
-static func blob(ci: CanvasItem, center: Vector2, radius: float, color: Color, seed: int, bumps: int = 7) -> void:
+static func rrect_pts(r: Rect2, radius: float, seg: int = 5) -> PackedVector2Array:
+	var rad := minf(radius, minf(r.size.x, r.size.y) / 2.0)
 	var pts := PackedVector2Array()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
-	var offs: Array[float] = []
-	for i in bumps:
-		offs.append(rng.randf_range(0.78, 1.0))
-	for i in 32:
-		var a := TAU * i / 32.0
-		var f := float(i) / 32.0 * bumps
-		var r := lerpf(offs[int(f) % bumps], offs[(int(f) + 1) % bumps], f - floorf(f))
-		pts.append(center + Vector2(cos(a), sin(a) * 0.8) * radius * r)
-	ci.draw_colored_polygon(pts, color)
+	var corners := [
+		[r.position + Vector2(r.size.x - rad, rad), -PI / 2.0],
+		[r.end - Vector2(rad, rad), 0.0],
+		[Vector2(r.position.x + rad, r.end.y - rad), PI / 2.0],
+		[r.position + Vector2(rad, rad), PI],
+	]
+	for c in corners:
+		for i in seg + 1:
+			var a: float = c[1] + PI / 2.0 * i / seg
+			pts.append(c[0] + Vector2(cos(a), sin(a)) * rad)
+	return pts
 
 
-## Coin icon: gold disc with a darker rim and a shine.
+static func moved(pts: PackedVector2Array, by: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	out.resize(pts.size())
+	for i in pts.size():
+		out[i] = pts[i] + by
+	return out
+
+
+## Smooth closed blob through the given points (Catmull-Rom).
+static func smooth_pts(ctrl: PackedVector2Array, steps: int = 5) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := ctrl.size()
+	for i in n:
+		var p0 := ctrl[(i - 1 + n) % n]
+		var p1 := ctrl[i]
+		var p2 := ctrl[(i + 1) % n]
+		var p3 := ctrl[(i + 2) % n]
+		for s in steps:
+			var t := float(s) / steps
+			var t2 := t * t
+			var t3 := t2 * t
+			out.append(0.5 * ((2.0 * p1) + (-p0 + p2) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3))
+	return out
+
+
+## Merge of several polygons (cached): clouds, bushes, hair.
+static func union(polys: Array) -> PackedVector2Array:
+	var k := hash(["union", polys])
+	if _geo.has(k):
+		return _geo[k]
+	var acc: PackedVector2Array = polys[0]
+	for i in range(1, polys.size()):
+		var merged := Geometry2D.merge_polygons(acc, polys[i])
+		var best := 0.0
+		for p in merged:
+			var a := absf(_area(p))
+			if a > best and not Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(acc) or a > best:
+				best = a
+				acc = p
+	_geo[k] = acc
+	return acc
+
+
+## Part of `pts` inside `clip` (cached), e.g. shoulders inside a portrait.
+static func clipped(pts: PackedVector2Array, clip: PackedVector2Array) -> PackedVector2Array:
+	var k := hash(["clip", pts, clip])
+	if _geo.has(k):
+		return _geo[k]
+	var res := PackedVector2Array()
+	var best := 0.0
+	for p in Geometry2D.intersect_polygons(pts, clip):
+		var a := absf(_area(p))
+		if a > best:
+			best = a
+			res = p
+	_geo[k] = res
+	return res
+
+
+# --- Toon drawing ----------------------------------------------------------------
+#
+# Everything is collected into one triangle list per canvas item and sent to
+# the renderer as a single call when the item finishes drawing (see flush).
+# Thousands of small polygons as separate calls were far too slow on phones.
+
+const AA := 1.0          # soft edge width, in local pixels
+
+## Phones: skip the soft outer edge of outlines (it doubles the triangle
+## count; on dense phone screens the difference is hard to see).
+static var low_power := OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
+const _QUAD_ALPHA := [1.0, 1.0, 0.0, 1.0, 0.0, 0.0]
+
+static var _geo := {}
+static var _cols := {}
+static var _xf := Transform2D.IDENTITY
+static var _stack: Array[Transform2D] = []
+static var _bci: CanvasItem = null
+static var _bv := PackedVector2Array()
+static var _bc := PackedColorArray()
+
+
+static func _area(p: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in p.size():
+		var q := p[(i + 1) % p.size()]
+		a += p[i].x * q.y - q.x * p[i].y
+	return a / 2.0
+
+
+static func _bounds(p: PackedVector2Array) -> Rect2:
+	var r := Rect2(p[0], Vector2.ZERO)
+	for v in p:
+		r = r.expand(v)
+	return r
+
+
+## Triangle list (3 vertices per triangle, no indices) of a simple polygon.
+static func _tris(p: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if p.size() < 3 or absf(_area(p)) < 0.5:
+		return out
+	for i in Geometry2D.triangulate_polygon(p):
+		out.append(p[i])
+	return out
+
+
+## A soft 1px band outside a closed ring: 6 vertices per edge, the outer
+## ones transparent (colors come from _QUAD_ALPHA).
+static func _fringe(ring: PackedVector2Array, width: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := ring.size()
+	if n < 3:
+		return out
+	var sgn := 1.0 if _area(ring) < 0.0 else -1.0
+	var nrm := PackedVector2Array()
+	nrm.resize(n)
+	for i in n:
+		var a := ring[(i - 1 + n) % n]
+		var b := ring[i]
+		var c := ring[(i + 1) % n]
+		var n1 := (b - a).orthogonal().normalized()
+		var n2 := (c - b).orthogonal().normalized()
+		var m := (n1 + n2).normalized()
+		var d := maxf(0.35, m.dot(n2))
+		nrm[i] = m * sgn * (width / d)
+	for i in n:
+		var j := (i + 1) % n
+		var ai := ring[i]
+		var aj := ring[j]
+		out.append_array([ai, aj, aj + nrm[j], ai, aj + nrm[j], ai + nrm[i]])
+	return out
+
+
+static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
+	var k := hash([pts, w, shade])
+	var g = _geo.get(k)
+	if g != null:
+		return g
+	g = _build(pts, w, shade)
+	_geo[k] = g
+	return g
+
+
+## Builds a shape once: [vertices, counts] where the vertices are the
+## outline, its soft edge, the fill, the shadow band and the highlight, in
+## that order, and counts holds how many vertices each part has.
+static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
+	if _geo.size() > 8000:
+		_geo.clear()
+		_cols.clear()
+	var outer := PackedVector2Array()
+	var fringe := PackedVector2Array()
+	if w > 0.0:
+		var best := PackedVector2Array()
+		var best_a := 0.0
+		for p in Geometry2D.offset_polygon(pts, w, Geometry2D.JOIN_ROUND):
+			var a := absf(_area(p))
+			if a > best_a:
+				best_a = a
+				best = p
+		outer = _tris(best)
+		if not outer.is_empty() and not low_power:
+			fringe = _fringe(best, AA)
+	var fill := _tris(pts)
+	var shadow := PackedVector2Array()
+	var hi := PackedVector2Array()
+	if shade > 0.0 and not fill.is_empty():
+		var r := _bounds(pts)
+		var d := clampf(r.size.y * 0.18, 1.5, 16.0) * shade
+		for p in Geometry2D.clip_polygons(pts, moved(pts, Vector2(0, -d))):
+			if Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(pts):
+				shadow.append_array(_tris(p))
+		var inset := Geometry2D.offset_polygon(pts, -clampf(r.size.y * 0.07, 1.0, 4.0))
+		if inset.size() == 1:
+			var ip: PackedVector2Array = inset[0]
+			for p in Geometry2D.clip_polygons(ip, moved(ip, Vector2(0, d * 0.5))):
+				if Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(ip):
+					hi.append_array(_tris(p))
+	if fill.is_empty():
+		outer = PackedVector2Array()
+		fringe = PackedVector2Array()
+	var v := PackedVector2Array()
+	for part in [outer, fringe, fill, shadow, hi]:
+		v.append_array(part)
+	return [v, PackedInt32Array([outer.size(), fringe.size(), fill.size(), shadow.size(), hi.size()])]
+
+
+static func _solid(color: Color, n: int) -> PackedColorArray:
+	var c := PackedColorArray()
+	c.resize(n)
+	c.fill(color)
+	return c
+
+
+## Colors for a soft edge band of `n` vertices (see _fringe).
+static func _fringe_cols(color: Color, n: int) -> PackedColorArray:
+	var k := hash(["f", color, n])
+	var c = _cols.get(k)
+	if c != null:
+		return c
+	c = PackedColorArray()
+	c.resize(n)
+	var clear := Color(color, 0.0)
+	for i in n:
+		c[i] = color if _QUAD_ALPHA[i % 6] > 0.5 else clear
+	_cols[k] = c
+	return c
+
+
+static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
+	var k := hash([g[1], fill, line])
+	var c = _cols.get(k)
+	if c != null and c.size() == g[0].size():
+		return c
+	var n: PackedInt32Array = g[1]
+	c = PackedColorArray()
+	c.append_array(_solid(line, n[0]))
+	c.append_array(_fringe_cols(line, n[1]))
+	c.append_array(_solid(fill, n[2]))
+	c.append_array(_solid(shade_of(fill), n[3]))
+	c.append_array(_solid(Color(1, 1, 1, 0.3 * fill.a), n[4]))
+	if _cols.size() > 6000:
+		_cols.clear()
+	_cols[k] = c
+	return c
+
+
+## Adds already built triangles to the current batch of `ci`.
+static func _put(ci: CanvasItem, v: PackedVector2Array, c: PackedColorArray) -> void:
+	if v.is_empty():
+		return
+	if ci != _bci:
+		flush()
+		_bci = ci
+		if not RenderingServer.frame_pre_draw.is_connected(flush):
+			RenderingServer.frame_pre_draw.connect(flush)
+	if _xf == Transform2D.IDENTITY:
+		_bv.append_array(v)
+	else:
+		_bv.append_array(_xf * v)
+	_bc.append_array(c)
+
+
+## Sends the collected triangles as one draw call. Runs by itself when
+## another canvas item starts drawing and right before the frame renders
+## (a script's _draw runs after the `draw` signal, so that can't be used);
+## call it by hand before drawing directly with CanvasItem.draw_*.
+static func flush() -> void:
+	if _bci != null and not _bv.is_empty() and is_instance_valid(_bci):
+		RenderingServer.canvas_item_add_triangle_array(_bci.get_canvas_item(), PackedInt32Array(), _bv, _bc)
+	_bv = PackedVector2Array()
+	_bc = PackedColorArray()
+	_bci = null
+
+
+static func _emit(ci: CanvasItem, g: Array, fill: Color, line: Color) -> void:
+	var v: PackedVector2Array = g[0]
+	if v.is_empty():
+		return
+	_put(ci, v, _colors_for(g, fill, line))
+
+
+## The core call: outlined, shaded polygon. w = outline width (0 = none),
+## shade = strength of the shadow/highlight bands (0 = flat).
+static func toon(ci: CanvasItem, pts: PackedVector2Array, fill: Color, w: float = 3.0, shade: float = 1.0, line: Color = INK) -> void:
+	_emit(ci, _geo_for(pts, w, shade), fill, line)
+
+
+## Flat filled polygon without outline, triangulated once.
+static func flat(ci: CanvasItem, pts: PackedVector2Array, color: Color) -> void:
+	_emit(ci, _geo_for(pts, 0.0, 0.0), color, color)
+
+
+## Flat polygon that changes every frame (not cached).
+static func flat_now(ci: CanvasItem, pts: PackedVector2Array, color: Color) -> void:
+	var v := _tris(pts)
+	_put(ci, v, _solid(color, v.size()))
+
+
+## Triangle or quad with a color per corner (gradients). Corners go around.
+static func grad(ci: CanvasItem, p: PackedVector2Array, c: PackedColorArray) -> void:
+	if p.size() == 3:
+		_put(ci, p, c)
+	else:
+		_put(ci, PackedVector2Array([p[0], p[1], p[2], p[0], p[2], p[3]]), PackedColorArray([c[0], c[1], c[2], c[0], c[2], c[3]]))
+
+
+static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
+	var k := hash(["c", c, r, w, shade])
+	var g = _geo.get(k)
+	if g == null:
+		g = _build(circle_pts(c, r), w, shade)
+		_geo[k] = g
+	_emit(ci, g, fill, INK)
+
+
+static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
+	var k := hash(["r", r, radius, w, shade])
+	var g = _geo.get(k)
+	if g == null:
+		g = _build(rrect_pts(r, radius), w, shade)
+		_geo[k] = g
+	_emit(ci, g, fill, INK)
+
+
+static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w: float = 3.0, shade: float = 1.0, rot: float = 0.0) -> void:
+	var k := hash(["e", c, radii, w, shade, rot])
+	var g = _geo.get(k)
+	if g == null:
+		g = _build(ellipse_pts(c, radii, 0, rot), w, shade)
+		_geo[k] = g
+	_emit(ci, g, fill, INK)
+
+
+## Filled disc with a soft edge (bubbles, dots, rivets).
+static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
+	var k := hash(["d", r])
+	var g = _geo.get(k)
+	if g == null:
+		var ring := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
+		var fr := _fringe(ring, AA)
+		var v := _tris(ring)
+		g = [v, fr]
+		_geo[k] = g
+	var fv: PackedVector2Array = g[0]
+	var fr2: PackedVector2Array = g[1]
+	var save := _xf
+	_xf = _xf * Transform2D(0.0, c)
+	_put(ci, fv, _solid(color, fv.size()))
+	_put(ci, fr2, _fringe_cols(color, fr2.size()))
+	_xf = save
+
+
+## Thick line through `pts` with soft edges (built every call).
+static func polyline(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float, closed: bool = false) -> void:
+	if pts.size() < 2:
+		return
+	var g := _poly_geo(pts, color, width, closed)
+	_put(ci, g[0], g[1])
+
+
+## Closed outline that never changes shape (cached).
+static func ring(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float) -> void:
+	var k := hash(["ring", pts, color, width])
+	var g = _geo.get(k)
+	if g == null:
+		g = _poly_geo(pts, color, width, true)
+		_geo[k] = g
+	_put(ci, g[0], g[1])
+
+
+static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, closed: bool) -> Array:
+	var n := pts.size()
+	var hw := width / 2.0
+	var edge := hw + AA
+	var left := PackedVector2Array()
+	var dirs := PackedVector2Array()
+	left.resize(n)
+	dirs.resize(n)
+	for i in n:
+		var prev: Vector2
+		var next: Vector2
+		if closed:
+			prev = pts[(i - 1 + n) % n]
+			next = pts[(i + 1) % n]
+		else:
+			prev = pts[maxi(i - 1, 0)]
+			next = pts[mini(i + 1, n - 1)]
+		var d1 := (pts[i] - prev).normalized() if pts[i] != prev else (next - pts[i]).normalized()
+		var d2 := (next - pts[i]).normalized() if next != pts[i] else d1
+		var nrm := (d1 + d2).orthogonal().normalized()
+		if nrm == Vector2.ZERO:
+			nrm = d1.orthogonal()
+		var s := maxf(0.4, nrm.dot(d2.orthogonal()))
+		left[i] = nrm / s
+	var v := PackedVector2Array()
+	var c := PackedColorArray()
+	var clear := Color(color, 0.0)
+	var segs := n if closed else n - 1
+	for i in segs:
+		var j := (i + 1) % n
+		var a := pts[i]
+		var b := pts[j]
+		var la := left[i]
+		var lb := left[j]
+		# core
+		v.append_array([a + la * hw, b + lb * hw, b - lb * hw, a + la * hw, b - lb * hw, a - la * hw])
+		c.append_array([color, color, color, color, color, color])
+		# soft edges on both sides
+		v.append_array([a + la * hw, b + lb * hw, b + lb * edge, a + la * hw, b + lb * edge, a + la * edge])
+		c.append_array([color, color, clear, color, clear, clear])
+		v.append_array([a - la * hw, b - lb * hw, b - lb * edge, a - la * hw, b - lb * edge, a - la * edge])
+		c.append_array([color, color, clear, color, clear, clear])
+	return [v, c]
+
+
+static func line(ci: CanvasItem, a: Vector2, b: Vector2, color: Color, width: float = 2.0) -> void:
+	polyline(ci, PackedVector2Array([a, b]), color, width)
+
+
+static func arc(ci: CanvasItem, c: Vector2, r: float, a0: float, a1: float, n: int, color: Color, width: float) -> void:
+	var pts := PackedVector2Array()
+	var full := absf(a1 - a0) >= TAU - 0.001
+	var count := n if full else n + 1
+	for i in count:
+		var a := lerpf(a0, a1, float(i) / n)
+		pts.append(c + Vector2(cos(a), sin(a)) * r)
+	polyline(ci, pts, color, width, full)
+
+
+## Outlined thick stroke (ropes, stems, handles).
+static func stroke(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float, w: float = 2.5) -> void:
+	if w > 0.0:
+		polyline(ci, pts, INK, width + w * 2.0)
+		disc(ci, pts[0], (width + w * 2.0) / 2.0, INK)
+		disc(ci, pts[pts.size() - 1], (width + w * 2.0) / 2.0, INK)
+	polyline(ci, pts, color, width)
+	disc(ci, pts[0], width / 2.0, color)
+	disc(ci, pts[pts.size() - 1], width / 2.0, color)
+
+
+static func push(ci: CanvasItem, pos: Vector2, rot: float = 0.0, scale: Vector2 = Vector2.ONE) -> void:
+	_stack.append(_xf)
+	_xf = _xf * Transform2D(rot, scale, 0.0, pos)
+
+
+static func pop(ci: CanvasItem) -> void:
+	_xf = _stack.pop_back() if not _stack.is_empty() else Transform2D.IDENTITY
+
+
+## Text with a thick dark outline, centered on x when `center` is set.
+static func text(ci: CanvasItem, pos: Vector2, s: String, size: int, color: Color = WHITE,
+		outline: int = 6, center: bool = true, font: Font = null) -> void:
+	if font == null:
+		font = UiTheme.heavy_font()
+	var p := pos
+	if center:
+		p.x -= font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x / 2.0
+	if ci == _bci:
+		flush()
+	ci.draw_set_transform_matrix(_xf)
+	if outline > 0:
+		ci.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, INK)
+	ci.draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+# --- Small shared sprites ------------------------------------------------------------
+
+## Gold coin with a rim, an embossed star and a shine.
 static func coin(ci: CanvasItem, center: Vector2, r: float) -> void:
-	ci.draw_circle(center, r, GOLD_DARK)
-	ci.draw_circle(center + Vector2(0, -r * 0.08), r * 0.86, GOLD)
-	ci.draw_circle(center + Vector2(0, -r * 0.08), r * 0.55, GOLD_DARK.lerp(GOLD, 0.55))
-	ci.draw_circle(center + Vector2(-r * 0.3, -r * 0.4), r * 0.18, Color(1, 1, 1, 0.8))
+	push(ci, center, 0.0, Vector2.ONE * (r / 20.0))
+	t_circle(ci, Vector2.ZERO, 20, GOLD_DARK, 3.0, 0.0)
+	t_circle(ci, Vector2(0, -1.5), 16, GOLD, 0.0, 0.8)
+	toon(ci, star_pts(Vector2(0, -1), 9.0, 4.2, 5), Color("ffe38a"), 0.0, 0.0)
+	flat(ci, ellipse_pts(Vector2(-8, -9), Vector2(3.5, 2.2), 12, -0.6), Color(1, 1, 1, 0.85))
+	pop(ci)
 
 
-## Crystal cluster used for ore deposits and ore piles.
+static func star_pts(c: Vector2, r_out: float, r_in: float, points: int, rot: float = -PI / 2.0) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in points * 2:
+		var a := rot + PI * i / points
+		pts.append(c + Vector2(cos(a), sin(a)) * (r_out if i % 2 == 0 else r_in))
+	return pts
+
+
+## Faceted gem sticking out of the ground at `b`, pointing along `tilt`.
+static func crystal(ci: CanvasItem, b: Vector2, h: float, w: float, tilt: float, color: Color, outline: float = 2.5) -> void:
+	var up := Vector2(0, -1).rotated(tilt)
+	var right := Vector2(1, 0).rotated(tilt)
+	var pts := PackedVector2Array([b - right * w, b - right * w + up * h * 0.72, b + up * h, b + right * w + up * h * 0.72, b + right * w])
+	toon(ci, pts, color, outline, 0.0)
+	flat(ci, PackedVector2Array([b + right * w * 0.1, b + up * h * 0.97, b + right * w * 0.96 + up * h * 0.72, b + right * w * 0.96]), shade_of(color, 0.2))
+	flat(ci, PackedVector2Array([b - right * w * 0.62 + up * h * 0.12, b - right * w * 0.62 + up * h * 0.66, b - right * w * 0.25 + up * h * 0.82, b - right * w * 0.25 + up * h * 0.12]), Color(1, 1, 1, 0.45))
+
+
+## Cluster of gems (ore deposits and ore piles).
 static func crystals(ci: CanvasItem, base: Vector2, size: float, style: Dictionary, seed: int, count: int = 4) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
+	var order: Array[int] = []
 	for i in count:
-		var x := base.x + (float(i) - (count - 1) / 2.0) * size * 0.42 + rng.randf_range(-4, 4)
-		var h := size * rng.randf_range(0.6, 1.15) * (1.0 - absf(float(i) - (count - 1) / 2.0) * 0.18)
-		var w := size * 0.26
-		var tilt := rng.randf_range(-0.25, 0.25)
-		var up := Vector2(0, -1).rotated(tilt)
-		var right := Vector2(1, 0).rotated(tilt)
-		var b := Vector2(x, base.y)
-		var pts := PackedVector2Array([b - right * w, b - right * w + up * h * 0.75, b + up * h, b + right * w + up * h * 0.75, b + right * w])
-		ci.draw_colored_polygon(pts, style["ore"] if i % 2 == 0 else style["ore2"])
-		var shine := PackedVector2Array([b - right * w * 0.5 + up * h * 0.1, b - right * w * 0.5 + up * h * 0.7, b + up * h * 0.92, b + up * h * 0.1])
-		ci.draw_colored_polygon(shine, Color(1, 1, 1, 0.3))
+		order.append(i)
+	# Tallest in the middle, drawn last.
+	order.sort_custom(func(a, b): return absf(a - (count - 1) / 2.0) > absf(b - (count - 1) / 2.0))
+	var specs := []
+	for i in count:
+		specs.append([rng.randf_range(-3, 3), rng.randf_range(0.65, 1.1), rng.randf_range(-0.28, 0.28)])
+	for i in order:
+		var off := float(i) - (count - 1) / 2.0
+		var x: float = base.x + off * size * 0.34 + specs[i][0]
+		var h: float = size * specs[i][1] * (1.0 - absf(off) * 0.16)
+		crystal(ci, Vector2(x, base.y), h, size * 0.2, specs[i][2] + off * 0.12, style["ore"] if i % 2 == 0 else style["ore2"], maxf(1.5, size * 0.04))
 
 
-## A diver seen from the side. `swim` animates the flippers (0..1 loop),
-## `angle` tilts the body, `facing` is 1 (right) or -1 (left).
-## `tool`: "" | "pick" (arm raised by `hit` 0..1) | "bag" (carrying ore).
-static func diver(ci: CanvasItem, pos: Vector2, scale: float, suit: Color, facing: float,
-		angle: float, swim: float, tool: String = "", hit: float = 0.0, bag_color: Color = Color.WHITE) -> void:
-	var xf := Transform2D(angle, Vector2(scale * facing, scale), 0.0, pos)
-	ci.draw_set_transform_matrix(xf)
-	var dark := suit.darkened(0.35)
-	# Flippers kick.
-	var kick := sin(swim * TAU) * 0.35
-	for s: float in [-1.0, 1.0]:
-		var a: float = kick * s
-		var hip := Vector2(-26, 2 + s * 3)
-		var tip := hip + Vector2(-26, 0).rotated(a)
-		ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(0, -4), tip + Vector2(0, -7).rotated(a), tip + Vector2(0, 7).rotated(a), hip + Vector2(0, 4)]), dark)
-	# Tank on the back.
-	rounded_rect(ci, Rect2(-20, -17, 26, 9), 4, Color("c9d3df"))
-	# Body.
-	rounded_rect(ci, Rect2(-28, -9, 44, 18), 9, suit)
-	rounded_rect(ci, Rect2(-10, -9, 6, 18), 2, dark)
-	# Head + mask.
-	ci.draw_circle(Vector2(20, -2), 11, suit)
-	rounded_rect(ci, Rect2(19, -9, 12, 10), 4, Color("163a5c"))
-	rounded_rect(ci, Rect2(21, -8, 8, 7), 3, Color("bff6ff"))
-	ci.draw_circle(Vector2(23, -6), 1.6, WHITE)
-	# Arm and tool.
-	match tool:
-		"pick":
-			var arm := -1.2 + hit * 1.9
-			var shoulder := Vector2(8, -4)
-			var hand := shoulder + Vector2(16, 0).rotated(arm)
-			ci.draw_line(shoulder, hand, dark, 6, true)
-			var head := hand + Vector2(10, 0).rotated(arm)
-			ci.draw_line(hand, head, WOOD_DARK, 4, true)
-			ci.draw_line(head + Vector2(0, -8).rotated(arm), head + Vector2(0, 8).rotated(arm), Color("c9d3df"), 4, true)
-		"bag":
-			ci.draw_line(Vector2(6, 2), Vector2(12, 14), dark, 5, true)
-			ci.draw_circle(Vector2(10, 22), 10, Color("a8793f"))
-			ci.draw_circle(Vector2(7, 19), 3, bag_color)
-			ci.draw_circle(Vector2(13, 22), 3, bag_color.lightened(0.3))
-		_:
-			ci.draw_line(Vector2(8, 0), Vector2(22, 8), dark, 6, true)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+## Padlock icon.
+static func lock(ci: CanvasItem, center: Vector2, s: float) -> void:
+	push(ci, center, 0.0, Vector2.ONE * (s / 20.0))
+	arc(ci, Vector2(0, -8), 10, PI, TAU, 18, INK, 10)
+	arc(ci, Vector2(0, -8), 10, PI, TAU, 18, METAL, 5)
+	t_rect(ci, Rect2(-15, -8, 30, 24), 6, GOLD)
+	t_circle(ci, Vector2(0, 2), 3.5, INK, 0.0, 0.0)
+	flat(ci, PackedVector2Array([Vector2(-1.8, 2), Vector2(1.8, 2), Vector2(2.4, 10), Vector2(-2.4, 10)]), INK)
+	pop(ci)
 
 
-## Boat seen from the side, `bob` rocks it. Cargo 0..1 fills crates.
-static func boat(ci: CanvasItem, pos: Vector2, scale: float, facing: float, bob: float, cargo: float, cargo_color: Color) -> void:
-	var xf := Transform2D(sin(bob * TAU) * 0.04, Vector2(scale * facing, scale), 0.0, pos + Vector2(0, sin(bob * TAU) * 3))
-	ci.draw_set_transform_matrix(xf)
-	# Cabin.
-	rounded_rect(ci, Rect2(-40, -54, 40, 34), 6, WHITE)
-	rounded_rect(ci, Rect2(-34, -48, 12, 11), 3, Color("7fd8ff"))
-	rounded_rect(ci, Rect2(-18, -48, 12, 11), 3, Color("7fd8ff"))
-	rounded_rect(ci, Rect2(-44, -60, 48, 8), 4, RED)
-	# Chimney.
-	rounded_rect(ci, Rect2(-14, -76, 10, 18), 3, INK.lightened(0.2))
-	# Cargo crates.
-	var crates := int(ceil(clampf(cargo, 0.0, 1.0) * 3.0))
-	for i in crates:
-		var c := Rect2(6 + i * 20, -40, 18, 18)
-		rounded_rect(ci, c, 3, WOOD)
-		ci.draw_circle(c.get_center(), 5, cargo_color)
-	# Hull.
-	var hull := PackedVector2Array([Vector2(-70, -22), Vector2(78, -22), Vector2(62, 6), Vector2(-58, 6)])
-	ci.draw_colored_polygon(hull, RED)
-	ci.draw_colored_polygon(PackedVector2Array([Vector2(-68, -18), Vector2(76, -18), Vector2(73, -12), Vector2(-66, -12)]), WHITE)
-	ci.draw_colored_polygon(PackedVector2Array([Vector2(-62, 0), Vector2(66, 0), Vector2(62, 6), Vector2(-58, 6)]), RED.darkened(0.35))
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+static func gear_pts(r: float, teeth: int = 8) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in teeth * 4:
+		var a := TAU * (i + 0.5) / (teeth * 4.0)
+		var rr := r if (i % 4) < 2 else r * 0.76
+		pts.append(Vector2(cos(a), sin(a)) * rr)
+	return pts
 
 
-## Round manager portrait. kind: "dive" | "boat" | "plant".
-static func manager(ci: CanvasItem, center: Vector2, r: float, kind: String, tint: Color) -> void:
-	ci.draw_circle(center, r, tint.darkened(0.3))
-	ci.draw_circle(center, r * 0.9, tint.lightened(0.35))
-	var skin := Color("f2c29b")
-	var face := center + Vector2(0, r * 0.12)
-	# Shoulders.
-	ci.draw_circle(center + Vector2(0, r * 0.95), r * 0.62, tint.darkened(0.1))
-	ci.draw_circle(face, r * 0.42, skin)
-	ci.draw_circle(face + Vector2(-r * 0.15, -r * 0.02), r * 0.06, INK)
-	ci.draw_circle(face + Vector2(r * 0.15, -r * 0.02), r * 0.06, INK)
-	ci.draw_arc(face + Vector2(0, r * 0.1), r * 0.16, 0.3, PI - 0.3, 8, INK, maxf(1.5, r * 0.05), true)
-	match kind:
-		"boat":
-			rounded_rect(ci, Rect2(face + Vector2(-r * 0.5, -r * 0.58), Vector2(r, r * 0.3)), r * 0.1, WHITE)
-			rounded_rect(ci, Rect2(face + Vector2(-r * 0.55, -r * 0.32), Vector2(r * 1.1, r * 0.1)), r * 0.05, INK)
-			ci.draw_circle(face + Vector2(0, -r * 0.44), r * 0.08, GOLD)
-		"plant":
-			ellipse(ci, face + Vector2(0, -r * 0.34), Vector2(r * 0.5, r * 0.3), GOLD)
-			rounded_rect(ci, Rect2(face + Vector2(-r * 0.6, -r * 0.2), Vector2(r * 1.2, r * 0.1)), r * 0.05, GOLD_DARK)
-		_:
-			rounded_rect(ci, Rect2(face + Vector2(-r * 0.36, -r * 0.2), Vector2(r * 0.72, r * 0.26)), r * 0.1, Color("163a5c"))
-			rounded_rect(ci, Rect2(face + Vector2(-r * 0.3, -r * 0.16), Vector2(r * 0.6, r * 0.18)), r * 0.08, Color("bff6ff"))
+static func gear(ci: CanvasItem, center: Vector2, r: float, color: Color, rot: float, teeth: int = 8) -> void:
+	push(ci, center, rot, Vector2.ONE * (r / 20.0))
+	toon(ci, gear_pts(20.0, teeth), color, 2.5, 0.6)
+	t_circle(ci, Vector2.ZERO, 6.5, shade_of(color, 0.5), 2.0, 0.0)
+	pop(ci)
 
 
-## Small fish swimming along x; `t` animates the tail.
+## Small fish; `t` wags the tail.
 static func fish(ci: CanvasItem, pos: Vector2, size: float, color: Color, facing: float, t: float) -> void:
-	var xf := Transform2D(0.0, Vector2(size * facing, size), 0.0, pos)
-	ci.draw_set_transform_matrix(xf)
-	var wag := sin(t * TAU * 2.0) * 0.3
-	ci.draw_colored_polygon(PackedVector2Array([Vector2(-0.9, 0), Vector2(-1.5, -0.45).rotated(wag), Vector2(-1.5, 0.45).rotated(wag)]), color.darkened(0.2))
-	ellipse(ci, Vector2.ZERO, Vector2(1.0, 0.55), color)
-	ci.draw_circle(Vector2(0.55, -0.12), 0.12, WHITE)
-	ci.draw_circle(Vector2(0.58, -0.12), 0.06, INK)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	push(ci, pos, 0.0, Vector2(size * facing, size) / 10.0)
+	var wag := sin(t * TAU * 2.0) * 0.35
+	push(ci, Vector2(-8, 0), wag)
+	toon(ci, PackedVector2Array([Vector2(1, 0), Vector2(-8, -6), Vector2(-6, 0), Vector2(-8, 6)]), shade_of(color, 0.15), 1.5, 0.0)
+	pop(ci)
+	toon(ci, ellipse_pts(Vector2.ZERO, Vector2(10, 6.5), 18), color, 1.5, 0.8)
+	flat(ci, PackedVector2Array([Vector2(-2, -6), Vector2(3, -9), Vector2(5, -5)]), shade_of(color, 0.15))
+	t_circle(ci, Vector2(5, -1.5), 2.2, WHITE, 1.0, 0.0)
+	flat(ci, circle_pts(Vector2(5.6, -1.5), 1.1, 8), INK)
+	pop(ci)
 
 
-## Swaying seaweed strand.
-static func seaweed(ci: CanvasItem, base: Vector2, height: float, color: Color, t: float, seed: float) -> void:
+## Swaying seaweed strand with an outline.
+static func seaweed(ci: CanvasItem, base: Vector2, height: float, color: Color, t: float, seed: float, width: float = 9.0) -> void:
 	var pts := PackedVector2Array()
 	var segs := 8
 	for i in segs + 1:
 		var f := float(i) / segs
-		var sway := sin(t * 1.4 + seed + f * 2.2) * 10.0 * f
-		pts.append(base + Vector2(sway, -height * f))
+		pts.append(base + Vector2(sin(t * 1.3 + seed + f * 2.4) * 11.0 * f, -height * f))
+	var widths: Array[float] = []
 	for i in segs:
-		var w := lerpf(8.0, 2.0, float(i) / segs)
-		ci.draw_line(pts[i], pts[i + 1], color, w, true)
+		widths.append(lerpf(width, 3.0, float(i) / segs))
+	# A tapered strand: outline, body, then light dashes along it.
+	var l := PackedVector2Array()
+	var r := PackedVector2Array()
+	for i in segs + 1:
+		var d := (pts[mini(i + 1, segs)] - pts[maxi(i - 1, 0)]).normalized().orthogonal()
+		var hw := lerpf(width, 3.0, float(i) / segs) / 2.0
+		l.append(pts[i] + d * hw)
+		r.append(pts[i] - d * hw)
+	r.reverse()
+	l.append_array(r)
+	flat_now(ci, _grown(l, 2.0), INK)
+	flat_now(ci, l, color)
+	for i in range(1, segs, 2):
+		line(ci, pts[i], pts[i + 1], color.lightened(0.25), widths[i] * 0.3)
 
 
-## Simple up-arrow icon for upgrade buttons (a glyph may be missing in web fonts).
-static func arrow_up(ci: CanvasItem, center: Vector2, s: float, color: Color) -> void:
-	ci.draw_colored_polygon(PackedVector2Array([
-		center + Vector2(0, -s), center + Vector2(s * 0.9, 0), center + Vector2(s * 0.35, 0),
-		center + Vector2(s * 0.35, s), center + Vector2(-s * 0.35, s), center + Vector2(-s * 0.35, 0),
-		center + Vector2(-s * 0.9, 0)]), color)
+static func _grown(p: PackedVector2Array, by: float) -> PackedVector2Array:
+	var g := Geometry2D.offset_polygon(p, by, Geometry2D.JOIN_ROUND)
+	return g[0] if g.size() > 0 else p
 
 
-static func lock(ci: CanvasItem, center: Vector2, s: float, color: Color) -> void:
-	ci.draw_arc(center + Vector2(0, -s * 0.35), s * 0.45, PI, TAU, 16, color, s * 0.18, true)
-	rounded_rect(ci, Rect2(center + Vector2(-s * 0.7, -s * 0.3), Vector2(s * 1.4, s * 1.1)), s * 0.2, color)
-	ci.draw_circle(center + Vector2(0, s * 0.2), s * 0.15, INK)
-
-
-static func gear(ci: CanvasItem, center: Vector2, r: float, color: Color, rot: float, teeth: int = 8) -> void:
-	var pts := PackedVector2Array()
-	for i in teeth * 4:
-		var a := rot + TAU * i / (teeth * 4.0)
-		var rr := r if (i % 4) < 2 else r * 0.78
-		pts.append(center + Vector2(cos(a), sin(a)) * rr)
-	ci.draw_colored_polygon(pts, color)
-	ci.draw_circle(center, r * 0.32, color.darkened(0.4))
+## Up arrow for upgrade buttons.
+static func arrow_pts(s: float) -> PackedVector2Array:
+	return PackedVector2Array([Vector2(0, -s), Vector2(s * 0.95, -s * 0.05), Vector2(s * 0.38, -s * 0.05),
+			Vector2(s * 0.38, s * 0.9), Vector2(-s * 0.38, s * 0.9), Vector2(-s * 0.38, -s * 0.05), Vector2(-s * 0.95, -s * 0.05)])

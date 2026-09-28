@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://c11wmk2md2fkn"
-path="res://.godot/imported/Nunito-Black.ttf-880f0c283166815ed56080446388b042.fontdata"
+uid="uid://by2phkfc5jg72"
+path="res://.godot/imported/Rubik-SemiBold.ttf-5755fb5135202440ae1641550f07c192.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/Nunito-Black.ttf"
-dest_files=["res://.godot/imported/Nunito-Black.ttf-880f0c283166815ed56080446388b042.fontdata"]
+source_file="res://assets/fonts/Rubik-SemiBold.ttf"
+dest_files=["res://.godot/imported/Rubik-SemiBold.ttf-5755fb5135202440ae1641550f07c192.fontdata"]
 
 [params]
 

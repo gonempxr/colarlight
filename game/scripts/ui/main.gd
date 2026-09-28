@@ -19,14 +19,16 @@ var _toast_tween: Tween
 var _wide := false
 var _sheet_open := false
 var _refresh_left := 0.0
+## Tests and screenshots skip the title screen.
+static var show_title := true
 
 
 func _ready() -> void:
 	theme = UiTheme.build()
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Art.SEA_DEEP
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 
@@ -43,6 +45,7 @@ func _ready() -> void:
 	_hud = Hud.new()
 	_hud.prestige_pressed.connect(_open_prestige)
 	_hud.settings_pressed.connect(_open_settings)
+	_hud.avatar_pressed.connect(_open_avatar)
 	add_child(_hud)
 
 	_toast = PanelContainer.new()
@@ -65,6 +68,15 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_refresh()
+	if show_title:
+		var title := TitleScreen.new()
+		title.started.connect(_after_title)
+		add_child(title)
+	else:
+		_after_title()
+
+
+func _after_title() -> void:
 	var report := GameState.take_offline_report()
 	if not report.is_empty():
 		_open_offline(report)
@@ -98,6 +110,8 @@ func _layout() -> void:
 		var world_w := view.x - side - 36.0
 		_scroller.position = Vector2(12, hud_h)
 		_scroller.size = Vector2(world_w, view.y - hud_h)
+		_scroller.zoom = clampf(world_w / 960.0, 1.0, 1.7)
+		_scroller.scroll_to(_scroller.scroll)
 		_panel.set_docked(true)
 		_panel.visible = true
 		_panel.position = Vector2(view.x - side - 12.0, hud_h + 12.0)
@@ -106,6 +120,8 @@ func _layout() -> void:
 	else:
 		_scroller.position = Vector2(0, hud_h - 8.0)
 		_scroller.size = Vector2(view.x, view.y - hud_h + 8.0)
+		_scroller.zoom = 1.0
+		_scroller.scroll_to(_scroller.scroll)
 		_panel.set_docked(false)
 		_panel.custom_minimum_size = Vector2(view.x, 0)
 		_panel.size = Vector2(view.x, 0)
@@ -144,6 +160,8 @@ func _refresh() -> void:
 		_panel.refresh()
 		if not _wide:
 			_place_sheet()
+		else:
+			_panel.reset_size()
 
 
 func _on_settings_changed() -> void:
@@ -195,25 +213,30 @@ func _open_settings() -> void:
 			else:
 				confirm_reset[0] = true
 				reset.text = tr("RESET_CONFIRM"), &"RedButton")
-		m.text(tr("CREDITS"), 16, Color(1, 1, 1, 0.5))
-		m.button(tr("CLOSE"), func(): _modal.close(), &"DarkButton"))
+		m.text(tr("CREDITS"), 16, Art.INK_SOFT)
+		m.button(tr("CLOSE"), func(): _modal.close(), &"CreamButton"))
+
+
+func _open_avatar() -> void:
+	_modal.open(func(m: Modal):
+		AvatarEditor.build(m, func(): _modal.close()))
 
 
 func _open_prestige() -> void:
 	_modal.open(func(m: Modal):
 		m.title(tr("PRESTIGE"))
-		m.text(tr("OCEAN") % (GameState.prestige_count + 1), 26, Color("bff6ff"))
+		m.text(tr("OCEAN") % (GameState.prestige_count + 1), 26, Color("1c7fb8"))
 		var mult := Balance.prestige_mult(GameState.prestige_count + 1)
 		m.text(tr("PRESTIGE_DESC") % NumFormat.short(mult))
 		if GameState.next_depth() != "":
-			m.text(tr("PRESTIGE_NEED_DEPTHS"), 24, Color("ffb3b3"))
+			m.text(tr("PRESTIGE_NEED_DEPTHS"), 24, Color("d8363c"))
 		var go := m.button(tr("PRESTIGE_GO") % NumFormat.short(GameState.prestige_cost()), func():
 			if GameState.prestige():
 				Sfx.play("prestige")
 				_modal.close()
 				_scroller.scroll_to(0.0), &"GoldButton")
 		go.disabled = not GameState.can_prestige()
-		m.button(tr("CLOSE"), func(): _modal.close(), &"DarkButton"))
+		m.button(tr("CLOSE"), func(): _modal.close(), &"CreamButton"))
 
 
 func _open_offline(report: Dictionary) -> void:

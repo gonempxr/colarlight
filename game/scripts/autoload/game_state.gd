@@ -13,6 +13,11 @@ signal cycle_finished(key: String, amount: float)
 signal milestone_reached(key: String, level: int)
 signal rush_started
 signal coins_earned(amount: float)
+## Player actions, for character reactions and sounds.
+signal upgraded(key: String, count: int)
+signal manager_hired(key: String)
+signal depth_opened(key: String)
+signal tapped(key: String)
 
 const SAVE_VERSION := 2
 const RUSH_PER_TAP := 0.08
@@ -236,6 +241,7 @@ func upgrade(key: String, count: int = 1) -> bool:
 	levels[key] = get_level(key) + count
 	if Balance.milestones(levels[key]) > before:
 		milestone_reached.emit(key, levels[key])
+	upgraded.emit(key, count)
 	changed.emit()
 	return true
 
@@ -245,6 +251,7 @@ func open_depth(key: String) -> bool:
 		return false
 	coins -= unlock_cost(key)
 	levels[key] = 1
+	depth_opened.emit(key)
 	changed.emit()
 	return true
 
@@ -254,6 +261,7 @@ func hire_manager(key: String) -> bool:
 		return false
 	coins -= manager_cost(key)
 	managers[key] = true
+	manager_hired.emit(key)
 	changed.emit()
 	return true
 
@@ -263,6 +271,7 @@ func tap(key: String) -> bool:
 	if not is_open(key):
 		return false
 	_add_rush()
+	tapped.emit(key)
 	if _timer[key] >= 0.0:
 		return false
 	return _start_cycle(key)

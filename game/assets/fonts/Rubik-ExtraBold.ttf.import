@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://c1k2lu26sqla"
-path="res://.godot/imported/Nunito-Bold.ttf-e301dd6fbe168d4b494ffe849f591c35.fontdata"
+uid="uid://ngu3okl0ityu"
+path="res://.godot/imported/Rubik-ExtraBold.ttf-af4e12247bc07eb8783a7016aa1c66e3.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/Nunito-Bold.ttf"
-dest_files=["res://.godot/imported/Nunito-Bold.ttf-e301dd6fbe168d4b494ffe849f591c35.fontdata"]
+source_file="res://assets/fonts/Rubik-ExtraBold.ttf"
+dest_files=["res://.godot/imported/Rubik-ExtraBold.ttf-af4e12247bc07eb8783a7016aa1c66e3.fontdata"]
 
 [params]
 
