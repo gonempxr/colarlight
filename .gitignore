@@ -2,3 +2,5 @@
 build/
 *.tmp
 balance/__pycache__/
+deliver/
+screenshots/
