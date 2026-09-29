@@ -16,21 +16,28 @@ const AUTOSAVE_SEC := 10.0
 ## Dive sites from shallow to deep. value = coins/s per level; cost0 = price
 ## of level 1 -> 2; unlock = price to open; manager = price of its foreman;
 ## cycle = seconds for one dive (down, 3 hits, up), longer when deeper.
+## Divers work on their own; a site's manager (foreman) doubles its output.
 const DEPTHS: Array[Dictionary] = [
-	{"id": "shells", "value": 0.8, "cost0": 6.0, "unlock": 0.0, "manager": 20.0, "cycle": 4.0},
-	{"id": "coral", "value": 6.0, "cost0": 60.0, "unlock": 50.0, "manager": 50.0, "cycle": 4.8},
-	{"id": "pearl", "value": 45.0, "cost0": 600.0, "unlock": 9.0e4, "manager": 2.7e4, "cycle": 5.6},
-	{"id": "copper", "value": 320.0, "cost0": 6.0e3, "unlock": 7.0e5, "manager": 2.1e5, "cycle": 6.4},
-	{"id": "emerald", "value": 2300.0, "cost0": 6.0e4, "unlock": 1.7e6, "manager": 5.1e5, "cycle": 7.2},
-	{"id": "crystal", "value": 1.6e4, "cost0": 6.0e5, "unlock": 3.8e6, "manager": 1.1e6, "cycle": 8.0},
+	{"id": "shells", "value": 0.8, "cost0": 6.0, "unlock": 0.0, "manager": 400.0, "cycle": 4.0},
+	{"id": "coral", "value": 6.0, "cost0": 60.0, "unlock": 50.0, "manager": 2.5e3, "cycle": 4.8},
+	{"id": "pearl", "value": 45.0, "cost0": 600.0, "unlock": 9.0e4, "manager": 1.5e5, "cycle": 5.6},
+	{"id": "copper", "value": 320.0, "cost0": 6.0e3, "unlock": 7.0e5, "manager": 1.2e6, "cycle": 6.4},
+	{"id": "emerald", "value": 2300.0, "cost0": 6.0e4, "unlock": 1.7e6, "manager": 3.4e6, "cycle": 7.2},
+	{"id": "crystal", "value": 1.6e4, "cost0": 6.0e5, "unlock": 3.8e6, "manager": 7.6e6, "cycle": 8.0},
 ]
+const FOREMAN_MULT := 2.0
 
-## Boat: carries ore from the dive sites to the shore. Plant: turns ore into coins.
-const BOAT := {"value": 1.5, "cost0": 8.0, "manager": 30.0, "cycle": 5.0}
-const PLANT := {"value": 1.7, "cost0": 10.0, "manager": 15.0, "cycle": 3.0}
+## Boat: carries ore from the dive sites to the shore. Plant: turns ore into
+## coins. Both run on taps until their manager automates them for good
+## (the automation survives a Dive).
+const BOAT := {"value": 1.5, "cost0": 8.0, "manager": 25.0, "cycle": 5.0}
+const PLANT := {"value": 1.7, "cost0": 10.0, "manager": 45.0, "cycle": 3.0}
 
-const PRESTIGE_COST := 6.3e7
-const PRESTIGE_COST_GROWTH := 8.0
+## A tap on a working stage pushes its cycle forward by this share.
+const TAP_BOOST := 0.1
+
+const PRESTIGE_COST := 5.0e7
+const PRESTIGE_COST_GROWTH := 6.0
 const PRESTIGE_MULT_STEP := 3.0
 
 

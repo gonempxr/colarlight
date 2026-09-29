@@ -85,8 +85,12 @@ func test_title() -> void:
 		return
 	var row: Control = main._world.rows[0]
 	var p: Vector2 = _world_to_screen(row.position + Vector2(row.deposit_pos().x - 40, 150))
+	var taps := [0]
+	var count := func(_k: String) -> void: taps[0] += 1
+	gs.tapped.connect(count)
 	await _click(p)
-	check(gs.cycle_progress("d0") < 0.0, "title blocks taps on the scene")
+	gs.tapped.disconnect(count)
+	check(taps[0] == 0, "title blocks taps on the scene")
 	await _click(_center(title._play))
 	await create_timer(0.8).timeout
 	await _frames(2)
@@ -96,9 +100,13 @@ func test_title() -> void:
 func test_tap_dive() -> void:
 	var row: Control = main._world.rows[0]
 	var p: Vector2 = _world_to_screen(row.position + Vector2(row.deposit_pos().x - 40, 150))
-	check(gs.cycle_progress("d0") < 0.0, "site idle before tap")
+	check(gs.cycle_progress("d0") >= 0.0, "divers work without taps")
+	var taps := [0]
+	var count := func(k: String) -> void: if k == "d0": taps[0] += 1
+	gs.tapped.connect(count)
 	await _click(p)
-	check(gs.cycle_progress("d0") >= 0.0, "tapping the site starts a dive")
+	gs.tapped.disconnect(count)
+	check(taps[0] == 1, "tapping the site boosts the dive")
 
 
 func test_upgrade_sheet() -> void:

@@ -20,6 +20,7 @@ func _initialize() -> void:
 	test_formulas()
 	test_bulk_and_affordable()
 	test_tap_runs_one_cycle()
+	test_foreman_and_kept_automation()
 	test_chain_moves_ore_to_coins()
 	test_manager_loops()
 	test_boat_waits_for_ore()
@@ -82,16 +83,44 @@ func test_bulk_and_affordable() -> void:
 
 func test_tap_runs_one_cycle() -> void:
 	var gs := _fresh()
-	check(gs.cycle_progress("d0") < 0.0, "idle before tap")
+	check(gs.is_auto("d0") and not gs.is_auto("boat") and not gs.is_auto("plant"), "divers work alone, boat and plant need taps")
+	check(gs.cycle_progress("d0") < 0.0, "idle before the first tick")
 	check(gs.tap("d0"), "tap starts dive")
-	check(not gs.tap("d0"), "second tap while diving doesn't restart")
 	gs.advance(gs.cycle_time("d0") * 0.5)
 	check(near(gs.cycle_progress("d0"), 0.5), "halfway through the dive")
-	gs.advance(gs.cycle_time("d0"))
+	check(gs.tap("d0"), "tap while diving helps")
+	check(near(gs.cycle_progress("d0"), 0.5 + Balance.TAP_BOOST), "tap pushes the dive forward")
+	gs.advance(gs.cycle_time("d0") * (0.5 - Balance.TAP_BOOST))
 	check(near(gs.hold, gs.cycle_capacity("d0")), "one dive delivers one load")
-	check(gs.cycle_progress("d0") < 0.0, "without manager stops after one cycle")
+	check(gs.cycle_progress("d0") >= 0.0, "divers go again on their own")
+	check(gs.tap("boat"), "boat sails on tap")
+	gs.advance(gs.cycle_time("boat"))
+	check(gs.cycle_progress("boat") < 0.0, "boat without captain stops after one trip")
 	check(not gs.tap("d1"), "closed site can't be tapped")
 	gs.free()
+
+
+func test_foreman_and_kept_automation() -> void:
+	var gs := _fresh()
+	var base: float = gs.rate("d0")
+	gs.coins = 1e6
+	check(gs.hire_manager("d0"), "hire foreman")
+	check(near(gs.rate("d0"), base * Balance.FOREMAN_MULT), "foreman doubles the site")
+	check(gs.hire_manager("boat") and gs.hire_manager("plant"), "hire captain and plant manager")
+	check(gs.is_auto("boat") and gs.is_auto("plant"), "boat and plant automated")
+	for key in gs.stage_keys():
+		gs.levels[key] = maxi(1, gs.levels[key])
+	gs.coins = 1e12
+	check(gs.prestige(), "dive")
+	check(gs.is_auto("boat") and gs.is_auto("plant"), "automation survives the dive")
+	check(not gs.has_manager("d0"), "foremen are hired again")
+	gs.boost_left = 10.0
+	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0 * 2.0), "boost doubles income")
+	gs.bonus = {"plant": 1.5}
+	gs.boost_left = 0.0
+	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0 * 1.5), "stage bonus applies")
+	gs.free()
+	DirAccess.remove_absolute(TEST_SAVE)
 
 
 func test_chain_moves_ore_to_coins() -> void:
@@ -210,7 +239,9 @@ func test_rush() -> void:
 
 func test_offline_only_with_managers() -> void:
 	var gs := _fresh()
-	check(gs.simulate_offline(3600.0) == 0.0, "nothing offline without managers")
+	check(gs.simulate_offline(3600.0) == 0.0, "no coins offline without boat and plant managers")
+	check(gs.hold > 0.0, "divers still fill the raft offline")
+	gs.hold = 0.0
 	for key in ["d0", "boat", "plant"]:
 		gs.managers[key] = true
 	gs.levels["d0"] = 20
@@ -286,7 +317,7 @@ func test_prestige() -> void:
 	check(gs.get_level("d1") == 0 and gs.get_level("plant") == 1, "levels reset")
 	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0), "income x3 after first prestige")
 	check(before > 0.0, "sanity")
-	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * 8.0), "next prestige costs more")
+	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * Balance.PRESTIGE_COST_GROWTH), "next prestige costs more")
 	gs.free()
 	DirAccess.remove_absolute(TEST_SAVE)
 

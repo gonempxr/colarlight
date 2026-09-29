@@ -3,7 +3,10 @@ extends Node
 ## Registered as the GameState autoload. UI only reads from here and calls actions.
 ##
 ## Stage keys: "d0".."d5" (dive sites, shallow to deep), "boat", "plant".
-## A stage without a manager runs one cycle per tap; with a manager it loops.
+## Divers always work on their own; a tap pushes their dive forward and a
+## site's manager (foreman) doubles its output. The boat and the plant run
+## one cycle per tap until their manager automates them; that automation
+## is kept through a Dive (prestige).
 ## Divers put ore into `hold` (at the boat), the boat moves it to `dock`
 ## (on shore), the plant turns dock ore into coins.
 
@@ -39,6 +42,11 @@ var hold := 0.0
 var dock := 0.0
 var rush_meter := 0.0
 var rush_left := 0.0
+## Income x2 boost (from pearls, rewards) and its seconds left.
+var boost_left := 0.0
+## Extra multipliers per stage key from artifacts and the like ("all" = every
+## stage). Filled by Progress; not saved here.
+var bonus: Dictionary = {}
 
 ## Per-stage cycle state: seconds elapsed in the current cycle (-1 = idle)
 ## and the amount the cycle carries.
@@ -74,15 +82,18 @@ func reset() -> void:
 	coins = 0.0
 	total_earned = 0.0
 	prestige_count = 0
+	boost_left = 0.0
+	managers = {}
 	_reset_run()
 
 
-func _reset_run() -> void:
+func _reset_run(keep_automation: bool = false) -> void:
+	var kept := {"boat": managers.get("boat", false), "plant": managers.get("plant", false)} if keep_automation else {}
 	levels = {}
 	managers = {}
 	for key in stage_keys():
 		levels[key] = 0
-		managers[key] = false
+		managers[key] = kept.get(key, false)
 		_timer[key] = -1.0
 		_load[key] = 0.0
 	levels["d0"] = 1
@@ -132,12 +143,20 @@ func is_open(key: String) -> bool:
 
 
 func income_mult() -> float:
-	return Balance.prestige_mult(prestige_count)
+	return Balance.prestige_mult(prestige_count) * (2.0 if boost_left > 0.0 else 1.0) * float(bonus.get("all", 1.0))
+
+
+## Does this stage start its next cycle by itself?
+func is_auto(key: String) -> bool:
+	return depth_index(key) >= 0 or has_manager(key)
 
 
 ## Coins per second this stage can handle.
 func rate(key: String) -> float:
-	return Balance.output(stage_data(key)["value"], get_level(key)) * income_mult()
+	var r := Balance.output(stage_data(key)["value"], get_level(key)) * income_mult() * float(bonus.get(key, 1.0))
+	if depth_index(key) >= 0 and has_manager(key):
+		r *= Balance.FOREMAN_MULT
+	return r
 
 
 func dives_rate() -> float:
@@ -266,14 +285,17 @@ func hire_manager(key: String) -> bool:
 	return true
 
 
-## Player tapped a stage: starts a cycle if idle and fills the rush meter.
+## Player tapped a stage: starts the cycle if idle, otherwise pushes the
+## running one forward a little. Also fills the rush meter.
+## Returns true when something happened.
 func tap(key: String) -> bool:
 	if not is_open(key):
 		return false
 	_add_rush()
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
-		return false
+		_timer[key] += Balance.TAP_BOOST * cycle_time(key)
+		return true
 	return _start_cycle(key)
 
 
@@ -282,7 +304,7 @@ func prestige() -> bool:
 		return false
 	prestige_count += 1
 	coins = 0.0
-	_reset_run()
+	_reset_run(true)
 	changed.emit()
 	save_game()
 	return true
@@ -295,10 +317,11 @@ func advance(seconds: float) -> void:
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
+	boost_left = maxf(0.0, boost_left - seconds)
 	for key in stage_keys():
 		if not is_open(key):
 			continue
-		if _timer[key] < 0.0 and has_manager(key):
+		if _timer[key] < 0.0 and is_auto(key):
 			_start_cycle(key)
 		if _timer[key] < 0.0:
 			continue
@@ -306,7 +329,7 @@ func advance(seconds: float) -> void:
 		while _timer[key] >= cycle_time(key):
 			var leftover: float = _timer[key] - cycle_time(key)
 			_finish_cycle(key)
-			if not has_manager(key) or not _start_cycle(key):
+			if not is_auto(key) or not _start_cycle(key):
 				break
 			_timer[key] = leftover
 
@@ -360,15 +383,11 @@ func _add_rush() -> void:
 		rush_started.emit()
 
 
-## Time away: only stages with managers work. Uses smooth flows instead of
-## cycles so 8 hours cost a few thousand cheap steps.
+## Time away: divers and automated stages keep working. Uses smooth flows
+## instead of cycles so 8 hours cost a few thousand cheap steps.
 func simulate_offline(seconds: float) -> float:
 	var earned := 0.0
-	var dives := 0.0
-	for i in Balance.DEPTHS.size():
-		var key := "d%d" % i
-		if has_manager(key):
-			dives += rate(key)
+	var dives := dives_rate()
 	var boat := rate("boat") if has_manager("boat") else 0.0
 	var plant := rate("plant") if has_manager("plant") else 0.0
 	var left := seconds
@@ -403,6 +422,7 @@ func save_game() -> bool:
 		"managers": managers,
 		"hold": hold,
 		"dock": dock,
+		"boost_left": boost_left,
 	}
 	# Write to a temp file and swap, so a crash mid-write can't corrupt the save.
 	var tmp_path := save_path + ".tmp"
@@ -431,6 +451,7 @@ func load_game() -> bool:
 	var now := Time.get_unix_time_from_system()
 	var away := clampf(now - _num(data.get("saved_at"), now), 0.0, Balance.OFFLINE_CAP_SEC)
 	var earned := simulate_offline(away)
+	boost_left = maxf(0.0, boost_left - away)
 	if away >= Balance.OFFLINE_MIN_REPORT_SEC and earned >= 1.0:
 		_offline_report = {"seconds": away, "coins": earned}
 	changed.emit()
@@ -474,6 +495,7 @@ func _apply_save(data: Dictionary) -> void:
 			closed = true
 	hold = maxf(0.0, _num(data.get("hold"), 0.0))
 	dock = maxf(0.0, _num(data.get("dock"), 0.0))
+	boost_left = clampf(_num(data.get("boost_left"), 0.0), 0.0, 24.0 * 3600.0)
 
 
 static func _num(value, fallback: float) -> float:

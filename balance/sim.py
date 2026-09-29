@@ -24,10 +24,13 @@ DEPTHS = [
 ]
 BOAT = {"value": 1.5, "cost0": 8}
 PLANT = {"value": 1.7, "cost0": 10}
-# Stage runs only on taps until its manager is hired.
+# Dive sites work on their own from the start. The boat and the plant run
+# only on taps (at this efficiency) until their manager is hired.
 TAP_EFFICIENCY = 0.35
-MANAGER_COST = {"plant": 15, "boat": 30, "d0": 20, "d1": 50, "d2": 2.7e4, "d3": 2.1e5, "d4": 5.1e5, "d5": 1.1e6}
-PRESTIGE_COSTS = [6.3e7, 6.3e7 * 8, 6.3e7 * 64]   # need all depths open + this many coins
+# A dive site's foreman doubles its output.
+FOREMAN_MULT = 2.0
+MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3, "d2": 1.5e5, "d3": 1.2e6, "d4": 3.4e6, "d5": 7.6e6}
+PRESTIGE_COSTS = [5e7, 5e7 * 6, 5e7 * 36]   # need all depths open + this many coins
 PRESTIGE_MULT = [3, 9, 27]                        # income multiplier after 1st, 2nd, 3rd prestige
 
 DT = 1.0
@@ -47,18 +50,18 @@ def up_cost(cost0: float, level: int) -> float:
 
 
 class Game:
-    def __init__(self, mult: float = 1.0):
+    def __init__(self, mult: float = 1.0, keep=()):
         self.coins = 0.0
         self.depth_lv = [1] + [0] * (len(DEPTHS) - 1)
         self.boat_lv = 1
         self.plant_lv = 1
-        self.managers = set()
+        self.managers = set(keep)
         self.mult = mult
 
     def stage_rates(self):
         dives = 0.0
         for k, d in enumerate(DEPTHS):
-            eff = 1.0 if f"d{k}" in self.managers else TAP_EFFICIENCY
+            eff = FOREMAN_MULT if f"d{k}" in self.managers else 1.0
             dives += output(d["value"], self.depth_lv[k]) * eff
         boat = output(BOAT["value"], self.boat_lv) * (1.0 if "boat" in self.managers else TAP_EFFICIENCY)
         plant = output(PLANT["value"], self.plant_lv) * (1.0 if "plant" in self.managers else TAP_EFFICIENCY)
@@ -143,8 +146,8 @@ def best_option(g: Game):
     return best
 
 
-def run(mult: float, prestige_cost: float, trace: bool, max_t: float = 12 * 3600):
-    g = Game(mult)
+def run(mult: float, prestige_cost: float, trace: bool, max_t: float = 12 * 3600, keep=()):
+    g = Game(mult, keep)
     t = 0.0
     events = []
     target = best_option(g)
@@ -183,8 +186,11 @@ def fmt(t: float) -> str:
 def main():
     trace = "--trace" in sys.argv
     mult = 1.0
+    keep = ()
     for i, cost in enumerate(PRESTIGE_COSTS):
-        t, events, g = run(mult, cost, trace)
+        t, events, g = run(mult, cost, trace, keep=keep)
+        # Boat and plant automation is permanent: it survives a dive.
+        keep = tuple(m for m in g.managers if m in ("boat", "plant"))
         print(f"=== Run {i + 1} (income x{mult:g}) ===")
         for et, label in events:
             print(f"  {fmt(et)}  {label}")
