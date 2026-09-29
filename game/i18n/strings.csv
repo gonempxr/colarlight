@@ -221,3 +221,48 @@ TUT_TAP_PLANT,Tap the plant to turn ore into coins,Тапни по заводу 
 TUT_HIRE_BOAT,Hire a captain: the boat will sail by itself!,Найми капитана — лодка будет плавать сама!,Contrata un capitán: ¡el barco navegará solo!,雇用船长：运输船会自动航行！
 TUT_HIRE_PLANT,Hire a chief: the plant will work by itself!,Найми начальника — завод будет работать сам!,Contrata un jefe: ¡la planta trabajará sola!,雇用厂长：加工厂会自动工作！
 TUT_OPEN_DEPTH,Unlock a new depth with more treasure!,Открой новую глубину — там больше сокровищ!,¡Desbloquea una nueva profundidad con más tesoros!,解锁新的深度，那里有更多宝藏！
+DEPTH_AMBER,Amber Cove,Янтарная бухта,Cala de Ámbar,琥珀湾
+DEPTH_SAPPHIRE,Sapphire Reef,Сапфировый риф,Arrecife de Zafiro,蓝宝石礁
+DEPTH_GOLD,Golden Wreck,Золотой затонувший корабль,Pecio Dorado,黄金沉船
+DEPTH_RUBY,Ruby Rift,Рубиновая расщелина,Grieta de Rubí,红宝石裂谷
+DEPTH_ICE,Frost Cave,Ледяная пещера,Cueva Helada,冰霜洞穴
+DEPTH_LAVA,Lava Vents,Вулканические жерла,Fumarolas de Lava,熔岩喷口
+DEPTH_JADE,Jade Maze,Нефритовый лабиринт,Laberinto de Jade,玉石迷宫
+DEPTH_MOON,Moonstone Shelf,Лунная отмель,Repisa Lunar,月光石架
+DEPTH_FOSSIL,Fossil Bed,Кладбище окаменелостей,Lecho Fósil,化石层
+DEPTH_OBSIDIAN,Obsidian Canyon,Обсидиановый каньон,Cañón de Obsidiana,黑曜石峡谷
+DEPTH_GLOW,Glow Garden,Светящийся сад,Jardín Luminoso,荧光花园
+DEPTH_ATLANTIS,Atlantis Ruins,Руины Атлантиды,Ruinas de la Atlántida,亚特兰蒂斯遗迹
+DEPTH_METEOR,Meteor Crater,Метеоритный кратер,Cráter del Meteorito,陨石坑
+DEPTH_KRAKEN,Kraken's Lair,Логово кракена,Guarida del Kraken,海怪巢穴
+DEPTH_STAR,Star Abyss,Звёздная бездна,Abismo Estelar,星光深渊
+BOAT_STAGE_1,Rowboat,Вёсельная лодка,Bote de remos,划艇
+BOAT_STAGE_2,Sailboat,Парусник,Velero,帆船
+BOAT_STAGE_3,Fishing Boat,Рыбацкий катер,Barco pesquero,渔船
+BOAT_STAGE_4,Motor Launch,Моторный катер,Lancha a motor,摩托艇
+BOAT_STAGE_5,Steam Tug,Паровой буксир,Remolcador de vapor,蒸汽拖船
+BOAT_STAGE_6,Cargo Trawler,Грузовой траулер,Arrastrero de carga,货运拖网船
+BOAT_STAGE_7,Paddle Steamer,Колёсный пароход,Vapor de ruedas,明轮船
+BOAT_STAGE_8,Coastal Freighter,Каботажное судно,Carguero costero,近海货轮
+BOAT_STAGE_9,Hovercraft,Судно на воздушной подушке,Aerodeslizador,气垫船
+BOAT_STAGE_10,Catamaran,Катамаран,Catamarán,双体船
+BOAT_STAGE_11,Hydrofoil,Судно на подводных крыльях,Hidroala,水翼船
+BOAT_STAGE_12,Container Ship,Контейнеровоз,Portacontenedores,集装箱船
+BOAT_STAGE_13,Sub-Carrier,Подлодка-грузовоз,Submarino de carga,潜水货船
+BOAT_STAGE_14,Golden Yacht,Золотая яхта,Yate dorado,黄金游艇
+BOAT_STAGE_15,Crystal Ark,Кристальный ковчег,Arca de cristal,水晶方舟
+PLANT_STAGE_1,Sorting Tent,Палатка сортировки,Carpa de clasificación,分拣帐篷
+PLANT_STAGE_2,Wooden Shack,Деревянная хижина,Choza de madera,木棚
+PLANT_STAGE_3,Gear Workshop,Мастерская с шестерёнкой,Taller de engranajes,齿轮工坊
+PLANT_STAGE_4,Small Factory,Маленький завод,Pequeña fábrica,小工厂
+PLANT_STAGE_5,Brick Works,Кирпичный завод,Fábrica de ladrillo,砖厂
+PLANT_STAGE_6,Conveyor Hall,Конвейерный цех,Nave de cintas,传送带车间
+PLANT_STAGE_7,Twin Chimneys,Завод с двумя трубами,Doble chimenea,双烟囱工厂
+PLANT_STAGE_8,Refinery,Перерабатывающий комбинат,Refinería,精炼厂
+PLANT_STAGE_9,Crystal Lab,Кристальная лаборатория,Laboratorio de cristal,水晶实验室
+PLANT_STAGE_10,Solar Factory,Солнечный завод,Fábrica solar,太阳能工厂
+PLANT_STAGE_11,Turbine Plant,Турбинный завод,Planta de turbinas,涡轮工厂
+PLANT_STAGE_12,Glass Dome,Стеклянный купол,Cúpula de cristal,玻璃穹顶
+PLANT_STAGE_13,Robot Factory,Завод роботов,Fábrica de robots,机器人工厂
+PLANT_STAGE_14,Golden Palace,Золотой дворец,Palacio dorado,黄金宫殿
+PLANT_STAGE_15,Coral Citadel,Коралловая цитадель,Ciudadela de coral,珊瑚城堡

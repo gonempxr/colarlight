@@ -18,6 +18,7 @@ var _scroller: Scroller
 var _world: World
 var _panel: UpgradePanel
 var _dock: Dock
+var _dock_laid_out := false
 var _modal: Modal
 ## Second dialog layer above the first (names, feature news).
 var _top: Modal
@@ -167,7 +168,7 @@ func _apply_ui_scale() -> void:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	_wide = view.x > view.y * WIDE_ASPECT
-	var dock_h := DOCK_H if _dock.visible else 0.0
+	var dock_h := DOCK_H if _dock_laid_out else 0.0
 	_hud.position = Vector2.ZERO
 	_hud.size = Vector2(view.x, HUD_H)
 	if _wide:
@@ -247,8 +248,11 @@ func _refresh() -> void:
 				_place_sheet()
 		else:
 			_panel.reset_size()
+	# The dock shows itself when a feature opens (Dock.refresh), so compare
+	# with what the layout last made room for, not with its visibility.
 	var dock_shown := _dock.count() > 0
-	if dock_shown != _dock.visible or (dock_shown and _dock.size.y < 1.0):
+	if dock_shown != _dock_laid_out:
+		_dock_laid_out = dock_shown
 		_dock.visible = dock_shown
 		_layout()
 		if dock_shown and not Settings.reduce_motion:

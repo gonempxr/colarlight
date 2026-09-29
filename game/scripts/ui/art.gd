@@ -44,6 +44,21 @@ const DEPTH_STYLE: Array[Dictionary] = [
 	{"rock": Color("927668"), "floor": Color("c8ab94"), "ore": Color("f08a45"), "ore2": Color("ffc185"), "suit": Color("7fd34e"), "water": Color("1a5692"), "deco": "wreck"},
 	{"rock": Color("51817c"), "floor": Color("8cb8aa"), "ore": Color("3ee08f"), "ore2": Color("b0ffd9"), "suit": Color("9b72ff"), "water": Color("15457c"), "deco": "kelp"},
 	{"rock": Color("45427a"), "floor": Color("7470b0"), "ore": Color("b58cff"), "ore2": Color("f0e3ff"), "suit": Color("2de2c5"), "water": Color("102e60"), "deco": "glow"},
+	{"rock": Color("b07a3c"), "floor": Color("e8c07a"), "ore": Color("ffb52e"), "ore2": Color("ffe08a"), "suit": Color("ff7043"), "water": Color("135a8a"), "deco": "amber"},  # amber
+	{"rock": Color("3d5a9e"), "floor": Color("8aa6de"), "ore": Color("2f6bff"), "ore2": Color("9cc3ff"), "suit": Color("ffd23f"), "water": Color("114a82"), "deco": "coral"},  # sapphire
+	{"rock": Color("8a6a3a"), "floor": Color("c9a86a"), "ore": Color("ffd23f"), "ore2": Color("fff1a8"), "suit": Color("ef5350"), "water": Color("0f3f74"), "deco": "wreck"},  # gold
+	{"rock": Color("7a3a4a"), "floor": Color("c47a88"), "ore": Color("ff2d55"), "ore2": Color("ff9fb4"), "suit": Color("3ee08f"), "water": Color("0e3868"), "deco": "crystals"},  # ruby
+	{"rock": Color("7fa6c4"), "floor": Color("d6ecfa"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("0d325f"), "deco": "ice"},  # ice
+	{"rock": Color("5a2e2a"), "floor": Color("a8543a"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("0c2a52"), "deco": "lava"},  # lava
+	{"rock": Color("2f6a5a"), "floor": Color("7ab8a0"), "ore": Color("2fd08a"), "ore2": Color("c8ffe6"), "suit": Color("ff8a3d"), "water": Color("0b2648"), "deco": "kelp"},  # jade
+	{"rock": Color("4a4a6e"), "floor": Color("9a9ac8"), "ore": Color("e6e8ff"), "ore2": Color("ffffff"), "suit": Color("5cd05f"), "water": Color("0a2140"), "deco": "glow"},  # moon
+	{"rock": Color("6a5a48"), "floor": Color("b0a088"), "ore": Color("e8d8b0"), "ore2": Color("fff4dc"), "suit": Color("3aa6f0"), "water": Color("091d38"), "deco": "bones"},  # fossil
+	{"rock": Color("2a2436"), "floor": Color("5e5478"), "ore": Color("8a6cf0"), "ore2": Color("d8c8ff"), "suit": Color("ffd23f"), "water": Color("081a32"), "deco": "crystals"},  # obsidian
+	{"rock": Color("233a4a"), "floor": Color("3e6a7a"), "ore": Color("5affd8"), "ore2": Color("e0fff6"), "suit": Color("ff6fae"), "water": Color("07162c"), "deco": "glow"},  # glow
+	{"rock": Color("3a4a6a"), "floor": Color("8a9ab8"), "ore": Color("ffd98a"), "ore2": Color("fff6d8"), "suit": Color("2de2c5"), "water": Color("061426"), "deco": "ruins"},  # atlantis
+	{"rock": Color("3a2a3a"), "floor": Color("6a5470"), "ore": Color("ff5ae0"), "ore2": Color("ffc8f4"), "suit": Color("7fd34e"), "water": Color("051122"), "deco": "crystals"},  # meteor
+	{"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("040e1c"), "deco": "kelp"},  # kraken
+	{"rock": Color("1a1636"), "floor": Color("3a3470"), "ore": Color("fff27a"), "ore2": Color("ffffff"), "suit": Color("ff5a8a"), "water": Color("030a16"), "deco": "glow"},  # star
 ]
 
 

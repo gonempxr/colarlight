@@ -24,8 +24,28 @@ const DEPTHS: Array[Dictionary] = [
 	{"id": "copper", "value": 320.0, "cost0": 6.0e3, "unlock": 7.0e5, "manager": 1.2e6, "cycle": 6.4},
 	{"id": "emerald", "value": 2300.0, "cost0": 6.0e4, "unlock": 1.7e6, "manager": 3.4e6, "cycle": 7.2},
 	{"id": "crystal", "value": 1.6e4, "cost0": 6.0e5, "unlock": 3.8e6, "manager": 7.6e6, "cycle": 8.0},
+	{"id": "amber", "value": 1.12e05, "cost0": 6e06, "unlock": 3.42e07, "manager": 6.84e07, "cycle": 8.3},
+	{"id": "sapphire", "value": 7.84e05, "cost0": 6e07, "unlock": 3.08e08, "manager": 6.16e08, "cycle": 8.6},
+	{"id": "gold", "value": 5.49e06, "cost0": 6e08, "unlock": 2.77e09, "manager": 5.54e09, "cycle": 8.9},
+	{"id": "ruby", "value": 3.84e07, "cost0": 6e09, "unlock": 2.49e10, "manager": 4.99e10, "cycle": 9.2},
+	{"id": "ice", "value": 2.69e08, "cost0": 6e10, "unlock": 2.24e11, "manager": 4.49e11, "cycle": 9.5},
+	{"id": "lava", "value": 1.88e09, "cost0": 6e11, "unlock": 2.02e12, "manager": 4.04e12, "cycle": 9.8},
+	{"id": "jade", "value": 1.32e10, "cost0": 6e12, "unlock": 1.82e13, "manager": 3.64e13, "cycle": 10.1},
+	{"id": "moon", "value": 9.22e10, "cost0": 6e13, "unlock": 1.64e14, "manager": 3.27e14, "cycle": 10.4},
+	{"id": "fossil", "value": 6.46e11, "cost0": 6e14, "unlock": 1.47e15, "manager": 2.94e15, "cycle": 10.7},
+	{"id": "obsidian", "value": 4.52e12, "cost0": 6e15, "unlock": 1.32e16, "manager": 2.65e16, "cycle": 11.0},
+	{"id": "glow", "value": 3.16e13, "cost0": 6e16, "unlock": 1.19e17, "manager": 2.38e17, "cycle": 11.3},
+	{"id": "atlantis", "value": 2.21e14, "cost0": 6e17, "unlock": 1.07e18, "manager": 2.15e18, "cycle": 11.6},
+	{"id": "meteor", "value": 1.55e15, "cost0": 6e18, "unlock": 9.66e18, "manager": 1.93e19, "cycle": 11.9},
+	{"id": "kraken", "value": 1.09e16, "cost0": 6e19, "unlock": 8.69e19, "manager": 1.74e20, "cycle": 12.0},
+	{"id": "star", "value": 7.6e16, "cost0": 6e20, "unlock": 7.82e20, "manager": 1.56e21, "cycle": 12.0},
 ]
 const FOREMAN_MULT := 2.0
+
+## The boat and the plant change their look (and name) as they grow, like
+## buildings in Clash of Clans: a new stage at every output milestone
+## (level 10, 25, 50, 75...), 15 stages in all.
+const BUILDING_STAGES := 15
 
 ## Boat: carries ore from the dive sites to the shore. Plant: turns ore into
 ## coins. Both run on taps until their manager automates them for good
@@ -76,6 +96,11 @@ static func affordable_levels(cost0: float, level: int, coins: float) -> int:
 	while n > 0 and bulk_cost(cost0, level, n) > coins:
 		n -= 1
 	return n
+
+
+## Look/stage of the boat or the plant at this level: 1..BUILDING_STAGES.
+static func building_stage(level: int) -> int:
+	return clampi(1 + milestones(level), 1, BUILDING_STAGES)
 
 
 static func divers_at(level: int) -> int:
