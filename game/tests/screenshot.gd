@@ -3,7 +3,7 @@ extends SceneTree
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
-## optional overlay: sheet | title | avatar | settings | prestige | quests |
+## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
 ## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial.
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -14,8 +14,10 @@ func _initialize() -> void:
 	var scenario := args[2] if args.size() > 2 else "mid"
 	var scroll := float(args[3]) if args.size() > 3 else 0.0
 	var overlay: String = args[4] if args.size() > 4 else ""
+	var ui_scale := float(args[5]) if args.size() > 5 else 1.0
 	await process_frame
 	root.get_node("Settings").language = lang
+	root.get_node("Settings").ui_scale = ui_scale
 	TranslationServer.set_locale(lang)
 	var gs := root.get_node("GameState")
 	gs.autosave_enabled = false
@@ -43,6 +45,8 @@ func _initialize() -> void:
 		pr.equipped["pet"] = "pet_octopus"
 		pr.stats["puzzles_won"] = 4
 		pr.chest_ready = overlay == "chest"
+		if overlay != "daily":
+			pr.daily_last = pr.today()
 		pr.apply_bonus()
 		pr._fill_quests()
 		pr.quests[0]["count"] = pr.quests[0]["goal"]
@@ -83,6 +87,8 @@ func _initialize() -> void:
 			main.open_players()
 		"tutorial":
 			pr.tutorial_step = 0
+		"toast":
+			main._show_toast(TranslationServer.translate("QUEST_DONE"))
 		"settings":
 			main._open_settings()
 		"prestige":

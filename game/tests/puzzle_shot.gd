@@ -19,13 +19,13 @@ func _initialize() -> void:
 	bg.color = Art.SEA_DEEP
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
-	var screen := PuzzleScreen.new()
+	var screen: Control = load("res://scripts/puzzle/puzzle_screen.gd").new()
 	root.add_child(screen)
 	screen.setup(PuzzleLevels.level(n), func(r: Dictionary) -> Array:
 		return [["coin", "+%d" % (250 * maxi(1, r["fragments"]))], ["pearl", "+%d" % (r["stars"] + 1)]])
 	for i in 20:
 		await process_frame
-	var m := screen.model
+	var m: Match3 = screen.model
 	match mode:
 		"anim":
 			# Specials on the board, then a rocket + bomb combo caught mid-blast.

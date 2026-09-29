@@ -57,7 +57,7 @@ func open(builder: Callable, opts: Dictionary = {}) -> void:
 	_scroll.scroll_vertical = 0
 	rebuild()
 	visible = true
-	_layout.call_deferred()
+	_relayout()
 	_animate_in()
 
 
@@ -67,7 +67,7 @@ func rebuild() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_builder.call(self)
-	_layout.call_deferred()
+	_relayout()
 	(func(): _scroll.scroll_vertical = keep).call_deferred()
 
 
@@ -100,6 +100,14 @@ func _animate_in() -> void:
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.16)
 	_tween.tween_property(_panel, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Wrapped labels only know their real height once they have a width, so
+## the box is measured again a frame later (else it keeps empty space).
+func _relayout() -> void:
+	_layout.call_deferred()
+	await get_tree().process_frame
+	_layout()
 
 
 func _layout() -> void:

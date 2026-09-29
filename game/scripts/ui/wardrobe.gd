@@ -22,7 +22,7 @@ static func build(m: Modal, main: Node) -> void:
 		Art.t_ellipse(ci, c + Vector2(30, 0), Vector2(150, 18), Art.CREAM_DARK, 3.0, 0.0)
 		Chars.person(ci, c + Vector2(0, -4 - absf(sin(tt * 2.2)) * 3.0), 1.9, 1.0, Settings.avatar,
 				{"emotion": "happy", "blink": Chars.blinking(tt, 2.0), "arm_r": 0.3 + sin(tt * 2.0) * 0.1, "arm_l": -0.2, "hold": ""})
-		var pet := Progress.equipped_art("pet")
+		var pet: String = Progress.equipped_art("pet")
 		if pet != "":
 			Art.push(ci, c + Vector2(125, -50 + sin(tt * 2.6) * 6.0), 0.0, Vector2(1.9, 1.9))
 			PetArt.draw(ci, pet, tt, -1.0, true)

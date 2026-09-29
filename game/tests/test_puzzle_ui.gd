@@ -6,7 +6,10 @@ extends SceneTree
 
 var _failures := 0
 var _checks := 0
-var screen: PuzzleScreen
+var screen: Control
+## Loaded at run time: the screen uses autoloads that don't exist yet when
+## this script compiles.
+var PuzzleScreen: GDScript
 var results: Array = []
 
 
@@ -20,6 +23,7 @@ func check(condition: bool, what: String) -> void:
 
 func _initialize() -> void:
 	await process_frame
+	PuzzleScreen = load("res://scripts/puzzle/puzzle_screen.gd")
 	var gs := root.get_node_or_null("GameState")
 	if gs and "autosave_enabled" in gs:
 		gs.autosave_enabled = false
@@ -29,6 +33,8 @@ func _initialize() -> void:
 		if tr_res:
 			TranslationServer.add_translation(tr_res)
 	TranslationServer.set_locale("en")
+	root.size = Vector2i(390, 844)
+	await _frames(4)
 	await test_layout("phone")
 	await test_swaps()
 	await test_out_of_moves()
@@ -139,7 +145,7 @@ func test_layout(label: String) -> void:
 
 func test_swaps() -> void:
 	await _open(3)
-	var m := screen.model
+	var m: Match3 = screen.model
 	var h := m.find_hint()
 	var before := m.moves
 	await _drag(screen.cell_screen_pos(h[0]), screen.cell_screen_pos(h[1]))
@@ -174,7 +180,7 @@ func test_swaps() -> void:
 
 func test_out_of_moves() -> void:
 	await _open(2)
-	var m := screen.model
+	var m: Match3 = screen.model
 	m.fragments_needed = 99
 	m.moves = 1
 	screen._shown_moves = 1
@@ -211,7 +217,7 @@ func test_out_of_moves() -> void:
 
 func test_win() -> void:
 	await _open(1)
-	var m := screen.model
+	var m: Match3 = screen.model
 	m.fragments_collected = m.fragments_needed
 	var h := m.find_hint()
 	var budget: int = screen.level["moves"]
@@ -229,7 +235,7 @@ func test_win() -> void:
 	if results.size() == 1:
 		var r: Dictionary = results[0]
 		check(r["won"] and r["stars"] == 3 and r["moves_left"] == budget - 1 and r["fragments"] == r["fragments_needed"] and r["level"] == 1, "win result: %s" % r)
-	await _frames(40)
+	await create_timer(0.6).timeout   # it fades out first
 	check(not is_instance_valid(screen), "the screen frees itself after finishing")
 
 

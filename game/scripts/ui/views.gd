@@ -238,9 +238,12 @@ static func feature_intro(m: Modal, id: String, on_open: Callable) -> void:
 			Art.grad(ci, PackedVector2Array([c, c + Vector2(cos(a - 0.12), sin(a - 0.12)) * 150.0, c + Vector2(cos(a + 0.12), sin(a + 0.12)) * 150.0]),
 					PackedColorArray([ray, Color(ray, 0.0), Color(ray, 0.0)])), Vector2(0, 170), true)
 	var ic := icon(FEATURE_ICONS.get(id, "star"), 128)
-	ic.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	ic.position -= Vector2(64, 64)
-	burst.add_child(ic)
+	# A full-size CenterContainer keeps the icon centred once the view gets its width.
+	var mid := CenterContainer.new()
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mid.add_child(ic)
+	burst.add_child(mid)
 	var tw := ic.create_tween().set_loops()
 	ic.pivot_offset = Vector2(64, 64)
 	tw.tween_property(ic, "scale", Vector2(1.08, 1.08), 0.5).set_trans(Tween.TRANS_SINE)

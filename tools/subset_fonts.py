@@ -3,7 +3,7 @@
 Rubik (Latin + Cyrillic) is used whole and lives in game/assets/fonts
 already. Noto Sans SC is cut down to
 the Chinese characters the game actually uses, so rerun this after editing
-game/i18n/strings.csv:
+any game/i18n/*.csv:
     python3 tools/subset_fonts.py
 Sources (SIL Open Font License), fetched via fonts.googleapis.com css2:
     Rubik 600/800, Noto Sans SC 700.
@@ -19,9 +19,12 @@ EXTRA = "中文English Русский Español 0123456789%×∞→·+-.,:;!?()�
 
 os.makedirs(OUT, exist_ok=True)
 text = EXTRA
-with open(os.path.join(ROOT, "game", "i18n", "strings.csv"), encoding="utf-8") as f:
-    for row in csv.DictReader(f):
-        text += row["zh"]
+I18N = os.path.join(ROOT, "game", "i18n")
+for name in sorted(os.listdir(I18N)):
+    if name.endswith(".csv"):
+        with open(os.path.join(I18N, name), encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                text += row["zh"]
 chars = sorted({c for c in text if ord(c) > 0x2000 or c in EXTRA})
 
 opts = subset.Options()

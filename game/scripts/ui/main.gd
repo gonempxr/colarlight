@@ -182,6 +182,7 @@ func _layout() -> void:
 		_panel.position = Vector2(view.x - side - 12.0, HUD_H + 12.0)
 		_panel.custom_minimum_size = Vector2(side, 0)
 		_panel.reset_size()
+		_dock.fit(side)
 		_dock.size = Vector2(side, dock_h)
 		_dock.position = Vector2(view.x - side - 12.0, view.y - dock_h)
 	else:
@@ -194,6 +195,7 @@ func _layout() -> void:
 		_panel.size = Vector2(view.x, 0)
 		_panel.visible = _sheet_open
 		_place_sheet()
+		_dock.fit(view.x)
 		_dock.size = Vector2(view.x, dock_h)
 		_dock.position = Vector2(0, view.y - dock_h)
 	_toast.size = Vector2(minf(620.0, view.x - 40.0), 0)
@@ -270,7 +272,15 @@ func _on_milestone(key: String, level: int) -> void:
 
 func _show_toast(text: String) -> void:
 	_toast_label.text = text
+	# Wrapped labels shrink to one word (one character in Chinese), so give
+	# the toast the width its text needs, up to the screen width.
+	var view := get_viewport_rect().size
+	var font := _toast_label.get_theme_font("font")
+	var fs := _toast_label.get_theme_font_size("font_size")
+	var need := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 60.0
+	_toast.custom_minimum_size.x = minf(minf(620.0, view.x - 40.0), need)
 	_toast.reset_size()
+	_toast.position.x = (view.x - _toast.size.x) / 2.0
 	_toast.modulate.a = 1.0
 	_toast.visible = true
 	_toast.pivot_offset = _toast.size / 2.0
@@ -365,7 +375,7 @@ func open_puzzle() -> void:
 	_puzzle = load(PUZZLE_SCRIPT).new()
 	add_child(_puzzle)
 	move_child(_puzzle, _fx.get_index())
-	_puzzle.setup(level)
+	_puzzle.setup(level, _puzzle_rewards)
 	_puzzle.finished.connect(_on_puzzle_finished)
 	_puzzle.tree_exited.connect(func():
 		_puzzle = null
@@ -373,8 +383,14 @@ func open_puzzle() -> void:
 	Sfx.play("start")
 
 
-func _on_puzzle_finished(result: Dictionary) -> void:
+## Called by the puzzle when a level ends (won, or "collect what you got"):
+## grants the rewards and returns the lines its end panel shows.
+var _last_puzzle_reward := {}
+
+
+func _puzzle_rewards(result: Dictionary) -> Array:
 	var r := Progress.puzzle_reward(result)
+	_last_puzzle_reward = r
 	var lines: Array = []
 	if r["coins"] > 0.0:
 		lines.append(["coin", "+" + NumFormat.short(r["coins"])])
@@ -387,8 +403,14 @@ func _on_puzzle_finished(result: Dictionary) -> void:
 		else:
 			var st: Dictionary = Progress.artifacts[id]
 			lines.append(["museum", tr("PIECE_OF") % [tr("ART_" + id.to_upper()), st["pieces"], Progress.pieces_needed(id)]])
-	if is_instance_valid(_puzzle) and _puzzle.has_method("set_rewards"):
-		_puzzle.set_rewards(lines)
+	return lines
+
+
+func _on_puzzle_finished(_result: Dictionary) -> void:
+	# The rewards were given when the level ended; now let them fly home.
+	if not _last_puzzle_reward.is_empty():
+		celebrate({"coins": _last_puzzle_reward["coins"], "pearls": _last_puzzle_reward["pearls"]}, get_viewport_rect().size / 2.0)
+		_last_puzzle_reward = {}
 
 
 # --- Players ------------------------------------------------------------------------------

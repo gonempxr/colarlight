@@ -19,6 +19,7 @@ var _row: HBoxContainer
 var _buttons := {}
 var _badges := {}
 var _t := 0.0
+var _fit_w := 0.0
 
 
 func _ready() -> void:
@@ -52,6 +53,14 @@ func _ready() -> void:
 			Progress.seen(id)
 			pressed.emit(id))
 		_row.add_child(b)
+		# Slimmer side padding than normal buttons so labels fit narrow docks.
+		for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var box := b.get_theme_stylebox(st, StringName(it[3]))
+			if box:
+				box = _copy_box(box)
+				box.content_margin_left = 6
+				box.content_margin_right = 6
+				b.add_theme_stylebox_override(st, box)
 		_buttons[id] = b
 		var badge := Label.new()
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -72,6 +81,17 @@ func _ready() -> void:
 	refresh()
 
 
+## duplicate() drops a script's plain vars (ToonBox colours), so copy them.
+static func _copy_box(src: StyleBox) -> StyleBox:
+	var dst: StyleBox = src.duplicate()
+	for p in src.get_property_list():
+		if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			dst.set(p["name"], src.get(p["name"]))
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		dst.set_content_margin(side, src.get_content_margin(side))
+	return dst
+
+
 ## Number of buttons showing (the dock hides itself when there are none).
 func count() -> int:
 	var n := 0
@@ -79,6 +99,18 @@ func count() -> int:
 		if _buttons[id].visible:
 			n += 1
 	return n
+
+
+## Shrinks the buttons so every one fits in the given width (the PC side
+## column is narrower than a phone screen).
+func fit(width: float) -> void:
+	_fit_w = width
+	var n := maxi(1, count())
+	var w := floorf(minf(118.0, (width - 20.0 - 8.0 * (n - 1)) / n))
+	for id in _buttons:
+		var b: Button = _buttons[id]
+		b.custom_minimum_size.x = w
+		b.add_theme_font_size_override("font_size", 19 if w >= 110.0 else 15)
 
 
 func button(id: String) -> Button:
@@ -109,6 +141,8 @@ func refresh() -> void:
 		badge.visible = Progress.fresh.has(id) or n > 0
 		badge.reset_size()
 	visible = count() > 0
+	if _fit_w > 0.0:
+		fit(_fit_w)
 
 
 func _process(delta: float) -> void:

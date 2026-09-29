@@ -284,15 +284,15 @@ func _draw_island() -> void:
 	if bmood == "rich":
 		Chars.mark(self, "heart", bpos + Vector2(24, -98), _t)
 	# The player's pet floats next to them in a little bubble of sea water.
-	var pet := Progress.equipped_art("pet")
+	var pet: String = Progress.equipped_art("pet")
 	if pet != "":
-		var pp := bpos + Vector2(-50, -34 + sin(_t * 2.4) * 5.0 - (8.0 if bmood == "rich" else 0.0))
-		Art.disc(self, pp, 30.0, Color(0.7, 0.93, 1.0, 0.35))
-		Art.arc(self, pp, 30.0, 0, TAU, 28, Color(1, 1, 1, 0.8), 2.5)
-		Art.push(self, pp, 0.0, Vector2(0.95, 0.95))
+		var pet_at := bpos + Vector2(-50, -34 + sin(_t * 2.4) * 5.0 - (8.0 if bmood == "rich" else 0.0))
+		Art.disc(self, pet_at, 30.0, Color(0.7, 0.93, 1.0, 0.35))
+		Art.arc(self, pet_at, 30.0, 0, TAU, 28, Color(1, 1, 1, 0.8), 2.5)
+		Art.push(self, pet_at, 0.0, Vector2(0.95, 0.95))
 		PetArt.draw(self, pet, _t, -1.0, bmood == "rich")
 		Art.pop(self)
-		Art.arc(self, pp, 23.0, PI * 1.1, PI * 1.4, 6, Color(1, 1, 1, 0.8), 3.0)
+		Art.arc(self, pet_at, 23.0, PI * 1.1, PI * 1.4, 6, Color(1, 1, 1, 0.8), 3.0)
 
 
 func _draw_raft() -> void:

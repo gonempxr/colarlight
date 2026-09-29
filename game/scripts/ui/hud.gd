@@ -58,7 +58,7 @@ func _ready() -> void:
 	psb.content_margin_bottom = 4
 	pill.add_theme_stylebox_override("panel", psb)
 	pill.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
-	pill.custom_minimum_size.x = 300
+	pill.custom_minimum_size.x = 240
 	row.add_child(pill)
 	var mid := VBoxContainer.new()
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
