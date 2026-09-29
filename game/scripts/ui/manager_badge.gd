@@ -19,7 +19,7 @@ func _init(stage_key: String) -> void:
 func _ready() -> void:
 	custom_minimum_size = Vector2(SIZE, SIZE + 20)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	tooltip_text = tr("MANAGER_HINT")
+	tooltip_text = tr("MANAGER_HINT_DEPTH") if key.begins_with("d") else tr("MANAGER_HINT")
 	_t = randf() * 10.0
 
 

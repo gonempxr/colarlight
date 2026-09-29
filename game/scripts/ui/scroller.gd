@@ -1,6 +1,7 @@
 class_name Scroller
 extends Control
-## Vertical scroll view with finger drag, mouse wheel and inertia.
+## Vertical scroll view with finger drag, mouse wheel, inertia and a soft
+## rubber-band stretch past the ends that springs back.
 ## Listens in _input so a drag that starts on a button still scrolls; buttons
 ## ask `Scroller.is_drag()` and ignore the release that ends a drag.
 
@@ -8,7 +9,13 @@ const DRAG_THRESHOLD := 14.0
 const FRICTION := 5.0
 const WHEEL_STEP := 120.0
 
+const STRETCH := 0.35
+const MAX_STRETCH := 140.0
+const SPRING := 14.0
+
 static var _dragged_recently := false
+## Set while a dialog or the puzzle covers the ocean.
+static var locked := false
 
 var content: Control
 var scroll := 0.0
@@ -58,6 +65,10 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
+	if locked:
+		_pressing = false
+		_dragging = false
+		return
 	if event is InputEventMouseButton:
 		var inside := get_global_rect().has_point(event.position)
 		match event.button_index:
@@ -94,7 +105,13 @@ func _input(event: InputEvent) -> void:
 			var dt := maxf(0.001, (now - _last_motion_ms) / 1000.0)
 			_last_motion_ms = now
 			_velocity = lerpf(_velocity, -dy / dt, 0.5)
-			scroll = clampf(scroll - dy, 0.0, max_scroll())
+			# Past an end the content follows the finger less and less.
+			var over := _overshoot()
+			var outward := over != 0.0 and signf(-dy) == signf(over)
+			var k := STRETCH * (1.0 - absf(over) / MAX_STRETCH) if outward else 1.0
+			if over == 0.0 and (scroll - dy < 0.0 or scroll - dy > max_scroll()):
+				k = STRETCH
+			scroll = clampf(scroll - dy * maxf(0.05, k), -MAX_STRETCH, max_scroll() + MAX_STRETCH)
 			_apply()
 
 
@@ -102,14 +119,34 @@ func _clear_drag_flag() -> void:
 	_dragged_recently = false
 
 
+## How far past the top (<0) or bottom (>0) the view is stretched.
+func _overshoot() -> float:
+	if scroll < 0.0:
+		return scroll
+	return maxf(0.0, scroll - max_scroll())
+
+
 func _process(delta: float) -> void:
-	if _pressing or absf(_velocity) < 5.0:
-		if not _pressing:
-			_velocity = 0.0
+	if _pressing:
 		return
-	scroll = clampf(scroll + _velocity * delta, 0.0, max_scroll())
+	var over := _overshoot()
+	if over != 0.0:
+		# Spring back to the end.
+		_velocity = 0.0
+		scroll -= over * (1.0 - exp(-SPRING * delta))
+		if absf(_overshoot()) < 0.5:
+			scroll = clampf(scroll, 0.0, max_scroll())
+		_apply()
+		return
+	if absf(_velocity) < 5.0:
+		_velocity = 0.0
+		return
+	scroll += _velocity * delta
 	_velocity *= exp(-FRICTION * delta)
-	if scroll <= 0.0 or scroll >= max_scroll():
+	if scroll < 0.0 or scroll > max_scroll():
+		# Fling into the end: stretch a little by the leftover speed.
+		var edge := 0.0 if scroll < 0.0 else max_scroll()
+		scroll = edge + clampf(scroll - edge, -MAX_STRETCH * 0.4, MAX_STRETCH * 0.4)
 		_velocity = 0.0
 	_apply()
 
@@ -119,5 +156,6 @@ func _apply() -> void:
 		return
 	content.scale = Vector2(zoom, zoom)
 	content.size.x = size.x / zoom
-	scroll = clampf(scroll, 0.0, max_scroll())
+	if not _pressing and absf(_velocity) < 5.0 and _overshoot() == 0.0:
+		scroll = clampf(scroll, 0.0, max_scroll())
 	content.position = Vector2(0, -scroll)

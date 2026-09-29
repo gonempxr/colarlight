@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ce13p50og32n6"
+
+[deps]
+
+files=["res://i18n/puzzle.en.translation", "res://i18n/puzzle.ru.translation", "res://i18n/puzzle.es.translation", "res://i18n/puzzle.zh.translation"]
+
+source_file="res://i18n/puzzle.csv"
+dest_files=["res://i18n/puzzle.en.translation", "res://i18n/puzzle.ru.translation", "res://i18n/puzzle.es.translation", "res://i18n/puzzle.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

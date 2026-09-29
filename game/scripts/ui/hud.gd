@@ -8,7 +8,11 @@ signal settings_pressed
 signal avatar_pressed
 
 var _coins: Label
+var _coin_icon: TextureRect
 var _rate: Label
+var _pearls: Label
+var _pearl_icon: TextureRect
+var _pearl_bump := 0.0
 var _rush: ProgressBar
 var _rush_label: Label
 var _prestige: Button
@@ -75,12 +79,28 @@ func _ready() -> void:
 	_coins.add_theme_color_override("font_color", Art.GOLD)
 	_coins.add_theme_constant_override("outline_size", 9)
 	coin_row.add_child(_coins)
+	_coin_icon = coin
+	var sub := HBoxContainer.new()
+	sub.alignment = BoxContainer.ALIGNMENT_CENTER
+	sub.add_theme_constant_override("separation", 6)
+	mid.add_child(sub)
 	_rate = Label.new()
 	_rate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rate.add_theme_font_size_override("font_size", 19)
 	_rate.add_theme_color_override("font_color", Color("9ff0c0"))
 	_rate.add_theme_constant_override("outline_size", 5)
-	mid.add_child(_rate)
+	sub.add_child(_rate)
+	_pearl_icon = TextureRect.new()
+	_pearl_icon.texture = Icons.get_icon("pearl", 26)
+	_pearl_icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	_pearl_icon.custom_minimum_size = Vector2(26, 26)
+	sub.add_child(_pearl_icon)
+	_pearls = Label.new()
+	_pearls.add_theme_font_override("font", UiTheme.heavy_font())
+	_pearls.add_theme_font_size_override("font_size", 21)
+	_pearls.add_theme_color_override("font_color", Color("f1e6ff"))
+	_pearls.add_theme_constant_override("outline_size", 6)
+	sub.add_child(_pearls)
 	_rush = ProgressBar.new()
 	_rush.show_percentage = false
 	_rush.max_value = 1.0
@@ -113,7 +133,26 @@ func _ready() -> void:
 	row.add_child(settings)
 	_shown_coins = GameState.coins
 	GameState.coins_earned.connect(func(_a): _bump = 1.0)
+	Progress.pearls_earned.connect(func(_a): _pearl_bump = 1.0)
 	Settings.changed.connect(_avatar.queue_redraw)
+
+
+## Screen points where flying rewards land.
+func coin_target() -> Vector2:
+	return _coin_icon.get_global_rect().get_center()
+
+
+func pearl_target() -> Vector2:
+	if _pearl_icon.visible:
+		return _pearl_icon.get_global_rect().get_center()
+	return _coin_icon.get_global_rect().get_center() + Vector2(0, 40)
+
+
+func bump(kind: String) -> void:
+	if kind == "pearl":
+		_pearl_bump = 1.0
+	else:
+		_bump = 1.0
 
 
 static func _rush_fill() -> ToonBox:
@@ -152,11 +191,23 @@ func _process(delta: float) -> void:
 	_coins.pivot_offset = _coins.size / 2.0
 	_coins.scale = Vector2.ONE * (1.0 + _bump * 0.08)
 	_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(GameState.income_rate())
+	_pearl_bump = maxf(0.0, _pearl_bump - delta * 4.0)
+	var has_pearls := Progress.pearls_total > 0 or Progress.has_feature("shop")
+	_pearl_icon.visible = has_pearls
+	_pearls.visible = has_pearls
+	_pearls.text = str(Progress.pearls)
+	_pearls.pivot_offset = _pearls.size / 2.0
+	_pearls.scale = Vector2.ONE * (1.0 + _pearl_bump * 0.25)
 	var rushing := GameState.is_rushing()
-	_rush.visible = not rushing and GameState.rush_meter > 0.0
+	var boosted := GameState.boost_left > 0.0
+	_rush.visible = not rushing and not boosted and GameState.rush_meter > 0.0
 	_rush.value = GameState.rush_meter
-	_rush_label.visible = rushing
+	_rush_label.visible = rushing or boosted
 	if rushing:
 		_rush_label.text = "%s %d" % [tr("RUSH"), ceili(GameState.rush_left)]
+		_rush_label.add_theme_color_override("font_color", Color("ff9fd0"))
+	elif boosted:
+		_rush_label.text = "×2  %s" % NumFormat.duration(GameState.boost_left)
+		_rush_label.add_theme_color_override("font_color", Art.GOLD)
 	_prestige.tooltip_text = tr("PRESTIGE")
 	_prestige.theme_type_variation = &"GoldButton" if GameState.can_prestige() else &"PurpleButton"

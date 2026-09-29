@@ -5,6 +5,9 @@ extends RefCounted
 
 const NAMED: Array[String] = ["", "K", "M", "B", "T"]
 
+## Scientific style (1.2e6) instead of letters; set by Settings.
+static var sci := false
+
 
 static func suffix(tier: int) -> String:
 	if tier < NAMED.size():
@@ -21,6 +24,13 @@ static func short(value: float) -> String:
 	var sign := "-" if value < 0.0 else ""
 	if v < 1000.0:
 		return sign + str(int(v))
+	if sci:
+		var e := int(floor(log(v) / log(10.0)))
+		var m := floorf(v / pow(10.0, e) * 100.0) / 100.0
+		if m >= 10.0:
+			m /= 10.0
+			e += 1
+		return "%s%.2fe%d" % [sign, m, e]
 	var tier := int(floor(log(v) / log(1000.0)))
 	var shown := v / pow(1000.0, tier)
 	# Float error can land at 999.99 or 1000.0 on the boundary.

@@ -1,0 +1,21 @@
+keys,en,ru,es,zh
+PZ_LEVEL,Level %d,Уровень %d,Nivel %d,第%d关
+PZ_MOVES,Moves,Ходы,Movs.,步数
+PZ_GOAL_HINT,Bring the pieces down!,Опусти кусочки вниз!,¡Baja las piezas!,把碎片带到底部！
+PZ_LEAVE_Q,Leave level?,Выйти из уровня?,¿Salir del nivel?,离开关卡？
+PZ_LEAVE,Leave,Выйти,Salir,离开
+PZ_STAY,Stay,Остаться,Seguir,继续
+PZ_WIN,Level complete!,Уровень пройден!,¡Nivel superado!,过关啦！
+PZ_OUT,Out of moves!,Ходы закончились!,¡Sin movimientos!,步数用完了！
+PZ_SO_CLOSE,So close! Keep going?,Почти! Ещё чуть-чуть?,¡Casi! ¿Seguimos?,差一点！继续吗？
+PZ_MORE,+%d moves,+%d ходов,+%d movs.,+%d步
+PZ_FREE,Free,Бесплатно,Gratis,免费
+PZ_TAKE,Collect what you got,Забрать найденное,Llevar lo logrado,领取已得
+PZ_COLLECT,Collect,Забрать,Recoger,领取
+PZ_FOUND,Pieces: %d/%d,Кусочки: %d/%d,Piezas: %d/%d,碎片：%d/%d
+PZ_NICE,Nice!,Класс!,¡Bien!,不错！
+PZ_WOW,Wow!,Вау!,¡Guau!,哇！
+PZ_SUPER,Super!,Супер!,¡Súper!,超棒！
+PZ_AMAZING,Amazing!,Потрясающе!,¡Increíble!,太厉害了！
+PZ_SHUFFLE,Shuffle!,Перемешали!,¡Mezcla!,洗牌！
+PZ_FEW,%d moves left!,Осталось %d ходов!,¡Quedan %d movs.!,还剩%d步！

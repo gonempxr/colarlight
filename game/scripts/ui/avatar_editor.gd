@@ -1,7 +1,7 @@
 class_name AvatarEditor
 extends RefCounted
 ## Look editor for the player's avatar (the businessman on the island):
-## a live preview and a row of arrows per part. Saved in Settings.
+## a live preview and a row of arrows per part. Saved in the player's profile.
 
 const PARTS := [
 	["AV_SKIN", "skin"], ["AV_HAIR", "hair"], ["AV_HAIR_COLOR", "hair_color"], ["AV_HAT", "hat"],
@@ -15,7 +15,13 @@ static func _options(part: String) -> Array:
 		"hair_color": return range(Chars.HAIR_COLORS.size())
 		"outfit": return range(Chars.OUTFITS.size())
 		"hair": return Chars.HAIR_STYLES
-		"hat": return Chars.HATS
+		"hat":
+			# Free hats plus the ones won or bought in the wardrobe.
+			var hats: Array = Chars.HATS.duplicate()
+			for c in Content.COSMETICS:
+				if c["slot"] == "hat" and Progress.is_owned(c["id"]):
+					hats.append(c["art"])
+			return hats
 		"extra": return Chars.EXTRAS
 		"clothes": return Chars.CLOTHES
 	return []
@@ -78,6 +84,12 @@ static func _step(part: String, dir: int, preview: AvatarPreview) -> void:
 	var i := opts.find(look.get(part))
 	look[part] = opts[posmod(i + dir, opts.size())]
 	Settings.set_avatar(look)
+	if part == "hat":
+		# Keep the wardrobe's "wearing" mark in step.
+		Progress.equipped["hat"] = ""
+		for c in Content.COSMETICS:
+			if c["slot"] == "hat" and c["art"] == look["hat"]:
+				Progress.equipped["hat"] = c["id"]
 	preview.cheer()
 	Sfx.play("pop")
 

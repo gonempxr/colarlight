@@ -154,7 +154,9 @@ func refresh() -> void:
 	lines.append(tr("STAT_MILESTONE") % next_ms)
 	_stats.text = "\n".join(lines)
 	var n := _count()
-	var after := Balance.output(data["value"], level + n) * gs.income_mult()
+	# Same multipliers as now (prestige, boost, foreman, artifacts), next level's output.
+	var now_out := Balance.output(data["value"], level)
+	var after := gs.rate(key) * Balance.output(data["value"], level + n) / now_out if now_out > 0.0 else 0.0
 	_gain.text = "+%s  →  %s" % [tr("PER_SEC") % NumFormat.rate(after - gs.rate(key)), tr("LEVEL") % (level + n)]
 	for i in _modes.size():
 		var m: int = MODES[i]

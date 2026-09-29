@@ -1,7 +1,7 @@
 extends Node
 ## All audio: sound effects from a small player pool, character voices,
 ## the underwater ambience and the music loop. Registered as the Sfx
-## autoload. Sounds follow Settings.sound, music follows Settings.music.
+## autoload. Sounds follow Settings.sfx_volume, music follows Settings.music_volume.
 ##
 ## Each sound has a volume, a pitch spread (so repeats don't sound
 ## robotic) and a minimum gap, so busy moments never turn into noise.
@@ -77,6 +77,8 @@ func _loop_player(name: String, db: float) -> AudioStreamPlayer:
 func play(name: String, pitch: float = 1.0) -> void:
 	if not Settings.sound or not _streams.has(name):
 		return
+	if name.begins_with("voice_") and not Settings.voices:
+		return
 	var cfg: Array = SOUNDS[name]
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - float(_last.get(name, -99.0)) < float(cfg[2]):
@@ -85,7 +87,7 @@ func play(name: String, pitch: float = 1.0) -> void:
 	var p := _players[_next]
 	_next = (_next + 1) % POOL
 	p.stream = _streams[name]
-	p.volume_db = cfg[0]
+	p.volume_db = cfg[0] + linear_to_db(Settings.sfx_volume)
 	p.pitch_scale = pitch * (1.0 + randf_range(-cfg[1], cfg[1]))
 	p.play()
 
@@ -102,6 +104,8 @@ func start_music() -> void:
 
 
 func _apply_settings() -> void:
+	_music.volume_db = MUSIC_DB + linear_to_db(maxf(0.001, Settings.music_volume))
+	_ambience.volume_db = AMBIENCE_DB + linear_to_db(maxf(0.001, Settings.sfx_volume))
 	if _music.stream:
 		var on := _music_wanted and Settings.music
 		if on and not _music.playing:

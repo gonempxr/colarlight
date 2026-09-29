@@ -12,9 +12,12 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Profiles="*res://scripts/autoload/profiles.gd"
 Settings="*res://scripts/autoload/settings.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
 GameState="*res://scripts/autoload/game_state.gd"
+Progress="*res://scripts/autoload/progress.gd"
+Platform="*res://scripts/autoload/platform.gd"
 
 [display]
 

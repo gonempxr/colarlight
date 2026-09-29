@@ -249,6 +249,9 @@ static func _hair_front(ci: CanvasItem, hair: String, hc: Color) -> void:
 
 
 static func _hat(ci: CanvasItem, hat: String) -> void:
+	if hat in HatsArt.IDS:
+		HatsArt.draw(ci, hat)
+		return
 	match hat:
 		"tophat":
 			Art.t_rect(ci, Rect2(-15, -52, 30, 36), 5, Color("2e2a3d"), 2.5, 0.5)

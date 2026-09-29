@@ -1,5 +1,8 @@
 Fonts in this folder:
 
+Nunito (Nunito-Black.ttf)
+Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+
 Rubik (Rubik-SemiBold.ttf, Rubik-ExtraBold.ttf)
 Copyright 2015 The Rubik Project Authors (https://github.com/googlefonts/rubik)
 

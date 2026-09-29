@@ -20,6 +20,7 @@ const CAVE_L := 150.0
 var surface: SurfaceView
 var rows: Array[DepthRow] = []
 var divers: DiverLayer
+var chest: ChestBubble
 
 var t := 0.0
 var _bubbles: Array[Vector3] = []   # x, y, radius
@@ -44,6 +45,9 @@ func _ready() -> void:
 	divers = DiverLayer.new()
 	divers.world = self
 	add_child(divers)
+	chest = ChestBubble.new()
+	chest.world = self
+	add_child(chest)
 	custom_minimum_size.y = height()
 	for i in 5:
 		_fish.append({"x": _rng.randf(), "y": _rng.randf_range(SURFACE_Y + 50.0, TOP_H - 50.0), "speed": _rng.randf_range(0.015, 0.04),

@@ -23,6 +23,12 @@ func _initialize() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://test_ui_save.json"
 	gs.reset()
+	var progress := root.get_node("Progress")
+	progress.autosave_enabled = false
+	progress.save_path = "user://test_ui_progress.json"
+	progress.reset()
+	var profiles := root.get_node("Profiles")
+	profiles.set_name_of(profiles.current_id, "Tester")
 	TranslationServer.set_locale("en")
 	change_scene_to_file("res://scenes/main.tscn")
 	await _frames(5)
@@ -91,6 +97,8 @@ func test_title() -> void:
 	await _click(p)
 	gs.tapped.disconnect(count)
 	check(taps[0] == 0, "title blocks taps on the scene")
+	# Let the intro finish (the button pops in).
+	await create_timer(1.3).timeout
 	await _click(_center(title._play))
 	await create_timer(0.8).timeout
 	await _frames(2)
@@ -114,6 +122,7 @@ func test_upgrade_sheet() -> void:
 	var card: Control = main._world.rows[0].card
 	await _click(_center(card._upgrade))
 	check(main._panel.visible and main._panel.key == "d0", "card button opens the upgrade sheet")
+	await create_timer(0.4).timeout   # the sheet slides up
 	var before: int = gs.get_level("d0")
 	await _click(_center(main._panel._buy))
 	check(gs.get_level("d0") == before + 1, "buy button upgrades")
@@ -123,6 +132,7 @@ func test_upgrade_sheet() -> void:
 	await _click(_center(main._panel._buy))
 	check(gs.get_level("d0") == before + 11, "x10 buys ten levels")
 	await _click(_center(main._panel._close))
+	await create_timer(0.35).timeout   # and slides away
 	check(not main._panel.visible, "close hides the sheet")
 
 

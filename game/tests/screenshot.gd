@@ -3,7 +3,9 @@ extends SceneTree
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
-## optional overlay: sheet | title | avatar | settings | prestige.
+## optional overlay: sheet | title | avatar | settings | prestige | quests |
+## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial.
+## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -19,6 +21,31 @@ func _initialize() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://screenshot_save.json"
 	gs.reset()
+	var pr := root.get_node("Progress")
+	pr.autosave_enabled = false
+	pr.save_path = "user://screenshot_progress.json"
+	pr.reset()
+	var profiles := root.get_node("Profiles")
+	profiles.set_name_of(profiles.current_id, "Маша" if lang == "ru" else "Alex")
+	if scenario != "start":
+		for f in Content.FEATURES:
+			pr.features[f] = true
+		pr.fresh["puzzle"] = true
+		pr.pearls = 135
+		pr.pearls_total = 180
+		pr.tutorial_step = 7
+		pr.artifacts["compass"] = {"level": 2, "pieces": 1}
+		pr.artifacts["bell_shell"] = {"level": 1, "pieces": 3}
+		pr.artifacts["fish_idol"] = {"level": 0, "pieces": 2}
+		pr.owned["pet_crab"] = true
+		pr.owned["pet_octopus"] = true
+		pr.owned["hat_cat_ears"] = true
+		pr.equipped["pet"] = "pet_octopus"
+		pr.stats["puzzles_won"] = 4
+		pr.chest_ready = overlay == "chest"
+		pr.apply_bonus()
+		pr._fill_quests()
+		pr.quests[0]["count"] = pr.quests[0]["goal"]
 	match scenario:
 		"mid":
 			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "boat": 45, "plant": 41}, true)
@@ -49,11 +76,26 @@ func _initialize() -> void:
 		"sheet":
 			main._on_stage_selected("d1")
 		"avatar":
-			main._open_avatar()
+			main.open_avatar_editor()
+		"quests", "daily", "museum":
+			main.open_feature(overlay)
+		"players":
+			main.open_players()
+		"tutorial":
+			pr.tutorial_step = 0
 		"settings":
 			main._open_settings()
 		"prestige":
 			main._open_prestige()
+		_:
+			if overlay.begins_with("wardrobe"):
+				if ":" in overlay:
+					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
+				main.open_feature("shop")
+			elif overlay.begins_with("feature:"):
+				main._news.append(overlay.split(":")[1])
+				main._started = true
+				main._show_next_news()
 	for i in 30:
 		await process_frame
 	await RenderingServer.frame_post_draw

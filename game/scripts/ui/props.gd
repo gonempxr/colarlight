@@ -3,6 +3,14 @@ extends RefCounted
 ## Scenery and machines, drawn in local space with Art's toon kit.
 ## Callers place them with Art.push/pop.
 
+## Boat paint from the wardrobe: hull, stripe, cabin roof, chimney, flag
+## (empty = the classic red boat).
+static var boat_paint: Array = []
+
+
+static func _paint(i: int, fallback: Color) -> Color:
+	return boat_paint[i] if boat_paint.size() > i else fallback
+
 
 ## Fluffy cloud, `seed` picks the shape.
 static func cloud(ci: CanvasItem, seed: int) -> void:
@@ -81,14 +89,14 @@ static func boat(ci: CanvasItem, t: float, crates: int, ore: Color, captain: boo
 	# Flag at the stern.
 	var wave := sin(t * 5.0) * 3.0
 	Art.stroke(ci, PackedVector2Array([Vector2(-78, -34), Vector2(-78, -84)]), Art.WOOD_DARK, 3.0, 1.5)
-	Art.toon(ci, PackedVector2Array([Vector2(-77, -84), Vector2(-50, -77 + wave), Vector2(-77, -68)]), Art.GOLD, 2.0, 0.0)
+	Art.toon(ci, PackedVector2Array([Vector2(-77, -84), Vector2(-50, -77 + wave), Vector2(-77, -68)]), _paint(4, Art.GOLD), 2.0, 0.0)
 	# Chimney with smoke puffs.
-	Art.t_rect(ci, Rect2(-24, -124, 20, 36), 3, Art.GOLD, 2.8, 0.6)
+	Art.t_rect(ci, Rect2(-24, -124, 20, 36), 3, _paint(3, Art.GOLD), 2.8, 0.6)
 	Art.t_rect(ci, Rect2(-24, -116, 20, 8), 1, Art.RED, 0.0, 0.0)
 	Art.t_rect(ci, Rect2(-27, -128, 26, 8), 3, Color("3a3f5c"), 2.5, 0.0)
 	# Cabin.
 	Art.t_rect(ci, Rect2(-62, -92, 58, 58), 8, Art.CREAM, 3.0, 0.5)
-	Art.t_rect(ci, Rect2(-68, -100, 70, 13), 6, Art.TEAL, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-68, -100, 70, 13), 6, _paint(2, Art.TEAL), 3.0, 0.4)
 	var win := Rect2(-53, -80, 40, 24)
 	Art.t_rect(ci, win, 6, Art.GLASS, 2.5, 0.0)
 	if captain:
@@ -113,8 +121,8 @@ static func boat(ci: CanvasItem, t: float, crates: int, ore: Color, captain: boo
 	# Hull.
 	var hull := Art.smooth_pts(PackedVector2Array([Vector2(-84, -38), Vector2(20, -38), Vector2(98, -44), Vector2(84, -14),
 			Vector2(66, 8), Vector2(-62, 8), Vector2(-80, -12)]), 3)
-	Art.toon(ci, hull, Art.RED, 3.2, 0.7)
-	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-120, -33, 240, 8), 2), hull), Art.WHITE)
+	Art.toon(ci, hull, _paint(0, Art.RED), 3.2, 0.7)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-120, -33, 240, 8), 2), hull), _paint(1, Art.WHITE))
 	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-120, -4, 240, 30), 2), hull), Color("2d3b6b"))
 	for x: float in [-44.0, -18.0, 8.0, 34.0]:
 		Art.t_circle(ci, Vector2(x, -15), 5.5, Art.METAL, 2.0, 0.0)

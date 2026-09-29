@@ -57,8 +57,19 @@ var _offline_report: Dictionary = {}
 
 
 func _ready() -> void:
+	var profiles := get_node_or_null("/root/Profiles")
+	if profiles:
+		save_path = profiles.file("game.json")
 	reset()
 	load_game()
+
+
+## Profiles switched: load the new player's game.
+func switch_profile() -> void:
+	save_path = Profiles.file("game.json")
+	reset()
+	load_game()
+	changed.emit()
 
 
 func _process(delta: float) -> void:
@@ -154,8 +165,10 @@ func is_auto(key: String) -> bool:
 ## Coins per second this stage can handle.
 func rate(key: String) -> float:
 	var r := Balance.output(stage_data(key)["value"], get_level(key)) * income_mult() * float(bonus.get(key, 1.0))
-	if depth_index(key) >= 0 and has_manager(key):
-		r *= Balance.FOREMAN_MULT
+	if depth_index(key) >= 0:
+		r *= float(bonus.get("dives", 1.0))
+		if has_manager(key):
+			r *= Balance.FOREMAN_MULT
 	return r
 
 
@@ -285,6 +298,18 @@ func hire_manager(key: String) -> bool:
 	return true
 
 
+## Rewards from quests, chests, puzzles and gifts.
+func add_coins(amount: float) -> void:
+	if amount > 0.0 and is_finite(amount):
+		_earn(amount)
+		changed.emit()
+
+
+func add_boost(seconds: float) -> void:
+	boost_left = minf(24.0 * 3600.0, boost_left + maxf(0.0, seconds))
+	changed.emit()
+
+
 ## Player tapped a stage: starts the cycle if idle, otherwise pushes the
 ## running one forward a little. Also fills the rush meter.
 ## Returns true when something happened.
@@ -294,7 +319,7 @@ func tap(key: String) -> bool:
 	_add_rush()
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
-		_timer[key] += Balance.TAP_BOOST * cycle_time(key)
+		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * cycle_time(key)
 		return true
 	return _start_cycle(key)
 
@@ -451,6 +476,10 @@ func load_game() -> bool:
 	var now := Time.get_unix_time_from_system()
 	var away := clampf(now - _num(data.get("saved_at"), now), 0.0, Balance.OFFLINE_CAP_SEC)
 	var earned := simulate_offline(away)
+	if earned > 0.0 and float(bonus.get("offline", 1.0)) > 1.0:
+		var extra := earned * (float(bonus["offline"]) - 1.0)
+		_earn(extra)
+		earned += extra
 	boost_left = maxf(0.0, boost_left - away)
 	if away >= Balance.OFFLINE_MIN_REPORT_SEC and earned >= 1.0:
 		_offline_report = {"seconds": away, "coins": earned}

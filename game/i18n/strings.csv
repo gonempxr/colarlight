@@ -12,12 +12,12 @@ DEPTH_CRYSTAL,Crystal Abyss,Кристальная бездна,Abismo de Crista
 DEPTH_METERS,%d m,%d м,%d m,%d 米
 UPGRADE,Upgrade,Улучшить,Mejorar,升级
 OPEN,Unlock,Открыть,Desbloquear,解锁
-LOCKED_SOON,Unlock the depth above first,Сначала откройте глубину выше,Primero desbloquea la de arriba,请先解锁上一层
+LOCKED_SOON,Unlock the depth above first,Сначала открой глубину выше,Primero desbloquea la de arriba,请先解锁上一层
 HIRE,Hire,Нанять,Contratar,雇用
 MANAGER_DIVE,Foreman,Бригадир,Capataz,领班
 MANAGER_BOAT,Captain,Капитан,Capitán,船长
 MANAGER_PLANT,Chief,Начальник,Jefe,厂长
-MANAGER_HINT,Works on its own. Also offline.,Работает сам. Даже когда вас нет.,Trabaja solo. También sin conexión.,自动工作，离线时也在工作。
+MANAGER_HINT,"Works on its own, even when you're away.","Работает сам, даже когда тебя нет.","Trabaja solo, incluso cuando no estás.",自动工作，你不在时也会工作。
 TAP_HINT,Tap!,Тапни!,¡Toca!,点击！
 BOTTLENECK,Bottleneck,Узкое место,Cuello de botella,瓶颈
 RUSH,Rush ×2!,Рывок ×2!,¡Impulso ×2!,冲刺 ×2！
@@ -27,17 +27,17 @@ STAT_CARRY,Carries,Перевозит,Transporta,运输量
 STAT_PROCESS,Processes,Перерабатывает,Procesa,加工量
 STAT_DIVERS,Divers,Дайверы,Buzos,潜水员
 STAT_MILESTONE,×2 at level %d,×2 на уровне %d,×2 en el nivel %d,等级 %d 时 ×2
-DESC_DEPTH,"Divers dive here, chip off ore and bring it up to the raft.","Дайверы ныряют сюда, откалывают руду и поднимают её на плот.","Los buzos bajan aquí, pican mineral y lo suben a la balsa.",潜水员潜到这里凿取矿石，并运回木筏。
+DESC_DEPTH,Divers dive here on their own and bring ore up to the raft. Tap to help them!,"Дайверы сами ныряют сюда и поднимают руду на плот. Тапай, чтобы помочь!",Los buzos bajan solos y suben mineral a la balsa. ¡Toca para ayudarles!,潜水员自己下潜，把矿石运回木筏。点击来帮忙！
 DESC_BOAT,The boat carries ore from the raft to the shore.,Лодка возит руду с плота на берег.,El barco lleva el mineral de la balsa a la orilla.,运输船把矿石从木筏运到岸边。
 DESC_PLANT,The plant turns ore into coins.,Завод перерабатывает руду в монеты.,La planta convierte el mineral en monedas.,加工厂把矿石变成金币。
 ON_RAFT,On raft,На плоту,En la balsa,木筏上
 ON_DOCK,On dock,На причале,En el muelle,码头上
 PRESTIGE,Dive Deeper,Погружение,Inmersión,深潜
-PRESTIGE_DESC,Reset all levels and start over in a new ocean. Your income is multiplied by ×%s forever.,"Все уровни сбросятся, и вы начнёте в новом океане. Доход навсегда умножится на ×%s.",Se reinician los niveles y empiezas en un océano nuevo. Tus ingresos se multiplican por ×%s para siempre.,所有等级重置，在新的海洋重新开始。收入永久 ×%s。
-PRESTIGE_NEED_DEPTHS,Unlock all depths first,Сначала откройте все глубины,Primero desbloquea todas las profundidades,请先解锁所有深度
+PRESTIGE_DESC,Levels reset and you start in a new ocean. Your income is ×%s forever.,"Уровни сбросятся, и ты начнёшь в новом океане. Доход навсегда ×%s.",Los niveles se reinician y empiezas en un océano nuevo. Tus ingresos serán ×%s para siempre.,等级重置，在新的海洋重新开始。收入永久 ×%s。
+PRESTIGE_NEED_DEPTHS,Unlock all depths first,Сначала открой все глубины,Primero desbloquea todas las profundidades,请先解锁所有深度
 PRESTIGE_GO,Dive for %s,Погрузиться за %s,Sumergirse por %s,花费 %s 深潜
 OCEAN,Ocean %d,Океан %d,Océano %d,海洋 %d
-OFFLINE,While you were away (%s) the crew earned,"Пока вас не было (%s), команда заработала","Mientras no estabas (%s), el equipo ganó",你离开期间（%s），团队赚到了
+OFFLINE,While you were away (%s) the crew earned,"Пока тебя не было (%s), команда заработала","Mientras no estabas (%s), el equipo ganó",你离开期间（%s），团队赚到了
 COLLECT,Collect,Забрать,Recoger,领取
 SETTINGS,Settings,Настройки,Ajustes,设置
 LANGUAGE,Language,Язык,Idioma,语言
@@ -46,12 +46,12 @@ MUSIC,Music,Музыка,Música,音乐
 ON,On,Вкл,Sí,开
 OFF,Off,Выкл,No,关
 RESET,Reset progress,Сбросить прогресс,Reiniciar progreso,重置进度
-RESET_CONFIRM,Tap again to erase everything,"Нажмите ещё раз, чтобы стереть всё",Toca otra vez para borrar todo,再点一次以清除全部
+RESET_CONFIRM,Tap again to erase everything,"Нажми ещё раз, чтобы стереть всё",Toca otra vez para borrar todo,再点一次以清除全部
 CLOSE,Close,Закрыть,Cerrar,关闭
 MILESTONE_TOAST,%s reached level %d: output ×2!,"%s: уровень %d, добыча ×2!",%s llegó al nivel %d: ¡producción ×2!,%s 达到等级 %d：产量 ×2！
 NEW_DIVER,A new diver joined!,Новый дайвер в команде!,¡Se unió un nuevo buzo!,新的潜水员加入了！
 NOT_ENOUGH,Not enough coins,Не хватает монет,No tienes suficientes monedas,金币不足
-CREDITS,"Fonts: Rubik, Seymour One and Noto Sans SC (SIL Open Font License). Music and sounds made for Coralight.","Шрифты: Rubik, Seymour One и Noto Sans SC (SIL Open Font License). Музыка и звуки сделаны для Coralight.","Fuentes: Rubik, Seymour One y Noto Sans SC (SIL Open Font License). Música y sonidos hechos para Coralight.",字体：Rubik、Seymour One 与 Noto Sans SC（SIL 开源字体许可证）。音乐与音效为 Coralight 原创。
+CREDITS,"Fonts: Nunito, Rubik, Seymour One and Noto Sans SC (SIL Open Font License). Music and sounds made for Coralight.","Шрифты: Nunito, Rubik, Seymour One и Noto Sans SC (SIL Open Font License). Музыка и звуки сделаны для Coralight.","Fuentes: Nunito, Rubik, Seymour One y Noto Sans SC (SIL Open Font License). Música y sonidos hechos para Coralight.",字体：Nunito、Rubik、Seymour One 与 Noto Sans SC（SIL 开源字体许可证）。音乐与音效为 Coralight 原创。
 PLAY,Play,Играть,Jugar,开始游戏
 AVATAR,My look,Мой образ,Mi aspecto,我的形象
 AV_SKIN,Skin,Кожа,Piel,肤色
@@ -62,3 +62,162 @@ AV_FACE,Face,Лицо,Cara,脸部
 AV_CLOTHES,Clothes,Одежда,Ropa,服装
 AV_COLOR,Color,Цвет,Color,颜色
 DONE,Done,Готово,Listo,完成
+MANAGER_HINT_DEPTH,Foreman: this site digs ×2.,Бригадир: здесь добывают ×2.,Capataz: aquí se extrae ×2.,领班：此处产量 ×2。
+PRESTIGE_KEEPS,"You keep: the captain, the plant chief, pearls, artifacts and your wardrobe.","Останутся: капитан, начальник завода, жемчуг, артефакты и гардероб.","Conservas: el capitán, el jefe de la planta, perlas, artefactos y tu ropa.",保留：船长、厂长、珍珠、文物和衣橱。
+NEW,NEW!,НОВОЕ!,¡NUEVO!,新！
+DOCK_DAILY,Gift,Подарок,Regalo,礼物
+DOCK_QUESTS,Quests,Задания,Misiones,任务
+DOCK_PUZZLE,Puzzle,Пазл,Puzle,拼图
+DOCK_MUSEUM,Museum,Музей,Museo,博物馆
+DOCK_SHOP,Wardrobe,Гардероб,Armario,衣橱
+CLAIM,Claim,Забрать,Recoger,领取
+YAY,Yay!,Ура!,¡Bien!,耶！
+OPEN_IT,Let's go!,Посмотреть!,¡Vamos!,去看看！
+NEW_FEATURE,Something new!,Новое в игре!,¡Algo nuevo!,新内容！
+MINUTES,%d min,%d мин,%d min,%d 分钟
+DAY,Day %d,День %d,Día %d,第 %d 天
+QUESTS,Quests,Задания,Misiones,任务
+QUESTS_HINT,Finish quests to get pearls!,Выполняй задания и получай жемчуг!,¡Completa misiones para ganar perlas!,完成任务获得珍珠！
+QUESTS_EMPTY,New quests are on the way…,Новые задания уже в пути…,Nuevas misiones en camino…,新任务马上就来……
+QUEST_DONE,Quest done! Claim your pearls,Задание выполнено! Забери жемчуг,¡Misión cumplida! Recoge tus perlas,任务完成！快领取珍珠
+QUEST_UPGRADE,Upgrade anything %d times,Сделай %d улучшений,Mejora algo %d veces,升级任意项目 %d 次
+QUEST_UPGRADE_STAGE,Upgrade %s %d times,Улучши «%s» %d раз,Mejora %s %d veces,升级%s %d 次
+QUEST_TAP,Tap %d times,Тапни %d раз,Toca %d veces,点击 %d 次
+QUEST_EARN,Earn %s coins,Заработай %s монет,Gana %s monedas,赚取 %s 金币
+QUEST_HIRE,Hire a manager,Найми менеджера,Contrata a un encargado,雇用一名管理员
+QUEST_OPEN,Unlock a new depth,Открой новую глубину,Desbloquea una nueva profundidad,解锁新的深度
+QUEST_PUZZLE,Win a puzzle,Пройди пазл,Gana un puzle,完成一关拼图
+QUEST_CHEST,Open a treasure bubble,Открой пузырь с сокровищем,Abre una burbuja del tesoro,打开一个宝藏泡泡
+QUEST_CHESTS,Open %d treasure bubbles,Открой %d пузыря с сокровищами,Abre %d burbujas del tesoro,打开 %d 个宝藏泡泡
+DAILY,Daily gift,Подарок дня,Regalo del día,每日礼物
+DAILY_HINT,Come back every day. Missing a day never resets your gifts!,Заходи каждый день. Пропуск не сбрасывает подарки!,Vuelve cada día. ¡Saltarte un día no borra tus regalos!,每天回来看看。错过一天也不会重置礼物！
+DAILY_TOMORROW,Next gift tomorrow!,Следующий подарок завтра!,¡El próximo regalo mañana!,明天还有礼物！
+FEATURE_DAILY,Daily gift,Подарок дня,Regalo del día,每日礼物
+FEATURE_DAILY_DESC,A present waits for you every day.,Каждый день тебя ждёт подарок.,Cada día te espera un regalo.,每天都有一份礼物等着你。
+FEATURE_CHESTS,Treasure bubbles,Пузыри с сокровищами,Burbujas del tesoro,宝藏泡泡
+FEATURE_CHESTS_DESC,Sometimes a chest floats by in a bubble. Tap it!,Иногда мимо проплывает сундук в пузыре. Тапни по нему!,A veces pasa un cofre en una burbuja. ¡Tócalo!,有时会有装着宝箱的泡泡漂过。点它！
+FEATURE_QUESTS,Quests,Задания,Misiones,任务
+FEATURE_QUESTS_DESC,Little goals that give pearls.,"Маленькие цели, за которые дают жемчуг.",Pequeñas metas que dan perlas.,完成小目标就能获得珍珠。
+FEATURE_SHOP,Wardrobe,Гардероб,Armario,衣橱
+FEATURE_SHOP_DESC,"Spend pearls on pets, hats and boat colors.","Трать жемчуг на питомцев, шапки и краску для лодки.","Gasta perlas en mascotas, gorros y colores para el barco.",用珍珠换宠物、帽子和船的颜色。
+FEATURE_PUZZLE,Puzzle,Пазл,Puzle,拼图
+FEATURE_PUZZLE_DESC,Match 3 shells and bring the treasure piece to the bottom!,Собирай по 3 ракушки и опусти кусочек сокровища на дно!,¡Junta 3 conchas y lleva el trozo del tesoro al fondo!,三个一样的贝壳连成一线，把宝物碎片送到底部！
+FEATURE_MUSEUM,Museum,Музей,Museo,博物馆
+FEATURE_MUSEUM_DESC,Collect ancient artifacts. Each one helps forever!,Собирай древние артефакты. Каждый помогает навсегда!,Reúne artefactos antiguos. ¡Cada uno ayuda para siempre!,收集古代文物，每件都会永久帮助你！
+MUSEUM,Museum,Музей,Museo,博物馆
+MUSEUM_HINT,Win puzzles to find artifact pieces. Every artifact is a bonus forever!,"Проходи пазлы, чтобы найти кусочки артефактов. Каждый артефакт — бонус навсегда!",Gana puzles para encontrar trozos de artefactos. ¡Cada artefacto es un bonus para siempre!,完成拼图来寻找文物碎片。每件文物都是永久加成！
+PLAY_FOR,Play for: %s,Играть за: %s,Jugar por: %s,挑战：%s
+ARTIFACT_UP,%s: level %d!,%s: уровень %d!,%s: ¡nivel %d!,%s：等级 %d！
+PIECE_OF,Piece of %s: %d/%d,Кусочек «%s»: %d/%d,Trozo de %s: %d/%d,%s 碎片：%d/%d
+ITEM_UNLOCKED,New item in your wardrobe!,Новая вещь в гардеробе!,¡Nuevo objeto en tu armario!,衣橱里有新物品！
+BONUS_BOAT,Boat +%d%%,Лодка +%d%%,Barco +%d%%,运输船 +%d%%
+BONUS_PLANT,Plant +%d%%,Завод +%d%%,Planta +%d%%,加工厂 +%d%%
+BONUS_D0,Shells +%d%%,Ракушки +%d%%,Conchas +%d%%,贝壳 +%d%%
+BONUS_TAP,Taps +%d%%,Тапы +%d%%,Toques +%d%%,点击 +%d%%
+BONUS_DIVES,All divers +%d%%,Все дайверы +%d%%,Todos los buzos +%d%%,全部潜水员 +%d%%
+BONUS_CHEST,Treasures +%d%%,Сокровища +%d%%,Tesoros +%d%%,宝藏 +%d%%
+BONUS_OFFLINE,Away income +%d%%,Доход без тебя +%d%%,Ingresos ausente +%d%%,离线收入 +%d%%
+BONUS_ALL,All income +%d%%,Весь доход +%d%%,Todos los ingresos +%d%%,全部收入 +%d%%
+BONUS_PUZZLE,Puzzle prizes +%d%%,Призы пазла +%d%%,Premios del puzle +%d%%,拼图奖励 +%d%%
+ART_COMPASS,Golden Compass,Золотой компас,Brújula de oro,黄金罗盘
+ART_BELL_SHELL,Bell Shell,Ракушка-колокол,Concha campana,铃铛贝
+ART_PEARL_CROWN,Pearl Crown,Жемчужная корона,Corona de perlas,珍珠王冠
+ART_AMPHORA,Old Amphora,Древняя амфора,Ánfora antigua,古老陶罐
+ART_SHIP_WHEEL,Ship's Wheel,Штурвал,Timón,船舵
+ART_DIVING_WATCH,Diving Watch,Часы водолаза,Reloj de buzo,潜水表
+ART_FISH_IDOL,Fish Idol,Рыбий идол,Ídolo pez,鱼神像
+ART_CRYSTAL_LANTERN,Crystal Lantern,Кристальный фонарь,Farol de cristal,水晶灯笼
+ART_TRIDENT,Trident,Трезубец,Tridente,三叉戟
+ART_TREASURE_KEY,Treasure Key,Ключ от сокровищ,Llave del tesoro,宝藏钥匙
+ART_STAR_MAP,Star Map,Звёздная карта,Mapa estelar,星图
+ART_SUN_MEDALLION,Sun Medallion,Солнечный медальон,Medallón solar,太阳徽章
+WARDROBE,Wardrobe,Гардероб,Armario,衣橱
+EDIT_LOOK,My look,Мой образ,Mi aspecto,我的形象
+TAB_PETS,Pets,Питомцы,Mascotas,宠物
+TAB_HATS,Hats,Шапки,Gorros,帽子
+TAB_BOATS,Boat,Лодка,Barco,船
+TAB_SUITS,Suits,Костюмы,Trajes,潜水服
+TAB_SHOP,Shop,Лавка,Tienda,商店
+WEAR,Wear,Надеть,Poner,穿戴
+WEARING,On,Надето,Puesto,已穿戴
+SHOP_HINT,"Pearls come from quests, puzzles, gifts and treasure bubbles.","Жемчуг дают за задания, пазлы, подарки и пузыри с сокровищами.","Las perlas salen de misiones, puzles, regalos y burbujas del tesoro.",珍珠来自任务、拼图、礼物和宝藏泡泡。
+SHOP_BOOST,Income ×2 for %d min,Доход ×2 на %d мин,Ingresos ×2 durante %d min,收入 ×2，持续 %d 分钟
+SHOP_COINS,Bag of %s coins,Мешок: %s монет,Bolsa de %s monedas,一袋 %s 金币
+PEARLS_HOW,Everything here is earned by playing.,"Всё здесь можно получить, просто играя.",Todo aquí se consigue jugando.,这里的一切都能通过游戏获得。
+GOAL_PUZZLE_1,Win 1 puzzle,Пройди 1 пазл,Gana 1 puzle,完成 1 关拼图
+GOAL_PUZZLE_10,Win 10 puzzles,Пройди 10 пазлов,Gana 10 puzles,完成 10 关拼图
+GOAL_PUZZLE_20,Win 20 puzzles,Пройди 20 пазлов,Gana 20 puzles,完成 20 关拼图
+GOAL_DAILY_3,Open 3 daily gifts,Открой 3 подарка дня,Abre 3 regalos diarios,打开 3 个每日礼物
+GOAL_DAILY_7,Open 7 daily gifts,Открой 7 подарков дня,Abre 7 regalos diarios,打开 7 个每日礼物
+GOAL_MUSEUM_6,Collect 6 artifacts,Собери 6 артефактов,Reúne 6 artefactos,收集 6 件文物
+GOAL_DEPTH_5,Reach the Crystal Abyss,Доберись до Кристальной бездны,Llega al Abismo de Cristal,抵达水晶深渊
+GOAL_PRESTIGE_1,Dive Deeper once,Соверши Погружение,Haz una Inmersión,完成一次深潜
+ITEM_PET_TURTLE,Turtle,Черепашка,Tortuga,小海龟
+ITEM_PET_CRAB,Crab,Крабик,Cangrejo,小螃蟹
+ITEM_PET_CLOWNFISH,Clownfish,Рыбка-клоун,Pez payaso,小丑鱼
+ITEM_PET_SEAHORSE,Seahorse,Морской конёк,Caballito de mar,海马
+ITEM_PET_JELLYFISH,Jellyfish,Медуза,Medusa,水母
+ITEM_PET_PUFFER,Puffer,Рыба-ёж,Pez globo,河豚
+ITEM_PET_OCTOPUS,Octopus,Осьминожка,Pulpo,小章鱼
+ITEM_PET_SEAL,Seal,Тюлень,Foca,海豹
+ITEM_PET_AXOLOTL,Axolotl,Аксолотль,Ajolote,六角恐龙
+ITEM_PET_DOLPHIN,Dolphin,Дельфин,Delfín,海豚
+ITEM_PET_SHARK_PUP,Baby Shark,Акулёнок,Tiburoncito,小鲨鱼
+ITEM_PET_NARWHAL,Narwhal,Нарвал,Narval,独角鲸
+ITEM_HAT_PARTY,Party Hat,Праздничный колпак,Gorro de fiesta,派对帽
+ITEM_HAT_CAT_EARS,Cat Ears,Кошачьи ушки,Orejas de gato,猫耳朵
+ITEM_HAT_BUNNY_EARS,Bunny Ears,Заячьи ушки,Orejas de conejo,兔耳朵
+ITEM_HAT_FROG,Frog Hat,Шапка-лягушка,Gorro de rana,青蛙帽
+ITEM_HAT_CHEF,Chef Hat,Колпак повара,Gorro de chef,厨师帽
+ITEM_HAT_HEADPHONES,Headphones,Наушники,Auriculares,耳机
+ITEM_HAT_FLOWER_CROWN,Flower Crown,Венок,Corona de flores,花环
+ITEM_HAT_VIKING,Viking Helmet,Шлем викинга,Casco vikingo,维京头盔
+ITEM_HAT_WIZARD,Wizard Hat,Шляпа волшебника,Sombrero de mago,巫师帽
+ITEM_HAT_SHARK_HOOD,Shark Hood,Капюшон-акула,Capucha de tiburón,鲨鱼兜帽
+ITEM_HAT_DINO_HOOD,Dino Hood,Капюшон-дино,Capucha de dino,恐龙兜帽
+ITEM_HAT_UNICORN,Unicorn,Единорог,Unicornio,独角兽
+ITEM_HAT_PUMPKIN,Pumpkin,Тыква,Calabaza,南瓜帽
+ITEM_HAT_ASTRONAUT,Space Helmet,Шлем космонавта,Casco espacial,太空头盔
+ITEM_BOAT_CLASSIC,Classic,Классика,Clásico,经典
+ITEM_BOAT_SUNNY,Sunny,Солнечная,Soleado,阳光
+ITEM_BOAT_CANDY,Candy,Конфетная,Caramelo,糖果
+ITEM_BOAT_PIRATE,Pirate,Пиратская,Pirata,海盗
+ITEM_BOAT_ROYAL,Royal,Королевская,Real,皇家
+ITEM_SUIT_CLASSIC,Classic,Классика,Clásico,经典
+ITEM_SUIT_MINT,Mint,Мятный,Menta,薄荷
+ITEM_SUIT_BUBBLEGUM,Bubblegum,Жвачка,Chicle,泡泡糖
+ITEM_SUIT_SUNSET,Sunset,Закат,Atardecer,日落
+ITEM_SUIT_GALAXY,Galaxy,Галактика,Galaxia,银河
+SET_SOUND,Sound,Звук,Sonido,声音
+SET_GAME,Game,Игра,Juego,游戏
+SET_SCREEN,Screen,Экран,Pantalla,画面
+SET_PLAYER,Player,Игрок,Jugador,玩家
+VOICES,Voices,Голоса,Voces,角色语音
+VIBRATION,Vibration,Вибрация,Vibración,振动
+NUMBERS,Numbers,Числа,Números,数字格式
+QUALITY,Graphics,Графика,Gráficos,画质
+QUALITY_AUTO,Auto,Авто,Auto,自动
+QUALITY_HIGH,High,Высокая,Alta,高
+QUALITY_LOW,Fast,Быстрая,Rápida,流畅
+UI_SIZE,Buttons size,Размер кнопок,Tamaño de botones,按钮大小
+SIZE_NORMAL,Normal,Обычный,Normal,标准
+SIZE_BIG,Big,Крупный,Grande,大
+SIZE_HUGE,Huge,Огромный,Enorme,特大
+REDUCE_MOTION,Less motion,Меньше движения,Menos movimiento,减少动效
+REPLAY_TUTORIAL,Show the tips again,Показать подсказки снова,Ver los consejos otra vez,重新显示提示
+PLAYERS,Players,Игроки,Jugadores,玩家
+PLAYERS_HINT,Each player has their own game and look.,У каждого игрока своя игра и свой образ.,Cada jugador tiene su propio juego y aspecto.,每位玩家都有自己的进度和形象。
+PLAYING_NOW,Playing,Играет,Jugando,游戏中
+ADD_PLAYER,Add a player,Добавить игрока,Añadir jugador,添加玩家
+SWITCH_PLAYER,Change player,Сменить игрока,Cambiar jugador,切换玩家
+HELLO,"Hi, %s!","Привет, %s!","¡Hola, %s!",你好，%s！
+WHATS_YOUR_NAME,What's your name?,Как тебя зовут?,¿Cómo te llamas?,你叫什么名字？
+NAME_PLACEHOLDER,Your name,Твоё имя,Tu nombre,你的名字
+RANDOM_NAMES,"Captain Bubbles, Coral Kid, Pearl Hunter, Sea Star, Little Whale, Wave Rider, Shell Seeker, Deep Diver","Капитан Пузырь, Коралл, Ловец жемчуга, Морская звезда, Китёнок, Покоритель волн, Искатель ракушек, Глубинка","Capitán Burbuja, Niño Coral, Cazaperlas, Estrella de Mar, Ballenita, Surfista, Buscaconchas, Buzo Valiente","泡泡船长, 珊瑚宝宝, 寻珠人, 小海星, 小鲸鱼, 冲浪手, 贝壳猎人, 深海勇士"
+TUT_TAP_DIVERS,Divers work on their own. Tap them to speed them up!,"Дайверы работают сами. Тапай, чтобы они спешили!",Los buzos trabajan solos. ¡Tócalos para que vayan más rápido!,潜水员会自己工作。点击让他们更快！
+TUT_UPGRADE,Upgrade the divers: more ore!,Улучши дайверов — будет больше руды!,Mejora a los buzos: ¡más mineral!,升级潜水员：更多矿石！
+TUT_TAP_BOAT,Tap the boat to carry ore to the shore,Тапни по лодке — она отвезёт руду на берег,Toca el barco para llevar el mineral a la orilla,点击运输船，把矿石运到岸边
+TUT_TAP_PLANT,Tap the plant to turn ore into coins,Тапни по заводу — он сделает из руды монеты,Toca la planta para convertir mineral en monedas,点击加工厂，把矿石变成金币
+TUT_HIRE_BOAT,Hire a captain: the boat will sail by itself!,Найми капитана — лодка будет плавать сама!,Contrata un capitán: ¡el barco navegará solo!,雇用船长：运输船会自动航行！
+TUT_HIRE_PLANT,Hire a chief: the plant will work by itself!,Найми начальника — завод будет работать сам!,Contrata un jefe: ¡la planta trabajará sola!,雇用厂长：加工厂会自动工作！
+TUT_OPEN_DEPTH,Unlock a new depth with more treasure!,Открой новую глубину — там больше сокровищ!,¡Desbloquea una nueva profundidad con más tesoros!,解锁新的深度，那里有更多宝藏！

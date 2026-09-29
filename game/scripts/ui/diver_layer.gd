@@ -19,6 +19,8 @@ var _floaters: Array[Dictionary] = []
 var _ripples: Array[Vector3] = []
 var _parts: Array[Dictionary] = []
 var _idle_since := {}
+## Diver suit colors from the wardrobe (empty = each depth's own color).
+static var suit_paint: Array = []
 var _dig_phase := {}
 var _rng := RandomNumberGenerator.new()
 
@@ -181,7 +183,7 @@ func _draw_tap_hint(at: Vector2) -> void:
 func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	var st: Dictionary = Art.DEPTH_STYLE[site]
 	var key := "d%d" % site
-	var suit: Color = st["suit"]
+	var suit: Color = st["suit"] if suit_paint.is_empty() else suit_paint[j % suit_paint.size()]
 	var ore: Color = st["ore"]
 	var row_top := World.row_y(site)
 	var ledge := row_top + DepthRow.LEDGE_Y + 2.0
