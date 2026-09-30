@@ -15,7 +15,9 @@ extends Control
 ##
 ## The sky itself (gradient, sun, moon, stars) is drawn by World under the
 ## water, so the sun really sinks into the sea. This view adds, in layers:
-##   _sky_fx  (behind)  far islands, lighthouse, clouds, rain, birds
+##   _sky_fx  (behind)  clouds, rain, birds, the lighthouse beam
+##   _far     (behind)  far islands and the lighthouse (still, repainted
+##                      when the light changes)
 ##   _ground  (behind)  the island (still, repainted on resize)
 ##   self               palm, plant, raft, boat, waves, smoke - tinted at night
 ##   _glow    (front)   night lights and the ore number tags (never tinted)
@@ -60,6 +62,9 @@ var _gear_rot2 := 0.0
 var _pending_throws: Array[Array] = []   # [time, kind, a, b]
 
 var _sky_fx: PaintLayer
+var _far: PaintLayer
+var _far_step := -1.0
+var _glow_last := []
 var _ground: PaintLayer
 var _glow: PaintLayer
 var _tint := Color.WHITE
@@ -106,6 +111,8 @@ func _ready() -> void:
 	_rng.seed = 11
 	_sky_fx = PaintLayer.new(_draw_sky_fx)
 	add_child(_sky_fx)
+	_far = PaintLayer.new(_paint_far)
+	add_child(_far)
 	_ground = PaintLayer.new(_paint_ground)
 	add_child(_ground)
 	_glow = PaintLayer.new(_draw_glow, false)
@@ -126,7 +133,7 @@ func _ready() -> void:
 	GameState.depth_opened.connect(_on_opened)
 	for c in [[0.12, 262.0, 0.8, 1], [0.52, 310.0, 0.95, 2], [0.86, 244.0, 0.72, 3], [0.36, 128.0, 0.62, 4]]:
 		_clouds.append({"x": c[0], "y": c[1], "s": c[2], "seed": c[3], "poke": -99.0, "rain": -99.0})
-	for i in 3:
+	for i in 2:
 		_birds.append(_new_bird(_rng.randf(), i))
 	for key in BUILDINGS:
 		_stage[key] = Props.current_stage(key)
@@ -465,6 +472,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		if Scroller.is_drag():
 			return
+		World.hurry()
 		var p: Vector2 = event.position
 		if _on_card(p):
 			return
@@ -704,10 +712,24 @@ func _process(delta: float) -> void:
 		_tint = tint
 		self_modulate = tint
 		_ground.self_modulate = tint
-	if World.anim_tick() and world.is_visible_band(0.0, size.y):
-		queue_redraw()
-		_sky_fx.queue_redraw()
-		_glow.queue_redraw()
+	# The crew, boats and plant redraw on the scene's SCENERY frames, the
+	# sky life on the others (see World's frame schedule).
+	if world.is_visible_band(0.0, size.y):
+		if World.tick(World.SCENERY):
+			queue_redraw()
+			# Night lights flicker; by day only the number tags move.
+			var sig := _glow_sig()
+			if smoothstep(0.3, 0.8, DayNight.night()) > 0.01 or sig != _glow_last:
+				_glow_last = sig
+				_glow.queue_redraw()
+		if World.tick(World.PEOPLE) and world.is_visible_band(0.0, World.SURFACE_Y):
+			_sky_fx.queue_redraw()
+			if _t - _lighthouse_poke < 2.4:
+				_far.queue_redraw()
+	var step := DayNight.stepped_phase()
+	if step != _far_step:
+		_far_step = step
+		_far.queue_redraw()
 
 
 func _update_stages() -> void:
@@ -858,12 +880,28 @@ func _paint_ground(ci: CanvasItem) -> void:
 	Art.pop(ci)
 
 
-## Far islands, the lighthouse, clouds, rain and birds (behind the scene).
+## Far islands and the lighthouse on its rock (a still layer).
+func _paint_far(ci: CanvasItem) -> void:
+	var w := size.x
+	var sy := World.SURFACE_Y
+	var sp := DayNight.stepped_phase()
+	var lights := smoothstep(0.3, 0.8, DayNight.night(sp))
+	Art.push(ci, Vector2(w * 0.2, sy))
+	Props.far_island(ci, 170, DayNight.far_color(0.0, sp))
+	Art.pop(ci)
+	Art.push(ci, Vector2(w * 0.72, sy))
+	Props.far_island(ci, 180, DayNight.far_color(0.4, sp))
+	Art.pop(ci)
+	var flash := clampf(1.0 - (_t - _lighthouse_poke) / 2.2, 0.0, 1.0)
+	Art.push(ci, _lighthouse_pos())
+	Props.lighthouse(ci, DayNight.far_color(0.2, sp), DayNight.far_color(0.0, sp), maxf(lights, flash))
+	Art.pop(ci)
+
+
+## Clouds, rain, birds and the lighthouse beam (behind the scene).
 func _draw_sky_fx(ci: CanvasItem) -> void:
 	if not world.is_visible_band(0.0, World.SURFACE_Y):
 		return
-	var w := size.x
-	var sy := World.SURFACE_Y
 	var night := DayNight.night()
 	var lights := smoothstep(0.3, 0.8, night)
 	var sp := DayNight.stepped_phase()
@@ -888,13 +926,7 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 		Art.pop(ci)
 	for r in _rain:
 		Art.line(ci, Vector2(r.x, r.y), Vector2(r.x - 2.0, r.y + 10.0), Color(0.75, 0.9, 1.0, 0.85), 2.2)
-	# Far islands and the lighthouse on its rock.
-	Art.push(ci, Vector2(w * 0.2, sy))
-	Props.far_island(ci, 170, DayNight.far_color(0.0, sp))
-	Art.pop(ci)
-	Art.push(ci, Vector2(w * 0.72, sy))
-	Props.far_island(ci, 180, DayNight.far_color(0.4, sp))
-	Art.pop(ci)
+	# The lighthouse beam sweeping over the sea (the tower is on _far).
 	var lh := _lighthouse_pos()
 	var poke := _t - _lighthouse_poke
 	var flash := clampf(1.0 - poke / 2.2, 0.0, 1.0)
@@ -907,9 +939,6 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 		var tip := lamp + dir * 300.0
 		Art.grad(ci, PackedVector2Array([lamp, tip + Vector2(0, -44), tip + Vector2(0, 44)]), PackedColorArray([c1, Color(c1, 0.0), Color(c1, 0.0)]))
 		Props.halo(ci, lamp, 36.0, Color(1.0, 0.9, 0.6, 0.6 * beam))
-	Art.push(ci, lh)
-	Props.lighthouse(ci, DayNight.far_color(0.2, sp), DayNight.far_color(0.0, sp), maxf(lights, flash))
-	Art.pop(ci)
 	# Birds (they rest at night).
 	var bird_c := Color.WHITE * DayNight.scene_tint(sp)
 	for b in _birds:
@@ -1190,6 +1219,15 @@ func _draw_sign(key: String) -> void:
 	Art.push(self, place[0], wob, Vector2(2.0 - sq, sq) * sc)
 	Props.sale_sign(self, _price(key), ready, place[1])
 	Art.pop(self)
+
+
+## What the number tags show and where (the glow layer redraws when it changes).
+func _glow_sig() -> Array:
+	var r: Dictionary = _chest["raft"]
+	var d: Dictionary = _chest["dock"]
+	return [NumFormat.short(GameState.hold) if GameState.hold > 0.0 else "", NumFormat.short(GameState.dock) if GameState.dock > 0.0 else "",
+			roundf(_raft_bob()), snappedf(float(r["lid"]), 0.05), snappedf(float(d["lid"]), 0.05),
+			snappedf(float(r["tag"]), 0.05), snappedf(float(d["tag"]), 0.05), size]
 
 
 ## Night lights and number tags, on top and never darkened.

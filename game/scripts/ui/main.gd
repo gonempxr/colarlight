@@ -351,7 +351,7 @@ func _refresh() -> void:
 		_side_boat.refresh()
 		_side_plant.refresh()
 	for row in _world.rows:
-		row.refresh()
+		row.refresh_if_shown()
 	if _panel.visible:
 		_panel.refresh()
 		if not _wide:

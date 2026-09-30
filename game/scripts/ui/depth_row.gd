@@ -7,6 +7,8 @@ extends Control
 const CAVE_TOP := 26.0
 const CAVE_BOTTOM := 234.0
 const LEDGE_Y := 200.0
+## Rows this close to the screen count as shown (they refresh and repaint).
+const ROW_MARGIN := 300.0
 
 var world: World
 var index := 0
@@ -17,7 +19,11 @@ var _lock_label: Label
 var _t := 0.0
 var _flash := 0.0
 var _bg: PaintLayer
+## The cave's edge, drawn over the glowing vein (still, like _bg).
+var _edge: PaintLayer
 var _bg_sig := []
+## Skipped a refresh while far off screen (see refresh_if_shown).
+var _stale := false
 ## The cave outline of the frame being drawn (decor clips light to it).
 var _cp := PackedVector2Array()
 
@@ -34,6 +40,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_bg = PaintLayer.new(_draw_bg)
 	add_child(_bg)
+	_edge = PaintLayer.new(_draw_edge, false)
+	add_child(_edge)
 	card = StageCard.new(key())
 	card.world = world
 	card.custom_minimum_size = Vector2(World.CARD_W, 0)
@@ -69,7 +77,16 @@ func _on_cycle_finished(k: String, _amount: float) -> void:
 		_flash = maxf(_flash, 0.4)
 
 
+## Periodic refresh from Main: sites far off screen wait until they show.
+func refresh_if_shown() -> void:
+	if world.is_visible_band(position.y - ROW_MARGIN, position.y + size.y + ROW_MARGIN):
+		refresh()
+	else:
+		_stale = true
+
+
 func refresh() -> void:
+	_stale = false
 	var open := GameState.is_open(key())
 	card.visible = open
 	var is_next := GameState.next_depth() == key()
@@ -100,6 +117,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		if Scroller.is_drag() or not GameState.is_open(key()):
 			return
+		World.hurry()
 		if event.position.x < world.scene_right():
 			if GameState.tap(key()):
 				Sfx.play("dive")
@@ -123,13 +141,19 @@ func cave_rect() -> Rect2:
 func _process(delta: float) -> void:
 	_t += delta
 	_flash = maxf(0.0, _flash - delta * 2.0)
-	if World.anim_tick() and world.is_visible_band(position.y, position.y + size.y):
+	var shown := world.is_visible_band(position.y, position.y + size.y)
+	if _stale and shown:
+		refresh()
+	# The cave life moves slowly: each site redraws on every other SCENERY
+	# frame of the world (neighbors alternate), about 15 times a second.
+	if shown and World.tick(World.SCENERY) and (World.tick_count(World.SCENERY) + index) % 2 == 0:
 		queue_redraw()
 	# The still background repaints only when something it shows changes.
 	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale()]
 	if sig != _bg_sig:
 		_bg_sig = sig
 		_bg.queue_redraw()
+		_edge.queue_redraw()
 	# Keep the lock label centered when the site opens or closes.
 	if _lock_label.visible != (not GameState.is_open(key())):
 		_notification(NOTIFICATION_RESIZED)
@@ -220,8 +244,12 @@ func _draw() -> void:
 	Art.flat(self, Art.clipped(Art.circle_pts(Vector2(cave.end.x - 30, LEDGE_Y - 50), 90, 32), cave_poly), Color(st["ore"], glow))
 	OreArt.deposit(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, index, index * 7 + 1, _t, 3, false)
 	OreArt.deposit(self, Vector2(dp.x, LEDGE_Y + 2), 70, index, index * 31 + 3, _t, 5)
-	# Edge of the cave drawn again over the vein so it stays inside.
-	Art.ring(self, cave_poly, Art.INK, 5.0)
+
+
+## Edge of the cave, drawn again over the vein so the glow stays inside.
+func _draw_edge(ci: CanvasItem) -> void:
+	if GameState.is_open(key()):
+		Art.ring(ci, _cave_poly(), Art.INK, 5.0)
 
 
 func _draw_decor(st: Dictionary, cave: Rect2) -> void:

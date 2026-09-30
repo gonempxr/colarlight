@@ -5,6 +5,13 @@ extends Control
 ## the day (DayNight), and character moods (short reactions to what the
 ## player does). The sky (gradient, stars, moon, sun) is drawn here, under
 ## the water, so the sun and moon sink into the sea.
+##
+## Drawing is split by how often things change (see the frame schedule):
+##   _sky, _sun, _sea  (behind)  sky gradient and stars, sun or moon, water;
+##                                repainted a few times a second at most
+##   self                        sea life: fish, seaweed, light rays, bubbles
+##   _ground, _floor   (front)   sand over the first site, the sea floor;
+##                                repainted when the light changes
 
 signal stage_selected(key: String)
 
@@ -35,11 +42,30 @@ var pokes := {}
 var _stars: Array[Vector3] = []          # x (0..1 of width), y, size
 var _shooting: Array[Dictionary] = []
 var _deep_tint := Color.WHITE
+var _sky: PaintLayer
+var _sun: PaintLayer
+var _sea: PaintLayer
+var _ground: PaintLayer
+var _floor: PaintLayer
+## Light the still layers were painted with (see _process).
+var _painted_light := -1.0
+var _painted_tint := -1.0
+var _sun_left := 0.0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_rng.seed = 7
+	_sky = PaintLayer.new(_paint_sky)
+	add_child(_sky)
+	_sun = PaintLayer.new(_paint_sun)
+	add_child(_sun)
+	_sea = PaintLayer.new(_paint_sea)
+	add_child(_sea)
+	_ground = PaintLayer.new(_paint_ground, false)
+	add_child(_ground)
+	_floor = PaintLayer.new(_paint_floor, false)
+	add_child(_floor)
 	surface = SurfaceView.new()
 	surface.world = self
 	add_child(surface)
@@ -56,7 +82,7 @@ func _ready() -> void:
 	chest.world = self
 	add_child(chest)
 	custom_minimum_size.y = height()
-	for i in 5:
+	for i in FISH:
 		_fish.append({"x": _rng.randf(), "y": _rng.randf_range(SURFACE_Y + 50.0, TOP_H - 50.0), "speed": _rng.randf_range(0.015, 0.04),
 				"dir": 1.0 if i % 2 == 0 else -1.0, "size": _rng.randf_range(10, 16), "dart": -99.0, "face": 1.0 if i % 2 == 0 else -1.0,
 				"color": [Color("ffd23f"), Color("ff7b54"), Color("7be0ff"), Color("ff9fd0"), Color("b6f36a")][i]})
@@ -105,14 +131,74 @@ func select(key: String) -> void:
 	stage_selected.emit(key)
 
 
-## Part of the world currently on screen (for skipping hidden drawing).
-## On phones the scene animates at half the frame rate (scrolling stays
-## smooth): drawing the characters is the most expensive thing we do.
+# --- Frame schedule ------------------------------------------------------------------
+## The scene animates at ANIM_HZ, not at the display's frame rate, and its
+## two heavy halves take turns: on PEOPLE frames the divers, the chest and
+## the sea life redraw, on SCENERY frames the surface (boats, plant, crew,
+## sky life) and the dive sites. So a display frame pays for about half of
+## the scene, and a 120 Hz screen doesn't draw it twice as often. Scrolling
+## moves the whole world as one transform, so it stays smooth at full rate.
+const ANIM_HZ := 30.0
+## Low quality (phones by default) animates the scene a little slower.
+const LOW_HZ := 24.0
+const PEOPLE := 0
+const SCENERY := 1
+const FISH := 4
+
 static var half_rate := Art.low_power
+static var _frame := -1
+static var _since: Array[float] = [9.0, 9.0]
+static var _fire: Array[bool] = [false, false]
+static var _count: Array[int] = [0, 0]
+static var _hurry := false
 
 
+static func _schedule() -> void:
+	var f := Engine.get_process_frames()
+	if f == _frame:
+		return
+	_frame = f
+	var tree := Engine.get_main_loop() as SceneTree
+	var dt := clampf(tree.root.get_process_delta_time(), 0.0, 1.0) if tree else 1.0
+	var period := 1.0 / (LOW_HZ if half_rate else ANIM_HZ)
+	for g in 2:
+		_since[g] += dt
+		_fire[g] = _hurry
+	_hurry = false
+	# The group waiting longest goes, the other one waits for the next
+	# frame. On a slow device the two simply alternate, so every frame costs
+	# about half of the scene there too.
+	var first := PEOPLE if _since[PEOPLE] >= _since[SCENERY] else SCENERY
+	if _since[first] >= period * 0.9:
+		_fire[first] = true
+	for g in 2:
+		if _fire[g]:
+			_since[g] = 0.0
+			_count[g] += 1
+
+
+## True on the frames the characters (divers, chest) redraw.
 static func anim_tick() -> bool:
-	return not half_rate or Engine.get_process_frames() % 2 == 0
+	return tick(PEOPLE)
+
+
+static func tick(group: int) -> bool:
+	_schedule()
+	return _fire[group]
+
+
+## How many times `group` has redrawn (to spread slower things over frames).
+static func tick_count(group: int) -> int:
+	_schedule()
+	return _count[group]
+
+
+## Redraw everything on the next frame (right after a tap).
+static func hurry() -> void:
+	_hurry = true
+
+
+## Part of the world currently on screen (for skipping hidden drawing).
 
 
 func visible_rect() -> Rect2:
@@ -207,6 +293,7 @@ func poke_fish(p: Vector2) -> bool:
 		_bubbles.append(Vector3(at.x + float(f["dir"]) * f["size"] * (0.9 + k * 0.15), at.y - k * 6.0, 2.0 + k * 0.8))
 	Sfx.play("pop", 1.5)
 	Sfx.play("dive", 1.8)
+	hurry()
 	return true
 
 
@@ -256,7 +343,7 @@ func _process(delta: float) -> void:
 			_shooting.remove_at(i)
 	if _rng.randf() < delta * 0.05 * DayNight.night():
 		shooting_star(Vector2(_rng.randf_range(0.1, 0.8) * size.x, _rng.randf_range(40.0, 220.0)))
-	if _bubbles.size() < 16 and _rng.randf() < delta * 5.0:
+	if _bubbles.size() < 12 and _rng.randf() < delta * 4.0:
 		_bubbles.append(Vector3(_rng.randf_range(SHAFT_L + 8.0, SHAFT_R - 8.0), _rng.randf_range(TOP_H, height() - 80.0), _rng.randf_range(2.0, 5.0)))
 	for i in range(_bubbles.size() - 1, -1, -1):
 		var b := _bubbles[i]
@@ -269,74 +356,120 @@ func _process(delta: float) -> void:
 		var dart := 1.0 + 7.0 * exp(-(t - float(f["dart"])) * 2.5)
 		f["x"] = fposmod(f["x"] + f["speed"] * f["dir"] * dart * delta, 1.3)
 		f["face"] = move_toward(float(f["face"]), float(f["dir"]), delta * 7.0)
-	if anim_tick():
+	_repaint_still(delta)
+	if tick(PEOPLE) and (is_visible_band(0.0, TOP_H) or is_visible_band(height() - BOTTOM_H, height())):
 		queue_redraw()
 
 
+## Repaints the still layers only when what they show has changed enough to
+## see: the sky and the water follow the clock in quarter-second steps
+## (their gradients are cheap), the toon shapes (sand, shells, floor) in
+## DayNight steps, as their colors are cached.
+func _repaint_still(delta: float) -> void:
+	var sky_on := is_visible_band(0.0, SURFACE_Y)
+	var light := floorf(DayNight.phase() * DayNight.CYCLE * 4.0)
+	if light != _painted_light:
+		_painted_light = light
+		_sky.queue_redraw()
+		_sea.queue_redraw()
+	elif sky_on and DayNight.night() > 0.02 and tick(SCENERY) and tick_count(SCENERY) % 4 == 0:
+		_sky.queue_redraw()   # twinkling stars
+	var tint := DayNight.stepped_phase()
+	if tint != _painted_tint:
+		_painted_tint = tint
+		_ground.queue_redraw()
+		_floor.queue_redraw()
+	# The sun and the moon move slowly: ten times a second is plenty, but a
+	# tap on them plays its spin or wink smoothly.
+	_sun_left -= delta
+	var poked := t - maxf(float(pokes.get("sun", -99.0)), float(pokes.get("moon", -99.0))) < 1.5
+	if sky_on and (_sun_left <= 0.0 or (poked and tick(SCENERY))):
+		_sun_left = 0.1
+		_sun.queue_redraw()
+
+
+## Sea life, redrawn with the characters: shooting stars, the light path
+## and rays in the water, fish, seaweed and the bubbles leaving the shaft.
 func _draw() -> void:
 	var w := size.x
 	var h := height()
-	var sky_on := is_visible_band(0.0, SURFACE_Y)
-	if sky_on:
-		_draw_sky(w)
-	# Open water under the surface and in the shaft behind the rows.
-	var bands := 10
-	for i in bands:
-		var y0 := lerpf(SURFACE_Y, h, float(i) / bands)
-		var y1 := lerpf(SURFACE_Y, h, float(i + 1) / bands)
-		if not is_visible_band(y0, y1):
-			continue
-		var c0 := water_at(y0)
-		var c1 := water_at(y1)
-		Art.grad(self, PackedVector2Array([Vector2(0, y0), Vector2(w, y0), Vector2(w, y1), Vector2(0, y1)]), PackedColorArray([c0, c0, c1, c1]))
+	if is_visible_band(0.0, SURFACE_Y):
+		_draw_shooting_stars()
 	if is_visible_band(SURFACE_Y, TOP_H):
 		_draw_reflection(w)
 		_draw_top_water(w)
-	for b in _bubbles:
-		Art.arc(self, Vector2(b.x, b.y), b.z, 0, TAU, 12, Color(1, 1, 1, 0.55), 1.5)
-		Art.disc(self, Vector2(b.x - b.z * 0.3, b.y - b.z * 0.3), b.z * 0.28, Color(1, 1, 1, 0.6))
+		# Only the stretch above the first site shows (the rows cover the shaft).
+		for b in _bubbles:
+			if b.y > TOP_H + b.z:
+				continue
+			Art.arc(self, Vector2(b.x, b.y), b.z, 0, TAU, 10, Color(1, 1, 1, 0.5), 1.5)
+			Art.disc(self, Vector2(b.x - b.z * 0.3, b.y - b.z * 0.3), b.z * 0.28, Color(1, 1, 1, 0.55))
 	if is_visible_band(h - BOTTOM_H, h):
-		_draw_floor(w, h)
+		var floor_y := h - BOTTOM_H + 60.0
+		for i in 6:
+			Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, Color("2b8f78"), t, i)
 
 
-## Sky gradient, sunset glow, stars, shooting stars, the moon and the sun.
-func _draw_sky(w: float) -> void:
+## Sky gradient, sunset glow and stars (a still layer).
+func _paint_sky(ci: CanvasItem) -> void:
+	var w := size.x
 	var sy := SURFACE_Y
 	var cols := DayNight.sky_colors()
 	var mid := sy * 0.52
-	Art.grad(self, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, mid), Vector2(0, mid)]), PackedColorArray([cols[0], cols[0], cols[1], cols[1]]))
-	Art.grad(self, PackedVector2Array([Vector2(0, mid), Vector2(w, mid), Vector2(w, sy + 2), Vector2(0, sy + 2)]), PackedColorArray([cols[1], cols[1], cols[2], cols[2]]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, mid), Vector2(0, mid)]), PackedColorArray([cols[0], cols[0], cols[1], cols[1]]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, mid), Vector2(w, mid), Vector2(w, sy + 2), Vector2(0, sy + 2)]), PackedColorArray([cols[1], cols[1], cols[2], cols[2]]))
 	var night := DayNight.night()
 	var warm := DayNight.warmth()
-	var light := DayNight.light_pos(w)
 	if warm > 0.02:
-		Props.halo(self, Vector2(light.x, sy), 300.0, Color(cols[2].lightened(0.35), warm * 0.55), 28)
+		Props.halo(ci, Vector2(DayNight.light_pos(w).x, sy), 300.0, Color(cols[2].lightened(0.35), warm * 0.55), 28)
 	if night > 0.02:
 		for s in _stars:
 			var tw := 0.55 + 0.45 * sin(t * (1.3 + s.z) + s.x * 40.0)
-			Props.star(self, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, night * tw))
-		for s in _shooting:
-			var age: float = s["age"]
-			var a := clampf(1.0 - age / 1.1, 0.0, 1.0) * clampf(age * 6.0, 0.0, 1.0)
-			var p: Vector2 = s["p"]
-			var v: Vector2 = s["v"]
-			Art.grad(self, PackedVector2Array([p, p - v * 0.28 + v.orthogonal().normalized() * 2.0, p - v * 0.28 - v.orthogonal().normalized() * 2.0]),
-					PackedColorArray([Color(1, 1, 0.9, a), Color(1, 1, 0.9, 0.0), Color(1, 1, 0.9, 0.0)]))
-			Props.star(self, p, 1.6, Color(1, 1, 0.9, a))
+			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, night * tw))
+
+
+func _draw_shooting_stars() -> void:
+	for s in _shooting:
+		var age: float = s["age"]
+		var a := clampf(1.0 - age / 1.1, 0.0, 1.0) * clampf(age * 6.0, 0.0, 1.0)
+		var p: Vector2 = s["p"]
+		var v: Vector2 = s["v"]
+		Art.grad(self, PackedVector2Array([p, p - v * 0.28 + v.orthogonal().normalized() * 2.0, p - v * 0.28 - v.orthogonal().normalized() * 2.0]),
+				PackedColorArray([Color(1, 1, 0.9, a), Color(1, 1, 0.9, 0.0), Color(1, 1, 0.9, 0.0)]))
+		Props.star(self, p, 1.6, Color(1, 1, 0.9, a))
+
+
+## The sun by day, the moon by night (a layer repainted ~10 times a second).
+func _paint_sun(ci: CanvasItem) -> void:
+	var w := size.x
+	var warm := DayNight.warmth()
 	var calm: bool = Settings.reduce_motion
 	if DayNight.sun_up():
 		var k := clampf((t - float(pokes.get("sun", -99.0))) / 1.2, 0.0, 1.0)
 		var spin := 0.0 if calm or k >= 1.0 else (1.0 - pow(1.0 - k, 3.0)) * TAU
 		var sq := sin(k * PI * 3.0) * (1.0 - k) * 0.14
-		Art.push(self, DayNight.sun_pos(w), 0.0, Vector2(1.0 + sq, 1.0 - sq))
-		Props.sun(self, t, spin, 1.0 if k < 0.8 else 0.0, warm)
-		Art.pop(self)
+		Art.push(ci, DayNight.sun_pos(w), 0.0, Vector2(1.0 + sq, 1.0 - sq))
+		Props.sun(ci, t, spin, 1.0 if k < 0.8 else 0.0, warm)
+		Art.pop(ci)
 	else:
 		var k := clampf((t - float(pokes.get("moon", -99.0))) / 1.4, 0.0, 1.0)
 		var sq := sin(k * PI * 3.0) * (1.0 - k) * 0.12
-		Art.push(self, DayNight.moon_pos(w), sin(k * PI * 2.0) * (1.0 - k) * 0.25, Vector2(1.0 + sq, 1.0 - sq))
-		Props.moon(self, t, 1.0 if k < 0.85 else 0.0)
-		Art.pop(self)
+		Art.push(ci, DayNight.moon_pos(w), sin(k * PI * 2.0) * (1.0 - k) * 0.25, Vector2(1.0 + sq, 1.0 - sq))
+		Props.moon(ci, t, 1.0 if k < 0.85 else 0.0)
+		Art.pop(ci)
+
+
+## Open water under the surface and in the shaft behind the rows (a still layer).
+func _paint_sea(ci: CanvasItem) -> void:
+	var w := size.x
+	var h := height()
+	var bands := 10
+	for i in bands:
+		var y0 := lerpf(SURFACE_Y, h, float(i) / bands)
+		var y1 := lerpf(SURFACE_Y, h, float(i + 1) / bands)
+		var c0 := water_at(y0)
+		var c1 := water_at(y1)
+		Art.grad(ci, PackedVector2Array([Vector2(0, y0), Vector2(w, y0), Vector2(w, y1), Vector2(0, y1)]), PackedColorArray([c0, c0, c1, c1]))
 
 
 ## Glittering path of sun or moon light on the water.
@@ -347,7 +480,7 @@ func _draw_reflection(w: float) -> void:
 	var up := clampf((SURFACE_Y + 20.0 - light.y) / 60.0, 0.0, 1.0)
 	var strength := (0.22 + DayNight.warmth() * 0.5) if DayNight.sun_up() else 0.4 * DayNight.night()
 	var c := DayNight.glint()
-	for i in 7:
+	for i in 6:
 		var y := SURFACE_Y + 12.0 + i * 11.0
 		var hw := (38.0 - i * 3.5) * (0.7 + 0.3 * sin(t * 2.1 + i * 1.3))
 		var x := light.x + sin(t * 1.3 + i * 1.7) * 6.0
@@ -358,12 +491,13 @@ func _draw_reflection(w: float) -> void:
 		Art.grad(self, PackedVector2Array([Vector2(x, y - 1.5), Vector2(x + hw, y), Vector2(x + hw, y), Vector2(x, y + 1.5)]), PackedColorArray([mid, clear, clear, mid]))
 
 
+## Light rays, fish and seaweed above the first dive site.
 func _draw_top_water(w: float) -> void:
 	var day := DayNight.daylight()
 	var tint := DayNight.deep_tint(DayNight.stepped_phase())
-	for i in 6:
-		var x := w * (0.1 + i * 0.17) + sin(t * 0.3 + i) * 16.0
-		var ray := Color(1, 1, 1, 0.09 * (0.2 + 0.8 * day))
+	for i in 5:
+		var x := w * (0.1 + i * 0.2) + sin(t * 0.3 + i) * 16.0
+		var ray := Color(1, 1, 1, 0.07 * (0.2 + 0.8 * day))
 		Art.grad(self, PackedVector2Array([Vector2(x - 14, SURFACE_Y), Vector2(x + 14, SURFACE_Y),
 				Vector2(x + 70, TOP_H), Vector2(x + 20, TOP_H)]), PackedColorArray([ray, ray, Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
 	for f in _fish:
@@ -372,33 +506,40 @@ func _draw_top_water(w: float) -> void:
 		if absf(face) < 0.15:
 			face = 0.15 * signf(face) if face != 0.0 else 0.15
 		Art.fish(self, _fish_pos(f, w), f["size"], Color(f["color"]) * tint, face, t * (1.0 + dart * 2.0) + f["y"])
-	# Sandy slope above the first dive site, with seaweed.
 	for i in 5:
 		var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
 		Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 16, Color("47c47a") * tint, t, i)
+
+
+## Sandy slope above the first dive site, with shells (a still layer over
+## the seaweed roots).
+func _paint_ground(ci: CanvasItem) -> void:
+	var w := size.x
+	var tint := DayNight.deep_tint(DayNight.stepped_phase())
 	var top := PackedVector2Array([Vector2(SHAFT_R, TOP_H + 4)])
 	for i in 13:
 		var x := lerpf(SHAFT_R, w + 10.0, i / 12.0)
 		top.append(Vector2(x, TOP_H - 22.0 - sin(i * 1.3) * 5.0 - (7.0 if i % 3 == 0 else 0.0)))
 	top.append(Vector2(w + 10, TOP_H + 4))
-	Art.toon(self, top, Art.SAND * tint, 3.0, 0.6)
+	Art.toon(ci, top, Art.SAND * tint, 3.0, 0.6)
 	var left := PackedVector2Array([Vector2(-10, TOP_H + 4), Vector2(-10, TOP_H - 26), Vector2(20, TOP_H - 30), Vector2(SHAFT_L, TOP_H - 18), Vector2(SHAFT_L, TOP_H + 4)])
-	Art.toon(self, left, Art.SAND * tint, 3.0, 0.6)
+	Art.toon(ci, left, Art.SAND * tint, 3.0, 0.6)
 	for p: Vector2 in [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26)]:
-		Art.push(self, p, 0.2)
-		Props.shell(self, Color("ffb3c7") * tint)
-		Art.pop(self)
+		Art.push(ci, p, 0.2)
+		Props.shell(ci, Color("ffb3c7") * tint)
+		Art.pop(ci)
 
 
-func _draw_floor(w: float, h: float) -> void:
+## The sea floor under the last dive site, with an old anchor (a still layer).
+func _paint_floor(ci: CanvasItem) -> void:
+	var w := size.x
+	var h := height()
 	var floor_y := h - BOTTOM_H + 60.0
-	for i in 6:
-		Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, Color("2b8f78"), t, i)
 	var pts := PackedVector2Array([Vector2(-10, h + 10)])
 	for i in 13:
 		pts.append(Vector2(w * i / 12.0, floor_y + sin(i * 1.7) * 14.0))
 	pts.append(Vector2(w + 10, h + 10))
-	Art.toon(self, pts, Color("2a2f5e"), 3.0, 0.4)
-	Art.push(self, Vector2(w * 0.7, floor_y + 20), 0.3)
-	Props.anchor(self)
-	Art.pop(self)
+	Art.toon(ci, pts, Color("2a2f5e"), 3.0, 0.4)
+	Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
+	Props.anchor(ci)
+	Art.pop(ci)

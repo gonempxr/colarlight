@@ -100,8 +100,11 @@ static func ellipse_pts(c: Vector2, radii: Vector2, n: int = 0, rot: float = 0.0
 	return pts
 
 
-static func rrect_pts(r: Rect2, radius: float, seg: int = 5) -> PackedVector2Array:
+## Rounded rectangle; `seg` steps per corner (0 = as few as look round).
+static func rrect_pts(r: Rect2, radius: float, seg: int = 0) -> PackedVector2Array:
 	var rad := minf(radius, minf(r.size.x, r.size.y) / 2.0)
+	if seg <= 0:
+		seg = arc_steps(rad, PI / 2.0, 5)
 	var pts := PackedVector2Array()
 	var corners := [
 		[r.position + Vector2(r.size.x - rad, rad), -PI / 2.0],
@@ -114,6 +117,17 @@ static func rrect_pts(r: Rect2, radius: float, seg: int = 5) -> PackedVector2Arr
 			var a: float = c[1] + PI / 2.0 * i / seg
 			pts.append(c[0] + Vector2(cos(a), sin(a)) * rad)
 	return pts
+
+
+## Steps for an arc of `angle` radians so no chord strays more than
+## ARC_TOL px from the curve (small corners need only one or two).
+const ARC_TOL := 0.3
+
+
+static func arc_steps(radius: float, angle: float, most: int) -> int:
+	if radius <= ARC_TOL * 2.0:
+		return 1
+	return clampi(ceili(angle / (2.0 * acos(1.0 - ARC_TOL / radius))), 1, most)
 
 
 static func moved(pts: PackedVector2Array, by: Vector2) -> PackedVector2Array:
@@ -249,6 +263,25 @@ static func _fringe(ring: PackedVector2Array, width: float) -> PackedVector2Arra
 	return out
 
 
+## Closed ring without the points that lie within `tol` of the line
+## joining their neighbours.
+static func _simplify(ring: PackedVector2Array, tol: float) -> PackedVector2Array:
+	var n := ring.size()
+	if n < 8:
+		return ring
+	var out := PackedVector2Array()
+	out.append(ring[0])
+	for i in range(1, n):
+		var a := out[out.size() - 1]
+		var b := ring[i]
+		var ac := ring[(i + 1) % n] - a
+		var l := ac.length()
+		if l > 0.001 and absf(ac.cross(b - a)) < tol * l and (b - a).dot(ac) > 0.0 and (b - a).length() < l:
+			continue
+		out.append(b)
+	return out if out.size() >= 3 else ring
+
+
 static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
 	var k := hash([pts, w, shade])
 	var g = _geo.get(k)
@@ -276,6 +309,9 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 			if a > best_a:
 				best_a = a
 				best = p
+		# A round offset doubles the points of a smooth shape; drop the
+		# ones that don't change it (half the outline triangles).
+		best = _simplify(best, 0.2)
 		outer = _tris(best)
 		if not outer.is_empty() and not low_power:
 			fringe = _fringe(best, AA)
@@ -285,10 +321,14 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 	if shade > 0.0 and not fill.is_empty():
 		var r := _bounds(pts)
 		var d := clampf(r.size.y * 0.18, 1.5, 16.0) * shade
-		for p in Geometry2D.clip_polygons(pts, moved(pts, Vector2(0, -d))):
-			if Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(pts):
-				shadow.append_array(_tris(p))
-		var inset := Geometry2D.offset_polygon(pts, -clampf(r.size.y * 0.07, 1.0, 4.0))
+		# Bands thinner than a pixel can't be seen: skip their triangles.
+		if d >= 1.0:
+			for p in Geometry2D.clip_polygons(pts, moved(pts, Vector2(0, -d))):
+				if Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(pts):
+					shadow.append_array(_tris(p))
+		var inset: Array[PackedVector2Array] = []
+		if d >= 2.0:
+			inset = Geometry2D.offset_polygon(pts, -clampf(r.size.y * 0.07, 1.0, 4.0))
 		if inset.size() == 1:
 			var ip: PackedVector2Array = inset[0]
 			for p in Geometry2D.clip_polygons(ip, moved(ip, Vector2(0, d * 0.5))):
@@ -445,7 +485,8 @@ static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
 	_put(ci, fv, _solid(color, fv.size()))
-	_put(ci, fr2, _fringe_cols(color, fr2.size()))
+	if not low_power:
+		_put(ci, fr2, _fringe_cols(color, fr2.size()))
 	_xf = save
 
 
@@ -469,7 +510,9 @@ static func ring(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: f
 
 static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, closed: bool) -> Array:
 	var n := pts.size()
-	var hw := width / 2.0
+	# Low power: no soft edges, the core covers about as much instead.
+	var soft := not low_power
+	var hw := width / 2.0 if soft else (width + AA) / 2.0
 	var edge := hw + AA
 	var left := PackedVector2Array()
 	var dirs := PackedVector2Array()
@@ -504,6 +547,8 @@ static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, close
 		# core
 		v.append_array([a + la * hw, b + lb * hw, b - lb * hw, a + la * hw, b - lb * hw, a - la * hw])
 		c.append_array([color, color, color, color, color, color])
+		if not soft:
+			continue
 		# soft edges on both sides
 		v.append_array([a + la * hw, b + lb * hw, b + lb * edge, a + la * hw, b + lb * edge, a + la * edge])
 		c.append_array([color, color, clear, color, clear, clear])
