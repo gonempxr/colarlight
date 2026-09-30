@@ -24,6 +24,7 @@ var _edge: PaintLayer
 var _bg_sig := []
 ## Skipped a refresh while far off screen (see refresh_if_shown).
 var _stale := false
+var _check_now := true
 ## The cave outline of the frame being drawn (decor clips light to it).
 var _cp := PackedVector2Array()
 
@@ -59,6 +60,7 @@ func _ready() -> void:
 	_open_btn.pressed.connect(_on_open)
 	add_child(_open_btn)
 	GameState.cycle_finished.connect(_on_cycle_finished)
+	GameState.depth_opened.connect(_on_depth_opened)
 	refresh()
 
 
@@ -70,6 +72,10 @@ func _on_open() -> void:
 		_flash = 1.0
 	else:
 		Sfx.play("deny")
+
+
+func _on_depth_opened(_k: String) -> void:
+	_check_now = true
 
 
 func _on_cycle_finished(k: String, _amount: float) -> void:
@@ -141,6 +147,9 @@ func cave_rect() -> Rect2:
 func _process(delta: float) -> void:
 	_t += delta
 	_flash = maxf(0.0, _flash - delta * 2.0)
+	# Keep the lock label centered when the site opens or closes.
+	if _lock_label.visible != (not GameState.is_open(key())):
+		_notification(NOTIFICATION_RESIZED)
 	var shown := world.is_visible_band(position.y, position.y + size.y)
 	if _stale and shown:
 		refresh()
@@ -148,15 +157,16 @@ func _process(delta: float) -> void:
 	# frame of the world (neighbors alternate), about 15 times a second.
 	if shown and World.tick(World.SCENERY) and (World.tick_count(World.SCENERY) + index) % 2 == 0:
 		queue_redraw()
-	# The still background repaints only when something it shows changes.
+	# The still background repaints only when something it shows changes
+	# (checked every few frames, rows taking turns, or right after a site opens).
+	if not _check_now and (Engine.get_process_frames() + index) % 6 != 0:
+		return
+	_check_now = false
 	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale()]
 	if sig != _bg_sig:
 		_bg_sig = sig
 		_bg.queue_redraw()
 		_edge.queue_redraw()
-	# Keep the lock label centered when the site opens or closes.
-	if _lock_label.visible != (not GameState.is_open(key())):
-		_notification(NOTIFICATION_RESIZED)
 
 
 func _draw_bg(ci: CanvasItem) -> void:

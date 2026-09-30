@@ -27,6 +27,7 @@ var _prestige: Button
 var _avatar: Control
 var _shown_coins := 0.0
 var _t := 0.0
+var _slow_left := 0.0
 var _bump := 0.0
 var _blink := false
 var _bar: PanelContainer
@@ -173,6 +174,7 @@ func pearl_target() -> Vector2:
 
 
 func bump(kind: String) -> void:
+	_slow_left = 0.0
 	if kind == "pearl":
 		_pearl_bump = 1.0
 	else:
@@ -292,16 +294,19 @@ func _process(delta: float) -> void:
 	else:
 		_shown_coins = lerpf(_shown_coins, target, minf(1.0, delta * 10.0))
 	_coins.text = NumFormat.short(_shown_coins)
-	_coins.pivot_offset = _coins.size / 2.0
-	_coins.scale = Vector2.ONE * (1.0 + _bump * 0.08)
-	_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(GameState.income_rate())
+	_set_pop(_coins, 1.0 + _bump * 0.08)
 	_pearl_bump = maxf(0.0, _pearl_bump - delta * 4.0)
+	_set_pop(_pearls, 1.0 + _pearl_bump * 0.25)
+	# The rest changes slowly: ten times a second is plenty.
+	_slow_left -= delta
+	if _slow_left > 0.0:
+		return
+	_slow_left = 0.1
+	_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(GameState.income_rate())
 	var has_pearls := Progress.pearls_total > 0 or Progress.has_feature("shop")
 	_pearl_icon.visible = has_pearls
 	_pearls.visible = has_pearls
 	_pearls.text = str(Progress.pearls)
-	_pearls.pivot_offset = _pearls.size / 2.0
-	_pearls.scale = Vector2.ONE * (1.0 + _pearl_bump * 0.25)
 	var rushing := GameState.is_rushing()
 	var boosted := GameState.boost_left > 0.0
 	_rush.visible = not rushing and not boosted and GameState.rush_meter > 0.0
@@ -315,6 +320,17 @@ func _process(delta: float) -> void:
 		_rush_label.add_theme_color_override("font_color", Art.GOLD)
 	_prestige.tooltip_text = tr("PRESTIGE")
 	_prestige.theme_type_variation = &"GoldButton" if GameState.can_prestige() else &"PurpleButton"
+
+
+## Scales a label about its middle, touching it only when something changed
+## (setting a transform every frame costs a canvas update).
+static func _set_pop(l: Control, s: float) -> void:
+	var pivot := l.size / 2.0
+	if l.pivot_offset != pivot:
+		l.pivot_offset = pivot
+	var sc := Vector2.ONE * s
+	if l.scale != sc:
+		l.scale = sc
 
 
 func _update_reveal(delta: float) -> void:

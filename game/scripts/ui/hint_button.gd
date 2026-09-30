@@ -12,6 +12,8 @@ var _t := 0.0
 var _down := false
 var _press := 0.0
 var _check_left := 0.0
+var _redraw_left := 0.0
+var _drawn_urgent := false
 var main: Node
 
 
@@ -46,7 +48,12 @@ func _process(delta: float) -> void:
 		wig = sin(_t * 10.0) * 0.08 * maxf(0.0, sin(_t * 1.8))
 	rotation = wig
 	scale = Vector2.ONE * (1.0 - _press * 0.08)
-	queue_redraw()
+	# Only the urgent glow moves; a calm bulb repaints when it changes.
+	_redraw_left -= delta
+	if urgent != _drawn_urgent or (urgent and _redraw_left <= 0.0):
+		_drawn_urgent = urgent
+		_redraw_left = 1.0 / 30.0
+		queue_redraw()
 
 
 func _draw() -> void:

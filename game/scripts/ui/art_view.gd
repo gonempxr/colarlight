@@ -3,9 +3,11 @@ extends Control
 ## A small canvas that draws toon art through a callable:
 ## painter.call(ci: CanvasItem, size: Vector2, t: float). Animated views
 ## redraw ANIM_HZ times a second (less on low power); still ones once.
+## They are small pictures on cards and panels: gentle bobbing and gears,
+## so a lower rate than the world's looks the same.
 
-const ANIM_HZ := 30.0
-const LOW_HZ := 20.0
+const ANIM_HZ := 20.0
+const LOW_HZ := 15.0
 
 var painter: Callable
 var animated := false

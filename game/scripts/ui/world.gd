@@ -51,6 +51,8 @@ var _floor: PaintLayer
 var _painted_light := -1.0
 var _painted_tint := -1.0
 var _sun_left := 0.0
+var _view := Rect2()
+var _view_frame := -1
 
 
 func _ready() -> void:
@@ -202,7 +204,12 @@ static func hurry() -> void:
 
 
 func visible_rect() -> Rect2:
-	return get_global_transform_with_canvas().affine_inverse() * get_viewport_rect()
+	# Asked for dozens of times a frame: worked out once per frame.
+	var f := Engine.get_process_frames()
+	if f != _view_frame:
+		_view_frame = f
+		_view = get_global_transform_with_canvas().affine_inverse() * get_viewport_rect()
+	return _view
 
 
 func is_visible_band(y0: float, y1: float) -> bool:
@@ -459,17 +466,16 @@ func _paint_sun(ci: CanvasItem) -> void:
 		Art.pop(ci)
 
 
-## Open water under the surface and in the shaft behind the rows (a still layer).
+## Open water above the first dive site and around the sea floor (a still
+## layer; the dive sites cover everything in between with their own rock
+## and shaft, so painting water there would only cost fill rate).
 func _paint_sea(ci: CanvasItem) -> void:
 	var w := size.x
 	var h := height()
-	var bands := 10
-	for i in bands:
-		var y0 := lerpf(SURFACE_Y, h, float(i) / bands)
-		var y1 := lerpf(SURFACE_Y, h, float(i + 1) / bands)
-		var c0 := water_at(y0)
-		var c1 := water_at(y1)
-		Art.grad(ci, PackedVector2Array([Vector2(0, y0), Vector2(w, y0), Vector2(w, y1), Vector2(0, y1)]), PackedColorArray([c0, c0, c1, c1]))
+	for band: Vector2 in [Vector2(SURFACE_Y, TOP_H + 8.0), Vector2(h - BOTTOM_H - 8.0, h)]:
+		var c0 := water_at(band.x)
+		var c1 := water_at(band.y)
+		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
 
 
 ## Glittering path of sun or moon light on the water.
