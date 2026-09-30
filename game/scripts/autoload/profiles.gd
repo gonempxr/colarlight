@@ -21,6 +21,7 @@ var current_id := ""
 
 
 func _ready() -> void:
+	_import_main_saves()
 	_load()
 	if list.is_empty():
 		var p := _make("")
@@ -148,6 +149,36 @@ func _make(name: String) -> Dictionary:
 	while not find(id).is_empty():
 		id = str(randi() % 100000000)
 	return {"id": id, "name": name, "avatar": Chars.default_avatar(), "created": Time.get_unix_time_from_system()}
+
+
+## A test build exported with its own save folder (custom user dir) starts
+## from a copy of the main build's saves, so a player can try it with their
+## progress. The main build's files are only read, never written.
+func _import_main_saves() -> void:
+	if not ProjectSettings.get_setting("application/config/use_custom_user_dir", false):
+		return
+	if FileAccess.file_exists(LIST_PATH) or FileAccess.file_exists("user://imported.txt"):
+		return
+	var base := OS.get_user_data_dir().get_base_dir()
+	var app := str(ProjectSettings.get_setting("application/config/name", ""))
+	for godot_dir in ["godot", "Godot"]:
+		var main_dir: String = base.path_join(godot_dir).path_join("app_userdata").path_join(app)
+		if FileAccess.file_exists(main_dir.path_join("profiles.cfg")):
+			_copy_dir(main_dir, "user://")
+			print("Imported saves from ", main_dir)
+			break
+	var mark := FileAccess.open("user://imported.txt", FileAccess.WRITE)
+	if mark:
+		mark.store_string("done")
+
+
+func _copy_dir(from: String, to: String) -> void:
+	DirAccess.make_dir_recursive_absolute(to)
+	for f in DirAccess.get_files_at(from):
+		if not f.ends_with(".tmp"):
+			DirAccess.copy_absolute(from.path_join(f), to.path_join(f))
+	for d in DirAccess.get_directories_at(from):
+		_copy_dir(from.path_join(d), to.path_join(d))
 
 
 func _migrate_old_save(id: String) -> void:
