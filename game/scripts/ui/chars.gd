@@ -392,7 +392,9 @@ static func _torso_colors(ci: CanvasItem, shape: PackedVector2Array, l: Dictiona
 ## positive = forward), walk (phase, <0 = standing), hold (item), look,
 ## bob (squash 0..1), tilt (head tilt), hand_l / hand_r (Vector2: the hand
 ## reaches that point in the person's own units, feet at the origin; the arm
-## stretches or shortens to get there, for gripping a crank or a rail).
+## bends at the elbow to get there, for gripping a crank or a rail);
+## no_arms (true: the arms are left out, to be drawn with reach_arms over
+## something the person stands behind).
 static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l: Dictionary, pose: Dictionary) -> void:
 	var bob: float = pose.get("bob", 0.0)
 	var sq := 1.0 - bob * 0.06
@@ -416,8 +418,11 @@ static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l:
 			Art.t_ellipse(ci, Vector2(2.5, 15.5), Vector2(7, 4), Color("3b2a2a"), 2.2, 0.0)
 			Art.pop(ci)
 		Art.cache_end(ci, leg_key)
+	var arms: bool = not pose.get("no_arms", false)
 	# Back arm.
-	if pose.has("hand_l"):
+	if not arms:
+		pass
+	elif pose.has("hand_l"):
 		_reach(ci, Vector2(-13, -41), pose["hand_l"], l, false)
 	else:
 		_arm(ci, Vector2(-13, -41), pose.get("arm_l", 0.1), l, false, "")
@@ -438,7 +443,9 @@ static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l:
 	head(ci, l, pose.get("emotion", "happy"), pose.get("blink", false), pose.get("look", Vector2.ZERO))
 	Art.pop(ci)
 	# Front arm with the held item.
-	if pose.has("hand_r"):
+	if not arms:
+		pass
+	elif pose.has("hand_r"):
 		_reach(ci, Vector2(13, -41), pose["hand_r"], l, true)
 	else:
 		_arm(ci, Vector2(13, -41), pose.get("arm_r", -0.1), l, true, pose.get("hold", ""), pose.get("hold_color", Art.GOLD))
@@ -481,30 +488,68 @@ static func _arm(ci: CanvasItem, shoulder: Vector2, angle: float, l: Dictionary,
 	Art.cache_end(ci, key)
 
 
+## Both arms of a person drawn with no_arms, in front of everything drawn
+## since: the hands reach `hand_l` / `hand_r` (person units, as in person).
+static func reach_arms(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l: Dictionary, hand_l: Vector2, hand_r: Vector2, bob: float = 0.0) -> void:
+	var sq := 1.0 - bob * 0.06
+	Art.push(ci, pos, 0.0, Vector2(scale * facing / sq, scale * sq))
+	_reach(ci, Vector2(-13, -41), hand_l, l, false)
+	_reach(ci, Vector2(13, -41), hand_r, l, true)
+	Art.pop(ci)
+
+
 ## An arm from `shoulder` whose hand ends at `hand` (person units, snapped
-## to whole units so the shape cache holds a few dozen reaches at most).
+## to whole units so the shape cache holds a few dozen reaches at most):
+## upper arm and forearm with the elbow bent outward (away from the body)
+## and down, straight when the hand is at full reach.
 static func _reach(ci: CanvasItem, shoulder: Vector2, hand: Vector2, l: Dictionary, front: bool) -> void:
 	var to := hand.round()
 	var key := hash([23, l, front, shoulder, to, Art.fringe_min])
 	if Art.cache_begin(ci, key):
 		return
 	var d := to - shoulder
-	var n := maxf(6.0, d.length())
+	var n := maxf(4.0, d.length())
+	var half := minf(n * 0.5, REACH_SEG)
+	var bend := sqrt(maxf(0.0, REACH_SEG * REACH_SEG - half * half))
+	var side := d.orthogonal().normalized()
+	# Elbow out to the shoulder's side of the body, and never above the line.
+	if side.x * signf(shoulder.x) < 0.0 or (absf(side.x) < 0.3 and side.y < 0.0):
+		side = -side
+	var elbow := shoulder + d * 0.5 + side * bend
+	var sleeve := sleeve_color(l)
+	var glove := glove_color(l)
+	for seg: Array in [[shoulder, elbow, sleeve], [elbow, to, sleeve]]:
+		var a: Vector2 = seg[0]
+		var e: Vector2 = seg[1]
+		var v := e - a
+		Art.push(ci, a, atan2(-v.x, v.y))
+		Art.t_rect(ci, Rect2(-4.5, -3, 9, v.length() + 3.0), 4.5, seg[2], 2.2, 0.0)
+		Art.pop(ci)
+	Art.t_circle(ci, to, 5.0, glove, 2.2, 0.0)
+	Art.cache_end(ci, key)
+
+
+## Upper arm and forearm of a reaching arm (person units).
+const REACH_SEG := 13.0
+
+
+static func sleeve_color(l: Dictionary) -> Color:
 	var clothes: String = l.get("clothes", "shirt")
-	var sleeve := _outfit(l)
 	match clothes:
 		"suit":
-			sleeve = Art.shade_of(sleeve, 0.1)
-		"overalls", "sailor", "lab":
-			sleeve = Color("f2f2f2") if clothes != "lab" else Art.WHITE
+			return Art.shade_of(_outfit(l), 0.1)
+		"overalls", "sailor":
+			return Color("f2f2f2")
+		"lab":
+			return Art.WHITE
 		"vest":
-			sleeve = Color("4a78c2")
-	var glove := Color("5a5f7a") if clothes in ["overalls", "vest"] else _skin(l)
-	Art.push(ci, shoulder, atan2(-d.x, d.y))
-	Art.t_rect(ci, Rect2(-4.5, -3, 9, n + 2.0), 4.5, sleeve, 2.2, 0.0)
-	Art.t_circle(ci, Vector2(0, n), 5.0, glove, 2.2, 0.0)
-	Art.pop(ci)
-	Art.cache_end(ci, key)
+			return Color("4a78c2")
+	return _outfit(l)
+
+
+## Work gloves with overalls and vests, else bare hands.
+static func glove_color(l: Dictionary) -> Color:
+	return Color("5a5f7a") if l.get("clothes", "shirt") in ["overalls", "vest"] else _skin(l)
 
 
 ## Things held by a handle: they point out of the fist.

@@ -62,6 +62,7 @@ func _ready() -> void:
 	_name.add_theme_constant_override("outline_size", 6)
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_name.custom_minimum_size.x = 40 if narrow else 150
 	_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Head row: [1] name [2]; the unit tabs show once a second one is for sale.
@@ -70,7 +71,6 @@ func _ready() -> void:
 	if narrow:
 		# One line, as tall as the unit tabs, on all three cards.
 		_name.autowrap_mode = TextServer.AUTOWRAP_OFF
-		_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_units.custom_minimum_size.y = 55
 	_head.add_child(_units)
 	if base in ["boat", "plant"]:

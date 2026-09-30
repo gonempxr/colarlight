@@ -16,18 +16,20 @@ const TOP_Y := World.SURFACE_Y + 92.0
 const PULLEY := Vector2(World.ROPE_X, World.SURFACE_Y - 112.0)
 ## Guide wheel on top of the raft's crane post.
 const GUIDE := Vector2(49.0, World.SURFACE_Y - 126.0)
-## The hand winch on the deck at the foot of the crane post (its drum's
-## axle) and the crank's reach; the operator stands on a little pontoon
-## lashed to the raft's left end and turns the crank with both hands. The
-## winch, its engine and the operator keep to x < 60 (the raft's loader
-## stands right of them).
-const WINCH := Vector2(43.0, World.SURFACE_Y - 44.0)
-const CRANK_R := 8.0
-const OPERATOR := Vector2(18.0, World.SURFACE_Y - 16.0)
-const OP_SCALE := 0.72
-## The handle's grip, seen a little from the front: the operator's far
-## hand holds its far end, the near hand its near end.
-const GRIP := Vector2(2.6, -3.4)
+## The hand winch, seen from its end: an A-frame on the deck holding the
+## drum (WINCH is its axle) with the crank in front of it. The operator
+## stands right behind it facing us and turns the crank's handle with both
+## hands, in a circle in front of his chest. From look 3 on an engine on
+## the pontoon at the left helps it through a belt. A little pontoon lashed
+## to the raft's left end carries them; they keep to x < 60 (the raft's
+## loader stands right of them) and below SURFACE_Y - 100.
+const WINCH := Vector2(27.0, World.SURFACE_Y - 38.0)
+const DRUM_R := 12.0
+const CRANK_R := 11.0
+## Half the handle's grip bar (both fists hold it side by side).
+const GRIP := 6.0
+const OPERATOR := Vector2(27.0, World.SURFACE_Y - 16.0)
+const OP_SCALE := 0.8
 ## The crank is drawn in this many angle steps (cached shapes).
 const CRANK_STEPS := 24
 ## Shares of a trip: down with the stops, back up, unloading at the top.
@@ -347,6 +349,10 @@ func _place_card() -> void:
 		at = Vector2(10.0, maxf(top + HintButton.SIZE + 10.0, boat.position.y + boat.size.y) + CARD_GAP)
 	if card.position != at:
 		card.position = at
+	# Its name tab as tall as theirs (they grow "1 | 2" tabs).
+	var head_h: float = boat._head.size.y
+	if card._head.custom_minimum_size.y != head_h:
+		card._head.custom_minimum_size.y = head_h
 	if card.custom_minimum_size.x != w:
 		card.custom_minimum_size.x = w
 		card.size.x = w
@@ -571,15 +577,24 @@ func _draw_top(ci: CanvasItem) -> void:
 	var look := _shown_look()
 	var bob: float = world.surface._raft_bob() if world.surface.has_method("_raft_bob") else 0.0
 	var off := Vector2(0, bob)
+	var turn := crank_angle()
+	var busy: bool = GameState.cycle_progress("lift") >= 0.0
+	# Engine (from look 3) on the pontoon, belted to the drum.
+	Art.push(ci, off)
+	_draw_pontoon(ci)
+	Art.pop(ci)
+	if look >= 3:
+		Art.push(ci, WINCH + off)
+		draw_engine(ci, look, turn, busy, _t)
+		Art.pop(ci)
 	# Cable: off the drum -> up to the guide wheel on the post -> along the
-	# arm -> over the pulley.
+	# arm -> over the pulley (behind the operator).
 	var c := cable_color(look)
-	var pts := PackedVector2Array([WINCH + Vector2(7, -8), GUIDE + Vector2(-6.5, 0), GUIDE + Vector2(0, -7), PULLEY + Vector2(0, -9)])
+	var pts := PackedVector2Array([WINCH + Vector2(DRUM_R - 3.0, -DRUM_R + 3.0), GUIDE + Vector2(-6.5, 0), GUIDE + Vector2(0, -7), PULLEY + Vector2(0, -9)])
 	Art.push(ci, off)
 	Art.polyline(ci, pts, Art.INK, 6.0)
 	Art.polyline(ci, pts, c, 3.0)
 	Art.pop(ci)
-	var turn := crank_angle()
 	Art.push(ci, GUIDE + off, turn * 0.6)
 	Art.t_circle(ci, Vector2.ZERO, 6.5, Art.METAL, 2.2, 0.0)
 	Art.flat(ci, Art.rrect_pts(Rect2(-5, -1.2, 10, 2.4), 1), Art.INK_SOFT)
@@ -589,14 +604,14 @@ func _draw_top(ci: CanvasItem) -> void:
 	Art.flat(ci, Art.rrect_pts(Rect2(-7, -1.5, 14, 3), 1), Art.INK_SOFT)
 	Art.flat(ci, Art.rrect_pts(Rect2(-1.5, -7, 3, 14), 1), Art.INK_SOFT)
 	Art.pop(ci)
-	Art.push(ci, off)
-	_draw_pontoon(ci)
-	Art.pop(ci)
-	var busy: bool = GameState.cycle_progress("lift") >= 0.0
+	# The operator, the winch in front of him, then his arms over it.
+	var op := _draw_operator(ci, off, turn)
 	Art.push(ci, WINCH + off)
 	draw_winch(ci, look, turn, busy, _t)
 	Art.pop(ci)
-	_draw_operator(ci, off, turn)
+	Chars.reach_arms(ci, op["feet"], OP_SCALE, 1.0, _op_look, op["hand_l"], op["hand_r"], op["bob"])
+	if _op_sleepy:
+		Chars.mark(ci, "zzz", OPERATOR + off + Vector2(12, -80), _t)
 	# A new look pops in with a flash.
 	var fx := _t - _look_fx
 	if fx >= 0.0 and fx < 0.8:
@@ -614,133 +629,167 @@ func crank_angle() -> float:
 	return fposmod(roundf(_crank / step) * step, TAU)
 
 
-## Where the crank's handle is, relative to the drum's axle.
+## Where the crank's handle is, relative to the axle.
 static func handle_at(turn: float) -> Vector2:
 	return Vector2(sin(turn), -cos(turn)) * CRANK_R
 
 
-static var _PONTOON_KEY := hash([52, "pontoon"])
+static var _PONTOON_KEY := hash([54, "pontoon"])
 
 
-## The operator's pontoon: a few planks on a float, lashed to the raft.
+## The winch's pontoon: a few planks on a float, lashed to the raft.
 func _draw_pontoon(ci: CanvasItem) -> void:
-	var base := Vector2(0, World.SURFACE_Y)
-	Art.push(ci, base)
+	Art.push(ci, Vector2(0, World.SURFACE_Y))
 	if not Art.cache_begin(ci, _PONTOON_KEY):
-		Art.t_ellipse(ci, Vector2(10, 3), Vector2(17, 9), Art.CORAL, 2.5, 0.7)
-		Art.t_rect(ci, Rect2(-10, -16, 44, 13), 4, Art.WOOD, 3.0, 0.6)
-		for x: float in [3.0, 17.0]:
+		Art.t_ellipse(ci, Vector2(12, 3), Vector2(17, 9), Art.CORAL, 2.5, 0.7)
+		Art.t_rect(ci, Rect2(-8, -16, 44, 13), 4, Art.WOOD, 3.0, 0.6)
+		for x: float in [5.0, 19.0]:
 			Art.line(ci, Vector2(x, -14), Vector2(x, -5), Art.WOOD_DARK, 2.0)
 		# Rope lashing to the raft's deck.
-		Art.t_rect(ci, Rect2(27, -17, 6, 15), 2, Color("e8c48a"), 2.0, 0.0)
-		Art.line(ci, Vector2(28, -12), Vector2(32, -9), Color("b88a4a"), 1.5)
-		Art.line(ci, Vector2(28, -7), Vector2(32, -4), Color("b88a4a"), 1.5)
+		Art.t_rect(ci, Rect2(29, -17, 6, 15), 2, Color("e8c48a"), 2.0, 0.0)
+		Art.line(ci, Vector2(30, -12), Vector2(34, -9), Color("b88a4a"), 1.5)
+		Art.line(ci, Vector2(30, -7), Vector2(34, -4), Color("b88a4a"), 1.5)
 		Art.cache_end(ci, _PONTOON_KEY)
 	Art.pop(ci)
 
 
-## The hand winch, origin at the drum's axle (the deck is 28 below): an
-## A-frame stand, the drum with the cable wound on it and the crank (arm
-## and handle) at `turn`. From look 3 on an engine at its right helps it
-## (steam, then electric); the crank stays so the operator can steer it.
-static func draw_winch(ci: CanvasItem, look: int, turn: float, busy: bool, t: float) -> void:
-	var wood := look <= 2
-	var frame := Art.WOOD if wood else (Color("8a94b8") if look == 3 else (Art.BRASS if look == 4 else (Color("4a5270") if look == 5 else Art.GOLD)))
-	var frame_dark := Art.shade_of(frame, 0.3)
-	# Engine behind the drum, up against the crane post.
+## The engine that helps the winch from look 3 on (origin at the drum's
+## axle; it stands on the pontoon at the left, the deck 22 below): a little
+## steam boiler that puffs (looks 3, 4), then an electric motor (5, 6), with
+## a belt running up to the drum.
+static func draw_engine(ci: CanvasItem, look: int, turn: float, busy: bool, t: float) -> void:
+	var x0 := -25.0
+	var w := 12.0
+	var top := -10.0
+	Art.stroke(ci, PackedVector2Array([Vector2(x0 + w * 0.5, top + 8.0), Vector2(0, 0)]), Color("3a3f5c"), 3.0, 1.5)
 	match look:
 		3, 4:
-			# A little steam boiler with a gauge; it puffs while it winds.
 			var metal := Color("8a94b8") if look == 3 else Color("e08a4a")
-			Art.t_rect(ci, Rect2(-3, -30, 17, 30), 6, metal, 2.5, 0.6)
-			Art.t_rect(ci, Rect2(-4, -22, 19, 4), 2, Art.shade_of(metal, 0.25), 2.0, 0.0)
-			Art.t_rect(ci, Rect2(6, -40, 6, 11), 2, Color("4a5270"), 2.0, 0.0)
-			Art.t_circle(ci, Vector2(8, -13), 4.5, Art.WHITE, 1.8, 0.0)
-			Art.push(ci, Vector2(8, -13), snappedf(sin(t * 3.0) * 0.8, 0.2) if busy else -0.6)
-			Art.line(ci, Vector2.ZERO, Vector2(0, -3.2), Art.RED, 1.5)
+			Art.t_rect(ci, Rect2(x0 + 4, top - 12, 5, 13), 2, Color("4a5270"), 2.0, 0.0)
+			Art.t_rect(ci, Rect2(x0, top, w, 32), 5, metal, 2.5, 0.6)
+			Art.t_rect(ci, Rect2(x0 - 1, top + 9, w + 2, 3.5), 1.5, Art.shade_of(metal, 0.25), 1.8, 0.0)
+			Art.t_circle(ci, Vector2(x0 + w * 0.5, top + 20), 4.2, Art.WHITE, 1.8, 0.0)
+			Art.push(ci, Vector2(x0 + w * 0.5, top + 20), snappedf(sin(t * 3.0) * 0.8, 0.2) if busy else -0.6)
+			Art.line(ci, Vector2.ZERO, Vector2(0, -3.0), Art.RED, 1.5)
 			Art.pop(ci)
 			if busy:
 				for k in 2:
 					var g := snappedf(fposmod(t * 0.9 + k * 0.5, 1.0), 0.05)
-					Art.disc(ci, Vector2(9 + g * 6.0, -42 - g * 22.0), snappedf(3.0 + g * 5.0, 1.0), Color(1, 1, 1, snappedf(0.7 * (1.0 - g), 0.1)))
-		5, 6:
-			# Electric motor: a striped box with a lamp.
+					Art.disc(ci, Vector2(x0 + 6.0 - g * 6.0, top - 14.0 - g * 20.0), snappedf(2.5 + g * 5.0, 1.0), Color(1, 1, 1, snappedf(0.75 * (1.0 - g), 0.1)))
+		_:
 			var box := Color("ffc93c") if look == 5 else Color("fff0b8")
-			Art.t_rect(ci, Rect2(-3, -30, 17, 28), 5, box, 2.5, 0.6)
-			for k in 2:
-				Art.flat(ci, PackedVector2Array([Vector2(-1 + k * 8, -28), Vector2(3 + k * 8, -28), Vector2(0 + k * 8, -23), Vector2(-4 + k * 8, -23)]), Art.INK)
+			Art.t_rect(ci, Rect2(x0, top, w, 32), 4, box, 2.5, 0.6)
+			for k in 3:
+				var y := top + 3.0 + k * 6.0
+				Art.flat(ci, PackedVector2Array([Vector2(x0 + 2, y + 3), Vector2(x0 + w - 2, y), Vector2(x0 + w - 2, y + 2.5), Vector2(x0 + 2, y + 5.5)]), Color(Art.INK, 0.85))
 			var lit := 1.0 if busy else 0.3
 			if busy:
-				Art.glow(ci, Vector2(8, -15), 11.0, Color(1, 0.8, 0.4, 0.4), 12)
-			Art.t_circle(ci, Vector2(8, -15), 4.0, Color(1.0, 0.35 + 0.5 * lit, 0.3, 1.0), 1.8, 0.0)
+				Art.glow(ci, Vector2(x0 + w * 0.5, top + 25), 9.0, Color(1, 0.8, 0.4, 0.4), 12)
+			Art.t_circle(ci, Vector2(x0 + w * 0.5, top + 25), 3.2, Color(1.0, 0.35 + 0.5 * lit, 0.3, 1.0), 1.6, 0.0)
 			if look >= 6:
-				Art.toon(ci, Art.star_pts(Vector2(5, -36), 4.5, 2.0, 5), Art.WHITE, 1.2, 0.0)
+				Art.toon(ci, Art.star_pts(Vector2(x0 + w * 0.5, top - 5), 4.5, 2.0, 5), Art.WHITE, 1.2, 0.0)
+	# The engine's pulley turns with the winch.
+	Art.push(ci, Vector2(x0 + w * 0.5, top + 8.0), turn * 2.0)
+	Art.t_circle(ci, Vector2.ZERO, 3.5, Art.METAL, 1.6, 0.0)
+	Art.line(ci, Vector2(-2.5, 0), Vector2(2.5, 0), Art.INK_SOFT, 1.2)
+	Art.pop(ci)
+
+
+## The winch, origin at the drum's axle (the deck is 22 below): an A-frame
+## stand, the drum seen from its end with the cable wound on it, and the
+## crank (arm, and a grip bar for both hands) at `turn`, fancier per look.
+static func draw_winch(ci: CanvasItem, look: int, turn: float, busy: bool, _t: float) -> void:
+	var deck := 22.0
+	var wood := look <= 2
+	var frame := Art.WOOD_DARK if wood else (Color("6a7394") if look == 3 else (Color("b8652e") if look == 4 else (Color("4a5270") if look == 5 else Art.GOLD_DARK)))
 	# Stand: two legs from the axle to a skid on the deck.
-	Art.stroke(ci, PackedVector2Array([Vector2(-2, 0), Vector2(-11, 26)]), frame, 5.0, 2.0)
-	Art.stroke(ci, PackedVector2Array([Vector2(2, 0), Vector2(11, 26)]), frame, 5.0, 2.0)
-	Art.t_rect(ci, Rect2(-15, 24, 30, 5), 2, frame_dark, 2.0, 0.0)
-	# Drum (its end seen from the side) with the cable wound round it; the
-	# spokes turn with the crank.
-	var drum := Art.WOOD if wood else (Color("4a5270") if look <= 4 else (Color("3a3f5c") if look == 5 else Art.GOLD_DARK))
-	Art.t_circle(ci, Vector2.ZERO, 11.0, drum, 2.5, 0.4)
-	Art.arc(ci, Vector2.ZERO, 7.5, 0, TAU, 18, cable_color(look), 3.0)
+	Art.stroke(ci, PackedVector2Array([Vector2(-3, 0), Vector2(-13, deck - 2)]), frame, 5.0, 2.0)
+	Art.stroke(ci, PackedVector2Array([Vector2(3, 0), Vector2(13, deck - 2)]), frame, 5.0, 2.0)
+	Art.t_rect(ci, Rect2(-17, deck - 4, 34, 5), 2, Art.shade_of(frame, 0.2), 2.0, 0.0)
+	# The drum's end plate with the cable wound round it; the spokes turn.
+	var drum := Art.WOOD if wood else (Color("8a94b8") if look == 3 else (Art.BRASS if look == 4 else (Color("3a3f5c") if look == 5 else Art.GOLD)))
+	Art.t_circle(ci, Vector2.ZERO, DRUM_R, drum, 2.5, 0.4)
+	Art.arc(ci, Vector2.ZERO, DRUM_R - 3.5, 0, TAU, 20, cable_color(look), 3.0)
 	if look == 2 or look == 3:
 		# Iron teeth round the rim.
 		for k in 8:
 			var a := turn + k * TAU / 8.0
-			Art.disc(ci, Vector2(cos(a), sin(a)) * 11.5, 1.6, Art.INK_SOFT)
+			Art.disc(ci, Vector2(cos(a), sin(a)) * (DRUM_R + 0.5), 1.8, Art.INK_SOFT)
 	Art.push(ci, Vector2.ZERO, turn)
 	for k in 3:
-		Art.line(ci, Vector2.ZERO, Vector2(0, -5.5).rotated(k * TAU / 3.0), Art.INK_SOFT, 1.6)
+		Art.line(ci, Vector2.ZERO, Vector2(0, -DRUM_R + 5.0).rotated(k * TAU / 3.0), Art.shade_of(drum, 0.45), 2.0)
 	Art.pop(ci)
-	# Crank arm and handle (the operator's hands cover the handle).
+	if look >= 6:
+		Art.toon(ci, Art.star_pts(Vector2(0, DRUM_R - 3.0), 3.0, 1.4, 5), Art.WHITE, 1.0, 0.0)
+	# Crank: the arm from the axle to the handle, and its grip bar.
 	var h := handle_at(turn)
 	var arm := Art.METAL if look < 6 else Art.GOLD
-	Art.stroke(ci, PackedVector2Array([Vector2.ZERO, h]), arm, 3.5, 1.8)
-	Art.t_circle(ci, Vector2.ZERO, 3.0, arm, 1.8, 0.0)
-	Art.stroke(ci, PackedVector2Array([h - GRIP, h + GRIP]), Art.CORAL if look < 6 else Art.WHITE, 4.5, 1.8)
+	Art.stroke(ci, PackedVector2Array([Vector2.ZERO, h]), arm, 4.0, 1.8)
+	Art.t_circle(ci, Vector2.ZERO, 3.2, arm, 1.8, 0.0)
+	Art.stroke(ci, PackedVector2Array([h - Vector2(GRIP, 0), h + Vector2(GRIP, 0)]), Art.CORAL if look < 6 else Art.WHITE, 4.5, 1.8)
+	if busy:
+		# Motion lines behind the handle: it sweeps round.
+		var a1 := turn - PI * 0.5
+		Art.arc(ci, Vector2.ZERO, CRANK_R + 5.0, a1 - 1.1, a1 - 0.2, 6, Color(1, 1, 1, 0.85), 1.8)
 
 
-## The operator on the pontoon: a worker (or, once hired, the lift's own
+var _op_sleepy := false
+var _op_look: Dictionary = {}
+
+
+## The operator behind the winch: a worker (or, once hired, the lift's own
 ## operator) who turns the crank with both hands while the lift runs,
-## rocking with it, and leans on the winch while it waits (dozing when ore
-## is waiting and nobody sends the lift).
-func _draw_operator(ci: CanvasItem, off: Vector2, turn: float) -> void:
+## bobbing with it, and leans on the drum while it waits (dozing when ore
+## is waiting and nobody sends the lift). Draws him without his arms and
+## returns where they go: {feet, hand_l, hand_r (his units), bob}.
+func _draw_operator(ci: CanvasItem, off: Vector2, turn: float) -> Dictionary:
 	var gs := GameState
 	var hired: bool = gs.has_manager("lift")
-	var l: Dictionary = Chars.manager_look("lift") if hired else Chars.look(2, "short", 1, "beanie", "none", 2, "overalls")
+	_op_look = Chars.manager_look("lift") if hired else Chars.look(2, "short", 1, "hardhat", "none", 0, "overalls")
 	var p: float = gs.cycle_progress("lift")
 	var mood := world.mood("lift")
-	var pose := {"blink": Chars.blinking(_t, 3.3)}
+	var pose := {"blink": Chars.blinking(_t, 3.3), "no_arms": true}
 	var feet := OPERATOR + off + Vector2(0, -world.hop("lift"))
+	var axle := WINCH + off
 	var emo := "happy"
+	var hl := Vector2.ZERO
+	var hr := Vector2.ZERO
+	_op_sleepy = false
 	if mood == "joy" or mood == "wow":
 		# Cheers with both arms up.
-		pose["arm_r"] = 2.4
-		pose["arm_l"] = -2.4
+		hl = feet + Vector2(-19, -62) * OP_SCALE
+		hr = feet + Vector2(19, -62) * OP_SCALE
 	elif p >= 0.0:
 		emo = "focus" if not gs.is_rushing() else "joy"
-		# Rocks toward the handle as it swings away, and back.
 		var h := handle_at(turn)
-		feet.x += h.x * 0.35
-		var hand := WINCH + off + h
-		pose["hand_r"] = (hand - GRIP * 0.7 - feet) / OP_SCALE
-		pose["hand_l"] = (hand + GRIP * 0.7 - feet) / OP_SCALE
-		pose["bob"] = snappedf(0.5 + 0.5 * cos(turn), 0.25) * 0.6
+		# Leans into the handle as it goes down and sways after it (his legs
+		# are behind the winch).
+		var dip := snappedf(0.5 - 0.5 * cos(turn), 0.125)
+		feet += Vector2(snappedf(h.x * 0.25, 0.5), dip * 5.0)
+		pose["bob"] = dip * 0.5
+		pose["tilt"] = snappedf(sin(turn), 0.5) * 0.08
+		hl = axle + h + Vector2(-GRIP * 0.55, 0)
+		hr = axle + h + Vector2(GRIP * 0.55, 0)
 	else:
 		if not hired and gs.pit > 0.0:
 			emo = "sleepy" if _t - _idle_since > 5.0 else "bored"
-		# Leans on the winch: an elbow on the drum, the other arm easy.
-		feet.x += 1.5
-		pose["hand_r"] = (WINCH + off + Vector2(-2, -12) - feet) / OP_SCALE
-		pose["arm_l"] = -0.15
-		pose["tilt"] = 0.12 if emo == "sleepy" else 0.05
+		_op_sleepy = emo == "sleepy"
+		if _op_sleepy:
+			# Dozes leaning on the drum, both hands on top of it.
+			hl = axle + Vector2(-9, -DRUM_R + 2.0)
+			hr = axle + Vector2(9, -DRUM_R + 2.0)
+			feet.y += 3.0
+			pose["tilt"] = 0.16
+		else:
+			# Waits at ease: a hand on the crank's grip, the other hanging.
+			hr = axle + handle_at(turn) + Vector2(GRIP * 0.3, 0)
+			hl = feet + Vector2(-16, -22) * OP_SCALE
 	if mood != "":
 		emo = mood
+		_op_sleepy = false
 	pose["emotion"] = emo
-	Chars.person(ci, feet, OP_SCALE, 1.0, l, pose)
-	if emo == "sleepy":
-		Chars.mark(ci, "zzz", feet + Vector2(8, -62), _t)
+	Chars.person(ci, feet, OP_SCALE, 1.0, _op_look, pose)
+	return {"feet": feet, "hand_l": (hl - feet) / OP_SCALE, "hand_r": (hr - feet) / OP_SCALE, "bob": float(pose.get("bob", 0.0))}
 
 
 ## Picture for the upgrade panel (PC): the shaft, the cabin and the crates.

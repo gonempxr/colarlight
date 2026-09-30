@@ -44,6 +44,8 @@ func _initialize() -> void:
 	main._scroller.zoom = zoom
 	main._scroller.scroll_to(AREA.position.y - 40.0)
 	gs.set_process(false)
+	# The "Tap!" bubble of the idle lift would cover the idle column.
+	world.divers.visible = false
 	var hired_list: Array = [false, true] if hired_arg == 2 else [hired_arg == 1]
 	var tiles: Array[Image] = []
 	var tile_size := Vector2i.ZERO
