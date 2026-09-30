@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<meta name="theme-color" content="#4fb3ee">
+		<title>Coralight: Dive Tycoon</title>
+		<style>
+@font-face { font-family: 'CL'; src: url(data:font/woff;base64,{{FONT_MAIN}}) format('woff'); font-display: block; }
+@font-face { font-family: 'CLZH'; src: url(data:font/woff;base64,{{FONT_ZH}}) format('woff'); font-display: block; }
+
+:root {
+	--ink: #241a3a;
+	--cream: #fff6e4;
+	--gold: #ffc93c;
+	--gold-dark: #e0921c;
+	--sky-top: #4fb3ee;
+	--sky-mid: #8fd2f7;
+	--sky-bottom: #c9eeff;
+	--sea-top: #35c9d2;
+	--sea-mid: #1c88b6;
+	--sea-deep: #165290;
+	--sea-abyss: #0e2654;
+	--horizon: 44%;
+}
+
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+
+body {
+	color: white;
+	background-color: var(--sea-abyss);
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas { display: block; }
+#canvas:focus { outline: none; }
+
+/* Loading screen */
+#status {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	z-index: 10;
+	font-family: 'CL', 'CLZH', 'Nunito', system-ui, sans-serif;
+	-webkit-user-select: none;
+	user-select: none;
+	transition: opacity 0.6s ease;
+}
+#status.leaving { opacity: 0; pointer-events: none; }
+
+.sky {
+	position: absolute;
+	left: 0; right: 0; top: 0;
+	height: var(--horizon);
+	background: linear-gradient(var(--sky-top), var(--sky-mid) 60%, var(--sky-bottom));
+	overflow: hidden;
+}
+.rays {
+	position: absolute;
+	left: 50%; top: 58%;
+	width: 220vmax; height: 220vmax;
+	margin: -110vmax 0 0 -110vmax;
+	background: repeating-conic-gradient(rgba(255, 255, 255, 0.22) 0deg 9deg, rgba(255, 255, 255, 0) 9deg 22.5deg);
+	-webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 40%);
+	mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 40%);
+	animation: spin 60s linear infinite;
+}
+.cloud { position: absolute; width: clamp(90px, 16vw, 190px); animation: drift linear infinite; }
+.cloud.c1 { top: 9%; animation-duration: 70s; animation-delay: -20s; }
+.cloud.c2 { top: 30%; width: clamp(70px, 11vw, 140px); animation-duration: 95s; animation-delay: -70s; }
+.cloud.c3 { top: 3%; width: clamp(60px, 9vw, 120px); animation-duration: 120s; animation-delay: -5s; }
+
+.gull { position: absolute; width: clamp(22px, 3vw, 34px); animation: fly 26s linear infinite; }
+.gull.g2 { animation-duration: 34s; animation-delay: -15s; top: 22%; }
+
+.sea {
+	position: absolute;
+	left: 0; right: 0; bottom: 0;
+	top: var(--horizon);
+	background: linear-gradient(var(--sea-top), var(--sea-mid) 28%, var(--sea-deep) 62%, var(--sea-abyss));
+}
+.waves {
+	position: absolute;
+	left: 0; top: -14px;
+	width: 200%; height: 30px;
+	animation: waves 7s linear infinite;
+}
+.shine {
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(100deg, rgba(255, 255, 255, 0) 0 60px, rgba(255, 255, 255, 0.07) 60px 110px, rgba(255, 255, 255, 0) 110px 200px);
+	-webkit-mask-image: linear-gradient(#000, transparent 70%);
+	mask-image: linear-gradient(#000, transparent 70%);
+	animation: shine 9s ease-in-out infinite alternate;
+}
+.bubble {
+	position: absolute;
+	bottom: -20px;
+	border: 2px solid rgba(255, 255, 255, 0.75);
+	background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.85) 0 18%, rgba(255, 255, 255, 0.12) 22%);
+	border-radius: 50%;
+	animation: rise linear infinite;
+}
+.fish { position: absolute; animation: swim linear infinite; }
+.fish svg { display: block; width: 100%; animation: bob 1.6s ease-in-out infinite alternate; }
+.fish.left { animation-name: swim-left; }
+.fish.left svg { transform: scaleX(-1); animation-name: bob-flip; }
+
+.floor {
+	position: absolute;
+	left: -2%; right: -2%; bottom: -2px;
+	height: 8%;
+	background: #e2aa62;
+	border-top: 4px solid var(--ink);
+	border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+}
+.weed { position: absolute; bottom: 5%; width: clamp(34px, 5vw, 56px); transform-origin: 50% 100%; animation: sway 3.2s ease-in-out infinite alternate; }
+
+/* Foreground */
+.front {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	grid-template-rows: var(--horizon) 1fr;
+	justify-items: center;
+	padding: 0 16px;
+}
+.logo {
+	align-self: center;
+	width: min(86vw, 640px, 110vh);
+	height: auto;
+	margin-top: 2vh;
+	filter: drop-shadow(0 6px 0 rgba(36, 26, 58, 0.25));
+	animation: logo-in 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both, float 3.4s ease-in-out 0.7s infinite alternate;
+}
+.bottom {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: clamp(14px, 3vh, 26px);
+	width: min(92vw, 480px);
+	margin-top: clamp(26px, 8vh, 90px);
+}
+.bar {
+	position: relative;
+	width: 100%;
+	height: clamp(26px, 4.2vh, 34px);
+	box-sizing: border-box;
+	border: 4px solid var(--ink);
+	border-radius: 999px;
+	background: #0b1d44;
+	box-shadow: 0 5px 0 var(--ink), inset 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+.fill {
+	position: absolute;
+	left: 0; top: 0; bottom: 0;
+	width: 6%;
+	min-width: 22px;
+	border-radius: 999px;
+	background:
+		linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.12)),
+		repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.22) 0 10px, rgba(255, 255, 255, 0) 10px 20px),
+		linear-gradient(90deg, var(--gold-dark), var(--gold));
+	background-size: 100% 100%, 28px 28px, 100% 100%;
+	animation: stripes 0.9s linear infinite;
+	transition: width 0.35s ease-out;
+}
+.bar.waiting .fill { width: 30% !important; animation: stripes 0.9s linear infinite, sweep 1.6s ease-in-out infinite alternate; }
+.rider {
+	position: absolute;
+	right: -20px; top: 50%;
+	width: clamp(38px, 6vh, 48px);
+	transform: translateY(-50%);
+	animation: rider 1.2s ease-in-out infinite alternate;
+}
+.label {
+	font-size: clamp(20px, 3.2vh, 28px);
+	letter-spacing: 0.02em;
+	text-shadow: 0 3px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink), 2px 2px 0 var(--ink), -2px 2px 0 var(--ink), 2px -2px 0 var(--ink), -2px -2px 0 var(--ink);
+	white-space: nowrap;
+}
+.label .pct { color: var(--gold); margin-left: 0.3em; }
+.card {
+	box-sizing: border-box;
+	width: 100%;
+	background: var(--cream);
+	color: var(--ink);
+	border: 4px solid var(--ink);
+	border-radius: 18px;
+	box-shadow: 0 5px 0 var(--ink);
+	padding: 12px 16px;
+}
+.tip {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 64px;
+	font-size: clamp(15px, 2.1vh, 18px);
+	line-height: 1.3;
+}
+.tip svg { flex: none; width: 34px; }
+.tip span { transition: opacity 0.35s ease; }
+.tip span.fade { opacity: 0; }
+#status-notice {
+	display: none;
+	text-align: center;
+	font-size: 16px;
+	line-height: 1.35;
+}
+#status-notice b { display: block; font-size: 20px; margin-bottom: 6px; color: #c7372f; }
+#status-notice .detail { font-size: 13px; opacity: 0.75; overflow-wrap: anywhere; }
+#status-notice button {
+	margin-top: 12px;
+	font: inherit;
+	font-size: 18px;
+	color: white;
+	background: #5cd05f;
+	border: 4px solid var(--ink);
+	border-radius: 14px;
+	box-shadow: 0 4px 0 var(--ink);
+	padding: 8px 22px;
+	cursor: pointer;
+}
+#status-notice button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+#status.failed .bar, #status.failed .label, #status.failed .tip { display: none; }
+#status.failed #status-notice { display: block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(130vw); } }
+@keyframes fly { from { transform: translate(-10vw, 0); } 50% { transform: translate(55vw, -2vh); } to { transform: translate(115vw, 1vh); } }
+@keyframes waves { to { transform: translateX(-50%); } }
+@keyframes shine { to { transform: translateX(80px); } }
+@keyframes rise { from { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translate(12px, -28vh); } 85% { opacity: 1; } to { transform: translate(-6px, -54vh); opacity: 0; } }
+@keyframes swim { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
+@keyframes swim-left { from { transform: translateX(120vw); } to { transform: translateX(-20vw); } }
+@keyframes bob { from { transform: translateY(-3px) rotate(-3deg); } to { transform: translateY(3px) rotate(3deg); } }
+@keyframes bob-flip { from { transform: scaleX(-1) translateY(-3px) rotate(-3deg); } to { transform: scaleX(-1) translateY(3px) rotate(3deg); } }
+@keyframes sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes logo-in { from { transform: scale(0.6) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes float { from { transform: translateY(-4px) rotate(-1deg); } to { transform: translateY(5px) rotate(1deg); } }
+@keyframes stripes { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 0 0, 28px 0, 0 0; } }
+@keyframes sweep { from { left: 0; } to { left: 70%; } }
+@keyframes rider { from { transform: translateY(-58%) rotate(-8deg); } to { transform: translateY(-42%) rotate(8deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+	#status *, #status *::before { animation: none !important; transition: none !important; }
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<div class="sky">
+				<div class="rays"></div>
+				<svg class="cloud c1" viewBox="0 0 120 56" aria-hidden="true"><path d="M20 50 a16 16 0 0 1 2-31 a22 22 0 0 1 40-8 a18 18 0 0 1 32 9 a15 15 0 0 1 6 30 z" fill="#fff" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><path d="M26 44 h66" stroke="#d6eefc" stroke-width="6" stroke-linecap="round"/></svg>
+				<svg class="cloud c2" viewBox="0 0 120 56" aria-hidden="true"><path d="M20 50 a16 16 0 0 1 2-31 a22 22 0 0 1 40-8 a18 18 0 0 1 32 9 a15 15 0 0 1 6 30 z" fill="#fff" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><path d="M26 44 h66" stroke="#d6eefc" stroke-width="6" stroke-linecap="round"/></svg>
+				<svg class="cloud c3" viewBox="0 0 120 56" aria-hidden="true"><path d="M20 50 a16 16 0 0 1 2-31 a22 22 0 0 1 40-8 a18 18 0 0 1 32 9 a15 15 0 0 1 6 30 z" fill="#fff" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><path d="M26 44 h66" stroke="#d6eefc" stroke-width="6" stroke-linecap="round"/></svg>
+				<svg class="gull" style="top:14%" viewBox="0 0 40 16" aria-hidden="true"><path d="M2 10 Q10 1 20 9 Q30 1 38 10" fill="none" stroke="#241a3a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<svg class="gull g2" viewBox="0 0 40 16" aria-hidden="true"><path d="M2 10 Q10 1 20 9 Q30 1 38 10" fill="none" stroke="#241a3a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</div>
+			<div class="sea" id="sea">
+				<div class="shine"></div>
+				<svg class="waves" viewBox="0 0 800 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q50 2 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14 V30 H0 Z" fill="#35c9d2"/><path d="M0 14 Q50 2 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14" fill="none" stroke="#241a3a" stroke-width="4"/><path d="M0 20 Q50 10 100 20 T200 20 T300 20 T400 20 T500 20 T600 20 T700 20 T800 20" fill="none" stroke="#bff3ff" stroke-width="3" opacity="0.8"/></svg>
+				<div class="fish" style="top:24%;width:clamp(46px,6vw,70px);animation-duration:17s;animation-delay:-4s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#ff7a59" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#ff7a59" stroke="#241a3a" stroke-width="4"/><path d="M18 30 q10 6 22 0" fill="none" stroke="#ffd0a8" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
+				<div class="fish left" style="top:52%;width:clamp(38px,5vw,58px);animation-duration:22s;animation-delay:-13s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#ffc93c" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#ffc93c" stroke="#241a3a" stroke-width="4"/><path d="M30 6 v32" stroke="#e0921c" stroke-width="5"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
+				<div class="fish" style="top:74%;width:clamp(34px,4.4vw,52px);animation-duration:26s;animation-delay:-9s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#8a6cf0" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#8a6cf0" stroke="#241a3a" stroke-width="4"/><path d="M22 10 q6 12 0 24 M34 8 q6 14 0 28" fill="none" stroke="#b9a6ff" stroke-width="4"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
+				<div class="floor"></div>
+				<svg class="weed" style="left:4%" viewBox="0 0 40 90" aria-hidden="true"><path d="M20 88 C4 70 34 56 16 40 C4 28 24 16 18 2" fill="none" stroke="#241a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 88 C4 70 34 56 16 40 C4 28 24 16 18 2" fill="none" stroke="#5cd05f" stroke-width="6" stroke-linecap="round"/></svg>
+				<svg class="weed" style="left:9%;height:9%;animation-delay:-1.4s" viewBox="0 0 40 90" aria-hidden="true"><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#241a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#2bc8b4" stroke-width="6" stroke-linecap="round"/></svg>
+				<svg class="weed" style="right:6%;animation-delay:-0.7s" viewBox="0 0 40 90" aria-hidden="true"><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#241a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#ff7a59" stroke-width="6" stroke-linecap="round"/></svg>
+			</div>
+			<div class="front">
+				<img class="logo" src="data:image/webp;base64,{{LOGO}}" alt="Coralight: Dive Tycoon" width="908" height="300">
+				<div class="bottom">
+					<div class="bar" id="status-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+						<div class="fill" id="status-fill">
+							<svg class="rider" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#f5b843" stroke="#241a3a" stroke-width="4"/><circle cx="24" cy="24" r="11" fill="#bff3ff" stroke="#241a3a" stroke-width="3.5"/><circle cx="21" cy="23" r="1.8" fill="#241a3a"/><circle cx="28" cy="23" r="1.8" fill="#241a3a"/><path d="M21 28 q3.5 3 7 0" fill="none" stroke="#241a3a" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="7" r="2.4" fill="#e0921c"/><circle cx="7" cy="24" r="2.4" fill="#e0921c"/><circle cx="41" cy="24" r="2.4" fill="#e0921c"/><path d="M12 12 a17 17 0 0 1 10 -6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.7"/></svg>
+						</div>
+					</div>
+					<div class="label"><span id="status-text">Loading</span><span class="pct" id="status-pct"></span></div>
+					<div class="card tip">
+						<svg viewBox="0 0 34 40" aria-hidden="true"><path d="M17 3 a13 13 0 0 1 8 23 v5 h-16 v-5 a13 13 0 0 1 8 -23 z" fill="#ffc93c" stroke="#241a3a" stroke-width="3.5" stroke-linejoin="round"/><path d="M11 13 a7 7 0 0 1 5 -5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><rect x="10" y="31" width="14" height="6" rx="2" fill="#cbd5e1" stroke="#241a3a" stroke-width="3"/></svg>
+						<span id="status-tip"></span>
+					</div>
+					<div class="card" id="status-notice"></div>
+				</div>
+			</div>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const TEXT = {
+		ru: {
+			loading: 'Погружаемся…', starting: 'Всплываем…', failed: 'Не удалось загрузить игру', retry: 'Обновить',
+			tips: [
+				'Нажимай на водолазов, и они будут работать быстрее',
+				'Менеджеры работают сами, даже пока тебя нет',
+				'Надпись «Узкое место» подскажет, что улучшать первым',
+				'Побеждай в пазле и собирай артефакты для музея',
+				'Чем глубже, тем дороже сокровища',
+				'Лампочка в углу всегда подскажет следующий шаг',
+			],
+		},
+		en: {
+			loading: 'Diving in…', starting: 'Surfacing…', failed: 'The game could not load', retry: 'Reload',
+			tips: [
+				'Tap divers to make them work faster',
+				'Managers keep working even while you are away',
+				'“Bottleneck” shows what to upgrade first',
+				'Win puzzles to collect artifacts for the museum',
+				'The deeper you dive, the richer the treasure',
+				'The lightbulb always knows your next step',
+			],
+		},
+		es: {
+			loading: 'Sumergiéndonos…', starting: 'Subiendo…', failed: 'No se pudo cargar el juego', retry: 'Recargar',
+			tips: [
+				'Toca a los buzos para que trabajen más rápido',
+				'Los gerentes siguen trabajando aunque no estés',
+				'«Cuello de botella» te dice qué mejorar primero',
+				'Gana puzles y reúne artefactos para el museo',
+				'Cuanto más hondo, más rico el tesoro',
+				'La bombilla siempre sabe tu siguiente paso',
+			],
+		},
+		zh: {
+			loading: '正在下潜…', starting: '正在上浮…', failed: '游戏加载失败', retry: '重新加载',
+			tips: [
+				'点击潜水员，让他们干得更快',
+				'经理会一直工作，即使你不在',
+				'“瓶颈”告诉你先升级什么',
+				'赢得拼图，为博物馆收集文物',
+				'潜得越深，宝藏越值钱',
+				'灯泡总会告诉你下一步做什么',
+			],
+		},
+	};
+	const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']);
+	let lang = 'en';
+	for (const l of langs) {
+		const code = String(l).toLowerCase().slice(0, 2);
+		if (TEXT[code]) { lang = code; break; }
+	}
+	const T = TEXT[lang];
+	document.documentElement.lang = lang;
+
+	const statusOverlay = document.getElementById('status');
+	const statusBar = document.getElementById('status-bar');
+	const statusFill = document.getElementById('status-fill');
+	const statusText = document.getElementById('status-text');
+	const statusPct = document.getElementById('status-pct');
+	const statusTip = document.getElementById('status-tip');
+	const statusNotice = document.getElementById('status-notice');
+
+	statusText.textContent = T.loading;
+
+	// Bubbles rising through the sea.
+	const sea = document.getElementById('sea');
+	for (let i = 0; i < 16; i++) {
+		const b = document.createElement('span');
+		const size = 6 + Math.random() * 16;
+		b.className = 'bubble';
+		b.style.width = b.style.height = size + 'px';
+		b.style.left = (Math.random() * 100) + '%';
+		b.style.animationDuration = (6 + Math.random() * 7) + 's';
+		b.style.animationDelay = (-Math.random() * 12) + 's';
+		sea.appendChild(b);
+	}
+
+	// Tips, one after another.
+	let tip = Math.floor(Math.random() * T.tips.length);
+	statusTip.textContent = T.tips[tip];
+	const tipTimer = setInterval(() => {
+		statusTip.classList.add('fade');
+		setTimeout(() => {
+			tip = (tip + 1) % T.tips.length;
+			statusTip.textContent = T.tips[tip];
+			statusTip.classList.remove('fade');
+		}, 350);
+	}, 4500);
+
+	let done = false;
+	function hide() {
+		if (done) {
+			return;
+		}
+		done = true;
+		clearInterval(tipTimer);
+		statusOverlay.classList.add('leaving');
+		setTimeout(() => statusOverlay.remove(), 650);
+	}
+
+	function setProgress(current, total) {
+		if (current > 0 && total > 0) {
+			const pct = Math.min(100, Math.floor((current / total) * 100));
+			statusBar.classList.remove('waiting');
+			statusFill.style.width = Math.max(6, pct) + '%';
+			statusPct.textContent = pct + '%';
+			statusBar.setAttribute('aria-valuenow', pct);
+		} else {
+			statusBar.classList.add('waiting');
+			statusPct.textContent = '';
+		}
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		let detail = 'An unknown error occurred.';
+		if (err instanceof Error) {
+			detail = err.message;
+		} else if (typeof err === 'string') {
+			detail = err;
+		}
+		statusNotice.textContent = '';
+		const title = document.createElement('b');
+		title.textContent = T.failed;
+		const text = document.createElement('div');
+		text.className = 'detail';
+		text.textContent = detail;
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.textContent = T.retry;
+		button.addEventListener('click', () => window.location.reload());
+		statusNotice.append(title, text, button);
+		statusOverlay.classList.add('failed');
+		clearInterval(tipTimer);
+		done = true;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			displayFailureNotice('The following features required to run the game are missing:\n' + missing.join('\n'));
+		}
+	} else {
+		setProgress(0, 0);
+		engine.startGame({
+			'onProgress': setProgress,
+			// The game prints CORALIGHT_READY once its first screen is drawn.
+			'onPrint': function (...args) {
+				console.log(...args);
+				if (args.join(' ').indexOf('CORALIGHT_READY') !== -1) {
+					hide();
+				}
+			},
+		}).then(() => {
+			statusBar.classList.remove('waiting');
+			statusFill.style.width = '100%';
+			statusPct.textContent = '';
+			statusText.textContent = T.starting;
+			// Safety net in case the ready line never arrives.
+			setTimeout(hide, 15000);
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
+</html>

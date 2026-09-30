@@ -154,6 +154,17 @@ func _ready() -> void:
 		move_child(_title, _modal.get_index())
 	else:
 		_after_title()
+	_announce_ready()
+
+
+## Tells the web loading screen (web/shell.html) that the first frame is
+## drawn, so it can fade out without showing a blank canvas.
+func _announce_ready() -> void:
+	if not OS.has_feature("web"):
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	print("CORALIGHT_READY")
 
 
 func _after_title() -> void:
