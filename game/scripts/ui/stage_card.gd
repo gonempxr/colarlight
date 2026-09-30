@@ -178,6 +178,8 @@ func _ready() -> void:
 	box.add_child(_tag)
 	for l: Label in [_name, _level, _rate]:
 		l.resized.connect(_fit_text)
+	if _stage:
+		_stage.resized.connect(_fit_text)
 	refresh()
 
 
@@ -367,6 +369,20 @@ func _fit_text() -> void:
 		fs = _fit_size(_name, fs, _name.size.x)
 	if _name.get_theme_font_size("font_size") != fs:
 		_name.add_theme_font_size_override("font_size", fs)
+	if narrow and _stage and _stage.size.x > 1.0:
+		# Two lines at most, and no word broken in the middle.
+		var room := _stage.size.x - 4.0
+		var font := _stage.get_theme_font("font")
+		var sf := 16
+		while sf > 11:
+			var fits := font.get_string_size(_stage.text, HORIZONTAL_ALIGNMENT_LEFT, -1, sf).x <= room * 1.8
+			for word in _stage.text.split(" ", false):
+				fits = fits and font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, sf).x <= room
+			if fits:
+				break
+			sf -= 1
+		if _stage.get_theme_font_size("font_size") != sf:
+			_stage.add_theme_font_size_override("font_size", sf)
 	for pair: Array in [[_level, 25], [_rate, 19]]:
 		var l: Label = pair[0]
 		l.clip_text = true

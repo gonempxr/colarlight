@@ -217,7 +217,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## and the plant).
 func stage_card(key: String) -> StageCard:
 	if key == "lift":
-		return _side_lift if _wide else _world.lift.card
+		return _side_lift if _wide else _world.lift.phone_card()
 	# The second boat/plant share the first one's card (its "2" tab).
 	if GameState.is_boat(key):
 		return _side_boat if _wide else _world.surface.boat_card
@@ -294,7 +294,8 @@ func _layout() -> void:
 	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, HUD_H + 16.0)
 	_world.surface.boat_card.visible = not _wide
 	_world.surface.plant_card.visible = not _wide
-	_world.lift.card.visible = not _wide
+	_world.lift.wide = _wide
+	_world.lift._place_card()
 
 
 ## Stacks the boat/plant cards and the upgrade panel above the dock; on

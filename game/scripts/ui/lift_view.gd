@@ -42,11 +42,16 @@ const LOOKS := 6
 ## shows it in the side column instead (main.gd).
 const CARD_LEFT := 10.0 + HintButton.SIZE + 10.0
 const CARD_GAP := 12.0
-## Narrower than this and it moves to a row of its own under the bulb.
+## Narrower than this (a big UI size) and the compact card at the top of
+## the shaft stands in for it: a second row in the sky would cover the raft.
 const CARD_MIN_W := 160.0
+const COMPACT_POS := Vector2(World.SHAFT_R + 14.0, World.SURFACE_Y + 26.0)
 
 var world: World
 var card: StageCard
+var compact: LiftCard
+## PC: the side column shows the lift's card, both of these hide.
+var wide := false
 
 var _t := 0.0
 var _top: PaintLayer
@@ -88,6 +93,14 @@ func _ready() -> void:
 	card = StageCard.new("lift")
 	card.world = world
 	add_child(card)
+	compact = LiftCard.new("lift")
+	compact.world = world
+	compact.lift = self
+	compact.position = COMPACT_POS
+	# Over the chest bubble that drifts in the same water.
+	compact.z_index = 2
+	compact.visible = false
+	add_child(compact)
 	_look = Balance.lift_look(GameState.get_level("lift"))
 	_look_old = _look
 	GameState.cycle_started.connect(_on_cycle_started)
@@ -335,27 +348,31 @@ func _on_upgraded(key: String, _n: int) -> void:
 
 ## Phone: the card joins the boat and plant cards at the top of the sky,
 ## as wide as the room left of them allows (at most as wide as they are);
-## with a big UI it gets a row of its own under the hint bulb.
+## with a big UI size the compact card at the top of the shaft instead.
 func _place_card() -> void:
-	if not card.visible:
-		return
 	var boat: Control = world.surface.boat_card
-	var top := boat.position.y
 	var room := boat.position.x - CARD_GAP - CARD_LEFT
-	var at := Vector2(CARD_LEFT, top)
+	var in_row := not wide and room >= CARD_MIN_W
+	card.visible = in_row
+	compact.visible = not wide and not in_row
+	if not in_row:
+		return
+	var at := Vector2(CARD_LEFT, boat.position.y)
 	var w := minf(World.CARD_W, room)
-	if room < CARD_MIN_W:
-		w = World.CARD_W
-		at = Vector2(10.0, maxf(top + HintButton.SIZE + 10.0, boat.position.y + boat.size.y) + CARD_GAP)
 	if card.position != at:
 		card.position = at
+	if card.custom_minimum_size.x != w:
+		card.custom_minimum_size.x = w
+		card.size.x = w
 	# Its name tab as tall as theirs (they grow "1 | 2" tabs).
 	var head_h: float = boat._head.size.y
 	if card._head.custom_minimum_size.y != head_h:
 		card._head.custom_minimum_size.y = head_h
-	if card.custom_minimum_size.x != w:
-		card.custom_minimum_size.x = w
-		card.size.x = w
+
+
+## The phone's card for the lift now (the row's or the compact one).
+func phone_card() -> StageCard:
+	return compact if compact.visible else card
 
 
 ## Syncs the look after a load, a Dive or a player switch.
@@ -364,7 +381,10 @@ func refresh() -> void:
 	if now != _look and _t - _look_fx > 1.0:
 		_look = now
 		_look_old = now
-	card.refresh()
+	if card.visible:
+		card.refresh()
+	if compact.visible:
+		compact.refresh()
 
 
 # --- Drawing: shaft ---------------------------------------------------------------------
