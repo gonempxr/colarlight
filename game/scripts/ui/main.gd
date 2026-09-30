@@ -19,12 +19,20 @@ var _world: World
 var _panel: UpgradePanel
 var _dock: Dock
 var _dock_laid_out := false
+## PC only: boat and plant cards in the side column (the in-world ones hide).
+var _side_cards: HBoxContainer
+var _side_boat: StageCard
+var _side_plant: StageCard
+var _hint_btn: HintButton
+## Frames left to re-fit the PC side column (wrapped text settles a frame late).
+var _side_fit_frames := 0
 var _modal: Modal
 ## Second dialog layer above the first (names, feature news).
 var _top: Modal
 var _fx: FxLayer
 var _tutor: Tutor
 var _puzzle: Control
+var _fishing: Control
 var _title: TitleScreen
 var _toast: PanelContainer
 var _toast_label: Label
@@ -64,11 +72,31 @@ func _ready() -> void:
 	_panel.closed.connect(_close_sheet)
 	add_child(_panel)
 
+	_side_cards = HBoxContainer.new()
+	_side_cards.add_theme_constant_override("separation", 12)
+	_side_cards.visible = false
+	add_child(_side_cards)
+	for k in ["boat", "plant"]:
+		var c := StageCard.new(k)
+		c.world = _world
+		c.hero = true
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_side_cards.add_child(c)
+		if k == "boat":
+			_side_boat = c
+		else:
+			_side_plant = c
+
 	_hud = Hud.new()
 	_hud.prestige_pressed.connect(_open_prestige)
 	_hud.settings_pressed.connect(_open_settings)
 	_hud.avatar_pressed.connect(_open_wardrobe)
 	add_child(_hud)
+
+	_hint_btn = HintButton.new()
+	_hint_btn.main = self
+	_hint_btn.pressed.connect(open_hint)
+	add_child(_hint_btn)
 
 	_tutor = Tutor.new()
 	_tutor.main = self
@@ -81,6 +109,10 @@ func _ready() -> void:
 	_toast_label = Label.new()
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_toast_label.add_theme_font_override("font", UiTheme.heavy_font())
+	_toast_label.add_theme_font_size_override("font_size", 25)
+	_toast_label.add_theme_color_override("font_color", Color("fff6e4"))
+	_toast_label.add_theme_constant_override("outline_size", 0)
 	_toast.add_child(_toast_label)
 	add_child(_toast)
 
@@ -139,7 +171,11 @@ func _process(delta: float) -> void:
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_title)
+	Scroller.locked = _modal.visible or _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title)
+	if _side_fit_frames > 0 and _wide:
+		_side_fit_frames -= 1
+		var view := get_viewport_rect().size
+		_fit_side_column(view, minf(SIDE_W, view.x * 0.4), _dock_height())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -155,8 +191,23 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## True while something covers the ocean (tutorial waits).
+## The card the player sees for a stage (PC: the side column for the boat
+## and the plant).
+func stage_card(key: String) -> StageCard:
+	if _wide and key == "boat":
+		return _side_boat
+	if _wide and key == "plant":
+		return _side_plant
+	if key == "boat":
+		return _world.surface.boat_card
+	if key == "plant":
+		return _world.surface.plant_card
+	var i := GameState.depth_index(key)
+	return _world.rows[i].card if i >= 0 else null
+
+
 func is_busy() -> bool:
-	return _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_title) or (_sheet_open and not _wide)
+	return _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or (_sheet_open and not _wide)
 
 
 func _apply_ui_scale() -> void:
@@ -165,28 +216,40 @@ func _apply_ui_scale() -> void:
 	World.half_rate = Art.low_power
 
 
+## Room the dock takes at the bottom: its real height (icon + label + margins
+## can outgrow DOCK_H), or nothing while it has no buttons.
+func _dock_height() -> float:
+	if not _dock_laid_out:
+		return 0.0
+	return maxf(DOCK_H, _dock.get_combined_minimum_size().y)
+
+
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	_wide = view.x > view.y * WIDE_ASPECT
-	var dock_h := DOCK_H if _dock_laid_out else 0.0
+	var dock_h := _dock_height()
 	_hud.position = Vector2.ZERO
 	_hud.size = Vector2(view.x, HUD_H)
+	_hud.set_notch(_wide)
 	if _wide:
 		var side := minf(SIDE_W, view.x * 0.4)
 		var world_w := view.x - side - 36.0
-		_scroller.position = Vector2(12, HUD_H)
-		_scroller.size = Vector2(world_w, view.y - HUD_H)
+		# The notch floats over the sky, so the ocean fills the whole height.
+		_scroller.position = Vector2(12, 0)
+		_scroller.size = Vector2(world_w, view.y)
 		_scroller.zoom = clampf(world_w / 960.0, 1.0, 1.7)
 		_scroller.scroll_to(_scroller.scroll)
 		_panel.set_docked(true)
 		_panel.visible = true
-		_panel.position = Vector2(view.x - side - 12.0, HUD_H + 12.0)
+		_side_cards.visible = true
 		_panel.custom_minimum_size = Vector2(side, 0)
-		_panel.reset_size()
+		_fit_side_column(view, side, dock_h)
+		_side_fit_frames = 2
 		_dock.fit(side)
 		_dock.size = Vector2(side, dock_h)
 		_dock.position = Vector2(view.x - side - 12.0, view.y - dock_h)
 	else:
+		_side_cards.visible = false
 		_scroller.position = Vector2(0, HUD_H - 8.0)
 		_scroller.size = Vector2(view.x, view.y - HUD_H + 8.0 - dock_h + 10.0)
 		_scroller.zoom = 1.0
@@ -199,8 +262,37 @@ func _layout() -> void:
 		_dock.fit(view.x)
 		_dock.size = Vector2(view.x, dock_h)
 		_dock.position = Vector2(0, view.y - dock_h)
-	_toast.size = Vector2(minf(620.0, view.x - 40.0), 0)
-	_toast.position = Vector2((view.x - _toast.size.x) / 2.0, HUD_H + 20.0)
+	# Lightbulb: top-left over the sky, clear of the bar and the cards.
+	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, HUD_H + 16.0)
+	_world.surface.boat_card.visible = not _wide
+	_world.surface.plant_card.visible = not _wide
+
+
+## Stacks the boat/plant cards and the upgrade panel above the dock; on
+## short screens (or big UI) the pictures shrink, then hide, so it all fits.
+func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
+	var x := view.x - side - 12.0
+	var bottom := view.y - dock_h - 8.0
+	var panel_hero := 190.0
+	var card_pics := true
+	for attempt in 3:
+		for c in [_side_boat, _side_plant]:
+			if c._pic:
+				c._pic.visible = card_pics
+		_side_cards.position = Vector2(x, 12.0)
+		_side_cards.size = Vector2(side, 0)
+		_side_cards.reset_size()
+		_side_cards.size.x = side
+		_panel.set_hero_height(panel_hero)
+		_panel.position = Vector2(x, _side_cards.position.y + _side_cards.size.y + 12.0)
+		_panel.reset_size()
+		var over := _panel.position.y + _panel.size.y - bottom
+		if over <= 0.0:
+			return
+		if panel_hero > 0.0:
+			panel_hero = 0.0 if panel_hero - over < 70.0 else panel_hero - over
+		else:
+			card_pics = false
 
 
 func _place_sheet() -> void:
@@ -239,6 +331,9 @@ func _close_sheet() -> void:
 
 func _refresh() -> void:
 	_world.surface.refresh()
+	if _side_cards.visible:
+		_side_boat.refresh()
+		_side_plant.refresh()
 	for row in _world.rows:
 		row.refresh()
 	if _panel.visible:
@@ -248,6 +343,7 @@ func _refresh() -> void:
 				_place_sheet()
 		else:
 			_panel.reset_size()
+			_side_fit_frames = maxi(_side_fit_frames, 1)
 	# The dock shows itself when a feature opens (Dock.refresh), so compare
 	# with what the layout last made room for, not with its visibility.
 	var dock_shown := _dock.count() > 0
@@ -257,7 +353,7 @@ func _refresh() -> void:
 		_layout()
 		if dock_shown and not Settings.reduce_motion:
 			var y := _dock.position.y
-			_dock.position.y += DOCK_H
+			_dock.position.y += _dock.size.y
 			create_tween().tween_property(_dock, "position:y", y, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -270,32 +366,52 @@ func _on_settings_changed() -> void:
 
 
 func _on_milestone(key: String, level: int) -> void:
+	if (key == "boat" or key == "plant") and 1 + Balance.milestones(level) <= Balance.BUILDING_STAGES:
+		# A milestone of the boat or the plant is a new building stage (up to 15).
+		var stage := Balance.building_stage(level)
+		_show_toast(tr("STAGE_UP") % [Views.stage_name(key), tr("%s_STAGE_%d" % [key.to_upper(), stage])])
+		Sfx.play("unlock")
+		return
 	_show_toast(tr("MILESTONE_TOAST") % [Views.stage_name(key), level])
 	Sfx.play("milestone")
 
 
 func _show_toast(text: String) -> void:
+	# A small calm card in the middle of the screen that fades up and away.
 	_toast_label.text = text
-	# Wrapped labels shrink to one word (one character in Chinese), so give
-	# the toast the width its text needs, up to the screen width.
 	var view := get_viewport_rect().size
 	var font := _toast_label.get_theme_font("font")
 	var fs := _toast_label.get_theme_font_size("font_size")
-	var need := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 60.0
-	_toast.custom_minimum_size.x = minf(minf(620.0, view.x - 40.0), need)
-	_toast.reset_size()
-	_toast.position.x = (view.x - _toast.size.x) / 2.0
-	_toast.modulate.a = 1.0
-	_toast.visible = true
+	var need := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 72.0
+	var w := minf(minf(560.0, view.x - 48.0), need)
+	# The label needs its width up front, or wrapping measures it one
+	# character per line.
+	_toast_label.custom_minimum_size.x = w - 60.0
+	_toast_label.size = Vector2(w - 60.0, 0.0)
+	# The container's cached minimum size is still the old one this frame,
+	# so size the card from the label directly.
+	var sb := _toast.get_theme_stylebox("panel")
+	_toast.size = Vector2(w, _toast_label.get_minimum_size().y + sb.get_margin(SIDE_TOP) + sb.get_margin(SIDE_BOTTOM))
+	var y := roundf(view.y * 0.4 - _toast.size.y / 2.0)
+	_toast.position = Vector2(roundf((view.x - _toast.size.x) / 2.0), y)
 	_toast.pivot_offset = _toast.size / 2.0
+	_toast.visible = true
 	if _toast_tween:
 		_toast_tween.kill()
 	_toast_tween = create_tween()
-	if not Settings.reduce_motion:
-		_toast.scale = Vector2(0.7, 0.7)
-		_toast_tween.tween_property(_toast, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_toast_tween.tween_interval(TOAST_SEC)
-	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.4)
+	if Settings.reduce_motion:
+		_toast.modulate.a = 1.0
+		_toast.scale = Vector2.ONE
+		_toast_tween.tween_interval(TOAST_SEC)
+		_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.3)
+	else:
+		_toast.modulate.a = 0.0
+		_toast.scale = Vector2(0.9, 0.9)
+		_toast_tween.tween_property(_toast, "modulate:a", 1.0, 0.22)
+		_toast_tween.parallel().tween_property(_toast, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_toast_tween.tween_interval(TOAST_SEC)
+		_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.45).set_ease(Tween.EASE_IN)
+		_toast_tween.parallel().tween_property(_toast, "position:y", y - 26.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_toast_tween.tween_callback(_toast.hide)
 
 
@@ -331,6 +447,11 @@ func celebrate(r: Dictionary, from: Vector2) -> void:
 
 # --- Features ------------------------------------------------------------------------
 
+func open_hint() -> void:
+	var h := Hints.pick(self)
+	_modal.open(func(m): Hints.build(m, self, h))
+
+
 func open_feature(id: String) -> void:
 	Progress.seen(id)
 	match id:
@@ -344,15 +465,17 @@ func open_feature(id: String) -> void:
 			_open_wardrobe()
 		"puzzle":
 			open_puzzle()
+		"fishing":
+			open_fishing()
 
 
 func _show_next_news() -> void:
-	if _news.is_empty() or _top.visible or _modal.visible or is_instance_valid(_puzzle) or not _started:
+	if _news.is_empty() or _top.visible or _modal.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or not _started:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")
 	var opener := Callable()
-	if id in ["daily", "quests", "puzzle", "museum", "shop"]:
+	if id in ["daily", "quests", "puzzle", "museum", "shop", "fishing"]:
 		opener = func(): open_feature(id)
 	_top.open(func(m): Views.feature_intro(m, id, opener))
 
@@ -364,6 +487,22 @@ func _open_wardrobe() -> void:
 func open_avatar_editor() -> void:
 	_modal.open(func(m: Modal):
 		AvatarEditor.build(m, func(): _open_wardrobe()))
+
+
+# --- Fishing -----------------------------------------------------------------------------
+
+func open_fishing(panel: String = "") -> void:
+	if is_instance_valid(_fishing):
+		return
+	_modal.close()
+	_fishing = load("res://scripts/fishing/fishing_screen.gd").new()
+	add_child(_fishing)
+	move_child(_fishing, _fx.get_index())
+	_fishing.setup({"panel": panel} if panel != "" else {})
+	_fishing.tree_exited.connect(func():
+		_fishing = null
+		_show_next_news())
+	Sfx.play("start")
 
 
 # --- Puzzle ------------------------------------------------------------------------------
@@ -492,8 +631,9 @@ func _open_prestige() -> void:
 		var mult := Balance.prestige_mult(GameState.prestige_count + 1)
 		m.text(tr("PRESTIGE_DESC") % NumFormat.short(mult))
 		m.text(tr("PRESTIGE_KEEPS"), 21, Art.INK_SOFT)
-		if GameState.next_depth() != "":
-			m.text(tr("PRESTIGE_NEED_DEPTHS"), 24, Color("d8363c"))
+		if not GameState.prestige_gate_open():
+			var gate := GameState.prestige_gate_depth()
+			m.text(tr("PRESTIGE_NEED_DEPTHS") % tr("DEPTH_" + gate.to_upper()), 24, Color("d8363c"))
 		var go := m.button(tr("PRESTIGE_GO") % NumFormat.short(GameState.prestige_cost()), func():
 			if GameState.prestige():
 				Sfx.play("prestige")

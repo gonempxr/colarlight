@@ -15,7 +15,7 @@ from fontTools import subset
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.expanduser("~/fontsrc")
 OUT = os.path.join(ROOT, "game", "assets", "fonts")
-EXTRA = "中文English Русский Español 0123456789%×∞→·+-.,:;!?()（）：，。！？ "
+EXTRA = "中文English Русский Español 0123456789%×∞→·★♪+-.,:;!?()（）：，。！？ "
 
 os.makedirs(OUT, exist_ok=True)
 text = EXTRA

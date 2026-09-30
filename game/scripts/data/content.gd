@@ -147,4 +147,4 @@ const COINS_MIN := 30
 
 # --- Features ---------------------------------------------------------------------
 ## Order in which features open, so something new keeps arriving.
-const FEATURES: Array[String] = ["daily", "chests", "quests", "shop", "puzzle", "museum"]
+const FEATURES: Array[String] = ["daily", "chests", "quests", "shop", "puzzle", "museum", "fishing"]

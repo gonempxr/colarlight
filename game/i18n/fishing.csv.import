@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bhrfrsdq2ycbb"
+
+[deps]
+
+files=["res://i18n/fishing.en.translation", "res://i18n/fishing.ru.translation", "res://i18n/fishing.es.translation", "res://i18n/fishing.zh.translation"]
+
+source_file="res://i18n/fishing.csv"
+dest_files=["res://i18n/fishing.en.translation", "res://i18n/fishing.ru.translation", "res://i18n/fishing.es.translation", "res://i18n/fishing.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

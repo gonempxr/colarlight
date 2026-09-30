@@ -12,6 +12,7 @@ const ITEMS := [
 	["puzzle", "puzzle", "DOCK_PUZZLE", "PurpleButton"],
 	["museum", "museum", "DOCK_MUSEUM", "GoldButton"],
 	["shop", "wardrobe", "DOCK_SHOP", "Button"],
+	["fishing", "fishing", "DOCK_FISHING", "BlueButton"],
 ]
 const BUTTON_H := 104.0
 
@@ -110,7 +111,7 @@ func fit(width: float) -> void:
 	for id in _buttons:
 		var b: Button = _buttons[id]
 		b.custom_minimum_size.x = w
-		b.add_theme_font_size_override("font_size", 19 if w >= 110.0 else 15)
+		b.add_theme_font_size_override("font_size", 19 if w >= 110.0 else (15 if w >= 84.0 else 13))
 
 
 func button(id: String) -> Button:

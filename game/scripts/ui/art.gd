@@ -44,21 +44,21 @@ const DEPTH_STYLE: Array[Dictionary] = [
 	{"rock": Color("927668"), "floor": Color("c8ab94"), "ore": Color("f08a45"), "ore2": Color("ffc185"), "suit": Color("7fd34e"), "water": Color("1a5692"), "deco": "wreck"},
 	{"rock": Color("51817c"), "floor": Color("8cb8aa"), "ore": Color("3ee08f"), "ore2": Color("b0ffd9"), "suit": Color("9b72ff"), "water": Color("15457c"), "deco": "kelp"},
 	{"rock": Color("45427a"), "floor": Color("7470b0"), "ore": Color("b58cff"), "ore2": Color("f0e3ff"), "suit": Color("2de2c5"), "water": Color("102e60"), "deco": "glow"},
-	{"rock": Color("b07a3c"), "floor": Color("e8c07a"), "ore": Color("ffb52e"), "ore2": Color("ffe08a"), "suit": Color("ff7043"), "water": Color("135a8a"), "deco": "amber"},  # amber
-	{"rock": Color("3d5a9e"), "floor": Color("8aa6de"), "ore": Color("2f6bff"), "ore2": Color("9cc3ff"), "suit": Color("ffd23f"), "water": Color("114a82"), "deco": "coral"},  # sapphire
-	{"rock": Color("8a6a3a"), "floor": Color("c9a86a"), "ore": Color("ffd23f"), "ore2": Color("fff1a8"), "suit": Color("ef5350"), "water": Color("0f3f74"), "deco": "wreck"},  # gold
-	{"rock": Color("7a3a4a"), "floor": Color("c47a88"), "ore": Color("ff2d55"), "ore2": Color("ff9fb4"), "suit": Color("3ee08f"), "water": Color("0e3868"), "deco": "crystals"},  # ruby
-	{"rock": Color("7fa6c4"), "floor": Color("d6ecfa"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("0d325f"), "deco": "ice"},  # ice
-	{"rock": Color("5a2e2a"), "floor": Color("a8543a"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("0c2a52"), "deco": "lava"},  # lava
-	{"rock": Color("2f6a5a"), "floor": Color("7ab8a0"), "ore": Color("2fd08a"), "ore2": Color("c8ffe6"), "suit": Color("ff8a3d"), "water": Color("0b2648"), "deco": "kelp"},  # jade
-	{"rock": Color("4a4a6e"), "floor": Color("9a9ac8"), "ore": Color("e6e8ff"), "ore2": Color("ffffff"), "suit": Color("5cd05f"), "water": Color("0a2140"), "deco": "glow"},  # moon
-	{"rock": Color("6a5a48"), "floor": Color("b0a088"), "ore": Color("e8d8b0"), "ore2": Color("fff4dc"), "suit": Color("3aa6f0"), "water": Color("091d38"), "deco": "bones"},  # fossil
-	{"rock": Color("2a2436"), "floor": Color("5e5478"), "ore": Color("8a6cf0"), "ore2": Color("d8c8ff"), "suit": Color("ffd23f"), "water": Color("081a32"), "deco": "crystals"},  # obsidian
-	{"rock": Color("233a4a"), "floor": Color("3e6a7a"), "ore": Color("5affd8"), "ore2": Color("e0fff6"), "suit": Color("ff6fae"), "water": Color("07162c"), "deco": "glow"},  # glow
-	{"rock": Color("3a4a6a"), "floor": Color("8a9ab8"), "ore": Color("ffd98a"), "ore2": Color("fff6d8"), "suit": Color("2de2c5"), "water": Color("061426"), "deco": "ruins"},  # atlantis
-	{"rock": Color("3a2a3a"), "floor": Color("6a5470"), "ore": Color("ff5ae0"), "ore2": Color("ffc8f4"), "suit": Color("7fd34e"), "water": Color("051122"), "deco": "crystals"},  # meteor
-	{"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("040e1c"), "deco": "kelp"},  # kraken
-	{"rock": Color("1a1636"), "floor": Color("3a3470"), "ore": Color("fff27a"), "ore2": Color("ffffff"), "suit": Color("ff5a8a"), "water": Color("030a16"), "deco": "glow"},  # star
+	{"rock": Color("9a6a3a"), "floor": Color("e0b870"), "ore": Color("ffa91f"), "ore2": Color("ffe08a"), "suit": Color("3fa7ff"), "water": Color("1a3a5c"), "deco": "amber"},  # amber
+	{"rock": Color("3d5a9e"), "floor": Color("8aa6de"), "ore": Color("2f6bff"), "ore2": Color("a8ccff"), "suit": Color("ffb52e"), "water": Color("0f3470"), "deco": "coral"},  # sapphire
+	{"rock": Color("7a5a34"), "floor": Color("d4b06a"), "ore": Color("ffd23f"), "ore2": Color("fff1a8"), "suit": Color("ef5350"), "water": Color("12304f"), "deco": "wreck"},  # gold
+	{"rock": Color("6e3044"), "floor": Color("b86a7c"), "ore": Color("ff2d55"), "ore2": Color("ff9fb4"), "suit": Color("5cd05f"), "water": Color("281a45"), "deco": "crystals"},  # ruby
+	{"rock": Color("7fa6c4"), "floor": Color("e4f4ff"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("0f3358"), "deco": "ice"},  # ice
+	{"rock": Color("4a2622"), "floor": Color("8a3a24"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("2a1420"), "deco": "lava"},  # lava
+	{"rock": Color("2f5a50"), "floor": Color("79b39c"), "ore": Color("2fd08a"), "ore2": Color("c8ffe6"), "suit": Color("ff8a3d"), "water": Color("0b2e34"), "deco": "lanterns"},  # jade
+	{"rock": Color("4a4a78"), "floor": Color("a8a8d8"), "ore": Color("e6e8ff"), "ore2": Color("ffffff"), "suit": Color("8a6cf0"), "water": Color("141a44"), "deco": "glow"},  # moon
+	{"rock": Color("6a5a48"), "floor": Color("b8a88c"), "ore": Color("e8d8b0"), "ore2": Color("fff4dc"), "suit": Color("3aa6f0"), "water": Color("1d1a2a"), "deco": "bones"},  # fossil
+	{"rock": Color("2e2640"), "floor": Color("5a4f78"), "ore": Color("8a6cf0"), "ore2": Color("d8c8ff"), "suit": Color("ffd23f"), "water": Color("140d24"), "deco": "crystals"},  # obsidian
+	{"rock": Color("1f3a48"), "floor": Color("3a6a78"), "ore": Color("5affd8"), "ore2": Color("e0fff6"), "suit": Color("ff5ab4"), "water": Color("061c2a"), "deco": "mushrooms"},  # glow
+	{"rock": Color("3a4a70"), "floor": Color("9aaccc"), "ore": Color("ffd98a"), "ore2": Color("fff6d8"), "suit": Color("2de2c5"), "water": Color("0a1a3a"), "deco": "ruins"},  # atlantis
+	{"rock": Color("3a2a44"), "floor": Color("6a5078"), "ore": Color("ff5ae0"), "ore2": Color("ffc8f4"), "suit": Color("7fd34e"), "water": Color("1a0b26"), "deco": "crater"},  # meteor
+	{"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("0a0f22"), "deco": "tentacles"},  # kraken
+	{"rock": Color("1a1640"), "floor": Color("3a3478"), "ore": Color("fff27a"), "ore2": Color("ffffff"), "suit": Color("ff5a8a"), "water": Color("070722"), "deco": "stars"},  # star
 ]
 
 
@@ -679,3 +679,71 @@ static func _grown(p: PackedVector2Array, by: float) -> PackedVector2Array:
 static func arrow_pts(s: float) -> PackedVector2Array:
 	return PackedVector2Array([Vector2(0, -s), Vector2(s * 0.95, -s * 0.05), Vector2(s * 0.38, -s * 0.05),
 			Vector2(s * 0.38, s * 0.9), Vector2(-s * 0.38, s * 0.9), Vector2(-s * 0.38, -s * 0.05), Vector2(-s * 0.95, -s * 0.05)])
+
+
+## Soft round glow: `color` in the middle fading to clear at radius `r`.
+static func glow(ci: CanvasItem, c: Vector2, r: float, color: Color, n: int = 18) -> void:
+	var clear := Color(color, 0.0)
+	var v := PackedVector2Array()
+	var cols := PackedColorArray()
+	var prev := c + Vector2(r, 0)
+	for i in n:
+		var a := TAU * (i + 1) / n
+		var p := c + Vector2(cos(a), sin(a)) * r
+		v.append_array([c, prev, p])
+		cols.append_array([color, clear, clear])
+		prev = p
+	_put(ci, v, cols)
+
+
+## Disc whose size or color changes every frame (bubbles, sparks, glows):
+## radius snapped to 0.25 px so the geometry cache stays small, colors not
+## cached (animated alpha would flood the color cache).
+static func dot(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
+	r = maxf(0.25, snappedf(r, 0.25))
+	var k := hash(["d", r])
+	var g = _geo.get(k)
+	if g == null:
+		var ring_pts := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
+		g = [_tris(ring_pts), _fringe(ring_pts, AA)]
+		_geo[k] = g
+	var fv: PackedVector2Array = g[0]
+	var fr: PackedVector2Array = g[1]
+	var save := _xf
+	_xf = _xf * Transform2D(0.0, c)
+	_put(ci, fv, _solid(color, fv.size()))
+	if not low_power:
+		var cols := PackedColorArray()
+		cols.resize(fr.size())
+		var clear := Color(color, 0.0)
+		for i in fr.size():
+			cols[i] = color if _QUAD_ALPHA[i % 6] > 0.5 else clear
+		_put(ci, fr, cols)
+	_xf = save
+
+
+## Open line through fixed points (geometry cached): details drawn every
+## frame in the same place, like ribs on a shell or facets on a gem.
+static func line_c(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float) -> void:
+	var k := hash(["lc", pts, color, width])
+	var g = _geo.get(k)
+	if g == null:
+		g = _poly_geo(pts, color, width, false)
+		_geo[k] = g
+	_put(ci, g[0], g[1])
+
+
+## Arc that never changes (geometry cached), see arc().
+static func arc_c(ci: CanvasItem, c: Vector2, r: float, a0: float, a1: float, n: int, color: Color, width: float) -> void:
+	var k := hash(["ac", c, r, a0, a1, n, color, width])
+	var g = _geo.get(k)
+	if g == null:
+		var pts := PackedVector2Array()
+		var full := absf(a1 - a0) >= TAU - 0.001
+		var count := n if full else n + 1
+		for i in count:
+			var a := lerpf(a0, a1, float(i) / n)
+			pts.append(c + Vector2(cos(a), sin(a)) * r)
+		g = _poly_geo(pts, color, width, full)
+		_geo[k] = g
+	_put(ci, g[0], g[1])

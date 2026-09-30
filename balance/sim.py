@@ -13,15 +13,34 @@ import sys
 # --- Parameters: the game must use exactly these (balance.gd mirrors them) ---
 GROWTH = 1.08                     # upgrade cost growth per level
 MILESTONE_FIRST = 10              # x2 output at level 10, then every 25 levels (25, 50, 75...)
-DEPTHS = [
-    # value: coins/s per level at depth; cost0: level 1->2 upgrade cost; unlock: cost to open
+IDS = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "amber", "sapphire", "gold", "ruby", "ice",
+       "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star"]
+# value: coins/s per level at depth; cost0: level 1->2 upgrade cost; unlock: cost to open.
+# Depths after the sixth follow a fixed pattern (value x7, cost0 x10, unlock x UNLOCK_STEP).
+FIRST = [
     {"value": 0.8,    "cost0": 6,       "unlock": 0},
-    {"value": 6,      "cost0": 60,      "unlock": 50},
-    {"value": 45,     "cost0": 600,     "unlock": 9e4},
-    {"value": 320,    "cost0": 6e3,     "unlock": 7e5},
-    {"value": 2.3e3,  "cost0": 6e4,     "unlock": 1.7e6},
-    {"value": 1.6e4,  "cost0": 6e5,     "unlock": 3.8e6},
+    {"value": 6,      "cost0": 60,      "unlock": 120},
+    {"value": 45,     "cost0": 600,     "unlock": 2.2e4},
+    {"value": 320,    "cost0": 6e3,     "unlock": 4.5e5},
+    {"value": 2.3e3,  "cost0": 6e4,     "unlock": 6e6},
+    {"value": 1.6e4,  "cost0": 6e5,     "unlock": 6e7},
 ]
+# Unlock prices: the first six from calibrate2.py (run 1), the rest follow the
+# run pattern (depth before the gate ~ P/40, the gate depth ~ P/9 of that run's
+# Dive Deeper price), so every run opens about two new depths.
+UNLOCKS = [0, 90, 1300, 1.2e5, 1.0e6, 2.3e6,
+           6.8e6, 3.0e7, 4.5e7, 2.0e8, 3.0e8, 1.3e9, 1.9e9, 8.4e9,
+           1.2e10, 5.3e10, 7.8e10, 3.4e11, 5.0e11, 2.2e12, 1.4e13]
+DEPTHS = [dict(d) for d in FIRST]
+while len(DEPTHS) < len(IDS):
+    prev = DEPTHS[-1]
+    DEPTHS.append({"value": prev["value"] * 7, "cost0": prev["cost0"] * 10, "unlock": 0})
+for k, u in enumerate(UNLOCKS):
+    DEPTHS[k]["unlock"] = u
+    # Deep sites: first level-up costs about the opening price, so their
+    # upgrade buttons stay within reach (x10 per depth outran income).
+    if k >= 7:
+        DEPTHS[k]["cost0"] = u
 BOAT = {"value": 1.5, "cost0": 8}
 PLANT = {"value": 1.7, "cost0": 10}
 # Dive sites work on their own from the start. The boat and the plant run
@@ -29,9 +48,27 @@ PLANT = {"value": 1.7, "cost0": 10}
 TAP_EFFICIENCY = 0.35
 # A dive site's foreman doubles its output.
 FOREMAN_MULT = 2.0
-MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3, "d2": 1.5e5, "d3": 1.2e6, "d4": 3.4e6, "d5": 7.6e6}
-PRESTIGE_COSTS = [5e7, 5e7 * 6, 5e7 * 36]   # need all depths open + this many coins
-PRESTIGE_MULT = [3, 9, 27]                        # income multiplier after 1st, 2nd, 3rd prestige
+MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3}
+for k in range(2, len(DEPTHS)):
+    MANAGER_COST[f"d{k}"] = float(f"{DEPTHS[k]['unlock'] * 2.0:.2g}")
+# Diving Deeper needs this depth open (deeper every time) and the coins.
+PRESTIGE_GATE_FIRST = 5
+PRESTIGE_GATE_STEP = 2
+PRESTIGE_COST0 = 1.0e7
+PRESTIGE_COST_GROWTH = 6.4
+RUNS = 9
+
+
+def prestige_gate(times: int) -> int:
+    return min(PRESTIGE_GATE_FIRST + PRESTIGE_GATE_STEP * times, len(DEPTHS) - 1)
+
+
+def prestige_cost(times: int) -> float:
+    return PRESTIGE_COST0 * PRESTIGE_COST_GROWTH ** times
+
+
+def prestige_mult(times: int) -> float:
+    return 3.0 ** times
 
 DT = 1.0
 
@@ -146,13 +183,13 @@ def best_option(g: Game):
     return best
 
 
-def run(mult: float, prestige_cost: float, trace: bool, max_t: float = 12 * 3600, keep=()):
+def run(mult: float, prestige_cost: float, trace: bool, max_t: float = 12 * 3600, keep=(), gate: int = 5):
     g = Game(mult, keep)
     t = 0.0
     events = []
     target = best_option(g)
     while t < max_t:
-        if all(lv > 0 for lv in g.depth_lv) and g.coins >= prestige_cost:
+        if g.depth_lv[gate] > 0 and g.coins >= prestige_cost:
             events.append((t, "PRESTIGE ready"))
             return t, events, g
         g.coins += g.income() * DT
@@ -164,7 +201,7 @@ def run(mult: float, prestige_cost: float, trace: bool, max_t: float = 12 * 3600
             if trace or label.startswith(("open", "manager")):
                 events.append((t, label))
             target = best_option(g)
-            if all(lv > 0 for lv in g.depth_lv):
+            if g.depth_lv[gate] > 0 and g.depth_lv[min(gate + 1, len(DEPTHS) - 1)] == 0 and False:
                 # Saving for prestige: only buy when it's under 5% of what we still need.
                 need = prestige_cost - g.coins
                 if target and target[1] > 0.05 * max(need, 0):
@@ -185,22 +222,23 @@ def fmt(t: float) -> str:
 
 def main():
     trace = "--trace" in sys.argv
-    mult = 1.0
     keep = ()
-    for i, cost in enumerate(PRESTIGE_COSTS):
-        t, events, g = run(mult, cost, trace, keep=keep)
-        # Boat and plant automation is permanent: it survives a dive.
+    total = 0.0
+    for i in range(RUNS):
+        mult = prestige_mult(i)
+        gate = prestige_gate(i)
+        t, events, g = run(mult, prestige_cost(i), trace, keep=keep, gate=gate)
         keep = tuple(m for m in g.managers if m in ("boat", "plant"))
-        print(f"=== Run {i + 1} (income x{mult:g}) ===")
+        print(f"=== Run {i + 1} (income x{mult:g}, needs {IDS[gate]} + {prestige_cost(i):.2g}) ===")
         for et, label in events:
-            print(f"  {fmt(et)}  {label}")
+            if label.startswith("open") or label.startswith("PRESTIGE"):
+                print(f"  {fmt(et)}  {label}")
         if t is None:
             print("  prestige NOT reached in 12h")
             break
-        d, b, p = g.stage_rates()
-        print(f"  end: depths {g.depth_lv}, boat {g.boat_lv}, plant {g.plant_lv}, "
-              f"income {g.income():.3g}/s (dives {d:.3g} boat {b:.3g} plant {p:.3g})")
-        mult = PRESTIGE_MULT[i]
+        total += t
+        deepest = max(k for k, lv in enumerate(g.depth_lv) if lv > 0)
+        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, boat {g.boat_lv}, plant {g.plant_lv}, income {g.income():.3g}/s")
 
 
 if __name__ == "__main__":

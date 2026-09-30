@@ -307,10 +307,14 @@ func test_corrupted_save() -> void:
 func test_prestige() -> void:
 	var gs := _fresh()
 	gs.coins = 1e12
-	check(not gs.can_prestige(), "prestige needs all sites open")
-	for key in gs.stage_keys():
-		gs.levels[key] = maxi(1, gs.levels[key])
-	check(gs.can_prestige(), "all open and enough coins")
+	check(not gs.can_prestige(), "prestige needs the gate depth open")
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[5]["id"], "first gate is the sixth depth")
+	for i in 5:
+		gs.levels["d%d" % i] = maxi(1, gs.levels["d%d" % i])
+	check(not gs.can_prestige(), "one short of the gate")
+	gs.levels["d5"] = 1
+	check(gs.can_prestige(), "gate open and enough coins")
+	check(gs.next_depth() != "", "deeper depths may stay closed")
 	var before: float = gs.rate("plant")
 	check(gs.prestige(), "prestige works")
 	check(gs.prestige_count == 1 and gs.coins == 0.0, "counter up, coins reset")
@@ -318,6 +322,9 @@ func test_prestige() -> void:
 	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0), "income x3 after first prestige")
 	check(before > 0.0, "sanity")
 	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * Balance.PRESTIGE_COST_GROWTH), "next prestige costs more")
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[7]["id"], "each Dive needs two depths deeper")
+	gs.prestige_count = 50
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[Balance.DEPTHS.size() - 1]["id"], "gate stops at the last depth")
 	gs.free()
 	DirAccess.remove_absolute(TEST_SAVE)
 

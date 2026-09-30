@@ -18,6 +18,7 @@ Sfx="*res://scripts/autoload/sfx.gd"
 GameState="*res://scripts/autoload/game_state.gd"
 Progress="*res://scripts/autoload/progress.gd"
 Platform="*res://scripts/autoload/platform.gd"
+Fishing="*res://scripts/fishing/fishing_state.gd"
 
 [display]
 
@@ -34,7 +35,7 @@ pointing/emulate_touch_from_mouse=false
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://i18n/strings.en.translation", "res://i18n/strings.ru.translation", "res://i18n/strings.es.translation", "res://i18n/strings.zh.translation", "res://i18n/puzzle.en.translation", "res://i18n/puzzle.ru.translation", "res://i18n/puzzle.es.translation", "res://i18n/puzzle.zh.translation")
+locale/translations=PackedStringArray("res://i18n/strings.en.translation", "res://i18n/strings.ru.translation", "res://i18n/strings.es.translation", "res://i18n/strings.zh.translation", "res://i18n/puzzle.en.translation", "res://i18n/puzzle.ru.translation", "res://i18n/puzzle.es.translation", "res://i18n/puzzle.zh.translation", "res://i18n/fishing.en.translation", "res://i18n/fishing.ru.translation", "res://i18n/fishing.es.translation", "res://i18n/fishing.zh.translation")
 locale/fallback="en"
 
 [rendering]

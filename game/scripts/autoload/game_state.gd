@@ -245,8 +245,17 @@ func prestige_cost() -> float:
 	return Balance.prestige_cost(prestige_count)
 
 
+## Id of the depth that must be open before the next Dive Deeper.
+func prestige_gate_depth() -> String:
+	return Balance.DEPTHS[Balance.prestige_gate(prestige_count)]["id"]
+
+
+func prestige_gate_open() -> bool:
+	return is_open("d%d" % Balance.prestige_gate(prestige_count))
+
+
 func can_prestige() -> bool:
-	return next_depth() == "" and coins >= prestige_cost()
+	return prestige_gate_open() and coins >= prestige_cost()
 
 
 func is_rushing() -> bool:

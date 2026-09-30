@@ -12,6 +12,10 @@ static func get_icon(name: String, px: int = 32) -> Texture2D:
 	var k := "%s@%d" % [name, px]
 	if _cache.has(k):
 		return _cache[k]
+	if name == "fishing":
+		# Drawn by the fishing module in the same toon style.
+		_cache[k] = FishArt.icon(px)
+		return _cache[k]
 	var svg := _svg(name)
 	var img := Image.new()
 	if svg == "" or img.load_svg_from_string(svg, px / 64.0) != OK:

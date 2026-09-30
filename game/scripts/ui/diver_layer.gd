@@ -2,9 +2,11 @@ class_name DiverLayer
 extends Control
 ## Top layer of the ocean: the dive rope, every diver, and effects
 ## (floating "+N" texts, tap ripples, confetti, sparkles).
-## A diver's trip follows its site's cycle: swim to the vein, dig three
-## times, swim back, climb the rope to the raft, drop the sack, dive back.
-## Idle divers (no manager, no tap) doze at the cave mouth.
+## A diver's trip follows its site's cycle: swim from its spot at the cave
+## mouth to the vein, dig three times, swim back, climb the rope to the raft,
+## toss the sack onto it, climb down and swim back to its spot. Every phase
+## starts where the last one ended (poses blend, divers turn around), and
+## idle divers (no manager, no tap) doze at that same spot.
 
 const DIVER_SCALE := 0.78
 const SWIM_OUT_END := 0.12
@@ -12,6 +14,12 @@ const DIG_END := 0.46
 const SWIM_BACK_END := 0.56
 const ASCEND_END := 0.78
 const DROP_END := 0.84
+## Where each diver works, from the deposit: x, y (px) and facing. The
+## first two work the vein (one standing, one hovering above), the others
+## get small veins of their own further left.
+const SPOTS: Array[Vector3] = [Vector3(-58, 0, 1), Vector3(-44, -80, 1), Vector3(-150, 0, 1), Vector3(-200, -80, 1), Vector3(-250, -2, 1)]
+## Divers hovering at work lean forward so the tool reaches down.
+const HOVER_TILT := 0.45
 
 var world: World
 var _t := 0.0
@@ -22,6 +30,7 @@ var _idle_since := {}
 ## Diver suit colors from the wardrobe (empty = each depth's own color).
 static var suit_paint: Array = []
 var _dig_phase := {}
+var _trip := {}
 var _rng := RandomNumberGenerator.new()
 
 
@@ -53,8 +62,9 @@ func sparkle(at: Vector2, count: int) -> void:
 
 
 ## A thing flying on an arc from a to b (sacks, coin bags).
-func throw_item(kind: String, a: Vector2, b: Vector2, color: Color, seconds: float = 0.6) -> void:
-	_parts.append({"kind": "throw", "item": kind, "a": a, "b": b, "color": color, "age": 0.0, "life": seconds, "pos": a, "vel": Vector2.ZERO, "rot": 0.0})
+## `depth` >= 0 fills a sack with that site's ore.
+func throw_item(kind: String, a: Vector2, b: Vector2, color: Color, seconds: float = 0.6, depth: int = -1) -> void:
+	_parts.append({"kind": "throw", "item": kind, "a": a, "b": b, "color": color, "age": 0.0, "life": seconds, "pos": a, "vel": Vector2.ZERO, "rot": 0.0, "depth": depth})
 
 
 func _process(delta: float) -> void:
@@ -77,7 +87,8 @@ func _process(delta: float) -> void:
 			var f: float = clampf(p["age"] / p["life"], 0.0, 1.0)
 			var a: Vector2 = p["a"]
 			var b: Vector2 = p["b"]
-			p["pos"] = a.lerp(b, f) + Vector2(0, -sin(f * PI) * 70.0)
+			var h := clampf(a.distance_to(b) * 0.35, 30.0, 70.0)
+			p["pos"] = a.lerp(b, f) + Vector2(0, -sin(f * PI) * h)
 			p["rot"] = f * TAU
 		else:
 			p["vel"] += Vector2(0, 520.0 if p["kind"] == "confetti" else 0.0) * delta
@@ -119,6 +130,7 @@ func _draw() -> void:
 				_idle_since[key] = _t
 		else:
 			_idle_since.erase(key)
+		_draw_veins(i, n, view)
 		for j in n:
 			_draw_diver(i, j, p, view)
 		if p < 0.0 and not gs.has_manager(key):
@@ -146,7 +158,7 @@ func _draw() -> void:
 
 func _draw_parts() -> void:
 	for p in _parts:
-		var a: float = clampf(1.0 - (p["age"] - p["life"] * 0.7) / (p["life"] * 0.3), 0.0, 1.0)
+		var a: float = snappedf(clampf(1.0 - (p["age"] - p["life"] * 0.7) / (p["life"] * 0.3), 0.0, 1.0), 0.05)
 		match p["kind"]:
 			"confetti":
 				Art.push(self, p["pos"], p["rot"], Vector2(1.0, absf(sin(p["rot"])) + 0.2))
@@ -157,27 +169,195 @@ func _draw_parts() -> void:
 				Art.toon(self, Art.star_pts(Vector2.ZERO, 8, 3.5, 4), Color(p["color"], a), 1.5, 0.0)
 				Art.pop(self)
 			"throw":
-				Art.push(self, p["pos"], sin(p["rot"]) * 0.4)
-				Chars.item(self, p["item"], Vector2(0, -12), p["color"])
+				# Stretches a little along the arc, squashes as it lands.
+				var f: float = clampf(p["age"] / p["life"], 0.0, 1.0)
+				var sq := 1.0 + 0.12 * sin(f * PI) - 0.18 * maxf(0.0, f - 0.85) / 0.15
+				Art.push(self, p["pos"], sin(p["rot"]) * 0.4, Vector2(2.0 - sq, sq))
+				Chars.item(self, p["item"], Vector2(0, -12), p["color"], int(p.get("depth", -1)))
 				Art.pop(self)
 
 
 func _draw_tap_hint(at: Vector2) -> void:
-	var bounce := absf(sin(_t * 4.0)) * 10.0
+	# The bubble bobs softly; the hand below it taps on its own rhythm.
+	var bob := (0.5 - 0.5 * cos(_t * 3.2)) * 8.0
 	var text := tr("TAP_HINT")
 	var font := UiTheme.heavy_font()
 	var fs := 24
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	Art.push(self, at + Vector2(0, -bounce))
+	Art.push(self, at + Vector2(0, -bob))
 	var box := Rect2(Vector2(-tw / 2.0 - 16, -44), Vector2(tw + 32, 46))
 	var tail := PackedVector2Array([Vector2(-10, 0), Vector2(10, 0), Vector2(0, 14)])
 	Art.toon(self, Art.union([Art.rrect_pts(box, 16), tail]), Art.WHITE, 3.0, 0.3)
 	Art.text(self, Vector2(0, -12), text, fs, Art.INK, 0)
-	# Pointing hand.
-	var hand := Vector2(tw / 2.0 + 30, -10)
-	Art.t_circle(self, hand, 9, Art.WHITE, 2.5, 0.3)
-	Art.t_rect(self, Rect2(hand + Vector2(-3.5, -22), Vector2(7, 18)), 3.5, Art.WHITE, 2.5, 0.0)
 	Art.pop(self)
+	PointerArt.draw(self, at + Vector2(10, 40), _t, not Settings.reduce_motion, -0.45, 0.8)
+
+
+## Small veins of ore for the third diver on (the first two share the big
+## deposit): they appear as the site hires more divers.
+func _draw_veins(site: int, n: int, view: Rect2) -> void:
+	var ledge := World.row_y(site) + DepthRow.LEDGE_Y + 2.0
+	var dp: Vector2 = world.rows[site].deposit_pos()
+	for j in range(2, mini(n, SPOTS.size())):
+		var sp := _spot(j)
+		var high := sp.y < -20.0
+		var at := Vector2(dp.x + sp.x + 50.0, ledge + (sp.y + 12.0 if high else 0.0))
+		if not view.grow(80.0).has_point(at):
+			continue
+		if high:
+			# A rock pillar holds the vein up where the hovering diver works.
+			Art.push(self, Vector2(at.x, ledge))
+			Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+			Art.pop(self)
+		OreArt.deposit(self, at, 32.0 if high else 36.0, site, site * 13 + j, _t, 2, false)
+
+
+## The pose of a diver at point p (0..1) of its trip: where it is, which
+## way it faces, its arms and what it carries. Every phase begins exactly
+## where the previous one ends, so nothing ever jumps.
+static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float, hover: bool, rope: Vector2, surface: float, swim_bob: float) -> Dictionary:
+	var sp := Vector3(0, 0, spot_facing)
+	var pos: Vector2
+	var facing := 1.0
+	var turn := 1.0
+	var tilt := 0.0
+	var arm := "swim"
+	var arm_from := ""
+	var blend := 1.0
+	var hit := 0.0
+	var carry := false
+	var sling := 0.0
+	var kick_amp := 1.0
+	var emo := "happy"
+	var trip: String = "out"
+	if p < SWIM_OUT_END:
+		var f := p / SWIM_OUT_END
+		var e := _ease(f)
+		var b := _bump(f)
+		var settle := smoothstep(0.6, 1.0, f) if hover else 0.0
+		pos = home.lerp(spot, e) + Vector2(0, -sin(f * PI) * (22.0 + (34.0 if sp.z < 0.0 else 0.0)) + swim_bob * maxf(b, settle))
+		tilt = lerpf(0.5 * b, HOVER_TILT, settle)
+		kick_amp = maxf(b, 0.6 * settle)
+		arm_from = "idle"
+		blend = smoothstep(0.0, 0.2, f)
+		if sp.z < 0.0:
+			turn = cos(PI * smoothstep(0.78, 1.0, f))
+	elif p < DIG_END:
+		var f := (p - SWIM_OUT_END) / (DIG_END - SWIM_OUT_END)
+		trip = "dig"
+		pos = spot + (Vector2(0, swim_bob) if hover else Vector2.ZERO)
+		facing = sp.z
+		tilt = HOVER_TILT if hover else 0.0
+		arm = "dig"
+		arm_from = "swim"
+		blend = smoothstep(0.0, 0.07, f)
+		hit = fposmod(f * 3.0, 1.0)
+		kick_amp = 0.6 if hover else 0.0
+		emo = "focus"
+	elif p < SWIM_BACK_END:
+		var f := (p - DIG_END) / (SWIM_BACK_END - DIG_END)
+		var e := _ease(f)
+		var b := _bump(f)
+		trip = "back"
+		var lift := (1.0 - smoothstep(0.0, 0.4, f)) if hover else 0.0
+		pos = spot.lerp(rope, e) + Vector2(0, -sin(f * PI) * 22.0 + swim_bob * maxf(b, lift))
+		facing = -1.0
+		if sp.z > 0.0:
+			# Turn around on the spot first.
+			facing = 1.0
+			turn = cos(PI * smoothstep(0.0, 0.22, f))
+		tilt = maxf(0.5 * b, HOVER_TILT * lift)
+		carry = true
+		arm_from = "dig"
+		blend = smoothstep(0.0, 0.22, f)
+		kick_amp = maxf(maxf(b, 0.6 * lift), 0.6 * smoothstep(0.75, 1.0, f))
+		emo = "joy" if f < 0.3 else "happy"
+	elif p < ASCEND_END:
+		var f := (p - SWIM_BACK_END) / (ASCEND_END - SWIM_BACK_END)
+		trip = "up"
+		pos = Vector2(rope.x, lerpf(rope.y, surface, _ease(f)))
+		facing = -1.0
+		arm = "rope"
+		arm_from = "swim"
+		blend = smoothstep(0.0, 0.15, f)
+		carry = true
+		sling = smoothstep(0.0, 0.2, f)
+		kick_amp = 0.6
+	elif p < DROP_END:
+		var f := (p - ASCEND_END) / (DROP_END - ASCEND_END)
+		trip = "drop"
+		# Pop out of the water, turn to the raft and toss the sack onto it.
+		pos = Vector2(rope.x, surface - sin(f * PI) * 12.0)
+		facing = 1.0
+		turn = -cos(PI * smoothstep(0.0, 0.3, f))
+		if f > 0.7:
+			turn = cos(PI * smoothstep(0.7, 1.0, f))
+		arm = "cheer"
+		arm_from = "rope"
+		blend = smoothstep(0.0, 0.25, f)
+		carry = f < 0.45
+		sling = 1.0 - smoothstep(0.1, 0.3, f)
+		kick_amp = 0.6
+		emo = "joy"
+		trip = "drop_carry" if carry else "drop"
+	else:
+		var f := (p - DROP_END) / (1.0 - DROP_END)
+		trip = "down"
+		if f < 0.7:
+			var g := f / 0.7
+			pos = Vector2(rope.x, lerpf(surface, rope.y, _ease(g)))
+			facing = -1.0
+			arm = "rope"
+			arm_from = "cheer"
+			blend = smoothstep(0.0, 0.2, g)
+			kick_amp = 0.6
+		else:
+			# Off the rope and back to the spot at the cave mouth.
+			var g := (f - 0.7) / 0.3
+			var b := _bump(g, 0.3)
+			pos = rope.lerp(home, _ease(g)) + Vector2(0, -sin(g * PI) * 10.0 + swim_bob * b)
+			facing = 1.0
+			turn = -cos(PI * smoothstep(0.0, 0.3, g))
+			tilt = 0.4 * b
+			kick_amp = maxf(b, 0.6 * (1.0 - smoothstep(0.0, 0.3, g)))
+			if g < 0.5:
+				arm = "swim"
+				arm_from = "rope"
+				blend = smoothstep(0.0, 0.3, g)
+			else:
+				arm = "idle"
+				arm_from = "swim"
+				blend = smoothstep(0.7, 1.0, g)
+	return {"pos": pos, "facing": facing, "turn": turn, "tilt": tilt, "arm": arm, "arm_from": arm_from, "blend": blend,
+			"hit": hit, "carry": carry, "sling": sling, "kick_amp": kick_amp, "emo": emo, "trip": trip}
+
+
+static var _PILLAR := Art.smooth_pts(PackedVector2Array([Vector2(-22, 3), Vector2(-14, -30), Vector2(-15, -62), Vector2(-9, -71),
+		Vector2(4, -73), Vector2(14, -66), Vector2(13, -34), Vector2(22, 3)]), 3)
+
+
+## SPOTS[j], spread out a little more in the wide caves of big screens.
+func _spot(j: int) -> Vector3:
+	var sp: Vector3 = SPOTS[j % SPOTS.size()]
+	if sp.x < -100.0:
+		var wide := clampf((world.scene_right() - World.CAVE_L) / 340.0, 1.0, 1.8)
+		sp.x *= wide
+	return sp
+
+
+static func _ease(x: float) -> float:
+	x = clampf(x, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+## 0 at both ends of a phase, 1 in the middle (lift off, tilt, kick).
+static func _bump(f: float, edge: float = 0.25) -> float:
+	return smoothstep(0.0, edge, f) * (1.0 - smoothstep(1.0 - edge, 1.0, f))
+
+
+## Where diver j of a site stands when idle, and where each trip starts.
+func home_pos(site: int, j: int) -> Vector2:
+	return Vector2(World.CAVE_L + 40.0 + j * 26.0, World.row_y(site) + DepthRow.LEDGE_Y + 2.0)
 
 
 func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
@@ -187,106 +367,109 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	var ore: Color = st["ore"]
 	var row_top := World.row_y(site)
 	var ledge := row_top + DepthRow.LEDGE_Y + 2.0
-	var rope_x := World.ROPE_X + 10.0 + j * 5.0
+	var home := home_pos(site, j)
+	var rope := Vector2(World.ROPE_X + 12.0 + j * 3.0, ledge - 14.0)
 	var surface := World.SURFACE_Y - 14.0
-	var dig_x := world.rows[site].deposit_pos().x - 58.0 - j * 30.0
+	var dp: Vector2 = world.rows[site].deposit_pos()
+	var sp := _spot(j)
+	var spot := Vector2(dp.x + sp.x, ledge + sp.y)
+	var hover := sp.y < -20.0
 	var mood := world.mood(key)
 	var hop := world.hop(key, j)
 	var blink := Chars.blinking(_t, site * 3.1 + j * 1.3)
 	var rushing := GameState.is_rushing()
 	var seed := site * 0.7 + j
+	var id := site * 10 + j
 	if p < 0.0:
 		# Dozing at the cave mouth until someone taps.
-		var at := Vector2(World.CAVE_L + 40.0 + j * 26.0, ledge - hop)
-		if not view.has_point(at):
+		var at := home - Vector2(0, hop)
+		if not view.grow(60.0).has_point(at):
 			return
 		var idle: float = _t - float(_idle_since.get(key, _t))
 		var emo := mood if mood != "" else ("sleepy" if idle > 5.0 else "bored")
-		Chars.diver(self, at, DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t)
+		Chars.diver(self, at, DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t + seed, site)
 		if emo == "sleepy" and j == 0:
 			Chars.mark(self, "zzz", at + Vector2(20, -80), _t)
 		elif mood == "wow" and j == 0:
 			Chars.mark(self, "!", at + Vector2(0, -92), _t)
 		return
-	p = clampf(p - j * 0.03, 0.0, 1.0)
+	# Later divers start a little later and catch up, so they never jump.
+	var lag := j * 0.03
+	p = clampf((p - lag) / (1.0 - lag), 0.0, 1.0)
 	var kick := _t * (3.0 if rushing else 1.8) + seed
-	var pos: Vector2
-	var facing := 1.0
-	var tilt := 0.0
-	var arm := "swim"
-	var hit := 0.0
-	var carry := false
-	var emo := "happy"
-	if p < SWIM_OUT_END:
-		var f := p / SWIM_OUT_END
-		pos = Vector2(lerpf(World.CAVE_L - 10.0, dig_x, smoothstep(0.0, 1.0, f)), ledge - 18.0 + sin(_t * 5.0 + seed) * 4.0)
-		tilt = 0.5
-	elif p < DIG_END:
-		var f := (p - SWIM_OUT_END) / (DIG_END - SWIM_OUT_END)
-		hit = fposmod(f * 3.0, 1.0)
-		pos = Vector2(dig_x, ledge)
-		arm = "pick"
-		hit = 1.0 - absf(hit * 2.0 - 1.0) if hit < 0.5 else smoothstep(0.5, 0.62, hit)
-		emo = "focus"
-		kick = 0.0
-		var phase := fposmod(f * 3.0, 1.0)
-		var id := site * 10 + j
+	var swim_bob := sin(_t * 4.2 + seed) * 3.0
+	var st8 := trip_pose(p, home, spot, sp.z, hover, rope, surface, swim_bob)
+	var pos: Vector2 = st8["pos"]
+	var facing: float = st8["facing"]
+	var turn: float = st8["turn"]
+	var tilt: float = st8["tilt"]
+	var arm: String = st8["arm"]
+	var arm_from: String = st8["arm_from"]
+	var blend: float = st8["blend"]
+	var hit: float = st8["hit"]
+	var carry: bool = st8["carry"]
+	var sling: float = st8["sling"]
+	var kick_amp: float = st8["kick_amp"]
+	var emo: String = st8["emo"]
+	var trip: String = st8["trip"]
+	if trip == "dig":
+		var phase := hit
 		var before: float = _dig_phase.get(id, phase)
 		_dig_phase[id] = phase
-		if before < 0.55 and phase >= 0.55 and view.has_point(pos_hint(dig_x, ledge)):
+		var tier := Chars.gear_tier(site)
+		var tip := pos + (Chars.dig_tip(tier) * DIVER_SCALE * Vector2(facing, 1.0)).rotated(tilt * facing)
+		if before < Chars.DIG_IMPACT and phase >= Chars.DIG_IMPACT and view.has_point(tip):
 			Sfx.play("dig")
 			if randf() < 0.06:
 				Sfx.voice("hup", randf_range(1.0, 1.4))
-		if phase > 0.55 and phase < 0.75:
-			_draw_chips(Vector2(dig_x + 42, ledge - 20), phase, ore)
-	elif p < SWIM_BACK_END:
-		var f := (p - DIG_END) / (SWIM_BACK_END - DIG_END)
-		pos = Vector2(lerpf(dig_x, rope_x, smoothstep(0.0, 1.0, f)), ledge - 18.0 + sin(_t * 5.0 + seed) * 4.0)
-		facing = -1.0
-		tilt = 0.5
-		carry = true
-		emo = "joy" if f < 0.3 else "happy"
-	elif p < ASCEND_END:
-		var f := (p - SWIM_BACK_END) / (ASCEND_END - SWIM_BACK_END)
-		pos = Vector2(rope_x, lerpf(ledge - 10.0, surface, smoothstep(0.0, 1.0, f)))
-		facing = -1.0
-		arm = "rope"
-		carry = true
-	elif p < DROP_END:
-		pos = Vector2(rope_x + 6.0, surface - absf(sin((p - ASCEND_END) / (DROP_END - ASCEND_END) * PI)) * 10.0)
-		arm = "cheer"
-		emo = "joy"
-	else:
-		var f := (p - DROP_END) / (1.0 - DROP_END)
-		pos = Vector2(rope_x, lerpf(surface, ledge - 10.0, smoothstep(0.0, 1.0, f)))
-		facing = -1.0
-		arm = "rope"
-	if not view.grow(60.0).has_point(pos):
+		var busy := 0.22 if Chars.tool_of(tier) == "pick" else 0.3
+		if phase >= Chars.DIG_IMPACT and phase < Chars.DIG_IMPACT + busy and view.grow(40.0).has_point(tip):
+			_draw_chips(tip, (phase - Chars.DIG_IMPACT) / busy, site, facing, id)
+	elif trip == "drop":
+		var was: String = _trip.get(id, "")
+		if was == "drop_carry" and view.grow(80.0).has_point(pos):
+			# Toss the sack onto the pile on the raft.
+			var hand := pos + Vector2(14, -60) * DIVER_SCALE
+			throw_item("sack", hand, Vector2(World.ROPE_X + 40.0, World.SURFACE_Y - 18.0), ore, 0.35, site)
+	_trip[id] = trip
+	if not view.grow(80.0).has_point(pos):
 		return
 	if rushing and emo in ["happy", "focus"]:
 		emo = "focus"
 	if mood != "":
 		emo = mood
-		if mood == "joy" and arm in ["swim", "idle"]:
+		if mood == "joy" and arm in ["swim", "idle"] and not carry:
 			arm = "cheer"
+			arm_from = ""
 	pos.y -= hop
-	Chars.diver(self, pos, DIVER_SCALE, suit, facing, tilt, kick, arm, hit, carry, ore, emo, blink, _t + seed)
+	var pose := {"turn": turn, "kick_amp": kick_amp, "sling": sling}
+	if arm_from != "" and blend < 1.0:
+		pose["arm_from"] = arm_from
+		pose["blend"] = blend
+	Chars.diver(self, pos, DIVER_SCALE, suit, facing, tilt, kick, arm, hit, carry, ore, emo, blink, _t + seed, site, pose)
 	if rushing and j == 0:
-		Chars.mark(self, "sweat", pos + Vector2(-16 * facing, -76), _t)
+		Chars.mark(self, "sweat", pos + Vector2(-16 * facing * turn, -76), _t)
 
 
-func _draw_chips(at: Vector2, phase: float, ore: Color) -> void:
-	var f := (phase - 0.55) / 0.2
+## Bits of the site's ore flying off the tool, and a flash where it hits.
+func _draw_chips(at: Vector2, f: float, site: int, facing: float, id: int) -> void:
+	var tool := Chars.tool_of(Chars.gear_tier(site))
 	for k in 4:
-		var a := -2.4 + k * 0.5
-		var p := at + Vector2(cos(a), sin(a)) * f * 34.0 + Vector2(0, f * f * 14.0)
-		Art.push(self, p, f * 4.0 + k)
-		Art.toon(self, PackedVector2Array([Vector2(-3, -3), Vector2(3, -2), Vector2(2, 3), Vector2(-3, 2)]), ore, 1.2, 0.0)
-		Art.pop(self)
+		# Thrown back toward the diver and up, then falling.
+		var a := -PI * 0.5 - facing * (0.35 + k * 0.32) + sin(id * 1.7 + k) * 0.15
+		var sp := 30.0 + 8.0 * ((id + k) % 3)
+		var p := at + Vector2(cos(a), sin(a)) * _ease(f) * sp + Vector2(0, f * f * 22.0)
+		OreArt.chip(self, p, 3.4 * (1.0 - f * 0.35), site, f * 6.0 * facing + k)
 	var s := 1.0 - f * 0.6
-	Art.push(self, at, 0.0, Vector2(s, s))
-	Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 1, 0.8, 1.0 - f), 1.2, 0.0)
-	Art.pop(self)
+	match tool:
+		"laser":
+			Art.glow(self, at, 22.0 * s + 4.0, Color(1, 1, 1, 0.5 * (1.0 - f)), 12)
+		"drill":
+			Art.glow(self, at, 16.0, Color(1, 0.95, 0.8, 0.45 * (1.0 - f)), 12)
+		_:
+			Art.push(self, at, 0.0, Vector2(s, s))
+			Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 1, 0.8, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
+			Art.pop(self)
 
 
 func pos_hint(x: float, y: float) -> Vector2:

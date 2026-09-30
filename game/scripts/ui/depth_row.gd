@@ -157,7 +157,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.t_ellipse(ci, p, Vector2(r * 1.3, r), rock.lightened(0.12), 2.0, 0.5, rng.randf_range(-0.5, 0.5))
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
-	var water: Color = Art.water_color(0.15 + index * 0.13)
+	var water: Color = Art.water_color(0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0))
 	Art.grad(ci, PackedVector2Array([shaft.position, Vector2(shaft.end.x, shaft.position.y), shaft.end, Vector2(shaft.position.x, shaft.end.y)]), PackedColorArray([water, water, water.darkened(0.1), water.darkened(0.1)]))
 	# Cave and the passage from the shaft.
 	var cave := cave_rect()
@@ -215,8 +215,8 @@ func _draw() -> void:
 	var dp := deposit_pos()
 	var glow := 0.12 + 0.05 * sin(_t * 2.0 + index) + _flash * 0.3
 	Art.flat(self, Art.clipped(Art.circle_pts(Vector2(cave.end.x - 30, LEDGE_Y - 50), 90, 32), cave_poly), Color(st["ore"], glow))
-	Art.crystals(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, st, index * 7 + 1, 3)
-	Art.crystals(self, Vector2(dp.x, LEDGE_Y + 2), 70, st, index * 31 + 3, 5)
+	OreArt.deposit(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, index, index * 7 + 1, _t, 3, false)
+	OreArt.deposit(self, Vector2(dp.x, LEDGE_Y + 2), 70, index, index * 31 + 3, _t, 5)
 	# Edge of the cave drawn again over the vein so it stays inside.
 	Art.ring(self, cave_poly, Art.INK, 5.0)
 
@@ -237,9 +237,10 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 			Art.pop(self)
 			Art.seaweed(self, Vector2(x1, y), 46, Color("47c47a"), _t, index)
 		"coral":
+			var cols := [Color("ff6f91"), Color("ffa84a"), Color("c86bff")] if index < 6 else [Color("4fc3ff"), Color("8f8cff"), Color("3fe0d0")]
 			for i in 3:
 				Art.push(self, Vector2(lerpf(x0, x1, i / 2.0), y + 2), 0.0, Vector2.ONE * (1.0 + (i % 2) * 0.3))
-				Props.coral(self, [Color("ff6f91"), Color("ffa84a"), Color("c86bff")][i], i + index, _t)
+				Props.coral(self, cols[i], i + index, _t)
 				Art.pop(self)
 		"pearls":
 			Art.push(self, Vector2(x0 + 10, y + 2))
@@ -260,12 +261,204 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 			for i in 4:
 				Art.seaweed(self, Vector2(lerpf(x0 - 20, x1 + 20, i / 3.0), y), 110 + (i % 2) * 40, Color("35c98a"), _t, i + index, 11.0)
 		"glow":
+			var gc: Color = Color("8f7bff") if index < 6 else Color("b9c4ff")
 			for i in 3:
 				var cx := lerpf(x0, x1, i / 2.0)
-				Art.crystal(self, Vector2(cx, y + 2), 26 + (i % 2) * 14, 8, -0.2 + i * 0.2, Color("8f7bff"), 2.2)
+				Art.crystal(self, Vector2(cx, y + 2), 26 + (i % 2) * 14, 8, -0.2 + i * 0.2, gc, 2.2)
 			Art.push(self, Vector2(mid, CAVE_TOP + 90 + sin(_t) * 10.0))
-			Props.jelly(self, _t, Color("ff9fe0"))
+			Props.jelly(self, _t, Color("ff9fe0") if index < 6 else Color("e6e8ff"))
 			Art.pop(self)
+		_:
+			_draw_decor_deep(st, cave)
+
+
+## Decor of the deeper sites (amber and below).
+func _draw_decor_deep(st: Dictionary, cave: Rect2) -> void:
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	match st["deco"]:
+		"amber":
+			# A fallen branch with drops of resin, and a firefly.
+			Art.stroke(self, PackedVector2Array([Vector2(x0 - 30, y + 2), Vector2(x0 + 10, y - 6), Vector2(mid + 10, y - 2)]), Art.WOOD_DARK, 9.0, 2.5)
+			Art.stroke(self, PackedVector2Array([Vector2(x0 + 10, y - 6), Vector2(x0 + 26, y - 26)]), Art.WOOD_DARK, 5.0, 2.2)
+			OreArt.piece(self, "amber", Vector2(x0 - 4, y - 5), 0.5, 0.2, st, _t, 0)
+			OreArt.piece(self, "amber", Vector2(mid - 10, y - 4), 0.4, -0.2, st, _t, 1)
+			for k in 3:
+				OreArt.piece(self, "amber", Vector2(lerpf(x0 - 20, x1 + 20, k / 2.0), top), 0.32 + k * 0.05, PI, st, _t, 1)
+			var ff := Vector2(mid + sin(_t * 0.7) * 70.0, top + 70.0 + sin(_t * 1.9) * 18.0)
+			Art.glow(self, ff, 16.0, Color(1.0, 0.85, 0.4, 0.45 + 0.2 * sin(_t * 9.0)), 12)
+			Art.disc(self, ff, 2.6, Color("fff2b0"))
+		"crystals":
+			var c: Color = ore.lightened(0.1)
+			for p: Vector3 in [Vector3(x0 - 10, 30, -0.3), Vector3(x0 + 8, 44, 0.1), Vector3(x1 + 10, 36, 0.25)]:
+				Art.crystal(self, Vector2(p.x, y + 2), p.y, p.y * 0.22, p.z, c if p.y > 40 else ore2, 2.2)
+			for p: Vector3 in [Vector3(x0 + 40, 26, 0.15), Vector3(mid + 20, 38, -0.1), Vector3(x1 - 10, 22, 0.2)]:
+				Art.crystal(self, Vector2(p.x, top - 2), p.y, p.y * 0.2, PI + p.z, ore2 if p.y > 30 else c, 2.2)
+			var tw := snappedf(0.5 + 0.5 * sin(_t * 3.0 + index), 0.05)
+			Art.push(self, Vector2(x0 + 8, y - 42), _t, Vector2.ONE * (0.5 + tw * 0.6))
+			Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.6, 4), Color(1, 1, 1, 0.9), 0.0, 0.0)
+			Art.pop(self)
+		"ice":
+			for k in 7:
+				var x := lerpf(x0 - 50, x1 + 60, k / 6.0)
+				var h := 18.0 + float((k * 37 + index) % 5) * 7.0
+				Art.push(self, Vector2(x, top - 2), 0.0, Vector2(1.0, h / 30.0))
+				Art.toon(self, _ICICLE, Color("dff6ff"), 2.2, 0.0)
+				Art.flat(self, _ICICLE_HI, Color(1, 1, 1, 0.8))
+				Art.pop(self)
+			for p: Vector3 in [Vector3(x0 - 6, 1.0, 0), Vector3(mid + 50, 0.8, 1)]:
+				Art.push(self, Vector2(p.x, y + 4), 0.0, Vector2(p.y, p.y))
+				Art.toon(self, _SNOW, Color("f4fbff"), 2.2, 0.5)
+				Art.pop(self)
+			for k in 5:
+				var f := fposmod(_t * 0.08 + k * 0.2, 1.0)
+				var sp := Vector2(lerpf(x0 - 40, x1 + 40, fposmod(k * 0.37, 1.0)) + sin(_t + k) * 12.0, lerpf(top + 10, y - 10, f))
+				Art.push(self, sp, _t * 0.5 + k)
+				Art.toon(self, _FLAKE, Color(1, 1, 1, snappedf(0.85 * sin(f * PI), 0.05)), 0.0, 0.0)
+				Art.pop(self)
+		"lava":
+			var hot := snappedf(0.75 + 0.25 * sin(_t * 2.3), 0.05)
+			Art.glow(self, Vector2(mid, y - 4), 70.0, Color(ore, 0.35 * hot), 16)
+			Art.push(self, Vector2(mid, y + 1))
+			Art.toon(self, _POOL, Color("3b2427"), 2.2, 0.0)
+			Art.flat(self, _POOL_IN, Color(ore, 1.0))
+			Art.flat(self, _POOL_CORE, Color(ore2, hot))
+			Art.pop(self)
+			for k in 3:
+				var f := fposmod(_t * 0.5 + k * 0.37, 1.0)
+				var bx := mid - 24.0 + k * 22.0
+				Art.arc(self, Vector2(bx, y - 1), 2.0 + f * 5.0, PI, TAU, 8, Color(ore2, 1.0 - f), 2.0)
+			# A vent puffing embers.
+			Art.push(self, Vector2(x0 - 4, y + 2))
+			Art.toon(self, _VENT, Color("4a2c2a"), 2.2, 0.4)
+			Art.flat(self, Art.ellipse_pts(Vector2(0, -20), Vector2(5, 2), 10), Color(ore, hot))
+			Art.pop(self)
+			for k in 4:
+				var f := fposmod(_t * 0.4 + k * 0.25, 1.0)
+				var ep := Vector2(x0 - 4 + sin(_t * 2.0 + k * 1.7) * 8.0 * f, y - 20.0 - f * 90.0)
+				Art.dot(self, ep, 2.2 * (1.0 - f) + 0.6, Color(ore2, 1.0 - f))
+		"bones":
+			# Whale ribs behind, a fish skeleton on the floor.
+			var bone := Color("f1e6cc")
+			for k in 4:
+				var c := Vector2(x1 - 20 + k * 22, y + 20)
+				Art.arc_c(self, c, 56.0 - k * 5.0, PI * 1.08, PI * 1.5, 10, Art.INK, 9.0)
+				Art.arc_c(self, c, 56.0 - k * 5.0, PI * 1.08, PI * 1.5, 10, bone, 4.5)
+			Art.stroke(self, PackedVector2Array([Vector2(x1 - 76, y - 34), Vector2(x1 + 50, y - 38)]), bone, 5.0, 2.2)
+			Art.push(self, Vector2(x0, y - 4), -0.05)
+			Art.stroke(self, PackedVector2Array([Vector2(-28, 0), Vector2(14, 0)]), bone, 3.0, 1.8)
+			for k in 5:
+				var rx := -20.0 + k * 7.0
+				Art.stroke(self, PackedVector2Array([Vector2(rx, -7), Vector2(rx + 2, 7)]), bone, 2.2, 1.6)
+			Art.toon(self, _FISH_TAIL, bone, 2.0, 0.0)
+			Art.toon(self, _FISH_SKULL, bone, 2.0, 0.4)
+			Art.flat(self, Art.circle_pts(Vector2(22, -3), 2.6, 10), Art.INK)
+			Art.pop(self)
+		"ruins":
+			Art.push(self, Vector2(x0 - 16, y + 3), 0.04, Vector2(1.9, 1.9))
+			OreArt.column(self)
+			Art.pop(self)
+			Art.push(self, Vector2(x1 + 16, y + 3), -0.06, Vector2(1.4, 1.1))
+			OreArt.column(self)
+			Art.pop(self)
+			Art.push(self, Vector2(mid + 4, y + 2), 0.12)
+			Art.t_rect(self, Rect2(-20, -16, 40, 16), 3, Color("c9d6ee"), 2.2, 0.5)
+			Art.line_c(self, PackedVector2Array([Vector2(-12, -8), Vector2(12, -8)]), Color("8a9ab8"), 1.6)
+			Art.pop(self)
+			Art.seaweed(self, Vector2(mid - 40, y), 54, Color("3fbf8f"), _t, index)
+			var rune := snappedf(0.5 + 0.5 * sin(_t * 1.6), 0.05)
+			Art.arc(self, Vector2(mid, top + 70), 16.0, 0, TAU, 24, Color(ore, 0.25 + 0.35 * rune), 2.5)
+			Art.toon(self, Art.star_pts(Vector2(mid, top + 70), 8, 3, 3), Color(ore, 0.3 + 0.4 * rune), 0.0, 0.0)
+		"mushrooms":
+			for p: Vector3 in [Vector3(x0 - 12, 0.55, 0), Vector3(x0 + 10, 0.4, 1), Vector3(mid + 30, 0.45, 2), Vector3(x1 + 14, 0.6, 3), Vector3(x1 - 6, 0.38, 4)]:
+				OreArt.piece(self, "glow", Vector2(p.x, y + 2), p.y, 0.0, st, _t, int(p.z))
+			for k in 7:
+				var f := fposmod(_t * 0.07 + k * 0.143, 1.0)
+				var sp := Vector2(lerpf(x0 - 40, x1 + 40, fposmod(k * 0.61, 1.0)) + sin(_t * 0.8 + k) * 10.0, lerpf(y - 10, top + 20, f))
+				Art.dot(self, sp, 2.2, Color(ore, 0.8 * sin(f * PI)))
+		"crater":
+			Art.push(self, Vector2(mid, y + 2))
+			Art.toon(self, _CRATER, Art.shade_of(st["floor"], 0.2), 2.2, 0.3)
+			Art.flat(self, _CRATER_IN, Color("2a1830"))
+			Art.pop(self)
+			Art.glow(self, Vector2(mid, y - 2), 30.0, Color(ore, 0.35 + 0.15 * sin(_t * 3.0)), 12)
+			for k in 3:
+				var f := fposmod(_t * 0.25 + k * 0.33, 1.0)
+				Art.dot(self, Vector2(mid + sin(k * 2.0 + _t) * 10.0, y - 6 - f * 60.0), 4.0 + f * 9.0, Color(0.8, 0.75, 0.9, 0.35 * (1.0 - f)))
+			for p: Vector3 in [Vector3(x0 - 10, top + 60, 0.0), Vector3(x1 + 20, top + 84, 1.0)]:
+				var bob := sin(_t * 1.2 + p.z * 2.0) * 6.0
+				OreArt.piece(self, "meteor", Vector2(p.x, p.y + bob), 0.55, sin(_t * 0.6 + p.z) * 0.2, st, _t, int(p.z))
+		"tentacles":
+			var dark := Color("5a2a6a")
+			Art.push(self, Vector2(x0 - 30, y + 6), 0.0, Vector2(2.2, 2.4))
+			OreArt.tentacle(self, _t * 0.9, dark)
+			Art.pop(self)
+			Art.push(self, Vector2(x1 + 40, y + 6), 0.0, Vector2(-1.9, 2.0))
+			OreArt.tentacle(self, _t * 0.9 + 2.0, dark)
+			Art.pop(self)
+			# Two eyes watching from a crack in the back wall; they blink.
+			var open := 0.15 if Chars.blinking(_t * 0.5, index) else 1.0
+			for sx: float in [-1.0, 1.0]:
+				var e := Vector2(mid + sx * 16.0, top + 62)
+				Art.glow(self, e, 16.0, Color(1.0, 0.85, 0.3, 0.3), 10)
+				Art.push(self, e, 0.0, Vector2(1.0, open))
+				Art.toon(self, _EYE, Color("ffd84a"), 2.0, 0.0)
+				Art.flat(self, _PUPIL, Art.INK)
+				Art.pop(self)
+		"stars":
+			for k in 9:
+				var sp := Vector2(lerpf(x0 - 60, x1 + 70, fposmod(k * 0.377 + index * 0.1, 1.0)), lerpf(top + 16, y - 30, fposmod(k * 0.618, 1.0)))
+				var tw := snappedf(0.5 + 0.5 * sin(_t * (2.0 + k * 0.3) + k), 0.05)
+				Art.push(self, sp, 0.0, Vector2.ONE * (0.4 + tw * 0.7))
+				Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.8, 4), Color(ore2, 0.5 + 0.5 * tw), 0.0, 0.0)
+				Art.pop(self)
+			# A shooting star every few seconds.
+			var f := fposmod(_t * 0.25 + index, 1.0) / 0.25
+			if f < 1.0:
+				var a := Vector2(x1 + 60, top + 20).lerp(Vector2(x0 - 40, top + 80), f)
+				Art.line(self, a, a + Vector2(34, -14), Color(ore, 0.5 * (1.0 - f)), 3.0)
+				Art.dot(self, a, 3.0, Color(1, 1, 1, 1.0 - f * 0.5))
+		"lanterns":
+			for k in 3:
+				Art.seaweed(self, Vector2(lerpf(mid - 30, mid + 40, k / 2.0), y), 80 + k * 20, Color("35c98a"), _t, k + index, 10.0)
+			for x: float in [x0 - 6, x1 + 10]:
+				Art.push(self, Vector2(x, y + 2))
+				_stone_lantern(ore)
+				Art.pop(self)
+
+
+func _stone_lantern(light: Color) -> void:
+	var stone := Color("9fb5ae")
+	var flick := snappedf(0.8 + 0.2 * sin(_t * 7.0 + position.y), 0.05)
+	Art.t_rect(self, Rect2(-14, -6, 28, 6), 2, stone, 2.2, 0.3)
+	Art.t_rect(self, Rect2(-5, -30, 10, 24), 2, stone, 2.2, 0.3)
+	Art.glow(self, Vector2(0, -40), 22.0, Color(light, 0.35 * flick), 12)
+	Art.t_rect(self, Rect2(-10, -48, 20, 18), 3, stone, 2.2, 0.3)
+	Art.flat(self, Art.rrect_pts(Rect2(-6, -45, 12, 12), 2), Color(1.0, 0.95, 0.7, flick))
+	Art.toon(self, PackedVector2Array([Vector2(-18, -47), Vector2(18, -47), Vector2(8, -57), Vector2(-8, -57)]), Art.shade_of(stone, 0.2), 2.2, 0.3)
+	Art.t_circle(self, Vector2(0, -60), 3.5, stone, 2.0, 0.0)
+
+
+static var _ICICLE := PackedVector2Array([Vector2(-5, 0), Vector2(5, 0), Vector2(0.5, 30)])
+static var _ICICLE_HI := PackedVector2Array([Vector2(-2.5, 2), Vector2(-0.5, 2), Vector2(-0.3, 18)])
+static var _FLAKE := PackedVector2Array([Vector2(0, -4), Vector2(1, -1), Vector2(4, 0), Vector2(1, 1), Vector2(0, 4), Vector2(-1, 1), Vector2(-4, 0), Vector2(-1, -1)])
+static var _FISH_TAIL := PackedVector2Array([Vector2(-28, 0), Vector2(-38, -8), Vector2(-35, 0), Vector2(-38, 8)])
+static var _FISH_SKULL := PackedVector2Array([Vector2(14, -8), Vector2(24, -9), Vector2(32, -2), Vector2(26, 5), Vector2(14, 7)])
+static var _EYE := PackedVector2Array([Vector2(-9, 0), Vector2(-5, -4.5), Vector2(0, -5.5), Vector2(5, -4.5), Vector2(9, 0), Vector2(5, 4.5), Vector2(0, 5.5), Vector2(-5, 4.5)])
+static var _PUPIL := PackedVector2Array([Vector2(-1.5, -4.5), Vector2(1.5, -4.5), Vector2(1.5, 4.5), Vector2(-1.5, 4.5)])
+static var _SNOW := Art.smooth_pts(PackedVector2Array([Vector2(-34, 2), Vector2(-24, -9), Vector2(-8, -15), Vector2(10, -13),
+		Vector2(26, -7), Vector2(34, 2)]), 3)
+static var _POOL := Art.ellipse_pts(Vector2(0, -2), Vector2(46, 8), 24)
+static var _POOL_IN := Art.ellipse_pts(Vector2(0, -2), Vector2(40, 5.5), 24)
+static var _POOL_CORE := Art.ellipse_pts(Vector2(-4, -2.5), Vector2(24, 2.6), 18)
+static var _VENT := PackedVector2Array([Vector2(-16, 0), Vector2(-6, -21), Vector2(6, -21), Vector2(16, 0)])
+static var _CRATER := Art.ellipse_pts(Vector2(0, -3), Vector2(44, 10), 24)
+static var _CRATER_IN := Art.ellipse_pts(Vector2(0, -3), Vector2(34, 6), 24)
 
 
 func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) -> void:

@@ -1,7 +1,15 @@
 class_name Hud
-extends PanelContainer
+extends Control
 ## Top bar: the player's avatar (opens the look editor), coins and income
 ## in a pill with the rush meter, Dive Deeper (prestige) and settings.
+## Phone: one bar across the top with the pill in the middle.
+## PC ("notch"): only the coin pill stays, hanging from the top edge in the
+## middle like a MacBook notch; the bar with the buttons hides above the
+## screen and slides down when the mouse comes near the top (or the notch
+## is clicked, for touch screens).
+
+const NOTCH_REVEAL_Y := 90.0
+const HIDE_DELAY := 0.9
 
 signal prestige_pressed
 signal settings_pressed
@@ -21,9 +29,19 @@ var _shown_coins := 0.0
 var _t := 0.0
 var _bump := 0.0
 var _blink := false
+var _bar: PanelContainer
+var _row: HBoxContainer
+var _pill: PanelContainer
+var _pill_slot: Control
+var _notch := false
+var _reveal := 1.0
+var _reveal_hold := 0.0
+var _intro_show := 3.0
 
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bar = PanelContainer.new()
 	var sb := ToonBox.make(Color("1f3f73"), 28, 6)
 	sb.open_top = true
 	sb.gloss = 0.0
@@ -32,10 +50,12 @@ func _ready() -> void:
 	sb.content_margin_right = 12
 	sb.content_margin_top = 8
 	sb.content_margin_bottom = 8 + 6 + 4
-	add_theme_stylebox_override("panel", sb)
+	_bar.add_theme_stylebox_override("panel", sb)
+	add_child(_bar)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	add_child(row)
+	_bar.add_child(row)
+	_row = row
 
 	_avatar = Control.new()
 	_avatar.custom_minimum_size = Vector2(80, 80)
@@ -49,17 +69,19 @@ func _ready() -> void:
 	row.add_child(_avatar)
 
 	var pill := PanelContainer.new()
-	var psb := ToonBox.make(Color("122850"), 22, 0)
-	psb.gloss = 0.0
-	psb.line_w = 3.0
-	psb.content_margin_left = 10
-	psb.content_margin_right = 14
-	psb.content_margin_top = 2
-	psb.content_margin_bottom = 4
-	pill.add_theme_stylebox_override("panel", psb)
 	pill.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	pill.custom_minimum_size.x = 240
+	pill.draw.connect(_draw_notch_frame)
+	pill.gui_input.connect(_on_pill_input)
 	row.add_child(pill)
+	_pill = pill
+	_style_pill(false)
+	# Takes the pill's place in the bar while the pill hangs as a notch.
+	_pill_slot = Control.new()
+	_pill_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pill_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pill_slot.visible = false
+	row.add_child(_pill_slot)
 	var mid := VBoxContainer.new()
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.add_theme_constant_override("separation", -4)
@@ -135,6 +157,8 @@ func _ready() -> void:
 	GameState.coins_earned.connect(func(_a): _bump = 1.0)
 	Progress.pearls_earned.connect(func(_a): _pearl_bump = 1.0)
 	Settings.changed.connect(_avatar.queue_redraw)
+	resized.connect(_place)
+	_pill.resized.connect(func(): if _notch: _place())
 
 
 ## Screen points where flying rewards land.
@@ -153,6 +177,76 @@ func bump(kind: String) -> void:
 		_pearl_bump = 1.0
 	else:
 		_bump = 1.0
+
+
+## PC layout: the pill becomes a notch at the top middle and the bar hides.
+func set_notch(on: bool) -> void:
+	if on == _notch:
+		_place()
+		return
+	_notch = on
+	_pill.get_parent().remove_child(_pill)
+	if on:
+		add_child(_pill)
+		_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_intro_show = 3.0
+	else:
+		_row.add_child(_pill)
+		_row.move_child(_pill, 1)
+		_pill.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
+		_reveal = 1.0
+	_pill_slot.visible = on
+	_style_pill(on)
+	_place()
+
+
+func is_notch() -> bool:
+	return _notch
+
+
+## Height the HUD takes from the top of the screen (the notch on PC).
+func used_height() -> float:
+	return _pill.size.y if _notch else size.y
+
+
+func _style_pill(notch: bool) -> void:
+	var psb := ToonBox.make(Color("122850") if not notch else Color("14305e"), 22 if not notch else 30, 0)
+	psb.gloss = 0.0
+	psb.line_w = 3.0 if not notch else 4.0
+	psb.shadow = 0.0 if not notch else 0.35
+	psb.open_top = notch
+	psb.content_margin_left = 10 if not notch else 34
+	psb.content_margin_right = 14 if not notch else 38
+	psb.content_margin_top = 2 if not notch else 6
+	psb.content_margin_bottom = 4 if not notch else 12
+	_pill.add_theme_stylebox_override("panel", psb)
+	_pill.custom_minimum_size.x = 240 if not notch else 320
+	_pill.mouse_filter = Control.MOUSE_FILTER_STOP if notch else Control.MOUSE_FILTER_IGNORE
+	_pill.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if notch else Control.CURSOR_ARROW
+	_pill.queue_redraw()
+
+
+func _place() -> void:
+	_bar.position = Vector2.ZERO
+	_bar.size = Vector2(size.x, size.y)
+	if _notch:
+		_pill.reset_size()
+		_pill.position = Vector2(roundf((size.x - _pill.size.x) / 2.0), 0.0)
+
+
+## Thin gold frame inside the notch, following its rounded lower corners.
+func _draw_notch_frame() -> void:
+	if not _notch:
+		return
+	var s := _pill.size
+	var r := Rect2(Vector2(9, -40), Vector2(s.x - 18, s.y + 40 - 9))
+	Art.polyline(_pill, Art.rrect_pts(r, 22.0, 6), Color(1.0, 0.82, 0.35, 0.55), 2.0, true)
+
+
+func _on_pill_input(e: InputEvent) -> void:
+	# Touch screens have no hover: a tap on the notch shows the buttons.
+	if _notch and e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+		_reveal_hold = 4.0
 
 
 static func _rush_fill() -> ToonBox:
@@ -176,6 +270,8 @@ func _draw_avatar() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _notch:
+		_update_reveal(delta)
 	_bump = maxf(0.0, _bump - delta * 4.0)
 	var blink := Chars.blinking(_t, 1.0)
 	if blink != _blink:
@@ -211,3 +307,24 @@ func _process(delta: float) -> void:
 		_rush_label.add_theme_color_override("font_color", Art.GOLD)
 	_prestige.tooltip_text = tr("PRESTIGE")
 	_prestige.theme_type_variation = &"GoldButton" if GameState.can_prestige() else &"PurpleButton"
+
+
+func _update_reveal(delta: float) -> void:
+	var mouse := get_viewport().get_mouse_position()
+	var near := mouse.y < NOTCH_REVEAL_Y or (_reveal > 0.5 and mouse.y < _bar.size.y + 6.0)
+	var modal_open := false
+	for c in get_parent().get_children():
+		if c is Modal and c.visible:
+			modal_open = true
+	_intro_show = maxf(0.0, _intro_show - delta)
+	_reveal_hold = maxf(0.0, _reveal_hold - delta)
+	if near or _intro_show > 0.0:
+		_reveal_hold = maxf(_reveal_hold, HIDE_DELAY)
+	var want := 1.0 if _reveal_hold > 0.0 and not modal_open else 0.0
+	if Settings.reduce_motion:
+		_reveal = want
+	else:
+		_reveal = move_toward(_reveal, want, delta * (5.0 if want > _reveal else 3.0))
+	var e := _reveal * _reveal * (3.0 - 2.0 * _reveal)
+	_bar.position.y = -(_bar.size.y + 12.0) * (1.0 - e)
+	_bar.visible = _reveal > 0.001

@@ -90,6 +90,13 @@ func show_stage(stage_key: String) -> void:
 	refresh()
 
 
+## PC column: the stage picture's height (0 hides it) so the panel fits.
+func set_hero_height(h: float) -> void:
+	if _hero:
+		_hero.custom_minimum_size.y = h
+		_hero.visible = docked and h > 0.0
+
+
 func set_docked(value: bool) -> void:
 	docked = value
 	if _close:
@@ -185,18 +192,20 @@ func _draw_hero() -> void:
 		var st: Dictionary = Art.DEPTH_STYLE[i]
 		Art.t_rect(_hero, ground, 14, st["floor"], 0.0, 0.0)
 		Art.flat(_hero, Art.circle_pts(Vector2(s.x - 110, s.y - 70), 80, 32), Color(st["ore"], 0.15))
-		Art.crystals(_hero, Vector2(s.x - 100, s.y - 36), 90, st, i * 31 + 3, 5)
-		var hit := fposmod(_t * 1.4, 1.0)
-		Chars.diver(_hero, Vector2(s.x - 210, s.y - 30), 1.3, st["suit"], 1.0, 0.0, 0.0, "pick",
-				1.0 - absf(hit * 2.0 - 1.0), false, st["ore"], "focus", Chars.blinking(_t, 3.0), _t)
+		OreArt.deposit(_hero, Vector2(s.x - 100, s.y - 36), 90, i, i * 31 + 3, _t, 5)
+		Chars.diver(_hero, Vector2(s.x - 210, s.y - 30), 1.3, st["suit"], 1.0, 0.0, 0.0, "dig",
+				fposmod(_t * 0.7, 1.0), false, st["ore"], "focus", Chars.blinking(_t, 3.0), _t, i)
 	else:
 		Art.t_rect(_hero, ground, 14, Art.SEA_TOP, 0.0, 0.0)
-		Art.push(_hero, Vector2(s.x - 170, s.y - 34 + sin(_t * 1.6) * 3.0), sin(_t * 1.4) * 0.03, Vector2(1.1, 1.1))
+		# Later stages are taller: shrink them to fit the box.
+		var bs := minf(1.1, (s.y - 44.0) / Props.boat_height(Props.current_stage("boat")))
+		Art.push(_hero, Vector2(s.x - 170, s.y - 34 + sin(_t * 1.6) * 3.0), sin(_t * 1.4) * 0.03, Vector2(bs, bs))
 		if key == "boat":
 			Props.boat(_hero, _t, 2, Art.DEPTH_STYLE[0]["ore2"], GameState.has_manager("boat"), "happy", Chars.blinking(_t, 7.0))
 		else:
 			Art.pop(_hero)
-			Art.push(_hero, Vector2(s.x - 250, s.y - 36), 0.0, Vector2(1.0, 1.0))
+			var ps := minf(1.0, (s.y - 44.0) / Props.plant_height(Props.current_stage("plant")))
+			Art.push(_hero, Vector2(s.x - 250, s.y - 36), 0.0, Vector2(ps, ps))
 			Props.plant(_hero, _t, true, _t * 3.0, 0.0)
 		Art.pop(_hero)
 	# The manager, or an empty chair waiting for one.

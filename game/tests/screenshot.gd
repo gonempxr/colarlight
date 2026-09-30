@@ -63,6 +63,15 @@ func _initialize() -> void:
 			for k in gs.stage_keys():
 				gs.managers[k] = true
 			gs.coins = 6.3e7
+		"deep":
+			# Everything open, boat and plant at their last stage.
+			for k in gs.stage_keys():
+				gs.levels[k] = 60
+				gs.managers[k] = true
+			gs.levels.merge({"boat": 360, "plant": 360}, true)
+			gs.coins = 2.0e13
+			gs.hold = 3.4e12
+			gs.dock = 9.1e11
 		_:
 			gs.coins = 12.0
 	load("res://scripts/ui/main.gd").show_title = overlay == "title"
@@ -87,6 +96,8 @@ func _initialize() -> void:
 			main.open_players()
 		"tutorial":
 			pr.tutorial_step = 0
+		"hint":
+			main.open_hint()
 		"toast":
 			main._show_toast(TranslationServer.translate("QUEST_DONE"))
 		"settings":
@@ -104,6 +115,9 @@ func _initialize() -> void:
 				main._show_next_news()
 	for i in 30:
 		await process_frame
+	if overlay == "toast":
+		await create_timer(0.6).timeout
+		print("toast ", main._toast.visible, " ", main._toast.position, " ", main._toast.size, " a=", main._toast.modulate.a, " lbl=", main._toast_label.size, " min=", main._toast_label.get_minimum_size(), " txt=", main._toast_label.text)
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out)
 	quit()

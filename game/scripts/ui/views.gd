@@ -226,7 +226,7 @@ static func daily(m: Modal, main: Node) -> void:
 
 # --- Feature intro and rewards -------------------------------------------------------------
 
-const FEATURE_ICONS := {"daily": "gift", "chests": "chest", "quests": "quests", "shop": "wardrobe", "puzzle": "puzzle", "museum": "museum"}
+const FEATURE_ICONS := {"daily": "gift", "chests": "chest", "quests": "quests", "shop": "wardrobe", "puzzle": "puzzle", "museum": "museum", "fishing": "fishing"}
 
 
 static func feature_intro(m: Modal, id: String, on_open: Callable) -> void:

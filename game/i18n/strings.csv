@@ -34,7 +34,7 @@ ON_RAFT,On raft,На плоту,En la balsa,木筏上
 ON_DOCK,On dock,На причале,En el muelle,码头上
 PRESTIGE,Dive Deeper,Погружение,Inmersión,深潜
 PRESTIGE_DESC,Levels reset and you start in a new ocean. Your income is ×%s forever.,"Уровни сбросятся, и ты начнёшь в новом океане. Доход навсегда ×%s.",Los niveles se reinician y empiezas en un océano nuevo. Tus ingresos serán ×%s para siempre.,等级重置，在新的海洋重新开始。收入永久 ×%s。
-PRESTIGE_NEED_DEPTHS,Unlock all depths first,Сначала открой все глубины,Primero desbloquea todas las profundidades,请先解锁所有深度
+PRESTIGE_NEED_DEPTHS,"First open the depth ""%s""","Сначала открой глубину «%s»","Primero abre la profundidad «%s»",请先开启深度「%s」
 PRESTIGE_GO,Dive for %s,Погрузиться за %s,Sumergirse por %s,花费 %s 深潜
 OCEAN,Ocean %d,Океан %d,Océano %d,海洋 %d
 OFFLINE,While you were away (%s) the crew earned,"Пока тебя не было (%s), команда заработала","Mientras no estabas (%s), el equipo ganó",你离开期间（%s），团队赚到了
@@ -266,3 +266,28 @@ PLANT_STAGE_12,Glass Dome,Стеклянный купол,Cúpula de cristal,玻
 PLANT_STAGE_13,Robot Factory,Завод роботов,Fábrica de robots,机器人工厂
 PLANT_STAGE_14,Golden Palace,Золотой дворец,Palacio dorado,黄金宫殿
 PLANT_STAGE_15,Coral Citadel,Коралловая цитадель,Ciudadela de coral,珊瑚城堡
+HINT_TITLE,Hint,Подсказка,Pista,提示
+HINT_SHOW,Show me,Покажи,Muéstrame,指给我看
+HINT_AUTO_TITLE,Automation,Автоматизация,Automatización,自动化
+HINT_AUTO_TEXT,Everything can work by itself! Hire a helper for each part:,Всё может работать само! Найми помощника для каждой части:,¡Todo puede funcionar solo! Contrata a un ayudante para cada parte:,所有东西都能自动运行！为每个部分雇一位帮手：
+HINT_AUTO_DIVERS,Divers always dive by themselves. A foreman doubles their ore.,Водолазы всегда ныряют сами. Бригадир удваивает добычу.,Los buzos siempre bucean solos. Un capataz duplica su mineral.,潜水员一直自己下潜。工头让矿石翻倍。
+HINT_AUTO_BOAT,Boat: sails by itself once you hire a captain.,"Лодка: плавает сама, когда наймёшь капитана.",Barco: navega solo cuando contratas a un capitán.,船：雇了船长就会自己航行。
+HINT_AUTO_PLANT,Plant: works by itself once you hire a manager.,"Завод: работает сам, когда наймёшь мастера.",Fábrica: trabaja sola cuando contratas a un encargado.,工厂：雇了厂长就会自己运转。
+HINT_HIRE_BOAT,Hire a captain: tap the round portrait on the Boat card. Then the boat sails by itself!,Найми капитана: нажми на круглый портрет на карточке «Лодка». Тогда лодка будет плавать сама!,Contrata a un capitán: toca el retrato redondo de la tarjeta Barco. ¡Así el barco navegará solo!,雇一位船长：点“运输船”卡片上的圆形头像。船就会自己航行！
+HINT_HIRE_PLANT,Hire a manager: tap the round portrait on the Plant card. Then the plant works by itself!,Найми мастера: нажми на круглый портрет на карточке «Завод». Тогда завод будет работать сам!,Contrata a un encargado: toca el retrato redondo de la tarjeta Fábrica. ¡Así trabajará sola!,雇一位厂长：点“加工厂”卡片上的圆形头像。工厂就会自己运转！
+HINT_SAVE_BOAT,Save %s coins for a boat captain. Then the boat sails by itself.,"Накопи %s монет на капитана лодки, и она будет плавать сама.",Ahorra %s monedas para un capitán y el barco navegará solo.,攒够%s金币雇船长，船就会自己航行。
+HINT_SAVE_PLANT,Save %s coins for a plant manager. Then the plant works by itself.,"Накопи %s монет на мастера завода, и он будет работать сам.",Ahorra %s monedas para un encargado y la fábrica trabajará sola.,攒够%s金币雇厂长，工厂就会自己运转。
+HINT_TAP_BOAT,Ore is waiting on the raft! Tap the boat to carry it to the shore.,"Руда ждёт на плоту! Нажми на лодку, чтобы отвезти её на берег.",¡Hay mineral esperando en la balsa! Toca el barco para llevarlo a la orilla.,木筏上有矿石在等着！点击船把它运到岸上。
+HINT_TAP_PLANT,Ore is waiting at the plant! Tap the plant to turn it into coins.,"Руда ждёт у завода! Нажми на завод, чтобы превратить её в монеты.",¡Hay mineral en la fábrica! Toca la fábrica para convertirlo en monedas.,工厂旁有矿石！点击工厂把它变成金币。
+HINT_OPEN_DEPTH,"You can open %s! The deeper, the more valuable the ore.","Можно открыть «%s»! Чем глубже, тем дороже руда.","¡Puedes abrir %s! Cuanto más hondo, más vale el mineral.",可以开启%s！越深矿石越值钱。
+HINT_SAVE_DEPTH,Save %s coins to open %s.,"Накопи %s монет, чтобы открыть «%s».",Ahorra %s monedas para abrir %s.,攒够%s金币开启%s。
+HINT_BOTTLENECK,%s is the slowest part. Upgrade it and your income grows!,"«%s» — самое слабое место. Улучши его, и доход вырастет!",%s es la parte más lenta. ¡Mejórala y ganarás más!,%s是最慢的环节。升级它，收入就会增加！
+HINT_UPGRADE,Save up to upgrade %s: the price is on its green button.,Копи на улучшение «%s»: цена на зелёной кнопке.,Ahorra para mejorar %s: el precio está en su botón verde.,攒钱升级%s：价格在绿色按钮上。
+HINT_FOREMAN,Hire a foreman at %s: the divers there will bring twice as much ore.,Найми бригадира в «%s»: водолазы там будут приносить вдвое больше.,Contrata a un capataz en %s: sus buzos traerán el doble.,在%s雇一位工头：那里的潜水员会带回双倍矿石。
+HINT_QUESTS,A task is done! Open Tasks and collect your pearls.,Задание выполнено! Открой «Задания» и забери жемчуг.,¡Misión cumplida! Abre Misiones y recoge tus perlas.,任务完成！打开任务领取珍珠。
+HINT_DAILY,Your daily gift is waiting!,Подарок дня ждёт тебя!,¡Tu regalo diario te espera!,每日礼物在等你！
+HINT_FISHING,"Try fishing: tap when the float dips, then hit the green zone. Rare fish sell for a lot!","Попробуй рыбалку: тапни, когда поплавок нырнёт, потом попадай в зелёную зону. Редкая рыба стоит дорого!","Prueba la pesca: toca cuando el flotador se hunda y acierta en la zona verde. ¡Los peces raros valen mucho!",试试钓鱼：浮漂下沉时点击，然后点中绿色区域。稀有鱼很值钱！
+HINT_PUZZLE,Play the puzzle to find artifact pieces. Artifacts give bonuses forever!,Сыграй в пазл и найди кусочки артефактов. Артефакты дают бонус навсегда!,Juega al puzle para encontrar piezas de artefactos. ¡Dan bonus para siempre!,玩拼图寻找文物碎片。文物永久提供加成！
+HINT_PRESTIGE,"You can Dive Deeper! You start again, but everything earns much more.","Можно «Нырнуть глубже»! Начнёшь сначала, но всё будет приносить гораздо больше.","¡Puedes Bucear más hondo! Empiezas de nuevo, pero todo gana mucho más.",可以“深潜”了！重新开始，但一切收益都会大大提高。
+HINT_TAP_DIVERS,"Divers work by themselves. Tap them to hurry them up, and save coins for upgrades.","Водолазы работают сами. Нажимай на них, чтобы ускорить, и копи монеты на улучшения.",Los buzos trabajan solos. Tócalos para que vayan más rápido y ahorra para mejoras.,潜水员会自己工作。点击他们加快速度，攒金币来升级。
+STAGE_UP,%s grew: %s!,%s: новая стадия «%s»!,¡%s creció: %s!,%s升级为：%s！

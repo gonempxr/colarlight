@@ -122,6 +122,7 @@ func select(id: String) -> void:
 	current_id = id
 	_save()
 	_load_all()
+	if has_node("/root/Fishing"): get_node("/root/Fishing").switch_profile()
 	switched.emit()
 
 

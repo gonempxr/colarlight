@@ -40,6 +40,7 @@ func _initialize() -> void:
 	await test_drag_does_not_press()
 	await test_open_depth()
 	await test_wheel_scroll()
+	await test_dock_appears()
 	await test_language_switch()
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute("user://test_ui_save.json")
@@ -195,6 +196,26 @@ func test_wheel_scroll() -> void:
 	root.push_input(ev)
 	await _frames(2)
 	check(main._scroller.scroll > 0.0, "mouse wheel scrolls the ocean")
+
+
+## Regression: the dock (quests, puzzle...) stayed off screen when its first
+## feature unlocked mid-game, until the UI size setting forced a re-layout.
+func test_dock_appears() -> void:
+	var progress := root.get_node("Progress")
+	progress.unlock_feature("quests")
+	main._refresh()
+	await create_timer(0.6).timeout
+	var dock: Control = main._dock
+	var view: Vector2 = main.get_viewport_rect().size
+	var r := dock.get_global_rect()
+	check(dock.is_visible_in_tree(), "dock shows once a feature unlocks")
+	check(r.size.y > 0.0 and r.end.y <= view.y + 1.0 and r.position.y >= 0.0, "dock sits inside the screen")
+	var sr: Rect2 = main._scroller.get_global_rect()
+	check(sr.end.y <= r.position.y + 12.0, "ocean ends at the dock (a small tuck under its rounded top)")
+	while not main._news.is_empty() or main._modal.visible:
+		main._modal.close()
+		main._news.clear()
+		await _frames(2)
 
 
 func test_language_switch() -> void:

@@ -1,0 +1,71 @@
+keys,en,ru,es,zh
+DOCK_FISHING,Fishing,Рыбалка,Pesca,钓鱼
+FEATURE_FISHING,Fishing,Рыбалка,Pesca,钓鱼
+FEATURE_FISHING_DESC,"Catch fish and sell them. The rarer the fish, the more coins!","Лови рыбу и продавай её. Чем реже рыба, тем больше монет!","Pesca y vende peces. ¡Cuanto más raro el pez, más monedas!",钓鱼然后卖掉。鱼越稀有，金币越多！
+FISHING_TITLE,Fishing,Рыбалка,Pesca,钓鱼
+FISHING_CAST,Cast!,Закинуть!,¡Lanzar!,抛竿！
+FISHING_WAIT,Wait...,Ждём...,Espera...,等一等…
+FISHING_PULL,Pull!,Тяни!,¡Tira!,拉！
+FISHING_REEL,Reel!,Крути!,¡Recoge!,收线！
+FISHING_TAP_CAST,Tap to cast!,"Нажми, чтобы закинуть!",¡Toca para lanzar!,点一下抛竿！
+FISHING_TOO_EARLY,Wait for the splash!,"Подожди, пока клюнет!",¡Espera a que pique!,等鱼咬钩！
+FISHING_BITE,Bite! Tap!,Клюёт! Жми!,¡Pica! ¡Toca!,咬钩了！快点！
+FISHING_TOO_SLOW,The fish swam away. Try again!,Рыбка уплыла. Попробуй ещё!,El pez se fue. ¡Otra vez!,鱼游走了，再试一次！
+FISHING_ESCAPED,"Oh no, it slipped away! Try again!","Ой, сорвалась! Давай ещё!","¡Oh, se escapó! ¡Otra vez!",哎呀，鱼跑了！再来！
+FISHING_HINT_REEL,Tap when the fish is in the green!,"Жми, когда рыбка в зелёном!",¡Toca cuando el pez esté en lo verde!,鱼在绿色区域时点击！
+FISHING_HIT,Yes!,Есть!,¡Sí!,好！
+FISHING_MISS,Oops!,Мимо!,¡Uy!,哎呀！
+FISHING_NEW,NEW!,НОВАЯ!,¡NUEVO!,新！
+FISHING_RECORD,Record!,Рекорд!,¡Récord!,新纪录！
+FISHING_CM,%s cm,%s см,%s cm,%s厘米
+FISHING_KEEP,To bucket,В ведро,Al cubo,放进桶里
+FISHING_SELL,Sell,Продать,Vender,卖出
+FISHING_RELEASE,Let go,Отпустить,Soltar,放生
+FISHING_BUCKET,Bucket,Ведро,Cubo,鱼桶
+FISHING_BUCKET_FULL,The bucket is full!,Ведро полное!,¡El cubo está lleno!,桶满了！
+FISHING_BUCKET_EMPTY,The bucket is empty. Go fishing!,Ведро пустое. Иди лови рыбу!,El cubo está vacío. ¡A pescar!,桶是空的，去钓鱼吧！
+FISHING_SELL_ALL,Sell all,Продать всё,Vender todo,全部卖出
+FISHING_BOOK,Fish book,Книга рыб,Libro de peces,鱼类图鉴
+FISHING_FOUND,Found: %d / %d,Найдено: %d из %d,Encontrados: %d / %d,已发现：%d / %d
+FISHING_BOOK_HINT,Catch every fish to fill the book!,"Поймай всех рыб, чтобы заполнить книгу!",¡Pesca todos los peces para llenar el libro!,钓到所有的鱼，填满图鉴！
+FISHING_CAUGHT_N,Caught: %d,Поймано: %d,Pescados: %d,钓到：%d
+FISHING_BEST,Best: %s,Рекорд: %s,Mejor: %s,最大：%s
+FISHING_SHOP,Upgrades,Улучшения,Mejoras,升级
+FISHING_ROD,Better rod,Удочка получше,Caña mejor,更好的鱼竿
+FISHING_ROD_DESC,Rare fish bite more often and are easier to reel in.,Редкие рыбы клюют чаще и тянутся легче.,Los peces raros pican más y son más fáciles de sacar.,稀有的鱼更常咬钩，也更好拉上来。
+FISHING_BUCKET_UP,Bigger bucket,Ведро побольше,Cubo más grande,更大的桶
+FISHING_BUCKET_DESC,Room for %d fish,Мест в ведре: %d,Caben %d peces,能装%d条鱼
+FISHING_HELPER,Fisherman,Рыбак,Pescador,渔夫
+FISHING_HELPER_HIRE_DESC,Catches fish into the bucket by himself.,Сам ловит рыбу тебе в ведро.,Pesca peces para tu cubo él solo.,自己钓鱼放进你的桶里。
+FISHING_HELPER_DESC,One fish every %d s,Рыбка каждые %d с,Un pez cada %d s,每%d秒钓一条鱼
+FISHING_HIRE,Hire,Нанять,Contratar,雇佣
+FISHING_BUY,Upgrade,Улучшить,Mejorar,升级
+FISHING_LEVEL,Level %d,Уровень %d,Nivel %d,%d级
+FISHING_MAX,Max,Максимум,Máximo,满级
+FISHING_HELPER_GOT,+1 fish,+1 рыбка,+1 pez,+1条鱼
+FISHING_HELPER_WAITING,"Bucket full, sell the fish!","Ведро полное, продай рыбу!","¡Cubo lleno, vende los peces!",桶满了，快卖鱼！
+FISHING_OFFLINE,The fisherman caught fish while you were away: %d,"Пока тебя не было, рыбак наловил рыбы: %d","Mientras no estabas, el pescador pescó: %d",你不在时，渔夫钓到了%d条鱼
+FISHING_LEAVE,Back,Назад,Volver,返回
+FISH_R_COMMON,Common,Обычная,Común,普通
+FISH_R_UNCOMMON,Uncommon,Необычная,Poco común,少见
+FISH_R_RARE,Rare,Редкая,Raro,稀有
+FISH_R_EPIC,Epic,Эпическая,Épico,史诗
+FISH_R_LEGENDARY,Legendary!,Легендарная!,¡Legendario!,传说！
+FISH_SARDINE,Sardine,Сардинка,Sardina,沙丁鱼
+FISH_PERCH,Perch,Окунь,Perca,鲈鱼
+FISH_GOBY,Goby,Бычок,Gobio,虾虎鱼
+FISH_FLOUNDER,Flounder,Камбала,Lenguado,比目鱼
+FISH_MACKEREL,Mackerel,Скумбрия,Caballa,鲭鱼
+FISH_CLOWNFISH,Clownfish,Рыба-клоун,Pez payaso,小丑鱼
+FISH_TANG,Blue tang,Голубой хирург,Cirujano azul,蓝倒吊
+FISH_PUFFER,Pufferfish,Рыба-фугу,Pez globo,河豚
+FISH_BUTTERFLY,Butterflyfish,Рыба-бабочка,Pez mariposa,蝴蝶鱼
+FISH_CATFISH,Catfish,Сом,Bagre,鲶鱼
+FISH_ANGELFISH,Angelfish,Рыба-ангел,Pez ángel,神仙鱼
+FISH_LIONFISH,Lionfish,Крылатка,Pez león,狮子鱼
+FISH_SWORDFISH,Swordfish,Рыба-меч,Pez espada,剑鱼
+FISH_ANGLER,Anglerfish,Удильщик,Pez linterna,鮟鱇鱼
+FISH_KOI,Koi,Карп кои,Carpa koi,锦鲤
+FISH_RAINBOW,Rainbow fish,Радужная рыбка,Pez arcoíris,彩虹鱼
+FISH_GOLDEN,Golden fish,Золотая рыбка,Pez dorado,金鱼王
+FISH_STAR_WHALE,Star whale,Звёздный кит,Ballena estelar,星星鲸

@@ -181,6 +181,7 @@ func _check_features() -> void:
 		"shop": pearls_total >= 8 or t >= 420.0,
 		"puzzle": GameState.is_open("d1") and t >= 240.0,
 		"museum": _any_piece(),
+		"fishing": GameState.is_open("d2"),
 	}
 	for id in Content.FEATURES:
 		if want.get(id, false) and not has_feature(id):

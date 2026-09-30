@@ -87,10 +87,15 @@ static func build() -> Theme:
 	sheet.content_margin_bottom = 24
 	t.set_stylebox("panel", "SheetPanel", sheet)
 	t.set_type_variation("ToastPanel", "PanelContainer")
-	var toast := panel_box(Color("2b2350"), 22, 0)
-	toast.line = Art.GOLD
-	toast.content_margin_top = 12
-	toast.content_margin_bottom = 12
+	# Calm notification card: deep navy, thin gold frame, soft shadow.
+	var toast := panel_box(Color(0.09, 0.1, 0.24, 0.94), 26, 0)
+	toast.line = Color("ffcf5a")
+	toast.line_w = 2.5
+	toast.shadow = 0.35
+	toast.content_margin_left = 30
+	toast.content_margin_right = 30
+	toast.content_margin_top = 14
+	toast.content_margin_bottom = 16
 	t.set_stylebox("panel", "ToastPanel", toast)
 	t.set_type_variation("CardPanel", "PanelContainer")
 	var card := panel_box(Art.CREAM, 20, 6)
