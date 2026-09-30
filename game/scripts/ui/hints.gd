@@ -17,14 +17,15 @@ static func pick(main: Node) -> Dictionary:
 		return _hint("daily", t("HINT_DAILY"), true, Callable(), "daily")
 	if Progress.has_feature("quests") and Progress.quests_ready() > 0:
 		return _hint("quests", t("HINT_QUESTS"), true, Callable(), "quests")
-	for k in GameState.BUILDINGS:
+	for k in GameState.AUTOMATED:
 		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
-			var line := "HINT_HIRE_BOAT" if GameState.is_boat(k) else "HINT_HIRE_PLANT"
-			return _hint("hire_" + k, t(line), true, func():
+			return _hint("hire_" + k, t("HINT_HIRE_" + k.to_upper()), true, func():
 				if card.key != k:
 					card.show_unit(k)
 				return _control(card._manager), "")
+	if not gs.has_manager("lift") and gs.pit > 0.0 and gs.cycle_progress("lift") < 0.0:
+		return _hint("tap_lift", t("HINT_TAP_LIFT"), true, func(): return _world(world, world.lift.cabin_pos() + Vector2(0, -30)), "")
 	if not gs.has_manager("boat") and gs.hold > 0.0 and gs.cycle_progress("boat") < 0.0:
 		return _hint("tap_boat", t("HINT_TAP_BOAT"), true, func(): return _world(world, world.surface.boat_world_pos() + Vector2(0, -40)), "")
 	if not gs.has_manager("plant") and gs.dock > 0.0 and gs.cycle_progress("plant") < 0.0:
@@ -55,10 +56,14 @@ static func pick(main: Node) -> Dictionary:
 		return _hint("fishing", t("HINT_FISHING"), false, Callable(), "fishing")
 	if Progress.has_feature("puzzle") and int(Progress.stats.get("puzzles_won", 0)) < 3:
 		return _hint("puzzle", t("HINT_PUZZLE"), false, Callable(), "puzzle")
-	for k in ["boat", "plant"]:
-		if not gs.has_manager(k):
+	for k in GameState.AUTOMATED:
+		if gs.is_open(k) and not gs.has_manager(k):
 			var card: StageCard = main.stage_card(k)
-			return _hint("save_" + k, t("HINT_SAVE_" + k.to_upper()) % NumFormat.short(gs.manager_cost(k)), false, func(): return _control(card._manager), "")
+			var line: String = t("HINT_SAVE_" + k.to_upper()) % NumFormat.short(gs.manager_cost(k))
+			return _hint("save_" + k, line, false, func():
+				if card.key != k:
+					card.show_unit(k)
+				return _control(card._manager), "")
 	if next != "":
 		var row: DepthRow = world.rows[gs.depth_index(next)]
 		return _hint("save_depth", t("HINT_SAVE_DEPTH") % [NumFormat.short(gs.unlock_cost(next)), Views.stage_name(next)], false, func(): return _control(row._open_btn), "")
@@ -68,7 +73,7 @@ static func pick(main: Node) -> Dictionary:
 	return _hint("tap_divers", t("HINT_TAP_DIVERS"), false, func(): return _world(world, world.rows[0].position + Vector2(world.rows[0].deposit_pos().x - 40, 150)), "")
 
 
-## Slowest stage: the boat, the plant, or (when the dives are the limit)
+## Slowest stage: the lift, the boat, the plant, or (when the dives are the limit)
 ## the cheapest dive site to upgrade.
 static func _weakest(gs: Node) -> String:
 	var group: String = gs.bottleneck()
@@ -143,12 +148,13 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 				foremen += 1
 	var rows := [
 		[true, t("HINT_AUTO_DIVERS") + "  (%d/%d)" % [foremen, open_sites]],
+		[gs.has_manager("lift"), t("HINT_AUTO_LIFT")],
 		[gs.has_manager("boat"), t("HINT_AUTO_BOAT")],
 		[gs.has_manager("plant"), t("HINT_AUTO_PLANT")],
 	]
 	for k in ["boat2", "plant2"]:
 		if gs.is_open(k):
-			rows.append([gs.has_manager(k), Views.stage_name(k)])
+			rows.append([gs.has_manager(k), t("HINT_AUTO_" + k.to_upper())])
 	for r in rows:
 		var h2 := HBoxContainer.new()
 		h2.add_theme_constant_override("separation", 10)

@@ -61,6 +61,8 @@ func _process(delta: float) -> void:
 
 func _tint() -> Color:
 	match key:
+		"lift":
+			return Color("9ff0dc")
 		"boat", "boat2":
 			return Color("8fd0ff")
 		"plant", "plant2":

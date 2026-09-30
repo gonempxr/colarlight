@@ -1,19 +1,18 @@
 class_name DiverLayer
 extends Control
-## Top layer of the ocean: the dive rope, every diver, and effects
-## (floating "+N" texts, tap ripples, confetti, sparkles).
+## Top layer of the ocean: every diver, and effects (floating "+N" texts,
+## tap ripples, confetti, sparkles). The lift in the shaft is LiftView.
 ## A diver's trip follows its site's cycle: swim from its spot at the cave
-## mouth to the vein, dig three times, swim back, climb the rope to the raft,
-## toss the sack onto it, climb down and swim back to its spot. Every phase
+## mouth to the vein, dig three times, swim back to the lift's crate at the
+## shaft, toss the sack into it and swim back to its spot. Every phase
 ## starts where the last one ended (poses blend, divers turn around), and
 ## idle divers (no manager, no tap) doze at that same spot.
 
 const DIVER_SCALE := 0.78
-const SWIM_OUT_END := 0.12
-const DIG_END := 0.46
-const SWIM_BACK_END := 0.56
-const ASCEND_END := 0.78
-const DROP_END := 0.84
+const SWIM_OUT_END := 0.14
+const DIG_END := 0.56
+const SWIM_BACK_END := 0.8
+const DROP_END := 0.88
 ## Where each diver works, from the deposit: x, y (px) and facing. The
 ## first two work the vein (one standing, one hovering above), the others
 ## get small veins of their own further left.
@@ -103,22 +102,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var gs := GameState
-	var deepest := 0
-	for i in Balance.DEPTHS.size():
-		if gs.is_open("d%d" % i):
-			deepest = i
 	var view := world.visible_rect()
-	# Rope from the raft's pulley down to the deepest open site.
-	var rope_top := World.SURFACE_Y - 112.0
-	var rope_bottom := World.row_y(deepest) + DepthRow.LEDGE_Y - 4.0
-	Art.line(self, Vector2(World.ROPE_X, rope_top), Vector2(World.ROPE_X, rope_bottom), Art.INK, 7.0)
-	Art.line(self, Vector2(World.ROPE_X, rope_top), Vector2(World.ROPE_X, rope_bottom), Color("e8c48a"), 3.5)
-	var y := rope_top + 30.0
-	while y < rope_bottom:
-		if y > view.position.y - 20.0 and y < view.end.y + 20.0:
-			Art.disc(self, Vector2(World.ROPE_X, y), 3.5, Color("c89a5a"))
-		y += 36.0
-	Art.t_circle(self, Vector2(World.ROPE_X, rope_bottom), 7, Art.WOOD_DARK, 2.5, 0.0)
 	for i in Balance.DEPTHS.size():
 		var key := "d%d" % i
 		if not gs.is_open(key):
@@ -137,13 +121,20 @@ func _draw() -> void:
 			var hint_at := Vector2(world.rows[i].deposit_pos().x - 40, World.row_y(i) + 70)
 			if view.has_point(hint_at):
 				_draw_tap_hint(hint_at)
-	for key in ["boat", "plant"]:
+	for key in ["lift", "boat", "plant"]:
 		if gs.cycle_progress(key) < 0.0 and not gs.has_manager(key):
-			var has_ore: bool = gs.hold > 0.0 if key == "boat" else gs.dock > 0.0
+			var has_ore: bool = gs.pit > 0.0 if key == "lift" else (gs.hold > 0.0 if key == "boat" else gs.dock > 0.0)
 			if has_ore:
-				var at: Vector2 = world.surface.boat_world_pos() + Vector2(10, -150) if key == "boat" \
-						else world.surface.plant_world_pos() + Vector2(70, -185)
-				_draw_tap_hint(at)
+				var at: Vector2
+				match key:
+					"lift":
+						at = world.lift.hint_pos()
+					"boat":
+						at = world.surface.boat_world_pos() + Vector2(10, -150)
+					_:
+						at = world.surface.plant_world_pos() + Vector2(70, -185)
+				if view.grow(60.0).has_point(at):
+					_draw_tap_hint(at)
 	for r in _ripples:
 		var f := r.z / 0.5
 		Art.arc(self, Vector2(r.x, r.y), 12.0 + f * 70.0, 0, TAU, 28, Color(1, 1, 1, 0.7 * (1.0 - f)), 5.0 * (1.0 - f) + 1.0)
@@ -215,7 +206,7 @@ func _draw_veins(site: int, n: int, view: Rect2) -> void:
 ## The pose of a diver at point p (0..1) of its trip: where it is, which
 ## way it faces, its arms and what it carries. Every phase begins exactly
 ## where the previous one ends, so nothing ever jumps.
-static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float, hover: bool, rope: Vector2, surface: float, swim_bob: float) -> Dictionary:
+static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float, hover: bool, crate: Vector2, swim_bob: float) -> Dictionary:
 	var sp := Vector3(0, 0, spot_facing)
 	var pos: Vector2
 	var facing := 1.0
@@ -260,7 +251,7 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		var b := _bump(f)
 		trip = "back"
 		var lift := (1.0 - smoothstep(0.0, 0.4, f)) if hover else 0.0
-		pos = spot.lerp(rope, e) + Vector2(0, -sin(f * PI) * 22.0 + swim_bob * maxf(b, lift))
+		pos = spot.lerp(crate, e) + Vector2(0, -sin(f * PI) * 22.0 + swim_bob * maxf(b, lift))
 		facing = -1.0
 		if sp.z > 0.0:
 			# Turn around on the spot first.
@@ -272,62 +263,36 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		blend = smoothstep(0.0, 0.22, f)
 		kick_amp = maxf(maxf(b, 0.6 * lift), 0.6 * smoothstep(0.75, 1.0, f))
 		emo = "joy" if f < 0.3 else "happy"
-	elif p < ASCEND_END:
-		var f := (p - SWIM_BACK_END) / (ASCEND_END - SWIM_BACK_END)
-		trip = "up"
-		pos = Vector2(rope.x, lerpf(rope.y, surface, _ease(f)))
-		facing = -1.0
-		arm = "rope"
-		arm_from = "swim"
-		blend = smoothstep(0.0, 0.15, f)
-		carry = true
-		sling = smoothstep(0.0, 0.2, f)
-		kick_amp = 0.6
 	elif p < DROP_END:
-		var f := (p - ASCEND_END) / (DROP_END - ASCEND_END)
-		trip = "drop"
-		# Pop out of the water, turn to the raft and toss the sack onto it.
-		pos = Vector2(rope.x, surface - sin(f * PI) * 12.0)
-		facing = 1.0
-		turn = -cos(PI * smoothstep(0.0, 0.3, f))
-		if f > 0.7:
-			turn = cos(PI * smoothstep(0.7, 1.0, f))
+		var f := (p - SWIM_BACK_END) / (DROP_END - SWIM_BACK_END)
+		# At the lift's crate: toss the sack in.
+		pos = crate + Vector2(0, -sin(f * PI) * 6.0)
+		facing = -1.0
 		arm = "cheer"
-		arm_from = "rope"
-		blend = smoothstep(0.0, 0.25, f)
+		arm_from = "swim"
+		blend = smoothstep(0.0, 0.3, f)
 		carry = f < 0.45
-		sling = 1.0 - smoothstep(0.1, 0.3, f)
 		kick_amp = 0.6
 		emo = "joy"
 		trip = "drop_carry" if carry else "drop"
 	else:
-		var f := (p - DROP_END) / (1.0 - DROP_END)
-		trip = "down"
-		if f < 0.7:
-			var g := f / 0.7
-			pos = Vector2(rope.x, lerpf(surface, rope.y, _ease(g)))
-			facing = -1.0
-			arm = "rope"
+		var g := (p - DROP_END) / (1.0 - DROP_END)
+		trip = "home"
+		# Back to the spot at the cave mouth.
+		var b := _bump(g, 0.3)
+		pos = crate.lerp(home, _ease(g)) + Vector2(0, -sin(g * PI) * 10.0 + swim_bob * b)
+		facing = 1.0
+		turn = -cos(PI * smoothstep(0.0, 0.3, g))
+		tilt = 0.4 * b
+		kick_amp = maxf(b, 0.6 * (1.0 - smoothstep(0.0, 0.3, g)))
+		if g < 0.5:
+			arm = "swim"
 			arm_from = "cheer"
-			blend = smoothstep(0.0, 0.2, g)
-			kick_amp = 0.6
+			blend = smoothstep(0.0, 0.3, g)
 		else:
-			# Off the rope and back to the spot at the cave mouth.
-			var g := (f - 0.7) / 0.3
-			var b := _bump(g, 0.3)
-			pos = rope.lerp(home, _ease(g)) + Vector2(0, -sin(g * PI) * 10.0 + swim_bob * b)
-			facing = 1.0
-			turn = -cos(PI * smoothstep(0.0, 0.3, g))
-			tilt = 0.4 * b
-			kick_amp = maxf(b, 0.6 * (1.0 - smoothstep(0.0, 0.3, g)))
-			if g < 0.5:
-				arm = "swim"
-				arm_from = "rope"
-				blend = smoothstep(0.0, 0.3, g)
-			else:
-				arm = "idle"
-				arm_from = "swim"
-				blend = smoothstep(0.7, 1.0, g)
+			arm = "idle"
+			arm_from = "swim"
+			blend = smoothstep(0.7, 1.0, g)
 	return {"pos": pos, "facing": facing, "turn": turn, "tilt": tilt, "arm": arm, "arm_from": arm_from, "blend": blend,
 			"hit": hit, "carry": carry, "sling": sling, "kick_amp": kick_amp, "emo": emo, "trip": trip}
 
@@ -368,8 +333,8 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	var row_top := World.row_y(site)
 	var ledge := row_top + DepthRow.LEDGE_Y + 2.0
 	var home := home_pos(site, j)
-	var rope := Vector2(World.ROPE_X + 12.0 + j * 3.0, ledge - 14.0)
-	var surface := World.SURFACE_Y - 14.0
+	var crate_at := LiftView.crate_pos(site)
+	var crate := Vector2(crate_at.x + 36.0 + j * 6.0, ledge - 4.0)
 	var dp: Vector2 = world.rows[site].deposit_pos()
 	var sp := _spot(j)
 	var spot := Vector2(dp.x + sp.x, ledge + sp.y)
@@ -398,7 +363,7 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	p = clampf((p - lag) / (1.0 - lag), 0.0, 1.0)
 	var kick := _t * (3.0 if rushing else 1.8) + seed
 	var swim_bob := sin(_t * 4.2 + seed) * 3.0
-	var st8 := trip_pose(p, home, spot, sp.z, hover, rope, surface, swim_bob)
+	var st8 := trip_pose(p, home, spot, sp.z, hover, crate, swim_bob)
 	var pos: Vector2 = st8["pos"]
 	var facing: float = st8["facing"]
 	var turn: float = st8["turn"]
@@ -428,9 +393,9 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	elif trip == "drop":
 		var was: String = _trip.get(id, "")
 		if was == "drop_carry" and view.grow(80.0).has_point(pos):
-			# Toss the sack onto the pile on the raft.
-			var hand := pos + Vector2(14, -60) * DIVER_SCALE
-			throw_item("sack", hand, Vector2(World.ROPE_X + 40.0, World.SURFACE_Y - 18.0), ore, 0.35, site)
+			# Toss the sack into the lift's crate.
+			var hand := pos + Vector2(-14, -60) * DIVER_SCALE
+			throw_item("sack", hand, crate_at + Vector2(0, -24), ore, 0.3, site)
 	_trip[id] = trip
 	if not view.grow(80.0).has_point(pos):
 		return

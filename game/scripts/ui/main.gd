@@ -208,6 +208,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## The card the player sees for a stage (PC: the side column for the boat
 ## and the plant).
 func stage_card(key: String) -> StageCard:
+	if key == "lift":
+		return _world.lift.card
 	# The second boat/plant share the first one's card (its "2" tab).
 	if GameState.is_boat(key):
 		return _side_boat if _wide else _world.surface.boat_card
@@ -352,6 +354,7 @@ func _refresh() -> void:
 		_side_plant.refresh()
 	for row in _world.rows:
 		row.refresh()
+	_world.lift.refresh()
 	if _panel.visible:
 		_panel.refresh()
 		if not _wide:
@@ -382,6 +385,13 @@ func _on_settings_changed() -> void:
 
 
 func _on_milestone(key: String, level: int) -> void:
+	if key == "lift":
+		# The lift gets a new look at some milestones (Balance.LIFT_LOOKS).
+		var look := Balance.lift_look(level)
+		if look > Balance.lift_look(int(GameState.upgraded_from.get("lift", level))):
+			_show_toast(tr("STAGE_UP") % [Views.stage_name(key), tr("LIFT_STAGE_%d" % look)])
+			Sfx.play("unlock")
+			return
 	var building := GameState.is_boat(key) or GameState.is_plant(key)
 	if building and 1 + Balance.milestones(level) <= Balance.BUILDING_STAGES:
 		# A milestone of a boat or a plant is a new building stage (up to 20).

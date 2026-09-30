@@ -1,7 +1,8 @@
 class_name UpgradePanel
 extends PanelContainer
 ## Details and buying for one stage: what it does, output now and after
-## the purchase, next milestone, x1 / x10 / MAX.
+## the purchase, next milestone, x1 / x10 / MAX, and hiring its manager
+## while it has none (so automating any stage is one clear button).
 ## Phone: a bottom sheet with a close button. PC: a docked side panel.
 
 signal closed
@@ -17,6 +18,7 @@ var _stats: Label
 var _gain: Label
 var _modes: Array[Button] = []
 var _buy: Button
+var _hire: Button
 var _close: Button
 var _mode := 0
 var _hero: Control
@@ -60,6 +62,14 @@ func _ready() -> void:
 	_stats.theme_type_variation = &"InkLabel"
 	_stats.add_theme_font_size_override("font_size", 24)
 	box.add_child(_stats)
+	_hire = Button.new()
+	_hire.theme_type_variation = &"GoldButton"
+	_hire.custom_minimum_size.y = 64
+	_hire.icon = Icons.get_icon("people", 30)
+	_hire.add_theme_font_size_override("font_size", 23)
+	_hire.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hire.pressed.connect(_on_hire)
+	box.add_child(_hire)
 	_gain = Label.new()
 	_gain.theme_type_variation = &"InkLabel"
 	_gain.add_theme_font_override("font", UiTheme.heavy_font())
@@ -119,6 +129,14 @@ func _count() -> int:
 	return m
 
 
+func _on_hire() -> void:
+	if GameState.hire_manager(key):
+		Sfx.play("hire")
+	else:
+		Sfx.play("deny")
+	refresh()
+
+
 func _on_buy() -> void:
 	if GameState.is_second(key) and not GameState.is_open(key):
 		Sfx.play("unlock" if GameState.open_building(key) else "deny")
@@ -141,7 +159,10 @@ func refresh() -> void:
 	var desc := ""
 	var what := ""
 	name = Views.stage_name(key)
-	if GameState.is_boat(key):
+	if key == "lift":
+		desc = tr("DESC_LIFT")
+		what = tr("STAT_CARRY")
+	elif GameState.is_boat(key):
 		desc = tr("DESC_BOAT")
 		what = tr("STAT_CARRY")
 	elif GameState.is_plant(key):
@@ -161,11 +182,22 @@ func refresh() -> void:
 			b.visible = false
 		_buy.text = tr("BUY_FOR") % NumFormat.short(price)
 		_buy.theme_type_variation = &"GoldButton" if gs.coins >= price else &"DarkButton"
+		_hire.visible = false
 		_close.visible = not docked
 		return
 	for b in _modes:
 		b.visible = true
 	_title.text = "%s · %s" % [name, tr("LEVEL") % gs.get_level(key)]
+	# Manager: one clear button while there is none.
+	var hired: bool = gs.has_manager(key)
+	var foreman := GameState.depth_index(key) >= 0
+	_hire.visible = not hired
+	if not hired:
+		var mc: float = gs.manager_cost(key)
+		_hire.text = (tr("PANEL_HIRE_FOREMAN") if foreman else tr("PANEL_HIRE")) % NumFormat.short(mc)
+		_hire.theme_type_variation = &"GoldButton" if gs.coins >= mc else &"DarkButton"
+		if not foreman:
+			desc += " " + tr("PANEL_MANUAL")
 	_desc.text = desc
 	var level: int = gs.get_level(key)
 	var ms := Balance.milestones(level)
@@ -174,6 +206,9 @@ func refresh() -> void:
 	lines.append("%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(gs.rate(key))])
 	if GameState.depth_index(key) >= 0:
 		lines.append("%s: %d" % [tr("STAT_DIVERS"), gs.divers(key)])
+	if key == "lift":
+		lines.append(tr("STAT_TRIP") % [NumFormat.short(gs.cycle_capacity(key)), "%.1f" % gs.cycle_time(key)])
+		lines.append(tr("STAT_WAITING") % NumFormat.short(gs.pit))
 	lines.append(tr("STAT_MILESTONE") % next_ms)
 	_stats.text = "\n".join(lines)
 	var n := _count()
@@ -200,6 +235,10 @@ func _process(delta: float) -> void:
 func _draw_hero() -> void:
 	var s := _hero.size
 	var i := GameState.depth_index(key)
+	if key == "lift":
+		LiftView.draw_hero(_hero, s, _t, Balance.lift_look(GameState.get_level(key)))
+		_draw_manager(s, Color("2283b6"))
+		return
 	var bg: Color = Art.DEPTH_STYLE[i]["water"] if i >= 0 else Art.SKY_TOP
 	var frame := Rect2(Vector2(2, 2), s - Vector2(4, 4))
 	Art.t_rect(_hero, frame, 18, bg, 4.0, 0.0)
@@ -224,7 +263,11 @@ func _draw_hero() -> void:
 			Art.push(_hero, Vector2(s.x - 250, s.y - 36), 0.0, Vector2(ps, ps))
 			Props.plant(_hero, _t, true, _t * 3.0, 0.0, key)
 		Art.pop(_hero)
-	# The manager, or an empty chair waiting for one.
+	_draw_manager(s, bg)
+
+
+## The manager, or an empty chair waiting for one.
+func _draw_manager(s: Vector2, bg: Color) -> void:
 	if GameState.has_manager(key):
 		Chars.portrait(_hero, Vector2(70, s.y / 2.0), 56, Chars.manager_look(key), "happy", Chars.blinking(_t, 5.0), bg.lightened(0.4))
 	else:

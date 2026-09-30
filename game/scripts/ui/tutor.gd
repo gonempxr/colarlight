@@ -5,8 +5,10 @@ extends Control
 ## sense (enough coins, ore waiting) and ends when the player does it.
 ## Progress.tutorial_step remembers where the player is.
 
-const STEPS := ["tap_divers", "upgrade", "tap_boat", "tap_plant", "hire_boat", "hire_plant", "open_depth"]
-const DONE := 7
+## Progress keeps the step index; when steps change, Progress remaps old
+## saves (Progress.TUTORIAL_V1_TO_V2).
+const STEPS := ["tap_divers", "tap_lift", "tap_boat", "tap_plant", "upgrade", "hire_lift", "hire_boat", "hire_plant", "open_depth"]
+const DONE := 9
 
 var main: Node
 var _t := 0.0
@@ -40,11 +42,11 @@ func _ready() -> void:
 	if Progress.tutorial_step == 0 and GameState.total_earned > 3000.0:
 		Progress.advance_tutorial(DONE)
 	GameState.tapped.connect(_on_tapped)
-	GameState.upgraded.connect(func(k, _c): if k == "d0" and _step() == 1: _next())
+	GameState.upgraded.connect(func(k, _c): if k == "d0" and _step() == 4: _next())
 	GameState.manager_hired.connect(func(k):
-		if (k == "boat" and _step() == 4) or (k == "plant" and _step() == 5):
+		if (k == "lift" and _step() == 5) or (k == "boat" and _step() == 6) or (k == "plant" and _step() == 7):
 			_next())
-	GameState.depth_opened.connect(func(_k): if _step() == 6: _next())
+	GameState.depth_opened.connect(func(k): if k == "d1" and _step() == 8: _next())
 
 
 func show_hint(point: Callable, text: String, seconds: float = 7.0) -> void:
@@ -71,6 +73,9 @@ func _on_tapped(key: String) -> void:
 				_taps += 1
 				if _taps >= 3:
 					_next()
+		1:
+			if key == "lift":
+				_next()
 		2:
 			if key == "boat":
 				_next()
@@ -84,15 +89,13 @@ func _skip_done() -> void:
 	var s := _step()
 	var skip := false
 	match s:
-		2:
+		1, 5:
+			skip = GameState.has_manager("lift")
+		2, 6:
 			skip = GameState.has_manager("boat")
-		3:
+		3, 7:
 			skip = GameState.has_manager("plant")
-		4:
-			skip = GameState.has_manager("boat")
-		5:
-			skip = GameState.has_manager("plant")
-		6:
+		8:
 			skip = GameState.is_open("d1")
 	if skip:
 		Progress.advance_tutorial(s + 1)
@@ -107,8 +110,8 @@ func _find_target() -> Variant:
 			var row: DepthRow = world.rows[0]
 			return _world_point(row.position + Vector2(row.deposit_pos().x - 40, 150))
 		1:
-			if GameState.coins >= GameState.upgrade_cost("d0"):
-				return _control_point(world.rows[0].card._upgrade)
+			if GameState.pit > 0.0 and GameState.cycle_progress("lift") < 0.0:
+				return _world_point(world.lift.cabin_pos() + Vector2(0, -30))
 		2:
 			if GameState.hold > 0.0 and GameState.cycle_progress("boat") < 0.0:
 				return _world_point(world.surface.boat_world_pos() + Vector2(0, -40))
@@ -116,12 +119,18 @@ func _find_target() -> Variant:
 			if GameState.dock > 0.0 and GameState.cycle_progress("plant") < 0.0:
 				return _world_point(world.surface.plant_world_pos() + Vector2(40, -80))
 		4:
+			if GameState.coins >= GameState.upgrade_cost("d0"):
+				return _control_point(world.rows[0].card._upgrade)
+		5:
+			if GameState.coins >= GameState.manager_cost("lift"):
+				return _control_point(main.stage_card("lift")._manager)
+		6:
 			if GameState.coins >= GameState.manager_cost("boat"):
 				return _control_point(main.stage_card("boat")._manager)
-		5:
+		7:
 			if GameState.coins >= GameState.manager_cost("plant"):
 				return _control_point(main.stage_card("plant")._manager)
-		6:
+		8:
 			if GameState.coins >= GameState.unlock_cost("d1"):
 				return _control_point(world.rows[1]._open_btn)
 	return null

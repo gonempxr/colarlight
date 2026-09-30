@@ -1,6 +1,6 @@
 """Coralight 2.0 balance simulation.
 
-Models the tycoon chain: dive sites -> boat -> processing plant -> coins.
+Models the tycoon chain: dive sites -> lift -> boat -> processing plant -> coins.
 A greedy "reasonable player" buys whatever gives the best income gain per coin.
 Prints when each depth opens, when managers are hired and when prestige is reached.
 
@@ -45,6 +45,8 @@ for k, u in enumerate(UNLOCKS):
         DEPTHS[k]["cost0"] = u
 BOAT = {"value": 1.5, "cost0": 8}
 PLANT = {"value": 1.7, "cost0": 10}
+# Lift: carries ore from the dive sites up the shaft to the raft (balance.gd LIFT).
+LIFT = {"value": 3.0, "cost0": 4}
 # Second boat and plant: bought once per run, bigger per level (balance.gd BOAT2/PLANT2).
 BOAT2 = {"value": 60.0, "cost0": 2.0e4, "unlock": 2.0e5}
 PLANT2 = {"value": 68.0, "cost0": 2.5e4, "unlock": 2.5e5}
@@ -53,14 +55,14 @@ PLANT2 = {"value": 68.0, "cost0": 2.5e4, "unlock": 2.5e5}
 TAP_EFFICIENCY = 0.35
 # A dive site's foreman doubles its output.
 FOREMAN_MULT = 2.0
-MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3, "boat2": 4.0e5, "plant2": 5.0e5}
+MANAGER_COST = {"lift": 10, "boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3, "boat2": 4.0e5, "plant2": 5.0e5}
 for k in range(2, len(DEPTHS)):
     MANAGER_COST[f"d{k}"] = float(f"{DEPTHS[k]['unlock'] * 2.0:.2g}")
 # Diving Deeper needs this depth open (deeper every time) and the coins.
 PRESTIGE_GATE_FIRST = 5
 PRESTIGE_GATE_STEP = 2
 PRESTIGE_COST0 = 1.2e7
-PRESTIGE_COST_GROWTH = 6.6
+PRESTIGE_COST_GROWTH = 6.5
 RUNS = 13
 
 
@@ -95,6 +97,7 @@ class Game:
     def __init__(self, mult: float = 1.0, keep=()):
         self.coins = 0.0
         self.depth_lv = [1] + [0] * (len(DEPTHS) - 1)
+        self.lift_lv = 1
         self.boat_lv = 1
         self.plant_lv = 1
         self.boat2_lv = 0
@@ -107,11 +110,12 @@ class Game:
         for k, d in enumerate(DEPTHS):
             eff = FOREMAN_MULT if f"d{k}" in self.managers else 1.0
             dives += output(d["value"], self.depth_lv[k]) * eff
+        lift = output(LIFT["value"], self.lift_lv) * (1.0 if "lift" in self.managers else TAP_EFFICIENCY)
         boat = output(BOAT["value"], self.boat_lv) * (1.0 if "boat" in self.managers else TAP_EFFICIENCY)
         plant = output(PLANT["value"], self.plant_lv) * (1.0 if "plant" in self.managers else TAP_EFFICIENCY)
         boat += output(BOAT2["value"], self.boat2_lv) * (1.0 if "boat2" in self.managers else TAP_EFFICIENCY)
         plant += output(PLANT2["value"], self.plant2_lv) * (1.0 if "plant2" in self.managers else TAP_EFFICIENCY)
-        return dives, boat, plant
+        return dives, lift, boat, plant
 
     def income(self) -> float:
         return min(self.stage_rates()) * self.mult
@@ -128,9 +132,10 @@ class Game:
                 opts.append((f"depth {k + 1} -> {lv + 1}", up_cost(d["cost0"], lv), ("depth", k)))
                 if f"d{k}" not in self.managers:
                     opts.append((f"manager depth {k + 1}", MANAGER_COST[f"d{k}"], ("mgr", f"d{k}")))
+        opts.append((f"lift -> {self.lift_lv + 1}", up_cost(LIFT["cost0"], self.lift_lv), ("lift",)))
         opts.append((f"boat -> {self.boat_lv + 1}", up_cost(BOAT["cost0"], self.boat_lv), ("boat",)))
         opts.append((f"plant -> {self.plant_lv + 1}", up_cost(PLANT["cost0"], self.plant_lv), ("plant",)))
-        for s in ("boat", "plant"):
+        for s in ("lift", "boat", "plant"):
             if s not in self.managers:
                 opts.append((f"manager {s}", MANAGER_COST[s], ("mgr", s)))
         for s, data in (("boat2", BOAT2), ("plant2", PLANT2)):
@@ -150,6 +155,8 @@ class Game:
             self.depth_lv[action[1]] = 1
         elif kind == "depth":
             self.depth_lv[action[1]] += 1
+        elif kind == "lift":
+            self.lift_lv += 1
         elif kind == "boat":
             self.boat_lv += 1
         elif kind == "plant":
@@ -171,10 +178,10 @@ class Game:
 
     def gain_of(self, action) -> float:
         before = self.potential()
-        saved = (list(self.depth_lv), self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, set(self.managers))
+        saved = (list(self.depth_lv), self.lift_lv, self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, set(self.managers))
         self.apply(action)
         after = self.potential()
-        self.depth_lv, self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, self.managers = saved
+        self.depth_lv, self.lift_lv, self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, self.managers = saved
         return after - before
 
 
@@ -250,7 +257,7 @@ def main():
         mult = prestige_mult(i)
         gate = prestige_gate(i)
         t, events, g = run(mult, prestige_cost(i), trace, keep=keep, gate=gate)
-        keep = tuple(m for m in g.managers if m in ("boat", "plant", "boat2", "plant2"))
+        keep = tuple(m for m in g.managers if m in ("lift", "boat", "plant", "boat2", "plant2"))
         print(f"=== Run {i + 1} (income x{mult:g}, needs {IDS[gate]} + {prestige_cost(i):.2g}) ===")
         for et, label in events:
             if label.startswith("open") or label.startswith("PRESTIGE"):
@@ -260,7 +267,7 @@ def main():
             break
         total += t
         deepest = max(k for k, lv in enumerate(g.depth_lv) if lv > 0)
-        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, boat {g.boat_lv}+{g.boat2_lv}, plant {g.plant_lv}+{g.plant2_lv}, income {g.income():.3g}/s")
+        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, lift {g.lift_lv}, boat {g.boat_lv}+{g.boat2_lv}, plant {g.plant_lv}+{g.plant2_lv}, income {g.income():.3g}/s")
 
 
 if __name__ == "__main__":

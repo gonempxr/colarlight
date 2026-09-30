@@ -61,6 +61,14 @@ const BUILDING_STAGES := 20
 ## (the automation survives a Dive).
 const BOAT := {"value": 1.5, "cost0": 8.0, "manager": 25.0, "cycle": 5.0}
 const PLANT := {"value": 1.7, "cost0": 10.0, "manager": 45.0, "cycle": 3.0}
+## Lift: carries the ore the divers leave in the crates at each depth up
+## the shaft to the raft. One trip goes down to the deepest open depth and
+## back, so a trip takes `cycle` + `cycle_step` per open depth below the
+## first (the rate per second does not change with depth, a trip just
+## carries more). Manual until its manager (the operator) is hired.
+const LIFT := {"value": 3.0, "cost0": 4.0, "manager": 10.0, "cycle": 4.0, "cycle_step": 0.4, "unlock": 0.0}
+## Levels where the lift gets a new look (rope and bucket ... bathyscaphe).
+const LIFT_LOOKS: Array[int] = [1, 10, 25, 75, 150, 250]
 ## The second boat and plant: bought in each run once the ocean is busy,
 ## bigger per level than the first ones. Provisional numbers (see sim.py).
 const BOAT2 := {"value": 60.0, "cost0": 2.0e4, "manager": 4.0e5, "cycle": 6.0, "unlock": 2.0e5}
@@ -72,7 +80,7 @@ const TAP_BOOST := 0.1
 ## Dive Deeper: needs the coins and a deeper depth open every time
 ## (PRESTIGE_GATE_FIRST, then PRESTIGE_GATE_STEP more per Dive).
 const PRESTIGE_COST := 1.2e7
-const PRESTIGE_COST_GROWTH := 6.6
+const PRESTIGE_COST_GROWTH := 6.5
 const PRESTIGE_GATE_FIRST := 5
 const PRESTIGE_GATE_STEP := 2
 const PRESTIGE_MULT_STEP := 3.0
@@ -118,6 +126,15 @@ static func affordable_levels(cost0: float, level: int, coins: float) -> int:
 ## Look/stage of the boat or the plant at this level: 1..BUILDING_STAGES.
 static func building_stage(level: int) -> int:
 	return clampi(1 + milestones(level), 1, BUILDING_STAGES)
+
+
+## Look of the lift at this level: 1..LIFT_LOOKS.size().
+static func lift_look(level: int) -> int:
+	var look := 1
+	for i in LIFT_LOOKS.size():
+		if level >= LIFT_LOOKS[i]:
+			look = i + 1
+	return look
 
 
 static func divers_at(level: int) -> int:

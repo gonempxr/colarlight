@@ -9,7 +9,7 @@ func _initialize() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://perf_save.json"
 	gs.reset()
-	gs.levels.merge({"d0": 150, "d1": 120, "d2": 100, "d3": 80, "d4": 60, "d5": 40, "boat": 300, "plant": 300}, true)
+	gs.levels.merge({"d0": 150, "d1": 120, "d2": 100, "d3": 80, "d4": 60, "d5": 40, "lift": 300, "boat": 300, "plant": 300}, true)
 	for k in gs.stage_keys():
 		gs.managers[k] = true
 	gs.coins = 1e9

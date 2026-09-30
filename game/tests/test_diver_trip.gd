@@ -6,8 +6,8 @@ extends SceneTree
 
 func _pose_vals(dl: GDScript, p: float, spot: Vector2, facing: float, hover: bool, tier: int = 0) -> Array:
 	var home := Vector2(190, 200)
-	var rope := Vector2(108, 186)
-	var s: Dictionary = dl.trip_pose(p, home, spot, facing, hover, rope, -1500.0, 0.0)
+	var crate := Vector2(186, 196)
+	var s: Dictionary = dl.trip_pose(p, home, spot, facing, hover, crate, 0.0)
 	var turn: float = s["turn"]
 	var sx: float = s["facing"] * (1.0 if turn >= 0.0 else -1.0) * maxf(0.08, absf(turn))
 	var chars: GDScript = load("res://scripts/ui/chars.gd")

@@ -23,7 +23,7 @@ func _initialize() -> void:
 	pr.autosave_enabled = false
 	pr.save_path = "user://depths_progress.json"
 	pr.reset()
-	pr.tutorial_step = 7
+	pr.tutorial_step = 9
 	for f in load("res://scripts/data/content.gd").FEATURES:
 		pr.features[f] = true
 	pr.daily_last = pr.today()

@@ -21,6 +21,7 @@ const CAVE_L := 150.0
 
 var surface: SurfaceView
 var rows: Array[DepthRow] = []
+var lift: LiftView
 var divers: DiverLayer
 var chest: ChestBubble
 
@@ -49,6 +50,9 @@ func _ready() -> void:
 		row.index = i
 		add_child(row)
 		rows.append(row)
+	lift = LiftView.new()
+	lift.world = self
+	add_child(lift)
 	divers = DiverLayer.new()
 	divers.world = self
 	add_child(divers)
@@ -127,6 +131,8 @@ func is_visible_band(y0: float, y1: float) -> bool:
 ## World point where a stage's characters are, for effects.
 func stage_anchor(key: String) -> Vector2:
 	match key:
+		"lift":
+			return lift.cabin_pos() + Vector2(0, -40)
 		"boat":
 			return surface.boat_world_pos() + Vector2(0, -60)
 		"plant":

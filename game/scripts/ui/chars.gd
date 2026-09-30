@@ -46,6 +46,8 @@ static func manager_look(key: String) -> Dictionary:
 		"d3": return look(4, "short", 0, "hardhat", "mustache", 3, "overalls")
 		"d4": return look(2, "long", 0, "pirate", "none", 4, "shirt")
 		"d5": return look(1, "spiky", 6, "none", "sunglasses", 7, "lab")
+		# The lift operator at the winch on the raft.
+		"lift": return look(5, "curly", 0, "cap", "mustache", 3, "overalls")
 		"boat": return look(2, "short", 1, "captain", "beard", 0, "sailor")
 		"plant": return look(3, "short", 0, "hardhat", "glasses", 2, "vest")
 		# The second boat's captain and the second plant's manager.

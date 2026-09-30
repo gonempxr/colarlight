@@ -16,6 +16,8 @@ static func t(key: String) -> String:
 
 static func stage_name(key: String) -> String:
 	match key:
+		"lift":
+			return t("STAGE_LIFT")
 		"boat":
 			return t("STAGE_BOAT")
 		"plant":
