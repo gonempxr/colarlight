@@ -7,8 +7,7 @@ extends Control
 ## empty its crate, comes back up and tosses the sacks into the raft chest.
 ## The cabin, the winch and the cable get a new look at the level
 ## milestones in Balance.LIFT_LOOKS (rope and bucket ... golden bathyscaphe).
-## Also holds the lift's card (LiftCard) at the top of the shaft and the
-## tap areas: a tap on the winch or the cabin taps the lift (one trip while
+## Also holds the tap areas: a tap on the winch or the cabin taps the lift (one trip while
 ## it has no operator) and shows it in the upgrade panel.
 
 const CAB_X := World.ROPE_X
@@ -17,12 +16,20 @@ const TOP_Y := World.SURFACE_Y + 92.0
 const PULLEY := Vector2(World.ROPE_X, World.SURFACE_Y - 112.0)
 ## Guide wheel on top of the raft's crane post.
 const GUIDE := Vector2(49.0, World.SURFACE_Y - 126.0)
-## The winch's drum, up on the crane post under its arm, and its operator
-## with a lever on the deck left of the post (the raft's loader stands
-## right of it).
-const WINCH := Vector2(33.0, World.SURFACE_Y - 98.0)
-const OPERATOR := Vector2(17.0, World.SURFACE_Y - 15.0)
-const LEVER := Vector2(35.0, World.SURFACE_Y - 16.0)
+## The hand winch on the deck at the foot of the crane post (its drum's
+## axle) and the crank's reach; the operator stands on a little pontoon
+## lashed to the raft's left end and turns the crank with both hands. The
+## winch, its engine and the operator keep to x < 60 (the raft's loader
+## stands right of them).
+const WINCH := Vector2(43.0, World.SURFACE_Y - 44.0)
+const CRANK_R := 8.0
+const OPERATOR := Vector2(18.0, World.SURFACE_Y - 16.0)
+const OP_SCALE := 0.72
+## The handle's grip, seen a little from the front: the operator's far
+## hand holds its far end, the near hand its near end.
+const GRIP := Vector2(2.6, -3.4)
+## The crank is drawn in this many angle steps (cached shapes).
+const CRANK_STEPS := 24
 ## Shares of a trip: down with the stops, back up, unloading at the top.
 const DOWN_END := 0.55
 const UP_END := 0.88
@@ -52,6 +59,8 @@ var _look_old := 1
 var _look_fx := -99.0
 var _idle_since := 0.0
 var _crank := 0.0
+## Tests and preview sheets: keep the crank where they put it.
+var freeze_crank := false
 var _sync_left := 0.0
 var _ratio: Array[float] = []
 var _ratio_at := -99.0
@@ -274,7 +283,8 @@ func _process(delta: float) -> void:
 		if stop == -2 and _thrown < 2 and float(tp[2]) >= _thrown * 0.35:
 			_unload_sack()
 		var moving := stop == -1 and p < UP_END
-		_crank += delta * (9.0 if moving else 1.5) * (-1.0 if p >= DOWN_END else 1.0)
+		if not freeze_crank:
+			_crank += delta * (9.0 if moving else 1.5) * (-1.0 if p >= DOWN_END else 1.0)
 	elif _last_p >= 0.0:
 		for i in _crates.size():
 			if not _taken[i]:
@@ -404,8 +414,7 @@ func _shown_look() -> int:
 
 static func _cable(ci: CanvasItem, a: Vector2, b: Vector2, look: int) -> void:
 	Art.line(ci, a, b, Art.INK, 7.0)
-	var c := Color("e8c48a") if look <= 2 else (Color("b9c3d6") if look <= 4 else Color("ffd86b"))
-	Art.line(ci, a, b, c, 3.5)
+	Art.line(ci, a, b, cable_color(look), 3.5)
 
 
 ## A wooden crate with the waiting ore; `fill` 1 = a lift trip's worth,
@@ -541,112 +550,176 @@ func _draw_top(ci: CanvasItem) -> void:
 	var look := _shown_look()
 	var bob: float = world.surface._raft_bob() if world.surface.has_method("_raft_bob") else 0.0
 	var off := Vector2(0, bob)
-	# Cable: drum -> up the crane post -> along the arm -> over the pulley.
-	var c := Color("e8c48a") if look <= 2 else (Color("b9c3d6") if look <= 4 else Color("ffd86b"))
-	var pts := PackedVector2Array([WINCH + Vector2(0, -11), GUIDE + Vector2(-6, -4), GUIDE + Vector2(0, -7), PULLEY + Vector2(0, -9)])
+	# Cable: off the drum -> up to the guide wheel on the post -> along the
+	# arm -> over the pulley.
+	var c := cable_color(look)
+	var pts := PackedVector2Array([WINCH + Vector2(7, -8), GUIDE + Vector2(-6.5, 0), GUIDE + Vector2(0, -7), PULLEY + Vector2(0, -9)])
 	Art.push(ci, off)
 	Art.polyline(ci, pts, Art.INK, 6.0)
 	Art.polyline(ci, pts, c, 3.0)
 	Art.pop(ci)
-	Art.push(ci, GUIDE + off, _crank * 0.6)
+	var turn := crank_angle()
+	Art.push(ci, GUIDE + off, turn * 0.6)
 	Art.t_circle(ci, Vector2.ZERO, 6.5, Art.METAL, 2.2, 0.0)
 	Art.flat(ci, Art.rrect_pts(Rect2(-5, -1.2, 10, 2.4), 1), Art.INK_SOFT)
 	Art.pop(ci)
-	Art.push(ci, PULLEY + off, _crank * 0.4)
+	Art.push(ci, PULLEY + off, turn * 0.4)
 	Art.t_circle(ci, Vector2.ZERO, 9.0, Art.METAL if look <= 4 else Art.GOLD, 2.4, 0.0)
 	Art.flat(ci, Art.rrect_pts(Rect2(-7, -1.5, 14, 3), 1), Art.INK_SOFT)
 	Art.flat(ci, Art.rrect_pts(Rect2(-1.5, -7, 3, 14), 1), Art.INK_SOFT)
 	Art.pop(ci)
-	Art.push(ci, WINCH + off)
-	_draw_winch(ci, look)
+	Art.push(ci, off)
+	_draw_pontoon(ci)
 	Art.pop(ci)
-	# The lever the operator works (tilts while the lift runs).
 	var busy: bool = GameState.cycle_progress("lift") >= 0.0
-	var tilt := (-0.35 if GameState.cycle_progress("lift") < DOWN_END else 0.35) if busy else 0.0
-	Art.push(ci, LEVER + off)
-	Art.t_rect(ci, Rect2(-7, -5, 14, 6), 2, Color("4a5270"), 2.0, 0.0)
-	Art.push(ci, Vector2(0, -3), tilt)
-	Art.t_rect(ci, Rect2(-2, -26, 4, 25), 2, Art.METAL, 2.0, 0.0)
-	Art.t_circle(ci, Vector2(0, -28), 4.5, Art.RED, 2.0, 0.0)
+	Art.push(ci, WINCH + off)
+	draw_winch(ci, look, turn, busy, _t)
 	Art.pop(ci)
-	Art.pop(ci)
-	_draw_operator(ci, OPERATOR + off)
+	_draw_operator(ci, off, turn)
 	# A new look pops in with a flash.
 	var fx := _t - _look_fx
 	if fx >= 0.0 and fx < 0.8:
 		Art.glow(ci, WINCH + off, 40.0 * (1.0 + fx), Color(1, 1, 0.8, 0.6 * (1.0 - fx / 0.8)), 16)
 
 
-## The winch on the raft's crane post (origin at the drum's axle): the drum
-## with a crank, and below it the machine that turns it, fancier per look.
-func _draw_winch(ci: CanvasItem, look: int) -> void:
-	var busy: bool = GameState.cycle_progress("lift") >= 0.0
-	# Bracket to the crane post.
-	Art.t_rect(ci, Rect2(0, -4, 14, 8), 2, Art.WOOD_DARK if look <= 2 else Color("4a5270"), 2.2, 0.0)
-	match look:
-		2:
-			Art.gear(ci, Vector2(-10, 12), 7.5, Art.METAL, -_crank * 1.6)
-		3, 4:
-			# A little steam engine that puffs while it winds.
-			var metal := Color("8a94b8") if look == 3 else Art.BRASS
-			Art.t_rect(ci, Rect2(-24, -2, 18, 22), 6, metal, 2.5, 0.6)
-			Art.t_circle(ci, Vector2(-15, 9), 4.5, Art.WHITE, 1.8, 0.0)
-			Art.push(ci, Vector2(-15, 9), sin(_t * 3.0) * 0.8 if busy else -0.6)
-			Art.line(ci, Vector2.ZERO, Vector2(0, -3.2), Art.RED, 1.5)
-			Art.pop(ci)
-			Art.t_rect(ci, Rect2(-23, -14, 6, 13), 2, Color("4a5270"), 2.0, 0.0)
-			if busy:
-				for k in 2:
-					var g := fposmod(_t * 0.9 + k * 0.5, 1.0)
-					Art.disc(ci, Vector2(-20 - g * 8.0, -16 - g * 22.0), snappedf(3.0 + g * 5.0, 1.0), Color(1, 1, 1, snappedf(0.7 * (1.0 - g), 0.1)))
-		5, 6:
-			# Electric motor: a striped box with a lamp.
-			var box := Color("ffc93c") if look == 5 else Color("ffe38a")
-			Art.t_rect(ci, Rect2(-26, -8, 20, 24), 5, box, 2.5, 0.6)
-			for k in 2:
-				Art.flat(ci, PackedVector2Array([Vector2(-24 + k * 9, 10), Vector2(-20 + k * 9, 10), Vector2(-23 + k * 9, 15), Vector2(-26 + k * 9, 15)]), Art.INK)
-			var lit := 1.0 if busy else 0.3
-			Art.t_circle(ci, Vector2(-16, -1), 4.0, Color(1.0, 0.35 + 0.5 * lit, 0.3, 1.0), 1.8, 0.0)
-			if busy:
-				Art.glow(ci, Vector2(-16, -1), 11.0, Color(1, 0.8, 0.4, 0.4), 12)
-			if look >= 6:
-				Art.toon(ci, Art.star_pts(Vector2(-16, -14), 4.5, 2.0, 5), Art.WHITE, 1.2, 0.0)
-	# The drum, its rope and the crank handle (turning).
-	var drum := Art.WOOD if look <= 2 else (Color("4a5270") if look <= 4 else (Color("3a3f5c") if look == 5 else Art.GOLD_DARK))
-	Art.push(ci, Vector2.ZERO, _crank)
-	Art.t_circle(ci, Vector2.ZERO, 11.0, drum, 2.5, 0.4)
-	Art.arc(ci, Vector2.ZERO, 7.0, 0, TAU, 16, Color("e8c48a") if look <= 2 else Color("b9c3d6"), 4.0)
-	Art.line(ci, Vector2.ZERO, Vector2(0, -13), Art.INK, 3.0)
-	Art.t_circle(ci, Vector2(0, -14), 3.5, Art.CORAL if look < 6 else Art.WHITE, 1.8, 0.0)
+static func cable_color(look: int) -> Color:
+	return Color("e8c48a") if look <= 2 else (Color("b9c3d6") if look <= 4 else Color("ffd86b"))
+
+
+## The crank's angle now, snapped to CRANK_STEPS (0 = handle straight up,
+## growing clockwise).
+func crank_angle() -> float:
+	var step := TAU / CRANK_STEPS
+	return fposmod(roundf(_crank / step) * step, TAU)
+
+
+## Where the crank's handle is, relative to the drum's axle.
+static func handle_at(turn: float) -> Vector2:
+	return Vector2(sin(turn), -cos(turn)) * CRANK_R
+
+
+static var _PONTOON_KEY := hash([52, "pontoon"])
+
+
+## The operator's pontoon: a few planks on a float, lashed to the raft.
+func _draw_pontoon(ci: CanvasItem) -> void:
+	var base := Vector2(0, World.SURFACE_Y)
+	Art.push(ci, base)
+	if not Art.cache_begin(ci, _PONTOON_KEY):
+		Art.t_ellipse(ci, Vector2(10, 3), Vector2(17, 9), Art.CORAL, 2.5, 0.7)
+		Art.t_rect(ci, Rect2(-10, -16, 44, 13), 4, Art.WOOD, 3.0, 0.6)
+		for x: float in [3.0, 17.0]:
+			Art.line(ci, Vector2(x, -14), Vector2(x, -5), Art.WOOD_DARK, 2.0)
+		# Rope lashing to the raft's deck.
+		Art.t_rect(ci, Rect2(27, -17, 6, 15), 2, Color("e8c48a"), 2.0, 0.0)
+		Art.line(ci, Vector2(28, -12), Vector2(32, -9), Color("b88a4a"), 1.5)
+		Art.line(ci, Vector2(28, -7), Vector2(32, -4), Color("b88a4a"), 1.5)
+		Art.cache_end(ci, _PONTOON_KEY)
 	Art.pop(ci)
 
 
-## The operator: a worker who dozes by the winch while nobody sends the
-## lift and cranks while it runs; once hired as the manager, the lift's own
-## operator (the manager's look) who never sleeps.
-func _draw_operator(ci: CanvasItem, at: Vector2) -> void:
+## The hand winch, origin at the drum's axle (the deck is 28 below): an
+## A-frame stand, the drum with the cable wound on it and the crank (arm
+## and handle) at `turn`. From look 3 on an engine at its right helps it
+## (steam, then electric); the crank stays so the operator can steer it.
+static func draw_winch(ci: CanvasItem, look: int, turn: float, busy: bool, t: float) -> void:
+	var wood := look <= 2
+	var frame := Art.WOOD if wood else (Color("8a94b8") if look == 3 else (Art.BRASS if look == 4 else (Color("4a5270") if look == 5 else Art.GOLD)))
+	var frame_dark := Art.shade_of(frame, 0.3)
+	# Engine behind the drum, up against the crane post.
+	match look:
+		3, 4:
+			# A little steam boiler with a gauge; it puffs while it winds.
+			var metal := Color("8a94b8") if look == 3 else Color("e08a4a")
+			Art.t_rect(ci, Rect2(-3, -30, 17, 30), 6, metal, 2.5, 0.6)
+			Art.t_rect(ci, Rect2(-4, -22, 19, 4), 2, Art.shade_of(metal, 0.25), 2.0, 0.0)
+			Art.t_rect(ci, Rect2(6, -40, 6, 11), 2, Color("4a5270"), 2.0, 0.0)
+			Art.t_circle(ci, Vector2(8, -13), 4.5, Art.WHITE, 1.8, 0.0)
+			Art.push(ci, Vector2(8, -13), snappedf(sin(t * 3.0) * 0.8, 0.2) if busy else -0.6)
+			Art.line(ci, Vector2.ZERO, Vector2(0, -3.2), Art.RED, 1.5)
+			Art.pop(ci)
+			if busy:
+				for k in 2:
+					var g := snappedf(fposmod(t * 0.9 + k * 0.5, 1.0), 0.05)
+					Art.disc(ci, Vector2(9 + g * 6.0, -42 - g * 22.0), snappedf(3.0 + g * 5.0, 1.0), Color(1, 1, 1, snappedf(0.7 * (1.0 - g), 0.1)))
+		5, 6:
+			# Electric motor: a striped box with a lamp.
+			var box := Color("ffc93c") if look == 5 else Color("fff0b8")
+			Art.t_rect(ci, Rect2(-3, -30, 17, 28), 5, box, 2.5, 0.6)
+			for k in 2:
+				Art.flat(ci, PackedVector2Array([Vector2(-1 + k * 8, -28), Vector2(3 + k * 8, -28), Vector2(0 + k * 8, -23), Vector2(-4 + k * 8, -23)]), Art.INK)
+			var lit := 1.0 if busy else 0.3
+			if busy:
+				Art.glow(ci, Vector2(8, -15), 11.0, Color(1, 0.8, 0.4, 0.4), 12)
+			Art.t_circle(ci, Vector2(8, -15), 4.0, Color(1.0, 0.35 + 0.5 * lit, 0.3, 1.0), 1.8, 0.0)
+			if look >= 6:
+				Art.toon(ci, Art.star_pts(Vector2(5, -36), 4.5, 2.0, 5), Art.WHITE, 1.2, 0.0)
+	# Stand: two legs from the axle to a skid on the deck.
+	Art.stroke(ci, PackedVector2Array([Vector2(-2, 0), Vector2(-11, 26)]), frame, 5.0, 2.0)
+	Art.stroke(ci, PackedVector2Array([Vector2(2, 0), Vector2(11, 26)]), frame, 5.0, 2.0)
+	Art.t_rect(ci, Rect2(-15, 24, 30, 5), 2, frame_dark, 2.0, 0.0)
+	# Drum (its end seen from the side) with the cable wound round it; the
+	# spokes turn with the crank.
+	var drum := Art.WOOD if wood else (Color("4a5270") if look <= 4 else (Color("3a3f5c") if look == 5 else Art.GOLD_DARK))
+	Art.t_circle(ci, Vector2.ZERO, 11.0, drum, 2.5, 0.4)
+	Art.arc(ci, Vector2.ZERO, 7.5, 0, TAU, 18, cable_color(look), 3.0)
+	if look == 2 or look == 3:
+		# Iron teeth round the rim.
+		for k in 8:
+			var a := turn + k * TAU / 8.0
+			Art.disc(ci, Vector2(cos(a), sin(a)) * 11.5, 1.6, Art.INK_SOFT)
+	Art.push(ci, Vector2.ZERO, turn)
+	for k in 3:
+		Art.line(ci, Vector2.ZERO, Vector2(0, -5.5).rotated(k * TAU / 3.0), Art.INK_SOFT, 1.6)
+	Art.pop(ci)
+	# Crank arm and handle (the operator's hands cover the handle).
+	var h := handle_at(turn)
+	var arm := Art.METAL if look < 6 else Art.GOLD
+	Art.stroke(ci, PackedVector2Array([Vector2.ZERO, h]), arm, 3.5, 1.8)
+	Art.t_circle(ci, Vector2.ZERO, 3.0, arm, 1.8, 0.0)
+	Art.stroke(ci, PackedVector2Array([h - GRIP, h + GRIP]), Art.CORAL if look < 6 else Art.WHITE, 4.5, 1.8)
+
+
+## The operator on the pontoon: a worker (or, once hired, the lift's own
+## operator) who turns the crank with both hands while the lift runs,
+## rocking with it, and leans on the winch while it waits (dozing when ore
+## is waiting and nobody sends the lift).
+func _draw_operator(ci: CanvasItem, off: Vector2, turn: float) -> void:
 	var gs := GameState
 	var hired: bool = gs.has_manager("lift")
 	var l: Dictionary = Chars.manager_look("lift") if hired else Chars.look(2, "short", 1, "beanie", "none", 2, "overalls")
 	var p: float = gs.cycle_progress("lift")
 	var mood := world.mood("lift")
+	var pose := {"blink": Chars.blinking(_t, 3.3)}
+	var feet := OPERATOR + off + Vector2(0, -world.hop("lift"))
 	var emo := "happy"
-	var arm_r := 0.5
-	var arm_l := -0.2
-	if p >= 0.0:
+	if mood == "joy" or mood == "wow":
+		# Cheers with both arms up.
+		pose["arm_r"] = 2.4
+		pose["arm_l"] = -2.4
+	elif p >= 0.0:
 		emo = "focus" if not gs.is_rushing() else "joy"
-		arm_r = -1.3 + snappedf(sin(_crank * 2.0), 0.25) * 0.5
-	elif not hired and gs.pit > 0.0:
-		emo = "sleepy" if _t - _idle_since > 5.0 else "bored"
+		# Rocks toward the handle as it swings away, and back.
+		var h := handle_at(turn)
+		feet.x += h.x * 0.35
+		var hand := WINCH + off + h
+		pose["hand_r"] = (hand - GRIP * 0.7 - feet) / OP_SCALE
+		pose["hand_l"] = (hand + GRIP * 0.7 - feet) / OP_SCALE
+		pose["bob"] = snappedf(0.5 + 0.5 * cos(turn), 0.25) * 0.6
+	else:
+		if not hired and gs.pit > 0.0:
+			emo = "sleepy" if _t - _idle_since > 5.0 else "bored"
+		# Leans on the winch: an elbow on the drum, the other arm easy.
+		feet.x += 1.5
+		pose["hand_r"] = (WINCH + off + Vector2(-2, -12) - feet) / OP_SCALE
+		pose["arm_l"] = -0.15
+		pose["tilt"] = 0.12 if emo == "sleepy" else 0.05
 	if mood != "":
 		emo = mood
-		if mood == "joy" or mood == "wow":
-			arm_r = 2.4
-			arm_l = -2.4
-	var hop := world.hop("lift")
-	Chars.person(ci, at - Vector2(0, hop), 0.7, 1.0, l, {"emotion": emo, "blink": Chars.blinking(_t, 3.3), "arm_r": arm_r, "arm_l": arm_l})
+	pose["emotion"] = emo
+	Chars.person(ci, feet, OP_SCALE, 1.0, l, pose)
 	if emo == "sleepy":
-		Chars.mark(ci, "zzz", at + Vector2(6, -60), _t)
+		Chars.mark(ci, "zzz", feet + Vector2(8, -62), _t)
 
 
 ## Picture for the upgrade panel (PC): the shaft, the cabin and the crates.
