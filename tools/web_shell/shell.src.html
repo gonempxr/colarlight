@@ -307,9 +307,9 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 //    pixels to fill. "Low" graphics quality in the game's settings caps it
 //    at 1.5 (the game remembers the choice in localStorage). The layout
 //    doesn't depend on the ratio: the game scales its UI to the window.
-// 2. Screens faster than ~95 Hz (120/144 Hz laptops and monitors) would
-//    make the game draw every frame twice as often for no visible gain:
-//    frames closer than 10.5 ms to the last one are skipped (120 Hz -> 60).
+// 2. Screens faster than 100 Hz (120/144 Hz laptops and monitors) would
+//    make the game draw twice as often for no visible gain: there the game
+//    gets every 2nd screen frame (120 Hz -> 60 fps).
 (function () {
 	const desc = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio') ||
 		Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
@@ -328,18 +328,44 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			},
 		});
 	}
+	// Measure the screen's refresh rate while the page is still quiet;
+	// only a clearly fast screen gets the frame divider.
 	const nativeFrame = window.requestAnimationFrame.bind(window);
-	let lastFrame = -1;
-	window.requestAnimationFrame = function (callback) {
-		const step = function (ts) {
-			if (lastFrame >= 0 && ts > lastFrame && ts - lastFrame < 10.5) {
-				return nativeFrame(step);
-			}
-			lastFrame = ts;
-			return callback(ts);
+	const gaps = [];
+	let prev = -1;
+	const probe = function (ts) {
+		if (prev >= 0) {
+			gaps.push(ts - prev);
+		}
+		prev = ts;
+		if (gaps.length < 30) {
+			nativeFrame(probe);
+			return;
+		}
+		gaps.sort((a, b) => a - b);
+		const gap = gaps[gaps.length >> 1];
+		if (!(gap > 1 && gap < 10)) {
+			return;
+		}
+		// 120 Hz -> every 2nd frame, 144 Hz -> 2nd (72 fps), 240 Hz -> 4th.
+		const every = Math.max(2, Math.round(16.7 / gap));
+		let delivered = -1;
+		window.requestAnimationFrame = function (callback) {
+			let seen = 0;
+			const step = function (ts) {
+				seen += 1;
+				// Wait for `every` screen frames, but never longer than a
+				// 60 Hz frame (the screen may slow down to save power).
+				if (seen < every && !(delivered >= 0 && ts - delivered >= 15)) {
+					return nativeFrame(step);
+				}
+				delivered = ts;
+				return callback(ts);
+			};
+			return nativeFrame(step);
 		};
-		return nativeFrame(step);
 	};
+	nativeFrame(probe);
 }());
 
 const engine = new Engine(GODOT_CONFIG);

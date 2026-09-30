@@ -17,6 +17,8 @@ var _drawn_urgent := false
 var _urgent_at := -99.0
 const WIGGLE_SEC := 10.0
 var main: Node
+## True once a real mouse (not a finger) has moved over the bulb.
+var _mouse_seen := false
 
 
 func _ready() -> void:
@@ -27,7 +29,18 @@ func _ready() -> void:
 	tooltip_text = tr("HINT_TITLE")
 
 
+# The tooltip only shows for a real mouse that is over the bulb. On the web the
+# pointer starts at (0, 0) and a touch screen never moves it, so the hover
+# could stick to the bulb and the tooltip popped up on the title screen.
+func _get_tooltip(at_position: Vector2) -> String:
+	if not _mouse_seen or not Rect2(Vector2.ZERO, size).has_point(at_position):
+		return ""
+	return tooltip_text
+
+
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		_mouse_seen = event.device != InputEvent.DEVICE_ID_EMULATION
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_down = true
