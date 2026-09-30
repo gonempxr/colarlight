@@ -831,8 +831,9 @@ static func draw_card_hero(ci: CanvasItem, s: Vector2, t: float, look: int, p: f
 	var ck := minf(k * 0.95, (cab.y - pulley.y - 18.0) / 76.0)
 	var hook_y := cab.y - 70.0 * ck
 	var c := cable_color(look)
-	var drum := Vector2(post_x + 22.0 * k, deck.y - 8.0 * k - 28.0 * k * 0.9)
-	var pts := PackedVector2Array([drum + Vector2(7, -8) * k * 0.9, Vector2(post_x + 2.0 * k, pulley.y + 2.0), pulley + Vector2(0, -7.0 * k)])
+	var wk := k * 0.85
+	var drum := Vector2(post_x + 26.0 * k, deck.y - 8.0 * k - 22.0 * wk)
+	var pts := PackedVector2Array([drum + Vector2(DRUM_R - 3.0, -DRUM_R + 3.0) * wk, Vector2(post_x + 2.0 * k, pulley.y + 2.0), pulley + Vector2(0, -7.0 * k)])
 	Art.polyline(ci, pts, Art.INK, 6.0)
 	Art.polyline(ci, pts, c, 3.0)
 	Art.line(ci, pulley, Vector2(cab.x, hook_y), Art.INK, 6.0)
@@ -844,7 +845,9 @@ static func draw_card_hero(ci: CanvasItem, s: Vector2, t: float, look: int, p: f
 	Art.push(ci, cab, 0.0, Vector2(ck, ck))
 	draw_cabin(ci, look, t, 1.0 if p >= DOWN_END else 0.25, busy)
 	Art.pop(ci)
-	Art.push(ci, drum, 0.0, Vector2(k * 0.9, k * 0.9))
+	Art.push(ci, drum, 0.0, Vector2(wk, wk))
+	if look >= 3:
+		draw_engine(ci, look, turn, busy, t)
 	draw_winch(ci, look, turn, busy, t)
 	Art.pop(ci)
 	# Little waves over the water line.

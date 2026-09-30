@@ -302,10 +302,21 @@ func test_ui() -> void:
 	var world = main._world
 	var lift = world.lift
 	check(lift != null and main.stage_card("lift") == lift.card, "the lift and its card are in the world")
-	check(lift.card.get_rect().end.y < world.TOP_H, "the card sits above the first depth")
+	# Phone: the lift's card joins the boat and plant cards in the sky row.
+	var lift_r: Rect2 = lift.card.get_rect()
+	var boat_r: Rect2 = world.surface.boat_card.get_rect()
+	var plant_r: Rect2 = world.surface.plant_card.get_rect()
+	check(lift.card.visible and is_equal_approx(lift_r.position.y, boat_r.position.y), "the lift card is in the card row (%s vs %s)" % [lift_r, boat_r])
+	check(lift_r.end.x <= boat_r.position.x - 8.0 and not lift_r.intersects(plant_r), "it sits left of the boat card, overlapping none")
+	check(lift_r.size.x >= lift.CARD_MIN_W, "it is wide enough (%.0f)" % lift_r.size.x)
+	var bulb: Rect2 = main._hint_btn.get_global_rect()
+	check(not lift.card.get_global_rect().intersects(bulb), "it leaves the hint bulb clear")
+	check(lift_r.end.y < world.SURFACE_Y - 150.0, "it stays in the sky, above the raft's crew (%.0f)" % lift_r.end.y)
+	check(absf(lift_r.size.y - boat_r.size.y) < 12.0, "as tall as the boat card (%.0f vs %.0f)" % [lift_r.size.y, boat_r.size.y])
+	check(lift.card._name.text.find("★1") >= 0, "the card shows the lift's look (%s)" % lift.card._name.text)
 	for row in world.rows:
 		if row.card.visible:
-			check(not lift.card.get_rect().intersects(Rect2(row.position + row.card.position, row.card.size)), "the lift card covers no depth card")
+			check(not lift_r.intersects(Rect2(row.position + row.card.position, row.card.size)), "the lift card covers no depth card")
 	# The tutorial walks through the lift: divers, lift, boat, plant.
 	gs.tap("d0")
 	gs.advance(gs.cycle_time("d0") + 0.05)
@@ -363,6 +374,11 @@ func test_ui() -> void:
 	main._close_sheet()
 	await create_timer(0.4).timeout
 	# The card's button opens the panel; its level follows upgrades.
+	lift.card._upgrade.pressed.emit()
+	await process_frame
+	check(main._sheet_open and main._panel.key == "lift", "the card's button opens the lift in the panel")
+	main._close_sheet()
+	await create_timer(0.4).timeout
 	gs.coins = 1e6
 	check(gs.upgrade("lift", 9), "upgrade to 10")
 	main._refresh()
