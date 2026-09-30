@@ -35,11 +35,16 @@ const DOWN_END := 0.55
 const UP_END := 0.88
 const CABIN_H := 62.0
 const LOOKS := 6
-## Card spot: right of the shaft, just under the water line.
-const CARD_POS := Vector2(World.SHAFT_R + 14.0, World.SURFACE_Y + 26.0)
+## Phone: the lift's card sits in the sky's card row, left of the boat and
+## plant cards and right of the hint bulb (main.gd puts it at x 10); PC
+## shows it in the side column instead (main.gd).
+const CARD_LEFT := 10.0 + HintButton.SIZE + 10.0
+const CARD_GAP := 12.0
+## Narrower than this and it moves to a row of its own under the bulb.
+const CARD_MIN_W := 160.0
 
 var world: World
-var card: LiftCard
+var card: StageCard
 
 var _t := 0.0
 var _top: PaintLayer
@@ -78,11 +83,9 @@ func _ready() -> void:
 	_hit_top.position = Vector2(0.0, World.SURFACE_Y - 120.0)
 	_hit_top.size = Vector2(56.0, 124.0)
 	_hit_cab = _hit_area()
-	card = LiftCard.new("lift")
+	card = StageCard.new("lift")
 	card.world = world
-	card.lift = self
 	add_child(card)
-	card.position = CARD_POS
 	_look = Balance.lift_look(GameState.get_level("lift"))
 	_look_old = _look
 	GameState.cycle_started.connect(_on_cycle_started)
@@ -264,10 +267,7 @@ func _sync_crates(force: bool = false) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	# The world is zoomed on wide screens; keep the card phone-sized there.
-	var inv := 1.0 / maxf(0.5, world.scale.x)
-	if not is_equal_approx(card.scale.x, inv):
-		card.scale = Vector2(inv, inv)
+	_place_card()
 	var gs := GameState
 	var p: float = gs.cycle_progress("lift")
 	if p < 0.0 and _last_p >= 0.0:
@@ -329,6 +329,27 @@ func _on_upgraded(key: String, _n: int) -> void:
 		world.react("lift", "wow", 1.6, true)
 		Sfx.play("unlock")
 	_look = now
+
+
+## Phone: the card joins the boat and plant cards at the top of the sky,
+## as wide as the room left of them allows (at most as wide as they are);
+## with a big UI it gets a row of its own under the hint bulb.
+func _place_card() -> void:
+	if not card.visible:
+		return
+	var boat: Control = world.surface.boat_card
+	var top := boat.position.y
+	var room := boat.position.x - CARD_GAP - CARD_LEFT
+	var at := Vector2(CARD_LEFT, top)
+	var w := minf(World.CARD_W, room)
+	if room < CARD_MIN_W:
+		w = World.CARD_W
+		at = Vector2(10.0, maxf(top + HintButton.SIZE + 10.0, boat.position.y + boat.size.y) + CARD_GAP)
+	if card.position != at:
+		card.position = at
+	if card.custom_minimum_size.x != w:
+		card.custom_minimum_size.x = w
+		card.size.x = w
 
 
 ## Syncs the look after a load, a Dive or a player switch.
@@ -734,3 +755,49 @@ static func draw_hero(ci: CanvasItem, s: Vector2, t: float, look: int) -> void:
 	Art.push(ci, Vector2(cx, s.y * 0.5 + CABIN_H * k * 0.5 + sin(t * 1.4) * 4.0), 0.0, Vector2(k, k))
 	draw_cabin(ci, look, t, 0.75, true)
 	Art.pop(ci)
+
+
+## Picture for the lift's card (the PC side column, like the boat and the
+## plant): the raft's winch at the current look with its cable over the
+## crane arm to the cabin hanging above the water. `p` is the trip's
+## progress (< 0 = waiting): the crank turns and the cabin bobs while it runs.
+static func draw_card_hero(ci: CanvasItem, s: Vector2, t: float, look: int, p: float) -> void:
+	var sea_y := s.y * 0.66
+	Art.flat(ci, Art.rrect_pts(Rect2(Vector2.ZERO, s), 14.0), Color("bfe8ff"))
+	Art.flat(ci, Art.rrect_pts(Rect2(0, sea_y, s.x, s.y - sea_y), 14.0), Color("5ec4e6"))
+	var busy := p >= 0.0
+	var k := clampf(s.y / 150.0, 0.7, 1.2)
+	var step := TAU / CRANK_STEPS
+	var turn := fposmod(roundf(t * (6.0 if busy else 0.0) / step) * step, TAU)
+	# Raft deck on the left with the post of the crane.
+	var post_x := s.x * 0.2
+	var deck := Vector2(post_x + 6.0 * k, sea_y + 2.0)
+	var pulley := Vector2(s.x * 0.68, 20.0 * k)
+	var arm := Art.WOOD if look <= 2 else (Color("8a94b8") if look <= 4 else Art.GOLD)
+	Art.t_rect(ci, Rect2(-10, deck.y - 8.0 * k, post_x + 60.0 * k, 12.0 * k), 3, Art.WOOD, 2.5, 0.5)
+	Art.t_rect(ci, Rect2(post_x - 5.0 * k, 12.0 * k, 10.0 * k, deck.y - 20.0 * k), 3, arm, 2.5, 0.4)
+	Art.t_rect(ci, Rect2(post_x - 6.0 * k, pulley.y - 5.0 * k, pulley.x - post_x + 8.0 * k, 9.0 * k), 3, arm, 2.5, 0.4)
+	# The cabin on its cable, bobbing a little while it runs.
+	var cab := Vector2(pulley.x, sea_y + 8.0 * k + (snappedf(sin(t * 2.0), 0.25) * 3.0 if busy else 0.0))
+	var ck := minf(k * 0.95, (cab.y - pulley.y - 18.0) / 76.0)
+	var hook_y := cab.y - 70.0 * ck
+	var c := cable_color(look)
+	var drum := Vector2(post_x + 22.0 * k, deck.y - 8.0 * k - 28.0 * k * 0.9)
+	var pts := PackedVector2Array([drum + Vector2(7, -8) * k * 0.9, Vector2(post_x + 2.0 * k, pulley.y + 2.0), pulley + Vector2(0, -7.0 * k)])
+	Art.polyline(ci, pts, Art.INK, 6.0)
+	Art.polyline(ci, pts, c, 3.0)
+	Art.line(ci, pulley, Vector2(cab.x, hook_y), Art.INK, 6.0)
+	Art.line(ci, pulley, Vector2(cab.x, hook_y), c, 3.0)
+	Art.push(ci, pulley, snappedf(turn * 0.4, 0.2))
+	Art.t_circle(ci, Vector2.ZERO, 8.0 * k, Art.METAL if look <= 4 else Art.GOLD, 2.4, 0.0)
+	Art.flat(ci, Art.rrect_pts(Rect2(-6, -1.5, 12, 3), 1), Art.INK_SOFT)
+	Art.pop(ci)
+	Art.push(ci, cab, 0.0, Vector2(ck, ck))
+	draw_cabin(ci, look, t, 1.0 if p >= DOWN_END else 0.25, busy)
+	Art.pop(ci)
+	Art.push(ci, drum, 0.0, Vector2(k * 0.9, k * 0.9))
+	draw_winch(ci, look, turn, busy, t)
+	Art.pop(ci)
+	# Little waves over the water line.
+	for x in range(8, int(s.x), 26):
+		Art.arc(ci, Vector2(x, sea_y + 14.0), 5.0, PI * 1.1, PI * 1.9, 6, Color(1, 1, 1, 0.6), 2.0)

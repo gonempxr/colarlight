@@ -74,10 +74,14 @@ static func build() -> Theme:
 		if type != "Button":
 			t.set_type_variation(type, "Button")
 		_style_button(t, type, BUTTON_COLORS[type])
+		# "Slim..." twins with narrow side margins (three cards in a row).
+		t.set_type_variation("Slim" + type, "Button")
+		_style_button(t, "Slim" + type, BUTTON_COLORS[type], 7.0)
 	# Cream buttons carry ink text.
-	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		t.set_color(c, "CreamButton", Art.INK)
-	t.set_constant("outline_size", "CreamButton", 0)
+	for type in ["CreamButton", "SlimCreamButton"]:
+		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			t.set_color(c, type, Art.INK)
+		t.set_constant("outline_size", type, 0)
 
 	t.set_stylebox("panel", "PanelContainer", panel_box(Art.CREAM))
 	t.set_type_variation("SheetPanel", "PanelContainer")
@@ -172,13 +176,16 @@ static func build() -> Theme:
 	return t
 
 
-static func _style_button(t: Theme, type: String, color: Color) -> void:
-	t.set_stylebox("normal", type, ToonBox.make(color))
-	t.set_stylebox("hover", type, ToonBox.make(color.lightened(0.08)))
-	t.set_stylebox("pressed", type, ToonBox.make(color.darkened(0.06), 18.0, 6.0, true))
-	var off := ToonBox.make(Color("b9bfd1"))
-	off.gloss = 0.1
-	t.set_stylebox("disabled", type, off)
+static func _style_button(t: Theme, type: String, color: Color, side: float = -1.0) -> void:
+	var boxes := {"normal": ToonBox.make(color), "hover": ToonBox.make(color.lightened(0.08)),
+			"pressed": ToonBox.make(color.darkened(0.06), 18.0, 6.0, true), "disabled": ToonBox.make(Color("b9bfd1"))}
+	boxes["disabled"].gloss = 0.1
+	for k: String in boxes:
+		var b: ToonBox = boxes[k]
+		if side >= 0.0:
+			b.content_margin_left = side
+			b.content_margin_right = side
+		t.set_stylebox(k, type, b)
 	t.set_stylebox("focus", type, StyleBoxEmpty.new())
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		t.set_color(c, type, Art.WHITE)

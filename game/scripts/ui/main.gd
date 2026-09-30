@@ -19,8 +19,10 @@ var _world: World
 var _panel: UpgradePanel
 var _dock: Dock
 var _dock_laid_out := false
-## PC only: boat and plant cards in the side column (the in-world ones hide).
+## PC only: lift, boat and plant cards in a row in the side column (the
+## in-world ones hide).
 var _side_cards: HBoxContainer
+var _side_lift: StageCard
 var _side_boat: StageCard
 var _side_plant: StageCard
 var _hint_btn: HintButton
@@ -73,19 +75,25 @@ func _ready() -> void:
 	add_child(_panel)
 
 	_side_cards = HBoxContainer.new()
-	_side_cards.add_theme_constant_override("separation", 12)
+	_side_cards.add_theme_constant_override("separation", 8)
 	_side_cards.visible = false
 	add_child(_side_cards)
-	for k in ["boat", "plant"]:
+	for k in ["lift", "boat", "plant"]:
 		var c := StageCard.new(k)
 		c.world = _world
 		c.hero = true
+		c.narrow = true
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		c.size_flags_stretch_ratio = 1.0
+		c.custom_minimum_size.x = 0
 		_side_cards.add_child(c)
-		if k == "boat":
-			_side_boat = c
-		else:
-			_side_plant = c
+		match k:
+			"lift":
+				_side_lift = c
+			"boat":
+				_side_boat = c
+			_:
+				_side_plant = c
 
 	_hud = Hud.new()
 	_hud.prestige_pressed.connect(_open_prestige)
@@ -209,7 +217,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## and the plant).
 func stage_card(key: String) -> StageCard:
 	if key == "lift":
-		return _world.lift.card
+		return _side_lift if _wide else _world.lift.card
 	# The second boat/plant share the first one's card (its "2" tab).
 	if GameState.is_boat(key):
 		return _side_boat if _wide else _world.surface.boat_card
@@ -286,6 +294,7 @@ func _layout() -> void:
 	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, HUD_H + 16.0)
 	_world.surface.boat_card.visible = not _wide
 	_world.surface.plant_card.visible = not _wide
+	_world.lift.card.visible = not _wide
 
 
 ## Stacks the boat/plant cards and the upgrade panel above the dock; on
@@ -296,7 +305,7 @@ func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
 	var panel_hero := 190.0
 	var card_pics := true
 	for attempt in 3:
-		for c in [_side_boat, _side_plant]:
+		for c in [_side_lift, _side_boat, _side_plant]:
 			if c._pic:
 				c._pic.visible = card_pics
 		_side_cards.position = Vector2(x, 12.0)
@@ -357,6 +366,7 @@ func _close_sheet() -> void:
 func _refresh() -> void:
 	_world.surface.refresh()
 	if _side_cards.visible:
+		_side_lift.refresh()
 		_side_boat.refresh()
 		_side_plant.refresh()
 	for row in _world.rows:
