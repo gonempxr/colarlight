@@ -253,6 +253,10 @@ func _sync_crates(force: bool = false) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	# The world is zoomed on wide screens; keep the card phone-sized there.
+	var inv := 1.0 / maxf(0.5, world.scale.x)
+	if not is_equal_approx(card.scale.x, inv):
+		card.scale = Vector2(inv, inv)
 	var gs := GameState
 	var p: float = gs.cycle_progress("lift")
 	if p < 0.0 and _last_p >= 0.0:

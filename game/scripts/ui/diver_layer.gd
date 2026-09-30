@@ -103,6 +103,23 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var gs := GameState
 	var view := world.visible_rect()
+	# Only one "Tap!" bubble at a time, so the screen stays calm.
+	var hinted := false
+	for key in ["lift", "boat", "plant"]:
+		if gs.cycle_progress(key) < 0.0 and not gs.has_manager(key):
+			var has_ore: bool = gs.pit > 0.0 if key == "lift" else (gs.hold > 0.0 if key == "boat" else gs.dock > 0.0)
+			if has_ore:
+				var at: Vector2
+				match key:
+					"lift":
+						at = world.lift.hint_pos()
+					"boat":
+						at = world.surface.boat_world_pos() + Vector2(10, -150)
+					_:
+						at = world.surface.plant_world_pos() + Vector2(70, -185)
+				if not hinted and view.grow(60.0).has_point(at):
+					hinted = true
+					_draw_tap_hint(at)
 	for i in Balance.DEPTHS.size():
 		var key := "d%d" % i
 		if not gs.is_open(key):
@@ -119,22 +136,9 @@ func _draw() -> void:
 			_draw_diver(i, j, p, view)
 		if p < 0.0 and not gs.has_manager(key):
 			var hint_at := Vector2(world.rows[i].deposit_pos().x - 40, World.row_y(i) + 70)
-			if view.has_point(hint_at):
+			if not hinted and view.has_point(hint_at):
+				hinted = true
 				_draw_tap_hint(hint_at)
-	for key in ["lift", "boat", "plant"]:
-		if gs.cycle_progress(key) < 0.0 and not gs.has_manager(key):
-			var has_ore: bool = gs.pit > 0.0 if key == "lift" else (gs.hold > 0.0 if key == "boat" else gs.dock > 0.0)
-			if has_ore:
-				var at: Vector2
-				match key:
-					"lift":
-						at = world.lift.hint_pos()
-					"boat":
-						at = world.surface.boat_world_pos() + Vector2(10, -150)
-					_:
-						at = world.surface.plant_world_pos() + Vector2(70, -185)
-				if view.grow(60.0).has_point(at):
-					_draw_tap_hint(at)
 	for r in _ripples:
 		var f := r.z / 0.5
 		Art.arc(self, Vector2(r.x, r.y), 12.0 + f * 70.0, 0, TAU, 28, Color(1, 1, 1, 0.7 * (1.0 - f)), 5.0 * (1.0 - f) + 1.0)
