@@ -223,7 +223,13 @@ func is_busy() -> bool:
 
 func _apply_ui_scale() -> void:
 	get_tree().root.content_scale_factor = Settings.ui_scale
-	Art.low_power = Settings.low_quality()
+	var low := Settings.low_quality()
+	if low != Art.low_power:
+		# Shapes are cached with or without soft edges: rebuild them.
+		Art.low_power = low
+		Art.clear_cache()
+		if _world:
+			_world.repaint_still()
 	World.half_rate = Art.low_power
 
 

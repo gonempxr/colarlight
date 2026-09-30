@@ -300,6 +300,48 @@ body {
 		<script>
 const GODOT_CONFIG = $GODOT_CONFIG;
 const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+
+// Frame budget, set before the engine starts:
+// 1. The game draws its canvas at the screen's pixel ratio. Phones report
+//    3 (some even more); 2 is sharp enough there and has 2.25 times fewer
+//    pixels to fill. "Low" graphics quality in the game's settings caps it
+//    at 1.5 (the game remembers the choice in localStorage). The layout
+//    doesn't depend on the ratio: the game scales its UI to the window.
+// 2. Screens faster than ~95 Hz (120/144 Hz laptops and monitors) would
+//    make the game draw every frame twice as often for no visible gain:
+//    frames closer than 10.5 ms to the last one are skipped (120 Hz -> 60).
+(function () {
+	const desc = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio') ||
+		Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
+	let cap = 2;
+	try {
+		if (localStorage.getItem('coralight_quality') === 'low') {
+			cap = 1.5;
+		}
+	} catch (e) { /* storage blocked: keep the default */ }
+	window.coralightPixelCap = cap;
+	if (desc && desc.get && desc.configurable !== false) {
+		Object.defineProperty(window, 'devicePixelRatio', {
+			configurable: true,
+			get: function () {
+				return Math.min(desc.get.call(window) || 1, window.coralightPixelCap || 2);
+			},
+		});
+	}
+	const nativeFrame = window.requestAnimationFrame.bind(window);
+	let lastFrame = -1;
+	window.requestAnimationFrame = function (callback) {
+		const step = function (ts) {
+			if (lastFrame >= 0 && ts > lastFrame && ts - lastFrame < 10.5) {
+				return nativeFrame(step);
+			}
+			lastFrame = ts;
+			return callback(ts);
+		};
+		return nativeFrame(step);
+	};
+}());
+
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {

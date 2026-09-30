@@ -14,6 +14,8 @@ var _press := 0.0
 var _check_left := 0.0
 var _redraw_left := 0.0
 var _drawn_urgent := false
+var _urgent_at := -99.0
+const WIGGLE_SEC := 10.0
 var main: Node
 
 
@@ -43,8 +45,11 @@ func _process(delta: float) -> void:
 	if _check_left <= 0.0 and main:
 		_check_left = 1.0
 		urgent = bool(Hints.pick(main)["urgent"])
+	if urgent and not _drawn_urgent:
+		_urgent_at = _t
 	var wig := 0.0
-	if urgent and not Settings.reduce_motion:
+	# It wiggles for a little while when a hint turns up, then only glows.
+	if urgent and not Settings.reduce_motion and _t - _urgent_at < WIGGLE_SEC:
 		wig = sin(_t * 10.0) * 0.08 * maxf(0.0, sin(_t * 1.8))
 	rotation = wig
 	scale = Vector2.ONE * (1.0 - _press * 0.08)
@@ -61,7 +66,7 @@ func _draw() -> void:
 	if urgent:
 		# Soft glow rings.
 		var p := fmod(_t, 1.4) / 1.4
-		Art.arc(self, c, SIZE * 0.46 + p * 16.0, 0, TAU, 32, Color(1.0, 0.86, 0.3, 0.7 * (1.0 - p)), 5.0)
+		Art.arc(self, c, SIZE * 0.46 + p * 16.0, 0, TAU, 32, Color(1.0, 0.86, 0.3, 0.5 * (1.0 - p)), 4.0)
 	Art.t_circle(self, c, SIZE * 0.44, Color("fff4d6") if urgent else Color("e9f3ff"), 4.0, 0.6)
 	draw_bulb(self, c + Vector2(0, 2), SIZE * 0.3, _t, urgent)
 	if urgent:

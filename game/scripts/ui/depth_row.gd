@@ -83,6 +83,11 @@ func _on_cycle_finished(k: String, _amount: float) -> void:
 		_flash = maxf(_flash, 0.4)
 
 
+func repaint_still() -> void:
+	_bg.queue_redraw()
+	_edge.queue_redraw()
+
+
 ## Periodic refresh from Main: sites far off screen wait until they show.
 func refresh_if_shown() -> void:
 	if world.is_visible_band(position.y - ROW_MARGIN, position.y + size.y + ROW_MARGIN):
@@ -171,7 +176,7 @@ func _process(delta: float) -> void:
 
 func _draw_bg(ci: CanvasItem) -> void:
 	var st := style()
-	var rock: Color = st["rock"]
+	var rock: Color = Art.calm(st["rock"])
 	var w := size.x
 	var h := World.ROW_H
 	# Rock layer with strata and pebbles.
@@ -193,12 +198,12 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.t_ellipse(ci, p, Vector2(r * 1.3, r), rock.lightened(0.12), 2.0, 0.5, rng.randf_range(-0.5, 0.5))
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
-	var water: Color = Art.water_color(0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0))
+	var water: Color = Art.calm(Art.water_color(0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)))
 	Art.grad(ci, PackedVector2Array([shaft.position, Vector2(shaft.end.x, shaft.position.y), shaft.end, Vector2(shaft.position.x, shaft.end.y)]), PackedColorArray([water, water, water.darkened(0.1), water.darkened(0.1)]))
 	# Cave and the passage from the shaft.
 	var cave := cave_rect()
 	var cave_poly := _cave_poly()
-	var inner: Color = st["water"]
+	var inner: Color = Art.calm(st["water"])
 	Art.toon(ci, cave_poly, inner, 5.0, 0.0)
 	# Soft darker back wall.
 	Art.flat(ci, Art.clipped(Art.ellipse_pts(cave.get_center() + Vector2(0, -20), Vector2(cave.size.x * 0.42, cave.size.y * 0.36), 30), cave_poly), inner.lightened(0.08))

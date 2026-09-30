@@ -15,11 +15,13 @@ const ITEMS := [
 	["fishing", "fishing", "DOCK_FISHING", "BlueButton"],
 ]
 const BUTTON_H := 104.0
+const WIGGLE_SEC := 20.0
 
 var _row: HBoxContainer
 var _buttons := {}
 var _badges := {}
 var _t := 0.0
+var _wiggle_until := {}
 var _fit_w := 0.0
 
 
@@ -155,7 +157,14 @@ func _process(delta: float) -> void:
 		var badge: Label = _badges[id]
 		badge.position = Vector2(b.size.x - badge.size.x + 6, -10)
 		b.pivot_offset = b.size / 2.0
-		var wiggle: bool = Progress.fresh.has(id) or (id == "daily" and Progress.daily_ready())
+		# A new or ready button wiggles for a little while, then just
+		# keeps its badge (a wiggle that never stops becomes noise).
+		var wants: bool = Progress.fresh.has(id) or (id == "daily" and Progress.daily_ready())
+		if not wants:
+			_wiggle_until.erase(id)
+		elif not _wiggle_until.has(id):
+			_wiggle_until[id] = _t + WIGGLE_SEC
+		var wiggle: bool = wants and _t < float(_wiggle_until.get(id, 0.0))
 		if wiggle and not Settings.reduce_motion:
 			b.rotation = sin(_t * 9.0) * 0.06 * maxf(0.0, sin(_t * 1.6))
 			b.scale = Vector2.ONE * (1.0 + 0.04 * maxf(0.0, sin(_t * 3.2)))

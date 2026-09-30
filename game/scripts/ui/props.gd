@@ -180,13 +180,13 @@ static func sun(ci: CanvasItem, t: float, spin: float = 0.0, wink: float = 0.0, 
 	var w := _q(warm, 12.0)
 	var core := Color("ffe066").lerp(Color("ff9a3c"), w)
 	var ray_c := Color(1.0, 0.93, 0.55).lerp(Color(1.0, 0.62, 0.35), w)
-	halo(ci, Vector2.ZERO, 92.0, Color(ray_c, 0.35 + w * 0.2))
+	halo(ci, Vector2.ZERO, 92.0, Color(ray_c, 0.24 + w * 0.2))
 	var pulse := 1.0 + sin(t * 2.2) * 0.06
 	for i in 12:
 		var a := TAU * i / 12.0 + t * 0.12 + spin
 		var len := (60.0 + (i % 2) * 12.0) * (pulse if i % 2 == 0 else 2.0 - pulse)
 		var ray := PackedVector2Array([Vector2(cos(a - 0.11), sin(a - 0.11)) * 40.0, Vector2(cos(a), sin(a)) * len, Vector2(cos(a + 0.11), sin(a + 0.11)) * 40.0])
-		Art.flat_now(ci, ray, Color(ray_c, 0.7))
+		Art.flat_now(ci, ray, Color(ray_c, 0.5))
 	Art.t_circle(ci, Vector2.ZERO, 36, core, 3.0, 0.5)
 	# Face: rosy cheeks, eyes (one winks) and a smile.
 	Art.disc(ci, Vector2(-17, 8), 6.0, Color(1.0, 0.5, 0.4, 0.45))

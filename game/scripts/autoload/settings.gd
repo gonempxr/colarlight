@@ -53,6 +53,7 @@ func _ready() -> void:
 	if number_style not in ["short", "sci"]:
 		number_style = "short"
 	ui_scale = _closest_scale(ui_scale)
+	_sync_web_quality()
 	NumFormat.sci = number_style == "sci"
 	TranslationServer.set_locale(language)
 	reload_avatar()
@@ -116,6 +117,7 @@ func set_value(key: String, value: Variant) -> void:
 		"quality":
 			if str(value) in QUALITIES:
 				quality = str(value)
+				_sync_web_quality()
 		"reduce_motion":
 			reduce_motion = value == true
 		"ui_scale":
@@ -129,8 +131,19 @@ func set_value(key: String, value: Variant) -> void:
 	_save()
 
 
-## Low quality drops soft outline edges and animates the scene at 30 fps
-## (the main screen applies it to Art and World).
+## The web page draws the canvas at the screen's pixel ratio capped at 2,
+## or at 1.5 when the player chose low quality (tools/web_shell): it reads
+## the choice from localStorage at start, and a change applies at once.
+func _sync_web_quality() -> void:
+	if not OS.has_feature("web"):
+		return
+	var low := quality == "low"
+	JavaScriptBridge.eval("try { localStorage.setItem('coralight_quality', '%s'); } catch (e) {} window.coralightPixelCap = %s;"
+			% [quality, "1.5" if low else "2"], true)
+
+
+## Low quality drops soft outline edges and animates the scene a little
+## slower (the main screen applies it to Art and World).
 func low_quality() -> bool:
 	var phone := OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
 	return phone if quality == "auto" else quality == "low"

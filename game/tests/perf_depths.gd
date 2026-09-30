@@ -28,6 +28,8 @@ func _initialize() -> void:
 	gs.coins = 1e22
 	load("res://scripts/ui/main.gd").show_title = false
 	if "phone" in args:
+		# Main applies Settings.low_quality() to Art and World at start.
+		root.get_node("Settings").quality = "low"
 		load("res://scripts/ui/world.gd").half_rate = true
 		load("res://scripts/ui/art.gd").low_power = true
 	var firsts: Array[int] = [15, 21, 24, 26]

@@ -33,6 +33,9 @@ const TAP_R := 46.0
 const RAFT_CHEST := Vector2(40, -15)
 const RAFT_CHEST_SCALE := 0.8
 const DOCK_CHEST_SCALE := 0.92
+const TAG_SCALE := 0.84
+## For-sale signs the player can't afford yet stay small.
+const SIGN_SMALL := 0.8
 ## Second boat: smaller, in a lane a little farther away. Its cycle: it
 ## waits at the shore, sails to the raft (until B2_ARRIVE), loads (until
 ## B2_LEAVE), sails back (until B2_BACK) and unloads.
@@ -91,6 +94,11 @@ var _chest := {
 	"dock": {"lid": 0.0, "vel": 0.0, "tag": 0.0, "shown": 0.0},
 }
 var _dock_pop_at := -1.0
+## Plant payouts waiting for their floating number (see _show_payout).
+const PAYOUT_GAP := 1.5
+var _payout := 0.0
+var _payout_pending := false
+var _payout_at := -99.0
 
 # Building looks: the stage shown, the one before, and when it changed.
 var _stage := {"boat": 0, "plant": 0, "boat2": 0, "plant2": 0}
@@ -146,6 +154,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED and plant_card:
 		plant_card.position = Vector2(world.card_x(), 14)
 		boat_card.position = Vector2(world.card_x() - 12 - World.CARD_W, 14)
+
+
+func repaint_still() -> void:
+	_far.queue_redraw()
+	_ground.queue_redraw()
 
 
 func refresh() -> void:
@@ -447,19 +460,35 @@ func _on_cycle_finished(key: String, amount: float) -> void:
 				_plant2_flash = 1.0
 			var door := _plant_door(key)
 			world.divers.throw_item("coinbag", door, _biz_pos() + Vector2(14, -60), Art.GOLD, 0.45)
-			var text_at := _biz_pos() + Vector2(0, -130)
-			get_tree().create_timer(0.45).timeout.connect(func():
-				world.react("biz", "rich", 1.4, true)
-				if randf() < 0.25:
-					Sfx.voice("ooh", 0.85)
-				world.divers.float_text(text_at, "+" + NumFormat.short(amount), Art.GOLD, true)
-				Sfx.play("coins"))
+			# Payouts close together (two plants, fast cycles) share one
+			# floating number, at most one every PAYOUT_GAP seconds.
+			_payout += amount
+			if not _payout_pending:
+				_payout_pending = true
+				_show_payout(0.45)
 		"boat", "boat2":
-			world.divers.float_text(dock_pos() + Vector2(0, -90), "+" + NumFormat.short(amount), Color("bff6ff"))
+			# The shore chest pops and its number tag shows the new amount.
+			pass
 		_:
 			if key.begins_with("d"):
 				world.react("raft", "joy", 0.5, true)
 				_pop_chest("raft", 1.0)
+
+
+func _show_payout(delay: float) -> void:
+	get_tree().create_timer(delay).timeout.connect(func():
+		var wait := PAYOUT_GAP - (_t - _payout_at)
+		if wait > 0.0:
+			_show_payout(wait)
+			return
+		_payout_at = _t
+		_payout_pending = false
+		world.react("biz", "rich", 1.4, true)
+		if randf() < 0.25:
+			Sfx.voice("ooh", 0.85)
+		world.divers.float_text(_biz_pos() + Vector2(0, -112), "+" + NumFormat.short(_payout), Art.GOLD)
+		_payout = 0.0
+		Sfx.play("coins"))
 
 
 ## Kicks a chest lid open (it springs back by itself).
@@ -980,7 +1009,7 @@ func _draw() -> void:
 	var front := wave.duplicate()
 	front.append(Vector2(w, sy + 16))
 	front.append(Vector2(0, sy + 16))
-	Art.flat_now(self, front, Color(Art.SEA_TOP, 0.6))
+	Art.flat_now(self, front, Color(Art.calm(Art.SEA_TOP), 0.6))
 	Art.polyline(self, wave, Art.WHITE, 4.0)
 	# Little glints riding the crests.
 	var glint := DayNight.glint()
@@ -1214,6 +1243,8 @@ func _draw_sign(key: String) -> void:
 	var sc: float = place[2]
 	var poke := clampf(1.0 - (_t - float(_sign_poke[key])) / 0.6, 0.0, 1.0)
 	var ready := 1.0 if _can_buy(key) else 0.0
+	if ready < 0.5:
+		sc *= SIGN_SMALL
 	var wob := sin(_t * 18.0) * 0.12 * poke + (sin(_t * 3.0) * 0.03 * ready if not _calm else 0.0)
 	var sq := 1.0 + sin(_t * 20.0) * 0.06 * poke
 	Art.push(self, place[0], wob, Vector2(2.0 - sq, sq) * sc)
@@ -1265,7 +1296,13 @@ func _draw_glow(ci: CanvasItem) -> void:
 		var lamp := raft_pos() + Vector2(0, _raft_bob()) + Props.RAFT_LAMP + Vector2(sin(_t * 1.7) * 1.5, 0)
 		Props.halo(ci, lamp, 34.0, Color(1.0, 0.85, 0.45, 0.45 * lights))
 		Art.disc(ci, lamp, 4.0, Color(1.0, 0.95, 0.7, 0.9 * lights))
+	# Chest tags a little smaller than the cards' numbers, so they inform
+	# without shouting.
 	if GameState.hold > 0.0:
-		Props.number_tag(ci, _raft_chest_pos() + Vector2(0, -50 - float(_chest["raft"]["lid"]) * 8.0), NumFormat.short(GameState.hold), _ore(), _chest["raft"]["tag"])
+		Art.push(ci, _raft_chest_pos() + Vector2(0, -44 - float(_chest["raft"]["lid"]) * 8.0), 0.0, Vector2.ONE * TAG_SCALE)
+		Props.number_tag(ci, Vector2.ZERO, NumFormat.short(GameState.hold), _ore(), _chest["raft"]["tag"])
+		Art.pop(ci)
 	if GameState.dock > 0.0:
-		Props.number_tag(ci, _dock_chest_pos() + Vector2(-8, -54 - float(_chest["dock"]["lid"]) * 8.0), NumFormat.short(GameState.dock), _ore(), _chest["dock"]["tag"])
+		Art.push(ci, _dock_chest_pos() + Vector2(-8, -48 - float(_chest["dock"]["lid"]) * 8.0), 0.0, Vector2.ONE * TAG_SCALE)
+		Props.number_tag(ci, Vector2.ZERO, NumFormat.short(GameState.dock), _ore(), _chest["dock"]["tag"])
+		Art.pop(ci)

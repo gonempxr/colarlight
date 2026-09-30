@@ -80,6 +80,16 @@ static func water_color(t: float) -> Color:
 	return SEA_DEEP.lerp(SEA_ABYSS, clampf((t - 0.6) / 0.4, 0.0, 1.0))
 
 
+## Backdrop colors (sky, water, rock) a little less saturated, so cards,
+## buttons and characters stand out against them.
+const CALM := 0.18
+
+
+static func calm(c: Color, amount: float = CALM) -> Color:
+	var g := c.get_luminance()
+	return Color(c.lerp(Color(g, g, g), amount), c.a)
+
+
 static func shade_of(c: Color, amount: float = 0.24) -> Color:
 	return Color(c.lerp(SHADE, amount), c.a)
 
@@ -209,6 +219,12 @@ static var _stack: Array[Transform2D] = []
 static var _bci: CanvasItem = null
 static var _bv := PackedVector2Array()
 static var _bc := PackedColorArray()
+
+
+## Forgets every cached shape (after low_power changes).
+static func clear_cache() -> void:
+	_geo.clear()
+	_cols.clear()
 
 
 static func _area(p: PackedVector2Array) -> float:

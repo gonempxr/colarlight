@@ -321,7 +321,7 @@ func _apply_night_tint() -> void:
 ## Water color at a depth y (shared with the surface so the horizon matches).
 static func water_at(y: float) -> Color:
 	var f := clampf((y - SURFACE_Y) / (height() - SURFACE_Y), 0.0, 1.0)
-	return Art.water_color(f) * DayNight.sea_tint().lerp(DayNight.deep_tint(), clampf(f * 4.0, 0.0, 1.0))
+	return Art.calm(Art.water_color(f)) * DayNight.sea_tint().lerp(DayNight.deep_tint(), clampf(f * 4.0, 0.0, 1.0))
 
 
 # --- Water ------------------------------------------------------------------------------
@@ -366,6 +366,15 @@ func _process(delta: float) -> void:
 	_repaint_still(delta)
 	if tick(PEOPLE) and (is_visible_band(0.0, TOP_H) or is_visible_band(height() - BOTTOM_H, height())):
 		queue_redraw()
+
+
+## Repaints every still layer (after the graphics quality changes).
+func repaint_still() -> void:
+	for layer: PaintLayer in [_sky, _sun, _sea, _ground, _floor]:
+		layer.queue_redraw()
+	surface.repaint_still()
+	for row in rows:
+		row.repaint_still()
 
 
 ## Repaints the still layers only when what they show has changed enough to
@@ -422,6 +431,8 @@ func _paint_sky(ci: CanvasItem) -> void:
 	var w := size.x
 	var sy := SURFACE_Y
 	var cols := DayNight.sky_colors()
+	for i in cols.size():
+		cols[i] = Art.calm(cols[i])
 	var mid := sy * 0.52
 	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, mid), Vector2(0, mid)]), PackedColorArray([cols[0], cols[0], cols[1], cols[1]]))
 	Art.grad(ci, PackedVector2Array([Vector2(0, mid), Vector2(w, mid), Vector2(w, sy + 2), Vector2(0, sy + 2)]), PackedColorArray([cols[1], cols[1], cols[2], cols[2]]))
