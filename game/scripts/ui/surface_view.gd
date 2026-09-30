@@ -5,6 +5,14 @@ extends Control
 ## its worker and the businessman (the player's avatar) who collects the
 ## money. Cards for the boat and the plant sit in the sky.
 ##
+## The second boat and plant ("boat2", "plant2") live in the back row: the
+## second boat sails a lane a little farther away (smaller, its own paint)
+## and waits at the shore instead of the raft, so the two boats pass each
+## other; the second plant stands on a terrace behind the shore chest.
+## While they are closed (from the third dive site on) a buoy and a fenced
+## plot with price signs mark where they will be; a tap there selects them
+## (World.select) so the upgrade panel can sell them.
+##
 ## The sky itself (gradient, sun, moon, stars) is drawn by World under the
 ## water, so the sun really sinks into the sea. This view adds, in layers:
 ##   _sky_fx  (behind)  far islands, lighthouse, clouds, rain, birds
@@ -23,6 +31,19 @@ const TAP_R := 46.0
 const RAFT_CHEST := Vector2(40, -15)
 const RAFT_CHEST_SCALE := 0.8
 const DOCK_CHEST_SCALE := 0.92
+## Second boat: smaller, in a lane a little farther away. Its cycle: it
+## waits at the shore, sails to the raft (until B2_ARRIVE), loads (until
+## B2_LEAVE), sails back (until B2_BACK) and unloads.
+const BOAT2_SCALE := 0.68
+const BOAT2_LANE := -3.0
+const B2_ARRIVE := 0.28
+const B2_LEAVE := 0.4
+const B2_BACK := 0.78
+## Second plant: on a terrace behind the shore chest (x from island_x()).
+const PLANT2_SCALE := 0.8
+const PLANT2_X := -18.0
+const PLANT2_LIFT := 26.0
+const BUILDINGS: Array[String] = ["boat", "plant", "boat2", "plant2"]
 
 var world: World
 var boat_card: StageCard
@@ -32,7 +53,10 @@ var _t := 0.0
 var _smoke: Array[Vector3] = []   # x, y, age
 var _gear_rot := 0.0
 var _boat_p := -1.0
+var _boat2_p := -1.0
 var _plant_flash := 0.0
+var _plant2_flash := 0.0
+var _gear_rot2 := 0.0
 var _pending_throws: Array[Array] = []   # [time, kind, a, b]
 
 var _sky_fx: PaintLayer
@@ -64,11 +88,17 @@ var _chest := {
 var _dock_pop_at := -1.0
 
 # Building looks: the stage shown, the one before, and when it changed.
-var _stage := {"boat": 0, "plant": 0}
-var _stage_old := {"boat": 0, "plant": 0}
-var _stage_fx := {"boat": -99.0, "plant": -99.0}
+var _stage := {"boat": 0, "plant": 0, "boat2": 0, "plant2": 0}
+var _stage_old := {"boat": 0, "plant": 0, "boat2": 0, "plant2": 0}
+var _stage_fx := {"boat": -99.0, "plant": -99.0, "boat2": -99.0, "plant2": -99.0}
 ## Only a change right after an upgrade is celebrated (not loads or profile switches).
-var _upgraded_at := {"boat": -99.0, "plant": -99.0}
+var _upgraded_at := {"boat": -99.0, "plant": -99.0, "boat2": -99.0, "plant2": -99.0}
+## When the second boat/plant was bought (the for-sale sign poofs away).
+var _opened_at := {"boat2": -99.0, "plant2": -99.0}
+## Last tap on a for-sale sign (it wobbles).
+var _sign_poke := {"boat2": -99.0, "plant2": -99.0}
+## Whether the terrace for the second plant is painted on the ground layer.
+var _terrace_shown := false
 
 
 func _ready() -> void:
@@ -93,11 +123,12 @@ func _ready() -> void:
 	GameState.upgraded.connect(func(k: String, _n: int) -> void:
 		if _upgraded_at.has(k):
 			_upgraded_at[k] = _t)
+	GameState.depth_opened.connect(_on_opened)
 	for c in [[0.12, 262.0, 0.8, 1], [0.52, 310.0, 0.95, 2], [0.86, 244.0, 0.72, 3], [0.36, 128.0, 0.62, 4]]:
 		_clouds.append({"x": c[0], "y": c[1], "s": c[2], "seed": c[3], "poke": -99.0, "rain": -99.0})
 	for i in 3:
 		_birds.append(_new_bird(_rng.randf(), i))
-	for key in ["boat", "plant"]:
+	for key in BUILDINGS:
 		_stage[key] = Props.current_stage(key)
 		_stage_old[key] = _stage[key]
 	_chest["raft"]["shown"] = GameState.hold
@@ -164,6 +195,162 @@ func _boat_deck(bp: Vector2) -> Vector2:
 	return bp + Vector2(30.0 * _boat_facing(), -50.0) * BOAT_SCALE
 
 
+## The second boat loads a little right of the first and moors a little
+## closer to the shore, so the two rarely hide each other.
+func boat2_x_range() -> Vector2:
+	var r := boat_x_range()
+	return Vector2(r.x + 30.0, r.y + 10.0)
+
+
+func boat2_world_pos() -> Vector2:
+	var r := boat2_x_range()
+	var p := GameState.cycle_progress("boat2")
+	var x := r.y
+	if p >= 0.0 and p < B2_ARRIVE:
+		x = lerpf(r.y, r.x, smoothstep(0.0, B2_ARRIVE, p))
+	elif p >= B2_ARRIVE and p < B2_LEAVE:
+		x = r.x
+	elif p >= B2_LEAVE and p < B2_BACK:
+		x = lerpf(r.x, r.y, smoothstep(B2_LEAVE, B2_BACK, p))
+	return Vector2(x, World.SURFACE_Y + BOAT2_LANE)
+
+
+func _boat2_facing() -> float:
+	var p := GameState.cycle_progress("boat2")
+	return -1.0 if p >= 0.0 and p < B2_LEAVE else 1.0
+
+
+func _boat_pos(key: String) -> Vector2:
+	return boat_world_pos() if key == "boat" else boat2_world_pos()
+
+
+func _boat_scale(key: String) -> float:
+	return BOAT_SCALE if key == "boat" else BOAT2_SCALE
+
+
+func _facing(key: String) -> float:
+	return _boat_facing() if key == "boat" else _boat2_facing()
+
+
+func _deck_of(key: String) -> Vector2:
+	return _boat_pos(key) + Vector2(30.0 * _facing(key), -50.0) * _boat_scale(key)
+
+
+## Is the boat under way (for the foam and the sailor's wave)?
+func _sailing(key: String) -> bool:
+	var p := GameState.cycle_progress(key)
+	if key == "boat":
+		return p >= BOAT_LOAD_END and (p < BOAT_SAIL_END or p >= BOAT_UNLOAD_END)
+	return p >= 0.0 and (p < B2_ARRIVE or (p >= B2_LEAVE and p < B2_BACK))
+
+
+## Crates on deck (0..3) while the boat carries ore.
+func _crates(key: String) -> int:
+	var p := GameState.cycle_progress(key)
+	var loaded := (p >= 0.04 and p < BOAT_SAIL_END + 0.02) if key == "boat" else (p >= B2_ARRIVE and p < B2_BACK + 0.02)
+	if not loaded:
+		return 0
+	var cap := maxf(1.0, GameState.cycle_capacity(key))
+	return clampi(ceili(GameState.cycle_load(key) / cap * 3.0), 1, 3)
+
+
+func plant2_world_pos() -> Vector2:
+	return Vector2(island_x() + PLANT2_X, World.SURFACE_Y - 64.0 - PLANT2_LIFT)
+
+
+func _plant_pos(key: String) -> Vector2:
+	return plant_world_pos() if key == "plant" else plant2_world_pos()
+
+
+func _plant_scale(key: String) -> float:
+	return 1.0 if key == "plant" else PLANT2_SCALE
+
+
+## Where coins come out of a plant (its door).
+func _plant_door(key: String) -> Vector2:
+	return _plant_pos(key) + Vector2(121, -44) * _plant_scale(key)
+
+
+## Where the second boat's buoy floats while it is for sale: at its
+## mooring, or out on the route when a phone's sky cards would hide the sign
+## there.
+func buoy_pos() -> Vector2:
+	var r := boat2_x_range()
+	var x := r.y
+	if _covered(x, World.SURFACE_Y - 14.0 - Props.SIGN_POST - 38.0) or (second_state("plant2") == "sale" and _plant_sign_low()):
+		x = lerpf(boat_x_range().x, boat_x_range().y, 0.66)
+	return Vector2(x, World.SURFACE_Y + sin(_t * 1.8) * 2.5)
+
+
+## Would a sky card (phone) hide a sign whose board top is at `top` around x?
+func _covered(x: float, top: float) -> bool:
+	for c: Control in [boat_card, plant_card]:
+		if is_instance_valid(c) and c.visible:
+			var r := c.get_rect()
+			if r.position.x < x + 60.0 and r.end.x > x - 60.0 and r.end.y > top:
+				return true
+	return false
+
+
+## For-sale sign placement: [foot of the post, post length, scale]. Where a
+## phone's sky card would hide it, it sits low (short post, a bit smaller).
+func _sign_place(key: String) -> Array:
+	if key == "boat2":
+		var b := buoy_pos()
+		if _covered(b.x, b.y - 14.0 - Props.SIGN_POST - 38.0):
+			return [b + Vector2(0, -12), 6.0, 0.8]
+		return [b + Vector2(0, -14), Props.SIGN_POST, 1.0]
+	var foot := plant2_world_pos() + Vector2(58, -4)
+	if _covered(foot.x, foot.y - Props.SIGN_POST - 38.0):
+		return [Vector2(island_x() - 30.0, World.SURFACE_Y - 40.0), 8.0, 0.8]
+	return [foot, Props.SIGN_POST, 1.0]
+
+
+## Is the plant sign in its low spot on the shore (drawn over the second boat)?
+func _plant_sign_low() -> bool:
+	var place := _sign_place("plant2")
+	return float(place[1]) < Props.SIGN_POST
+
+
+func _sign_rect(key: String) -> Rect2:
+	var place := _sign_place(key)
+	var foot: Vector2 = place[0]
+	var post: float = place[1]
+	var sc: float = place[2]
+	var w := maxf(TAP_R, Props.sale_sign_width(_price(key)) * sc)
+	var h := maxf(TAP_R + 10.0, (post + 34.0) * sc + 16.0)
+	return Rect2(foot.x - w / 2.0, foot.y - h + 8.0, w, h)
+
+
+## "open", "sale" (closed, for sale once the third dive site is open) or ""
+## (not shown yet) for "boat2" / "plant2". Right after buying, the sign
+## stays a moment while the poof hides the swap.
+func second_state(key: String) -> String:
+	var open: bool = GameState.is_open(key)
+	if open and _t - float(_opened_at.get(key, -99.0)) >= 0.22:
+		return "open"
+	var d2: bool = GameState.is_open("d2")
+	return "sale" if open or d2 else ""
+
+
+## The plot of the second plant (its sign has _sign_rect).
+func _plot_rect() -> Rect2:
+	var p := plant2_world_pos()
+	return Rect2(p.x - 8.0, p.y - 60.0, 128.0, 70.0)
+
+
+func _building_rect(key: String) -> Rect2:
+	if GameState.is_boat(key):
+		var bp := _boat_pos(key)
+		var bs := _boat_scale(key)
+		var bh := Props.boat_height(_stage[key]) * bs
+		return Rect2(bp.x - 100.0 * bs, bp.y - bh - 8.0, 200.0 * bs, bh + 22.0)
+	var pp := _plant_pos(key)
+	var ps := _plant_scale(key)
+	var ph := Props.plant_height(_stage[key]) * ps
+	return Rect2(pp.x - 8.0, pp.y - ph - 6.0, 150.0 * ps + 16.0, ph + 16.0)
+
+
 func _biz_pos() -> Vector2:
 	return plant_world_pos() + Vector2(122, 0)
 
@@ -198,6 +385,17 @@ func _shown_stage(key: String) -> int:
 	return _stage_old[key] if _t - float(_stage_fx[key]) < 0.22 else _stage[key]
 
 
+func _price(key: String) -> String:
+	var cost: float = GameState.unlock_cost(key)
+	return NumFormat.short(cost)
+
+
+func _can_buy(key: String) -> bool:
+	var cost: float = GameState.unlock_cost(key)
+	var coins: float = GameState.coins
+	return coins >= cost
+
+
 # --- Events -----------------------------------------------------------------------------
 
 func _on_cycle_started(key: String, _amount: float) -> void:
@@ -209,16 +407,38 @@ func _on_cycle_started(key: String, _amount: float) -> void:
 		_pop_chest("raft", 0.7)
 		world.react("raft", "joy", 0.8, true)
 		Sfx.play("horn")
+	elif key == "boat2":
+		# It sails off from the shore; the loading happens at the raft (see _process).
+		Sfx.play("horn", 0.8)
 	elif key == "plant":
 		_pop_chest("dock", 0.5)
 		world.react("worker", "focus", 1.0)
+	elif key == "plant2":
+		_pop_chest("dock", 0.5)
+		world.react("worker2", "focus", 1.0)
+		var hopper := plant2_world_pos() + Vector2(-15, -66) * PLANT2_SCALE
+		world.divers.throw_item("sack", _dock_chest_pos() + Vector2(0, -34), hopper, _ore(), 0.45)
+
+
+## The second boat or plant was bought: poof the sign away.
+func _on_opened(key: String) -> void:
+	if not _opened_at.has(key):
+		return
+	_opened_at[key] = _t
+	_stage[key] = Props.current_stage(key)
+	_stage_old[key] = _stage[key]
+	_stage_fx[key] = _t
+	Sfx.play("unlock")
 
 
 func _on_cycle_finished(key: String, amount: float) -> void:
 	match key:
-		"plant":
-			_plant_flash = 1.0
-			var door := plant_world_pos() + Vector2(121, -44)
+		"plant", "plant2":
+			if key == "plant":
+				_plant_flash = 1.0
+			else:
+				_plant2_flash = 1.0
+			var door := _plant_door(key)
 			world.divers.throw_item("coinbag", door, _biz_pos() + Vector2(14, -60), Art.GOLD, 0.45)
 			var text_at := _biz_pos() + Vector2(0, -130)
 			get_tree().create_timer(0.45).timeout.connect(func():
@@ -227,7 +447,7 @@ func _on_cycle_finished(key: String, amount: float) -> void:
 					Sfx.voice("ooh", 0.85)
 				world.divers.float_text(text_at, "+" + NumFormat.short(amount), Art.GOLD, true)
 				Sfx.play("coins"))
-		"boat":
+		"boat", "boat2":
 			world.divers.float_text(dock_pos() + Vector2(0, -90), "+" + NumFormat.short(amount), Color("bff6ff"))
 		_:
 			if key.begins_with("d"):
@@ -249,6 +469,15 @@ func _gui_input(event: InputEvent) -> void:
 		if _on_card(p):
 			return
 		var key := _building_at(p)
+		if key.begins_with("sale:"):
+			# A for-sale sign: show the second boat/plant in the upgrade panel.
+			key = key.substr(5)
+			_sign_poke[key] = _t
+			Sfx.play("click")
+			Settings.buzz(12)
+			world.divers.tap_ripple(p)
+			world.select(key)
+			return
 		if key == "" and _poke_ambient(p):
 			return
 		if key == "":
@@ -256,7 +485,7 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			key = "plant" if p.x > island_x() else "boat"
 		if GameState.tap(key):
-			Sfx.play("horn" if key == "boat" else "machine")
+			Sfx.play("horn" if GameState.is_boat(key) else "machine")
 		else:
 			Sfx.play("tap")
 		world.divers.tap_ripple(p)
@@ -270,22 +499,44 @@ func _on_card(p: Vector2) -> bool:
 	return false
 
 
-## The boat, the raft, the plant and its people take taps first.
+## The boat, the raft, the plant and its people take taps first (things in
+## front before things behind). Returns the key, "sale:boat2" /
+## "sale:plant2" for a for-sale sign, or "".
 func _building_at(p: Vector2) -> String:
-	var bp := boat_world_pos()
-	var bh := Props.boat_height(_stage["boat"]) * BOAT_SCALE
-	if Rect2(bp.x - 100.0 * BOAT_SCALE, bp.y - bh - 8.0, 200.0 * BOAT_SCALE, bh + 22.0).has_point(p):
+	if _building_rect("boat").has_point(p):
 		return "boat"
 	var r := raft_pos()
 	if Rect2(r.x - 70.0, r.y - 160.0, 140.0, 176.0).has_point(p):
 		return "boat"
+	var plant2 := second_state("plant2")
+	var boat2 := second_state("boat2")
+	# The signs stand in front of what is around them.
+	if plant2 == "sale" and _sign_rect("plant2").has_point(p):
+		return "sale:plant2"
+	if boat2 == "sale" and _sign_rect("boat2").has_point(p):
+		return "sale:boat2"
 	var pp := plant_world_pos()
 	var ph := Props.plant_height(_stage["plant"])
-	if Rect2(pp.x - 64.0, pp.y - ph - 6.0, 210.0, ph + 16.0).has_point(p):
+	# With the second plant (or its plot) behind, the first one's tap area
+	# stops at its hopper; below the terrace the belt still counts.
+	if plant2 == "" and Rect2(pp.x - 64.0, pp.y - ph - 6.0, 210.0, ph + 16.0).has_point(p):
+		return "plant"
+	if plant2 != "" and Rect2(pp.x - 8.0, pp.y - ph - 6.0, 154.0, ph + 16.0).has_point(p):
 		return "plant"
 	var d := _dock_chest_pos()
 	if Rect2(d.x - 40.0, d.y - 70.0, 90.0, 80.0).has_point(p):
 		return "plant"
+	# The worker and the belt in front of the terrace.
+	if plant2 != "" and Rect2(pp.x - 64.0, pp.y - 70.0, 60.0, 86.0).has_point(p):
+		return "plant"
+	if plant2 == "open" and _building_rect("plant2").has_point(p):
+		return "plant2"
+	if plant2 == "sale" and _plot_rect().has_point(p):
+		return "sale:plant2"
+	if boat2 == "open" and _building_rect("boat2").has_point(p):
+		return "boat2"
+	if boat2 == "sale" and Rect2(buoy_pos() + Vector2(-TAP_R / 2.0, -40.0), Vector2(TAP_R, 52.0)).has_point(p):
+		return "sale:boat2"
 	return ""
 
 
@@ -386,18 +637,30 @@ func _process(delta: float) -> void:
 	var wind := DayNight.wind * (0.5 if _calm else 1.0)
 	Props.wind = wind
 	_plant_flash = maxf(0.0, _plant_flash - delta * 2.0)
+	_plant2_flash = maxf(0.0, _plant2_flash - delta * 2.0)
 	_update_stages()
-	var working := GameState.cycle_progress("plant") >= 0.0
-	var pp := plant_world_pos()
-	if working:
-		_gear_rot += delta * 3.0
+	var terrace := second_state("plant2") != ""
+	if terrace != _terrace_shown:
+		_terrace_shown = terrace
+		_ground.queue_redraw()
+	for key in ["plant", "plant2"]:
+		if GameState.cycle_progress(key) < 0.0 or (key == "plant2" and second_state(key) != "open"):
+			continue
+		if key == "plant":
+			_gear_rot += delta * 3.0
+		else:
+			_gear_rot2 += delta * 3.0
 		if randf() < delta * 5.0:
-			for s in Props.plant_smoke_points(_stage["plant"]):
-				_smoke.append(Vector3(pp.x + s.x, pp.y + s.y, 0.0))
-	if GameState.cycle_progress("boat") >= 0.0 and randf() < delta * 3.0:
-		var bp := boat_world_pos()
-		for s in Props.boat_smoke_points(_stage["boat"]):
-			_smoke.append(Vector3(bp.x + s.x * BOAT_SCALE * _boat_facing(), bp.y + s.y * BOAT_SCALE, 0.0))
+			var pp := _plant_pos(key)
+			var ps := _plant_scale(key)
+			for s in Props.plant_smoke_points(_stage[key]):
+				_smoke.append(Vector3(pp.x + s.x * ps, pp.y + s.y * ps, 0.0))
+	for key in ["boat", "boat2"]:
+		if GameState.cycle_progress(key) >= 0.0 and randf() < delta * 3.0 and (key == "boat" or second_state(key) == "open"):
+			var bp := _boat_pos(key)
+			var bs := _boat_scale(key)
+			for s in Props.boat_smoke_points(_stage[key]):
+				_smoke.append(Vector3(bp.x + s.x * bs * _facing(key), bp.y + s.y * bs, 0.0))
 	for i in range(_smoke.size() - 1, -1, -1):
 		var s := _smoke[i]
 		s.z += delta
@@ -420,6 +683,19 @@ func _process(delta: float) -> void:
 		world.react("sailor", "joy", 0.8, true)
 		_dock_pop_at = _t + 0.45
 	_boat_p = bprog
+	# The second boat loads when it reaches the raft and unloads back at the shore.
+	var b2 := GameState.cycle_progress("boat2")
+	if _boat2_p < B2_ARRIVE and b2 >= B2_ARRIVE:
+		var from := _raft_chest_pos() + Vector2(0, -34)
+		_pending_throws.append([_t, "sack", from, _deck_of("boat2")])
+		_pending_throws.append([_t + 0.25, "sack", from, _deck_of("boat2")])
+		_pop_chest("raft", 0.7)
+		world.react("raft", "joy", 0.8, true)
+	if _boat2_p < B2_BACK + 0.02 and b2 >= B2_BACK + 0.02:
+		world.divers.throw_item("sack", _deck_of("boat2"), _dock_chest_pos() + Vector2(0, -34), _ore(), 0.5)
+		world.react("sailor2", "joy", 0.8, true)
+		_dock_pop_at = _t + 0.45
+	_boat2_p = b2
 	if _dock_pop_at > 0.0 and _t >= _dock_pop_at:
 		_dock_pop_at = -1.0
 		_pop_chest("dock", 1.0)
@@ -435,7 +711,7 @@ func _process(delta: float) -> void:
 
 
 func _update_stages() -> void:
-	for key in ["boat", "plant"]:
+	for key in BUILDINGS:
 		var st := Props.current_stage(key)
 		if st == int(_stage[key]):
 			continue
@@ -572,6 +848,11 @@ static func _fill(amount: float, cap: float) -> float:
 # --- Drawing ----------------------------------------------------------------------------
 
 func _paint_ground(ci: CanvasItem) -> void:
+	if _terrace_shown:
+		# The terrace for the second plant, behind the island's shore.
+		Art.push(ci, Vector2(island_x() + PLANT2_X - 16.0, World.SURFACE_Y))
+		Props.terrace(ci, 150.0 * PLANT2_SCALE + 16.0, 64.0 + PLANT2_LIFT)
+		Art.pop(ci)
 	Art.push(ci, Vector2(island_x(), World.SURFACE_Y))
 	Props.island(ci, 280.0)
 	Art.pop(ci)
@@ -652,8 +933,15 @@ func _draw() -> void:
 	var sy := World.SURFACE_Y
 	var lights := smoothstep(0.3, 0.8, DayNight.night())
 	_draw_island(lights)
+	match second_state("boat2"):
+		"open":
+			_draw_boat("boat2", lights)
+		"sale":
+			_draw_buoy(lights)
+	if second_state("plant2") == "sale" and _plant_sign_low():
+		_draw_sign("plant2")
 	_draw_raft(lights)
-	_draw_boat(lights)
+	_draw_boat("boat", lights)
 	# Water surface over the hulls and floats: two waves on top of each other.
 	var amp := (1.8 + DayNight.wind * 2.0) * (0.5 if _calm else 1.0)
 	var wave := PackedVector2Array()
@@ -682,7 +970,7 @@ func _draw() -> void:
 		Art.t_circle(self, Vector2(0, -5), 5, Color("8a5a2c"), 2.0, 0.0)
 		Art.disc(self, Vector2(-1.5, -7), 1.2, Color("5a3a1c"))
 		Art.pop(self)
-	for key in ["boat", "plant"]:
+	for key in BUILDINGS:
 		_draw_poof(key)
 
 
@@ -694,12 +982,12 @@ func _draw_poof(key: String) -> void:
 	var f := age / 0.8
 	var c: Vector2
 	var r: float
-	if key == "boat":
-		c = boat_world_pos() + Vector2(0, -44)
-		r = 70.0
+	if GameState.is_boat(key):
+		c = _boat_pos(key) + Vector2(0, -52) * _boat_scale(key)
+		r = 82.0 * _boat_scale(key)
 	else:
-		c = plant_world_pos() + Vector2(75, -70)
-		r = 90.0
+		c = _plant_pos(key) + Vector2(75, -70) * _plant_scale(key)
+		r = 90.0 * _plant_scale(key)
 	for i in 12:
 		var a := TAU * i / 12.0 + i * 0.3
 		var d := r * (0.35 + ease(f, 0.4) * 0.75)
@@ -717,17 +1005,20 @@ func _bounce(key: String) -> Vector2:
 	return Vector2(1.0 + sq, sin(minf(k * 2.5, 1.0) * PI) * 14.0 * (1.0 - k))
 
 
-func _push_plant(ci: CanvasItem) -> void:
-	var b := _bounce("plant")
-	Art.push(ci, plant_world_pos() + Vector2(75, -b.y), 0.0, Vector2(2.0 - b.x, b.x))
+func _push_plant(ci: CanvasItem, key: String = "plant") -> void:
+	var b := _bounce(key)
+	var s := _plant_scale(key)
+	Art.push(ci, _plant_pos(key) + Vector2(75 * s, -b.y), 0.0, Vector2(2.0 - b.x, b.x) * s)
 	Art.push(ci, Vector2(-75, 0))
 
 
-func _push_boat(ci: CanvasItem) -> void:
-	var b := _bounce("boat")
-	Art.push(ci, boat_world_pos() + Vector2(0, -b.y), sin(_t * 1.4) * 0.03 * (0.5 if _calm else 1.0),
-			Vector2(BOAT_SCALE * _boat_facing() * (2.0 - b.x), BOAT_SCALE * b.x))
-	Art.push(ci, Vector2(0, sin(_t * 1.6) * 3.0))
+func _push_boat(ci: CanvasItem, key: String = "boat") -> void:
+	var b := _bounce(key)
+	var s := _boat_scale(key)
+	var ph := 0.0 if key == "boat" else 1.9
+	Art.push(ci, _boat_pos(key) + Vector2(0, -b.y), sin(_t * 1.4 + ph) * 0.03 * (0.5 if _calm else 1.0),
+			Vector2(s * _facing(key) * (2.0 - b.x), s * b.x))
+	Art.push(ci, Vector2(0, sin(_t * 1.6 + ph) * 3.0))
 
 
 func _draw_island(lights: float) -> void:
@@ -735,6 +1026,11 @@ func _draw_island(lights: float) -> void:
 	Art.push(self, _palm_pos())
 	Props.palm(self, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0), _coconuts)
 	Art.pop(self)
+	match second_state("plant2"):
+		"open":
+			_draw_plant2(lights)
+		"sale":
+			_draw_plot()
 	var pp := plant_world_pos()
 	var working := GameState.cycle_progress("plant") >= 0.0
 	_push_plant(self)
@@ -806,27 +1102,31 @@ func _draw_raft(lights: float) -> void:
 			"hold": "sack" if catching else "", "hold_color": _ore()})
 
 
-func _draw_boat(lights: float) -> void:
-	var bp := boat_world_pos()
-	var p := GameState.cycle_progress("boat")
-	var facing := _boat_facing()
-	var crates := 0
-	if p >= 0.04 and p < BOAT_SAIL_END + 0.02:
-		var cap := maxf(1.0, GameState.cycle_capacity("boat"))
-		crates = clampi(ceili(GameState.cycle_load("boat") / cap * 3.0), 1, 3)
-	var mood := world.mood("boat")
-	var smood := world.mood("sailor")
+## Sailors: the first boat's and the second one's.
+const _SAILOR_LOOKS := {"boat": ["sailor", 1], "boat2": ["sailor2", 2]}
+
+
+func _draw_boat(key: String, lights: float) -> void:
+	var bp := _boat_pos(key)
+	var bs := _boat_scale(key)
+	var p := GameState.cycle_progress(key)
+	var facing := _facing(key)
+	var mood := world.mood(key)
+	var sailor: String = _SAILOR_LOOKS[key][0]
+	var smood := world.mood(sailor)
 	var semo := smood if smood != "" else (mood if mood != "" else ("happy" if p >= 0.0 else "bored"))
-	var sailing := p >= BOAT_LOAD_END and (p < BOAT_SAIL_END or p >= BOAT_UNLOAD_END)
-	var hop := maxf(world.hop("boat"), world.hop("sailor"))
+	var sailing := _sailing(key)
+	var hop := maxf(world.hop(key), world.hop(sailor))
+	var look := Chars.look(1, "short", 3, "sailor", "freckles", 1, "sailor") if key == "boat" else Chars.look(4, "spiky", 2, "sailor", "none", 7, "sailor")
 	var crew := func():
-		Chars.person(self, Vector2(52, -40 - hop), 0.9, 1.0, Chars.look(1, "short", 3, "sailor", "freckles", 1, "sailor"),
-				{"emotion": semo, "blink": Chars.blinking(_t, 5.0), "arm_r": 2.6 if smood == "joy" else (0.9 + sin(_t * 6.0) * 0.5 if sailing else 0.3),
-				"arm_l": -0.3})
-	_push_boat(self)
+		Chars.person(self, Vector2(52, -40 - hop), 0.9, 1.0, look,
+				{"emotion": semo, "blink": Chars.blinking(_t + (0.0 if key == "boat" else 1.7), 5.0),
+				"arm_r": 2.6 if smood == "joy" else (0.9 + sin(_t * 6.0) * 0.5 if sailing else 0.3), "arm_l": -0.3})
+	_push_boat(self, key)
 	var cap_emo := mood if mood != "" else "happy"
 	Props.downwind = facing
-	Props.boat_at_stage(self, _shown_stage("boat"), _t, crates, _ore(), GameState.has_manager("boat"), cap_emo, Chars.blinking(_t, 7.0), crew, lights)
+	Props.boat_at_stage(self, _shown_stage(key), _t, _crates(key), _ore(), GameState.has_manager(key), cap_emo, Chars.blinking(_t, 7.0), crew, lights,
+			Props.variant_of(key))
 	Props.downwind = 1.0
 	Art.pop(self)
 	Art.pop(self)
@@ -834,8 +1134,62 @@ func _draw_boat(lights: float) -> void:
 		# Foam behind the boat.
 		for i in 3:
 			var f := fposmod(_t * 1.5 + i / 3.0, 1.0)
-			var at := bp + Vector2(-facing * (70.0 + f * 40.0), 2)
-			Art.arc(self, at, 6.0 + f * 8.0, PI, TAU, 10, Color(1, 1, 1, 0.8 * (1.0 - f)), 3.0)
+			var at := bp + Vector2(-facing * (82.0 + f * 47.0) * bs, 2)
+			Art.arc(self, at, (6.0 + f * 8.0) * bs / BOAT_SCALE, PI, TAU, 10, Color(1, 1, 1, 0.8 * (1.0 - f)), 3.0)
+
+
+## The second plant on its terrace, with its own worker.
+func _draw_plant2(lights: float) -> void:
+	var working := GameState.cycle_progress("plant2") >= 0.0
+	_push_plant(self, "plant2")
+	Props.plant_at_stage(self, _shown_stage("plant2"), _t + 3.1, working, _gear_rot2, _plant2_flash, lights, 1)
+	Art.pop(self)
+	Art.pop(self)
+	var dock_empty: bool = GameState.dock <= 0.0
+	var mood := world.mood("worker2")
+	var emo := "focus" if working else ("sleepy" if dock_empty else "bored")
+	if mood != "" and mood != "focus":
+		emo = mood
+	var pmood := world.mood("plant2")
+	if pmood != "" and emo != "sleepy":
+		emo = pmood
+	var wpos := plant2_world_pos() + Vector2(14, -maxf(world.hop("plant2"), world.hop("worker2")))
+	var swing := absf(sin(_t * 7.0 + 1.3)) if working else 0.0
+	Chars.person(self, wpos, 0.66, 1.0, Chars.look(2, "bun", 3, "hardhat", "none", 7, "overalls"),
+			{"emotion": emo, "blink": Chars.blinking(_t + 2.3, 4.0), "arm_r": 2.2 - swing * 1.6, "arm_l": 0.3, "hold": "hammer", "bob": swing})
+	if emo == "sleepy":
+		Chars.mark(self, "zzz", wpos + Vector2(12, -70), _t)
+
+
+## The plot where the second plant will stand, with its price sign.
+func _draw_plot() -> void:
+	var p := plant2_world_pos()
+	Art.push(self, p + Vector2(4, 0))
+	Props.plot(self, 104.0)
+	Art.pop(self)
+	if not _plant_sign_low():
+		_draw_sign("plant2")
+
+
+## Mooring buoy with the second boat's price sign, bobbing where it will wait.
+func _draw_buoy(lights: float) -> void:
+	var b := buoy_pos()
+	Art.push(self, b, sin(_t * 1.3) * 0.06)
+	Props.buoy(self, lights)
+	Art.pop(self)
+	_draw_sign("boat2")
+
+
+func _draw_sign(key: String) -> void:
+	var place := _sign_place(key)
+	var sc: float = place[2]
+	var poke := clampf(1.0 - (_t - float(_sign_poke[key])) / 0.6, 0.0, 1.0)
+	var ready := 1.0 if _can_buy(key) else 0.0
+	var wob := sin(_t * 18.0) * 0.12 * poke + (sin(_t * 3.0) * 0.03 * ready if not _calm else 0.0)
+	var sq := 1.0 + sin(_t * 20.0) * 0.06 * poke
+	Art.push(self, place[0], wob, Vector2(2.0 - sq, sq) * sc)
+	Props.sale_sign(self, _price(key), ready, place[1])
+	Art.pop(self)
 
 
 ## Night lights and number tags, on top and never darkened.
@@ -844,10 +1198,28 @@ func _draw_glow(ci: CanvasItem) -> void:
 		return
 	var lights := smoothstep(0.3, 0.8, DayNight.night())
 	if lights > 0.01:
+		var plant2 := second_state("plant2")
+		if plant2 == "open":
+			_push_plant(ci, "plant2")
+			Props.plant_lights(ci, _shown_stage("plant2"), _t, lights)
+			Art.pop(ci)
+			Art.pop(ci)
 		_push_plant(ci)
 		Props.plant_lights(ci, _shown_stage("plant"), _t, lights)
 		Art.pop(ci)
 		Art.pop(ci)
+		match second_state("boat2"):
+			"open":
+				_push_boat(ci, "boat2")
+				Props.boat_lights(ci, _shown_stage("boat2"), _t, lights)
+				Art.pop(ci)
+				Art.pop(ci)
+			"sale":
+				var b := buoy_pos()
+				var lamp := b + Props.BUOY_LAMP.rotated(sin(_t * 1.3) * 0.06)
+				var blink := 0.55 + 0.45 * sin(_t * 2.6)
+				Props.halo(ci, lamp, 26.0, Color(1.0, 0.45, 0.35, 0.5 * lights * blink))
+				Art.disc(ci, lamp, 3.5, Color(1.0, 0.9, 0.8, 0.9 * lights))
 		_push_boat(ci)
 		Props.boat_lights(ci, _shown_stage("boat"), _t, lights)
 		Art.pop(ci)

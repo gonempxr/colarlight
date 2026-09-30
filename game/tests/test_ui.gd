@@ -225,6 +225,6 @@ func test_language_switch() -> void:
 	root.get_node("Settings").set_language("zh")
 	await _frames(3)
 	check(TranslationServer.get_locale() == "zh", "language switched")
-	check(main._world.surface.boat_card._name.text == "运输船", "card text follows the language")
+	check(main._world.surface.boat_card._name.text.begins_with("运输船"), "card text follows the language")
 	root.get_node("Settings").set_language(original)
 	main._modal.close()

@@ -2,7 +2,10 @@ extends Node
 ## The whole economy: dive sites -> boat -> plant -> coins.
 ## Registered as the GameState autoload. UI only reads from here and calls actions.
 ##
-## Stage keys: "d0".."d5" (dive sites, shallow to deep), "boat", "plant".
+## Stage keys: "d0".."dN" (dive sites, shallow to deep), "boat", "plant",
+## and the second boat and plant, "boat2" and "plant2", bought later in a run
+## (closed at level 0). Both boats carry from the same raft to the same
+## shore; both plants work the same shore pile.
 ## Divers always work on their own; a tap pushes their dive forward and a
 ## site's manager (foreman) doubles its output. The boat and the plant run
 ## one cycle per tap until their manager automates them; that automation
@@ -99,7 +102,10 @@ func reset() -> void:
 
 
 func _reset_run(keep_automation: bool = false) -> void:
-	var kept := {"boat": managers.get("boat", false), "plant": managers.get("plant", false)} if keep_automation else {}
+	var kept := {}
+	if keep_automation:
+		for k in ["boat", "plant", "boat2", "plant2"]:
+			kept[k] = managers.get(k, false)
 	levels = {}
 	managers = {}
 	for key in stage_keys():
@@ -123,9 +129,24 @@ static func stage_keys() -> Array[String]:
 	var keys: Array[String] = []
 	for i in Balance.DEPTHS.size():
 		keys.append("d%d" % i)
-	keys.append("boat")
-	keys.append("plant")
+	keys.append_array(BUILDINGS)
 	return keys
+
+
+const BUILDINGS: Array[String] = ["boat", "plant", "boat2", "plant2"]
+
+
+static func is_boat(key: String) -> bool:
+	return key == "boat" or key == "boat2"
+
+
+static func is_plant(key: String) -> bool:
+	return key == "plant" or key == "plant2"
+
+
+## The second boat or plant: bought with coins, not open from the start.
+static func is_second(key: String) -> bool:
+	return key == "boat2" or key == "plant2"
 
 
 static func depth_index(key: String) -> int:
@@ -138,6 +159,10 @@ static func stage_data(key: String) -> Dictionary:
 			return Balance.BOAT
 		"plant":
 			return Balance.PLANT
+		"boat2":
+			return Balance.BOAT2
+		"plant2":
+			return Balance.PLANT2
 	return Balance.DEPTHS[depth_index(key)]
 
 
@@ -164,7 +189,9 @@ func is_auto(key: String) -> bool:
 
 ## Coins per second this stage can handle.
 func rate(key: String) -> float:
-	var r := Balance.output(stage_data(key)["value"], get_level(key)) * income_mult() * float(bonus.get(key, 1.0))
+	# Artifact bonuses for the boat or the plant count for both of them.
+	var group := "boat" if is_boat(key) else ("plant" if is_plant(key) else key)
+	var r := Balance.output(stage_data(key)["value"], get_level(key)) * income_mult() * float(bonus.get(group, 1.0))
 	if depth_index(key) >= 0:
 		r *= float(bonus.get("dives", 1.0))
 		if has_manager(key):
@@ -179,16 +206,25 @@ func dives_rate() -> float:
 	return total
 
 
+## Both boats together (a closed one adds nothing).
+func boats_rate() -> float:
+	return rate("boat") + rate("boat2")
+
+
+func plants_rate() -> float:
+	return rate("plant") + rate("plant2")
+
+
 ## Coins per second with every stage automated: the weakest link.
 func income_rate() -> float:
-	return minf(dives_rate(), minf(rate("boat"), rate("plant")))
+	return minf(dives_rate(), minf(boats_rate(), plants_rate()))
 
 
-## Which group limits income: "dives", "boat" or "plant".
+## Which group limits income: "dives", "boat" (both boats) or "plant".
 func bottleneck() -> String:
 	var d := dives_rate()
-	var b := rate("boat")
-	var p := rate("plant")
+	var b := boats_rate()
+	var p := plants_rate()
 	if d <= b and d <= p:
 		return "dives"
 	return "boat" if b <= p else "plant"
@@ -287,6 +323,17 @@ func upgrade(key: String, count: int = 1) -> bool:
 	return true
 
 
+## Buys the second boat or plant (level 1).
+func open_building(key: String) -> bool:
+	if not is_second(key) or is_open(key) or coins < unlock_cost(key):
+		return false
+	coins -= unlock_cost(key)
+	levels[key] = 1
+	depth_opened.emit(key)
+	changed.emit()
+	return true
+
+
 func open_depth(key: String) -> bool:
 	if key != next_depth() or coins < unlock_cost(key):
 		return false
@@ -370,17 +417,16 @@ func advance(seconds: float) -> void:
 
 func _start_cycle(key: String) -> bool:
 	var amount := cycle_capacity(key)
-	match key:
-		"boat":
-			amount = minf(hold, amount)
-			if amount <= 0.0:
-				return false
-			hold -= amount
-		"plant":
-			amount = minf(dock, amount)
-			if amount <= 0.0:
-				return false
-			dock -= amount
+	if is_boat(key):
+		amount = minf(hold, amount)
+		if amount <= 0.0:
+			return false
+		hold -= amount
+	elif is_plant(key):
+		amount = minf(dock, amount)
+		if amount <= 0.0:
+			return false
+		dock -= amount
 	_timer[key] = 0.0
 	_load[key] = amount
 	cycle_started.emit(key, amount)
@@ -391,13 +437,12 @@ func _finish_cycle(key: String) -> void:
 	var amount: float = _load[key]
 	_timer[key] = -1.0
 	_load[key] = 0.0
-	match key:
-		"boat":
-			dock += amount
-		"plant":
-			_earn(amount)
-		_:
-			hold += amount
+	if is_boat(key):
+		dock += amount
+	elif is_plant(key):
+		_earn(amount)
+	else:
+		hold += amount
 	cycle_finished.emit(key, amount)
 
 
@@ -422,8 +467,14 @@ func _add_rush() -> void:
 func simulate_offline(seconds: float) -> float:
 	var earned := 0.0
 	var dives := dives_rate()
-	var boat := rate("boat") if has_manager("boat") else 0.0
-	var plant := rate("plant") if has_manager("plant") else 0.0
+	var boat := 0.0
+	var plant := 0.0
+	for k in BUILDINGS:
+		if has_manager(k):
+			if is_boat(k):
+				boat += rate(k)
+			else:
+				plant += rate(k)
 	var left := seconds
 	while left > 0.0:
 		var dt := minf(OFFLINE_STEP, left)
@@ -517,7 +568,7 @@ func _apply_save(data: Dictionary) -> void:
 	var saved_managers = data.get("managers", {})
 	for key in stage_keys():
 		if saved_levels is Dictionary:
-			var minimum := 0 if depth_index(key) > 0 else 1
+			var minimum := 0 if depth_index(key) > 0 or is_second(key) else 1
 			levels[key] = maxi(minimum, int(_num(saved_levels.get(key), minimum)))
 		if saved_managers is Dictionary:
 			managers[key] = saved_managers.get(key) == true and is_open(key)

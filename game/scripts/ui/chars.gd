@@ -3,8 +3,9 @@ extends RefCounted
 ## Every character: chibi people (workers, the businessman, managers, the
 ## player's avatar) and divers, whose gear gets fancier every three depths
 ## (brass helmet, scuba, full-face mask, hard suit, heat suit, exo-suit,
-## crystal suit) along with their tool (pick, drill, laser). Faces carry
-## emotions.
+## crystal suit, abyss mech, mythic armour, ocean-king suit) along with
+## their tool (pick, drill, laser, plasma drill, trident, king's hammer).
+## Faces carry emotions.
 ##
 ## A "look" describes a person: skin, hair, hair color, hat, face extra,
 ## outfit color and clothes. A "pose" describes the moment: emotion,
@@ -47,6 +48,9 @@ static func manager_look(key: String) -> Dictionary:
 		"d5": return look(1, "spiky", 6, "none", "sunglasses", 7, "lab")
 		"boat": return look(2, "short", 1, "captain", "beard", 0, "sailor")
 		"plant": return look(3, "short", 0, "hardhat", "glasses", 2, "vest")
+		# The second boat's captain and the second plant's manager.
+		"boat2": return look(4, "long", 3, "sailor", "freckles", 1, "sailor")
+		"plant2": return look(0, "long", 1, "hardhat_blue", "none", 6, "lab")
 	return default_avatar()
 
 
@@ -260,14 +264,15 @@ static func _hat(ci: CanvasItem, hat: String) -> void:
 			Art.t_rect(ci, Rect2(-15, -52, 30, 36), 5, Color("2e2a3d"), 2.5, 0.5)
 			Art.t_rect(ci, Rect2(-15, -26, 30, 7), 2, Art.GOLD, 0.0, 0.0)
 			Art.t_ellipse(ci, Vector2(0, -17), Vector2(25, 5.5), Color("2e2a3d"), 2.5, 0.3)
-		"hardhat":
+		"hardhat", "hardhat_blue":
+			var blue := hat == "hardhat_blue"
 			var dome := PackedVector2Array()
 			for i in 17:
 				var a := PI + PI * i / 16.0
 				dome.append(Vector2(cos(a) * 22.0, -10.0 + sin(a) * 18.0))
-			Art.toon(ci, dome, Color("ffcf33"), 2.5, 0.6)
-			Art.t_rect(ci, Rect2(-27, -13, 54, 7), 3.5, Color("f4b400"), 2.5, 0.0)
-			Art.t_rect(ci, Rect2(-3, -30, 6, 18), 3, Color("ffe07a"), 0.0, 0.0)
+			Art.toon(ci, dome, Color("3aa6f0") if blue else Color("ffcf33"), 2.5, 0.6)
+			Art.t_rect(ci, Rect2(-27, -13, 54, 7), 3.5, Color("1f7fd0") if blue else Color("f4b400"), 2.5, 0.0)
+			Art.t_rect(ci, Rect2(-3, -30, 6, 18), 3, Color("9fdcff") if blue else Color("ffe07a"), 0.0, 0.0)
 			Art.t_circle(ci, Vector2(0, -18), 4.5, Color("fff6c2"), 2.0, 0.0)
 		"captain":
 			Art.toon(ci, PackedVector2Array([Vector2(-19, -14), Vector2(-24, -30), Vector2(-14, -36), Vector2(14, -36), Vector2(24, -30), Vector2(19, -14)]), Art.WHITE, 2.5, 0.6)
@@ -523,9 +528,14 @@ static var _COINBAG := Art.smooth_pts(PackedVector2Array([Vector2(-6, 2), Vector
 #   2 full-face mask, head lamp  3 armored hard-suit + drill
 #   4 heat suit, orange visor    5 sci-fi exo-suit, thrusters + laser cutter
 #   6 glowing crystal suit with a halo of bubbles + laser cutter
+#   7 abyss mech: armored helm, reactor pack with jets + plasma drill
+#   8 mythic armour: golden crested helm, cuirass, shield + trident
+#   9 ocean king: crowned glass dome, ermine and cape + king's hammer
 # The suit color (per depth or the wardrobe paint) stays the main color.
+# Swung tools (pick, hammer) are drawn behind the head, so a raised tool
+# passes behind the helmet and never across the face.
 
-const GEAR_TIERS := 7
+const GEAR_TIERS := 10
 const SHOULDER_F := Vector2(11, -39)
 const SHOULDER_B := Vector2(-11, -39)
 const ARM_LEN := 17.0
@@ -537,8 +547,15 @@ static func gear_tier(depth: int) -> int:
 	return clampi(depth / 3, 0, GEAR_TIERS - 1)
 
 
-## "pick" (tiers 0-2), "drill" (3-4) or "laser" (5-6).
+## "pick" (tiers 0-2), "drill" (3-4), "laser" (5-6), "plasma" (7),
+## "trident" (8) or "hammer" (9).
 static func tool_of(tier: int) -> String:
+	if tier >= 9:
+		return "hammer"
+	if tier == 8:
+		return "trident"
+	if tier == 7:
+		return "plasma"
 	if tier >= 5:
 		return "laser"
 	if tier >= 3:
@@ -547,6 +564,12 @@ static func tool_of(tier: int) -> String:
 
 
 ## Depth whose ore color this is (for callers that pass no depth), else 0.
+## Swung tools follow the pick's wind-up and strike; the others brace
+## and push in (see dig_pose).
+static func swings(tool: String) -> bool:
+	return tool == "pick" or tool == "hammer"
+
+
 static func _depth_for_ore(ore: Color) -> int:
 	for i in Art.DEPTH_STYLE.size():
 		if (Art.DEPTH_STYLE[i]["ore"] as Color).is_equal_approx(ore):
@@ -570,7 +593,7 @@ static func _ease_out(x: float) -> float:
 ## body lunge (px forward)].
 static func dig_pose(u: float, tier: int) -> Array:
 	u = fposmod(u, 1.0)
-	if tool_of(tier) != "pick":
+	if not swings(tool_of(tier)):
 		# Drill / laser: brace back, then push in and hold while it works.
 		var lunge := 0.0
 		var lean := 0.0
@@ -622,6 +645,12 @@ static func dig_tip(tier: int) -> Vector2:
 			return Vector2(78, -44)
 		"laser":
 			return Vector2(86, -43)
+		"plasma":
+			return Vector2(82, -45)
+		"trident":
+			return Vector2(88, -45)
+		"hammer":
+			return Vector2(56, -14)
 	return Vector2(56, -13)
 
 
@@ -718,7 +747,7 @@ static func _arm_pair(arm: String, hit: float, t: float, tier: int, carry: bool)
 			return [p[0], 0.35 + (p[0] - 1.5) * 0.25, p[1], p[2], p[3]]
 		"pick":
 			var h := clampf(hit, 0.0, 1.0)
-			if tool_of(tier) != "pick":
+			if not swings(tool_of(tier)):
 				var p := dig_pose(lerpf(0.5, DIG_IMPACT, h), tier)
 				return [p[0], 0.35, 0.0, p[2], p[3]]
 			return [lerpf(2.42, 1.35, h), 0.35 + lerpf(0.23, -0.04, h), lerpf(-0.68, 0.05, h), lerpf(-0.14, 0.09, h), lerpf(0.0, 3.0, h)]
@@ -746,6 +775,15 @@ static func _diver_legs(ci: CanvasItem, tier: int, suit: Color, dark: Color, kic
 			4:
 				Art.t_rect(ci, Rect2(-5, -2, 10, 14), 4.5, leg, 2.2, 0.0)
 				Art.t_rect(ci, Rect2(-5, 5, 10, 3), 1, Color(1, 0.6, 0.2, 0.9) if sx > 0 else Color(0.8, 0.45, 0.2, 0.9), 0.0, 0.0)
+			7:
+				Art.t_rect(ci, Rect2(-6, -2, 12, 14), 5.5, Art.shade_of(MECH, 0.0 if sx > 0 else 0.3), 2.2, 0.0)
+				Art.flat(ci, _KNEE, leg)
+			8:
+				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
+				Art.t_rect(ci, Rect2(-5.5, 3, 11, 9), 3.5, Art.shade_of(MYTH_GOLD, 0.0 if sx > 0 else 0.3), 0.0, 0.0)
+			9:
+				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, Art.shade_of(KING_WHITE, 0.0 if sx > 0 else 0.3), 2.2, 0.0)
+				Art.t_rect(ci, Rect2(-5, 4, 10, 3), 1, Art.shade_of(MYTH_GOLD, 0.0 if sx > 0 else 0.3), 0.0, 0.0)
 			_:
 				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
 		Art.push(ci, Vector2(0, 11), flex)
@@ -774,10 +812,20 @@ static func _foot(ci: CanvasItem, tier: int, near: bool, t: float, st: Dictionar
 		5:
 			Art.toon(ci, _BOOT, Art.shade_of(Color("e9eef6"), k), 2.2, 0.0)
 			Art.t_rect(ci, Rect2(-6, 7.5, 17, 2.5), 1.2, Color(NEON, 0.9 - k), 0.0, 0.0)
-		_:
+		6:
 			var c: Color = st["ore"]
 			Art.toon(ci, _FIN6, Color(Art.shade_of(c.lightened(0.2), k), 0.9), 2.2, 0.0)
 			Art.flat(ci, PackedVector2Array([Vector2(6, 2), Vector2(22, 7), Vector2(14, 7)]), Color(1, 1, 1, 0.5 - k))
+		7:
+			Art.toon(ci, _MECH_BOOT, Art.shade_of(MECH_LIGHT, k), 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-6, 8, 21, 2.2), 1.0, Color(PLASMA, 0.9 - k), 0.0, 0.0)
+		8:
+			Art.toon(ci, _FIN1, Color(Art.shade_of(AQUA, k), 0.85), 2.2, 0.0)
+			Art.flat(ci, PackedVector2Array([Vector2(8, 2), Vector2(22, 5), Vector2(14, 6)]), Color(1, 1, 1, 0.45 - k))
+			Art.t_rect(ci, Rect2(-6, -2, 12, 6), 2.5, Art.shade_of(MYTH_GOLD, k), 0.0, 0.0)
+		_:
+			Art.toon(ci, _FIN9, Color(Art.shade_of(Color("7fe8ff"), k), 0.85), 2.2, 0.0)
+			Art.toon(ci, _BOOT, Art.shade_of(MYTH_GOLD, k), 2.2, 0.0)
 
 
 static var _FIN0 := PackedVector2Array([Vector2(-5, -2), Vector2(5, -2), Vector2(18, 3), Vector2(21, 8), Vector2(16, 10), Vector2(-5, 8)])
@@ -785,7 +833,20 @@ static var _FIN1 := Art.smooth_pts(PackedVector2Array([Vector2(-5, -2), Vector2(
 		Vector2(26, 8), Vector2(22, 11), Vector2(8, 10), Vector2(-5, 8)]), 2)
 static var _FIN6 := PackedVector2Array([Vector2(-5, -2), Vector2(5, -2), Vector2(24, 0), Vector2(30, 6), Vector2(22, 11), Vector2(-5, 8)])
 static var _BOOT := Art.smooth_pts(PackedVector2Array([Vector2(-6, -2), Vector2(6, -2), Vector2(7, 3), Vector2(13, 5), Vector2(12, 10), Vector2(-6, 10)]), 2)
+static var _MECH_BOOT := Art.smooth_pts(PackedVector2Array([Vector2(-7, -2), Vector2(7, -2), Vector2(8, 2), Vector2(16, 4), Vector2(16, 10), Vector2(-7, 10)]), 2)
+static var _FIN9 := Art.smooth_pts(PackedVector2Array([Vector2(-4, -1), Vector2(6, -1), Vector2(18, -2), Vector2(30, 1), Vector2(26, 7),
+		Vector2(33, 13), Vector2(18, 11), Vector2(-4, 9)]), 2)
 const NEON := Color("7df9ff")
+## Abyss mech (tier 7), mythic armour (8) and the ocean king (9).
+const MECH := Color("4a5270")
+const MECH_LIGHT := Color("8a94b8")
+const MECH_CORE := Color("22263a")
+const PLASMA := Color("ff4fd8")
+const MYTH_GOLD := Color("f2b632")
+const MYTH_DARK := Color("c07a1c")
+const AQUA := Color("4de8ff")
+const KING_WHITE := Color("f4f7ff")
+const KING_CAPE := Color("c0304a")
 
 
 static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: float, moving: bool, st: Dictionary) -> void:
@@ -822,6 +883,31 @@ static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: 
 				var jl := (16.0 if moving else 7.0) * fl
 				Art.flat_now(ci, PackedVector2Array([Vector2(x + 1, -23), Vector2(x + 8, -23), Vector2(x + 4.5, -23 + jl)]), Color(NEON, 0.75))
 				Art.flat_now(ci, PackedVector2Array([Vector2(x + 2.5, -23), Vector2(x + 6.5, -23), Vector2(x + 4.5, -23 + jl * 0.6)]), Color(1, 1, 1, 0.85))
+		7:
+			Art.t_rect(ci, Rect2(-28, -63, 14, 8), 2, MECH_LIGHT, 1.8, 0.0)
+			Art.t_rect(ci, Rect2(-30, -57, 18, 36), 6, MECH, 2.4, 0.3)
+			Art.t_circle(ci, Vector2(-21, -40), 5.5, MECH_CORE, 1.8, 0.0)
+			var g := 0.6 + 0.4 * sin(t * 4.0)
+			Art.dot(ci, Vector2(-21, -40), 3.2, Color(PLASMA, g))
+			# Twin plasma jets under the pack.
+			var jl := (15.0 if moving else 6.0) * (0.75 + 0.25 * sin(t * 29.0))
+			for x: float in [-26.0, -16.0]:
+				Art.push(ci, Vector2(x, -21), 0.0, Vector2(1.0, jl / 10.0))
+				Art.flat(ci, _JET, Color(PLASMA, 0.75))
+				Art.flat(ci, _JET_IN, Color(1, 1, 1, 0.85))
+				Art.pop(ci)
+		8:
+			# A round golden shield on the back with a trident on it.
+			Art.t_circle(ci, Vector2(-20, -40), 14, MYTH_DARK, 2.4, 0.4)
+			Art.flat(ci, _SHIELD_IN, MYTH_GOLD)
+			Art.flat(ci, _SHIELD_MARK, MYTH_DARK)
+		9:
+			# The royal cape, flowing back while swimming.
+			var sway := sin(t * 2.0) * 0.05 + (0.22 if moving else 0.0)
+			Art.push(ci, Vector2(-8, -53), sway)
+			Art.toon(ci, _CAPE, KING_CAPE, 2.4, 0.0)
+			Art.flat(ci, _CAPE_LINING, Art.shade_of(KING_CAPE, 0.4))
+			Art.pop(ci)
 		_:
 			var c: Color = st["ore"]
 			var g := 0.5 + 0.5 * sin(t * 2.0)
@@ -876,6 +962,37 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 			Art.t_circle(ci, Vector2(0, -38), 3.4, Color(NEON, 1.0), 1.5, 0.0)
 			Art.t_rect(ci, Rect2(-17, -54, 36, 9), 4.5, Color("e9eef6"), 2.5, 0.3)
 			Art.t_rect(ci, Rect2(-13, -51, 28, 2.5), 1, Color(NEON, g), 0.0, 0.0)
+		7:
+			Art.t_rect(ci, Rect2(-15, -49, 30, 36), 12, MECH, 2.6, 0.8)
+			Art.toon(ci, _MECH_CHEST, suit, 2.0, 0.0)
+			Art.flat(ci, _MECH_CORE_PTS, MECH_CORE)
+			Art.dot(ci, Vector2(0, -37), 2.8, Color(PLASMA, 0.75 + 0.25 * sin(t * 4.0)))
+			Art.t_rect(ci, Rect2(-15, -24, 30, 6), 2, MECH_LIGHT, 1.8, 0.0)
+			Art.t_rect(ci, Rect2(-3, -25, 6, 8), 1.5, PLASMA, 0.0, 0.0)
+			Art.t_rect(ci, Rect2(-19, -56, 40, 11), 5, MECH_LIGHT, 2.5, 0.0)
+		8:
+			Art.t_rect(ci, Rect2(-14, -48, 28, 35), 11, suit, 2.5, 0.8)
+			Art.t_rect(ci, Rect2(-13, -25, 26, 10), 2, MYTH_DARK, 0.0, 0.0)
+			Art.flat(ci, _SKIRT_STRIPS, Art.shade_of(suit, 0.2))
+			Art.toon(ci, _CUIRASS, MYTH_GOLD, 2.2, 0.6)
+			Art.flat(ci, _CUIRASS_GEM, AQUA)
+			Art.t_rect(ci, Rect2(-18, -55, 38, 10), 5, MYTH_GOLD, 2.5, 0.0)
+		9:
+			var c: Color = st["ore"]
+			Art.t_rect(ci, Rect2(-14, -48, 28, 35), 11, suit, 2.5, 0.8)
+			Art.flat(ci, _KING_TRIM, MYTH_GOLD)
+			Art.t_rect(ci, Rect2(-14, -24, 28, 5), 1.5, MYTH_GOLD, 0.0, 0.0)
+			Art.flat(ci, _BELT_JEWEL, Color("ff3d6e"))
+			# Ermine collar and the ocean-heart pendant, beating.
+			Art.t_rect(ci, Rect2(-19, -57, 40, 12), 6, KING_WHITE, 2.5, 0.3)
+			for p: Vector2 in [Vector2(-12, -50), Vector2(-3, -51), Vector2(7, -50), Vector2(15, -51)]:
+				Art.flat(ci, Art.ellipse_pts(p, Vector2(1.1, 2.0), 6), Art.INK)
+			var beat := maxf(0.0, sin(t * 3.2)) * 0.1
+			Art.dot(ci, Vector2(0, -36), 7.5, Color(c, 0.3))
+			Art.push(ci, Vector2(0, -36), 0.0, Vector2.ONE * (0.36 + beat * 0.36))
+			Art.toon(ci, OreArt.HEART_LO, c, 4.5, 0.0)
+			Art.flat(ci, _GLINT6, Color(1, 1, 1, 0.75))
+			Art.pop(ci)
 		_:
 			var c: Color = st["ore"]
 			var c2: Color = st["ore2"]
@@ -891,6 +1008,17 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 static var _EXO_CHEST := Art.smooth_pts(PackedVector2Array([Vector2(-12, -45), Vector2(12, -45), Vector2(13, -33), Vector2(7, -27),
 		Vector2(-7, -27), Vector2(-13, -33)]), 2)
 static var _CRYSTAL_PLATE := PackedVector2Array([Vector2(0, -46), Vector2(11, -36), Vector2(0, -24), Vector2(-11, -36)])
+static var _JET := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0), Vector2(0, 10)])
+static var _JET_IN := PackedVector2Array([Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, 6)])
+static var _MECH_CHEST := PackedVector2Array([Vector2(-12, -46), Vector2(12, -46), Vector2(13, -36), Vector2(6, -29), Vector2(-6, -29), Vector2(-13, -36)])
+static var _CUIRASS := Art.smooth_pts(PackedVector2Array([Vector2(-13, -47), Vector2(13, -47), Vector2(13, -34), Vector2(9, -26),
+		Vector2(0, -24), Vector2(-9, -26), Vector2(-13, -34)]), 2)
+static var _KING_TRIM := Art.rrect_pts(Rect2(-3, -46, 6, 22), 2, 2)
+## Cape, hanging from its anchor between the shoulders (0,0).
+static var _CAPE := Art.smooth_pts(PackedVector2Array([Vector2(-4, -3), Vector2(7, -1), Vector2(6, 14), Vector2(0, 30), Vector2(-8, 42),
+		Vector2(-22, 47), Vector2(-27, 40), Vector2(-19, 22), Vector2(-13, 6)]), 3)
+static var _CAPE_LINING := Art.clipped(Art.smooth_pts(PackedVector2Array([Vector2(-30, 20), Vector2(-10, 30), Vector2(-4, 40),
+		Vector2(-20, 52), Vector2(-34, 44)]), 2), _CAPE)
 
 
 static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emotion: String, blink: bool, t: float, st: Dictionary) -> void:
@@ -974,6 +1102,45 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 			Art.dot(ci, Vector2(-12, -100), 3.2, Art.INK)
 			Art.dot(ci, Vector2(-12, -100), 2.2, Color(NEON, g))
 			Art.dot(ci, Vector2(-12, -100), 5.0, Color(NEON, 0.25 * g))
+		7:
+			# Armored mech helm: a wide visor, an ear light, a fin on top.
+			Art.toon(ci, _MECH_FIN, suit, 2.2, 0.3)
+			Art.t_rect(ci, Rect2(-18, -93, 42, 42), 15, MECH, 2.8, 0.6)
+			Art.t_circle(ci, Vector2(-16, -72), 6.5, MECH_LIGHT, 2.2, 0.0)
+			Art.dot(ci, Vector2(-16, -72), 2.6, Color(PLASMA, 0.6 + 0.4 * sin(t * 4.0)))
+			Art.t_rect(ci, Rect2(-7.5, -85.5, 31, 28), 9.5, suit, 0.0, 0.0)
+			Art.flat(ci, _MECH_VISOR, skin)
+			Art.push(ci, Vector2(8, -70), 0.0, Vector2(0.58, 0.58))
+			_diver_face(ci, emotion, blink, skin)
+			Art.pop(ci)
+			Art.flat(ci, _MECH_VISOR, Color(PLASMA, 0.1))
+			Art.flat(ci, _MECH_GLINT, Color(1, 1, 1, 0.5))
+		8:
+			# Atlantean helm: a gold dome with a fin crest, the face open.
+			Art.toon(ci, _CREST, suit, 2.2, 0.0)
+			Art.t_circle(ci, Vector2(2, -71), 21, MYTH_GOLD, 2.8, 0.6)
+			Art.toon(ci, _MYTH_OPEN, skin, 2.0, 0.0)
+			Art.push(ci, Vector2(8, -66), 0.0, Vector2(0.6, 0.6))
+			_diver_face(ci, emotion, blink, skin)
+			Art.pop(ci)
+			Art.t_rect(ci, Rect2(-6, -86, 29, 5.5), 2.5, MYTH_DARK, 0.0, 0.0)
+			Art.flat(ci, _BROW_GEM, AQUA)
+			Art.arc_c(ci, Vector2(2, -71), 20.5, PI * 1.05, PI * 1.4, 5, Color(1, 1, 1, 0.75), 2.2)
+		9:
+			# The ocean king: a glass dome with a crown on top.
+			Art.t_circle(ci, Vector2(3, -68), 16.5, skin, 2.2, 0.3)
+			Art.toon(ci, _CAP5, KING_CAPE, 1.8, 0.3)
+			Art.push(ci, Vector2(5, -65), 0.0, Vector2(0.62, 0.62))
+			_diver_face(ci, emotion, blink, skin)
+			Art.pop(ci)
+			Art.flat(ci, Art.circle_pts(Vector2(2, -70), 21.5, 22), Color(0.8, 0.95, 1.0, 0.18))
+			Art.arc_c(ci, Vector2(2, -70), 21.5, 0, TAU, 12, Art.INK, 2.6)
+			Art.arc_c(ci, Vector2(2, -70), 18.5, PI * 1.05, PI * 1.45, 4, Color(1, 1, 1, 0.8), 2.6)
+			Art.t_rect(ci, Rect2(-14, -53, 32, 5), 2.5, MYTH_GOLD, 2.0, 0.0)
+			Art.toon(ci, _KING_CROWN, MYTH_GOLD, 2.2, 0.0)
+			for k in 3:
+				Art.flat(ci, _KING_GEMS[k], KING_JEWELS[k])
+				Art.flat(ci, _KING_PEARLS[k], KING_WHITE)
 		_:
 			# Crystal dome: faceted, glowing, the face inside.
 			var c: Color = st["ore"]
@@ -1009,6 +1176,15 @@ static var _VISOR := Art.smooth_pts(PackedVector2Array([Vector2(-10, -80), Vecto
 		Vector2(16, -56), Vector2(4, -54), Vector2(-9, -57), Vector2(-12, -68)]), 3)
 static var _CAP5 := Art.smooth_pts(PackedVector2Array([Vector2(-13, -64), Vector2(-14, -76), Vector2(-4, -85), Vector2(9, -84),
 		Vector2(18, -76), Vector2(10, -78), Vector2(0, -76), Vector2(-7, -70)]), 3)
+static var _MECH_FIN := PackedVector2Array([Vector2(-8, -89), Vector2(12, -89), Vector2(7, -103), Vector2(-4, -101)])
+static var _MECH_VISOR := Art.rrect_pts(Rect2(-5, -83, 26, 23), 7.5)
+static var _MECH_GLINT := Art.clipped(PackedVector2Array([Vector2(-6, -70), Vector2(-6, -76), Vector2(8, -86), Vector2(14, -86)]), _MECH_VISOR)
+static var _CREST := Art.smooth_pts(PackedVector2Array([Vector2(-20, -76), Vector2(-24, -90), Vector2(-14, -103), Vector2(2, -109),
+		Vector2(12, -100), Vector2(4, -92), Vector2(-6, -88)]), 3)
+static var _MYTH_OPEN := Art.ellipse_pts(Vector2(8, -67), Vector2(12.5, 13), 20)
+static var _KING_CROWN := PackedVector2Array([Vector2(-11, -88), Vector2(-13, -103), Vector2(-5, -96), Vector2(2, -107),
+		Vector2(9, -96), Vector2(17, -103), Vector2(15, -88)])
+const KING_JEWELS: Array[Color] = [Color("ff3d6e"), Color("4de8ff"), Color("4fe08a")]
 static var _CRYSTAL_DOME := PackedVector2Array([Vector2(-19, -62), Vector2(-20, -76), Vector2(-10, -89), Vector2(4, -92),
 		Vector2(17, -86), Vector2(23, -73), Vector2(21, -58), Vector2(10, -50), Vector2(-8, -51)])
 
@@ -1085,6 +1261,16 @@ static func _diver_arm(ci: CanvasItem, shoulder: Vector2, angle: float, suit: Co
 		5:
 			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
 			Art.t_rect(ci, Rect2(-1, 0, 2.2, 12), 1, Color(NEON, 0.9 if front else 0.5), 0.0, 0.0)
+		7:
+			Art.t_rect(ci, Rect2(-6, -3, 12, 19), 6, MECH if front else Art.shade_of(MECH, 0.35), 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-1.1, 6, 2.2, 8), 1, Color(PLASMA, 0.9 if front else 0.5), 0.0, 0.0)
+			Art.toon(ci, _PAULDRON, c, 2.2, 0.0)
+		8:
+			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-5, 7, 10, 6), 2, MYTH_GOLD if front else MYTH_DARK, 0.0, 0.0)
+		9:
+			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-5, 9, 10, 4), 1.5, MYTH_GOLD if front else MYTH_DARK, 0.0, 0.0)
 		_:
 			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
 	if tier == 2 and front:
@@ -1107,11 +1293,17 @@ static func _glove(ci: CanvasItem, at: Vector2, tier: int, st: Dictionary, front
 			g = Color("2a2f45")
 		6:
 			g = (st["ore2"] as Color)
+		7:
+			g = MECH_LIGHT
+		8:
+			g = MYTH_GOLD
+		9:
+			g = KING_WHITE
 	if not front:
 		g = Art.shade_of(g, 0.3)
 	# Pushed so the cached circle is reused wherever the hand is.
 	Art.push(ci, at)
-	Art.t_circle(ci, Vector2.ZERO, 5.2 if tier == 3 else 5.0, g, 2.2, 0.0)
+	Art.t_circle(ci, Vector2.ZERO, 6.0 if tier == 7 else (5.2 if tier == 3 else 5.0), g, 2.2, 0.0)
 	Art.pop(ci)
 
 
@@ -1120,19 +1312,27 @@ static func _glove(ci: CanvasItem, at: Vector2, tier: int, st: Dictionary, front
 static func _tool(ci: CanvasItem, tool: String, tier: int, angle: float, wrist: float, hit: float, t: float, st: Dictionary, arm: String) -> void:
 	var hand := SHOULDER_F + Vector2(sin(angle), cos(angle)) * ARM_LEN
 	match tool:
-		"pick":
+		"pick", "hammer":
 			Art.push(ci, hand, -angle + wrist)
-			_pick(ci, tier)
+			if tool == "pick":
+				_pick(ci, tier)
+			else:
+				_hammer(ci, st)
 			Art.pop(ci)
-		"drill", "laser":
+		"drill", "laser", "plasma", "trident":
 			# Held level, pointing forward; it works while pressed in.
 			var u := fposmod(hit, 1.0) if arm == "dig" else lerpf(0.5, DIG_IMPACT, clampf(hit, 0.0, 1.0))
 			var on := u >= DIG_IMPACT - 0.02 and u < 0.9
 			Art.push(ci, hand, 0.0)
-			if tool == "drill":
-				_drill(ci, tier, t, on)
-			else:
-				_laser(ci, tier, t, on, st)
+			match tool:
+				"drill":
+					_drill(ci, tier, t, on)
+				"laser":
+					_laser(ci, tier, t, on, st)
+				"plasma":
+					_plasma(ci, t, on)
+				_:
+					_trident(ci, t, on)
 			Art.pop(ci)
 
 
@@ -1205,6 +1405,64 @@ static var _LASER_BODY := Art.smooth_pts(PackedVector2Array([Vector2(-7, -15), V
 		Vector2(20, -3), Vector2(-7, -3)]), 2)
 
 
+## Tier 7: a chunky plasma drill with a spinning cone of light.
+static func _plasma(ci: CanvasItem, t: float, on: bool) -> void:
+	var shake := Vector2(sin(t * 53.0), cos(t * 41.0)) * 0.7 if on else Vector2.ZERO
+	Art.push(ci, shake, 0.0, Vector2(1.1, 1.1))
+	Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, MECH_CORE, 1.8, 0.0)
+	Art.t_rect(ci, Rect2(-9, -16, 30, 13), 5, MECH, 2.2, 0.0)
+	Art.flat(ci, _PLASMA_STRIPE, PLASMA)
+	Art.t_rect(ci, Rect2(20, -17, 6, 16), 2, MECH_LIGHT, 1.8, 0.0)
+	Art.toon(ci, _PLASMA_CONE, Color("ffc2f2"), 1.8, 0.0)
+	var spin := fposmod(t * (12.0 if on else 1.0), 1.0)
+	for k in 3:
+		var x := 27.0 + (k + spin) * 5.5
+		if x < 44.0:
+			var hw := 6.3 * (1.0 - (x - 26.0) / 20.0)
+			Art.line(ci, Vector2(x - 1.2, -9 - hw), Vector2(x + 1.2, -9 + hw), PLASMA, 1.6)
+	if on:
+		var pulse := 0.5 + 0.5 * sin(t * 30.0)
+		Art.dot(ci, Vector2(46, -9), 6.0 + pulse * 3.0, Color(PLASMA, 0.45))
+		Art.dot(ci, Vector2(46, -9), 2.5 + pulse, Color(1, 1, 1, 0.95))
+	Art.pop(ci)
+
+
+static var _PLASMA_CONE := PackedVector2Array([Vector2(26, -15.5), Vector2(46, -9.6), Vector2(46, -8.4), Vector2(26, -2.5)])
+
+
+## Tier 8: a golden trident, thrust into the vein.
+static func _trident(ci: CanvasItem, t: float, on: bool) -> void:
+	Art.t_rect(ci, Rect2(-16, -11.2, 58, 4.4), 2, MYTH_DARK, 1.8, 0.0)
+	Art.flat(ci, _TRIDENT_GRIP, MYTH_GOLD)
+	Art.toon(ci, _TRIDENT, MYTH_GOLD, 2.0, 0.0)
+	Art.flat(ci, _TRIDENT_GEM, AQUA)
+	if on:
+		var pulse := 0.5 + 0.5 * sin(t * 24.0)
+		for p: Vector2 in [Vector2(57, -9), Vector2(53, -17.5), Vector2(53, -0.5)]:
+			Art.dot(ci, p, 3.5 + pulse * 2.5, Color(AQUA, 0.55))
+			Art.dot(ci, p, 1.4 + pulse, Color(1, 1, 1, 0.95))
+
+
+static var _TRIDENT := Art.union([Art.rrect_pts(Rect2(38, -20, 5, 22), 2, 2),
+		PackedVector2Array([Vector2(42, -10.6), Vector2(52, -11), Vector2(52, -14), Vector2(58, -9), Vector2(52, -4), Vector2(52, -7), Vector2(42, -7.4)]),
+		PackedVector2Array([Vector2(41, -20), Vector2(50, -20), Vector2(50, -22), Vector2(55, -17.5), Vector2(50, -15), Vector2(50, -16.8), Vector2(41, -16.8)]),
+		PackedVector2Array([Vector2(41, -1.2), Vector2(50, -1.2), Vector2(50, -3), Vector2(55, -0.5), Vector2(50, 2), Vector2(41, 2)])])
+
+
+## Tier 9: the king's hammer in hand space (the fist at 0,0, the handle
+## along +y like the pick, the striking face toward -x).
+static func _hammer(ci: CanvasItem, st: Dictionary) -> void:
+	Art.t_rect(ci, Rect2(-2.8, -7, 5.6, 36), 2.8, MYTH_GOLD, 1.8, 0.0)
+	Art.flat(ci, _HAMMER_GRIP, KING_CAPE)
+	Art.t_rect(ci, Rect2(-15, 24, 27, 14), 4, KING_WHITE, 2.2, 0.0)
+	Art.flat(ci, _HAMMER_BANDS[0], MYTH_GOLD)
+	Art.flat(ci, _HAMMER_BANDS[1], MYTH_GOLD)
+	Art.push(ci, Vector2(-1.5, 31), 0.0, Vector2(0.3, 0.3))
+	Art.toon(ci, OreArt.HEART_LO, st["ore"], 5.0, 0.0)
+	Art.pop(ci)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-4, 27), Vector2(1.6, 1.0), 6), Color(1, 1, 1, 0.8))
+
+
 ## Bubbles, lamp light and halos around the diver.
 static func _diver_fx(ci: CanvasItem, tier: int, t: float, swim: bool, st: Dictionary) -> void:
 	# Breathing bubbles rise from the helmet in little bursts.
@@ -1235,3 +1493,34 @@ static func _diver_fx(ci: CanvasItem, tier: int, t: float, swim: bool, st: Dicti
 				var near := sin(a) * 0.5 + 0.5
 				Art.dot(ci, p, 2.6 + near * 1.6, Color(c, 0.45 + near * 0.3))
 				Art.disc(ci, p + Vector2(-0.8, -0.8), 1.0, Color(1, 1, 1, 0.8))
+		9:
+			# Little sparkles circling the king.
+			for k in 3:
+				var a := t * 1.1 + TAU * k / 3.0
+				var p := Vector2(2, -50) + Vector2(cos(a) * 32.0, sin(a) * 14.0 - 16.0)
+				Art.push(ci, p, t * 2.0 + k, Vector2.ONE * (0.6 + 0.4 * (sin(a) * 0.5 + 0.5)))
+				Art.toon(ci, _SPARK, Color(1.0, 0.93, 0.6, 0.95), 0.0, 0.0)
+				Art.pop(ci)
+
+
+static var _SPARK := Art.star_pts(Vector2.ZERO, 5.0, 1.3, 4)
+static var _HAMMER_GRIP := Art.rrect_pts(Rect2(-3.4, -4, 6.8, 9), 2, 1)
+static var _HAMMER_BANDS: Array[PackedVector2Array] = [Art.rrect_pts(Rect2(-14, 25, 3.5, 12), 1, 1), Art.rrect_pts(Rect2(7.5, 25, 3.5, 12), 1, 1)]
+static var _TRIDENT_GRIP := Art.rrect_pts(Rect2(-4.5, -12, 9, 6), 2, 1)
+static var _TRIDENT_GEM := Art.circle_pts(Vector2(41, -9), 2.4, 8)
+static var _BROW_GEM := Art.circle_pts(Vector2(8, -83), 2.6, 8)
+static var _PLASMA_STRIPE := PackedVector2Array([Vector2(-6, -13.5), Vector2(16, -13.5), Vector2(16, -11), Vector2(-6, -11)])
+static var _CUIRASS_GEM := Art.circle_pts(Vector2(0, -31.5), 3.0, 8)
+static var _BELT_JEWEL := Art.circle_pts(Vector2(0, -21.5), 2.8, 8)
+static var _PAULDRON := Art.ellipse_pts(Vector2(0, -1), Vector2(8, 6.5), 12)
+static var _MECH_CORE_PTS := Art.circle_pts(Vector2(0, -37), 4.6, 10)
+static var _KNEE := Art.circle_pts(Vector2(0, 5), 3.2, 8)
+static var _GLINT6 := Art.ellipse_pts(Vector2(-7, -7), Vector2(3, 4.5), 6, 0.6)
+static var _SHIELD_IN := Art.circle_pts(Vector2(-20, -40), 10, 14)
+## A little trident on the shield (one flat shape).
+static var _SHIELD_MARK := PackedVector2Array([Vector2(-21, -32), Vector2(-21, -41), Vector2(-24.5, -44), Vector2(-24.5, -48), Vector2(-23.3, -48),
+		Vector2(-23.3, -45), Vector2(-21, -43), Vector2(-21, -49), Vector2(-19, -49), Vector2(-19, -43), Vector2(-16.7, -45), Vector2(-16.7, -48),
+		Vector2(-15.5, -48), Vector2(-15.5, -44), Vector2(-19, -41), Vector2(-19, -32)])
+static var _SKIRT_STRIPS := Art.rrect_pts(Rect2(-3, -24, 6, 8.5), 1.5, 1)
+static var _KING_GEMS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-5, -91.5), 1.9, 6), Art.circle_pts(Vector2(2, -91.5), 1.9, 6), Art.circle_pts(Vector2(9, -91.5), 1.9, 6)]
+static var _KING_PEARLS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-11, -104), 2.2, 8), Art.circle_pts(Vector2(2, -108), 2.2, 8), Art.circle_pts(Vector2(15, -104), 2.2, 8)]

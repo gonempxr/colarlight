@@ -3,9 +3,12 @@ extends RefCounted
 ## Scenery and machines, drawn in local space with Art's toon kit.
 ## Callers place them with Art.push/pop.
 ##
-## The boat and the plant have 15 looks each (Balance.building_stage):
+## The boat and the plant have 20 looks each (Balance.building_stage):
 ##   Props.boat_at_stage(ci, stage, t, ...)  and  Props.plant_at_stage(ci, stage, t, ...)
 ## draw any of them; Props.boat / Props.plant draw the player's current one.
+## The second boat and plant ("boat2", "plant2") use the same looks with
+## their own paint: pass variant 1 (see variant_of) and they get turned
+## colors and a round "II" badge.
 ## Every stage keeps the same anchor points, so crew and ore line up:
 ##   boat  - origin at the waterline, facing +x; deck (sailor's feet) at
 ##           (52, -40); crates on the deck at x 6..81; ~200 px long.
@@ -23,14 +26,46 @@ static var downwind := 1.0
 
 const LIT := Color("ffe38a")
 const LAMP_OFF := Color("fff3c4")
-const STAGES := 15
+const STAGES := 20
+
+## Paint set while a second boat/plant is drawn (0 = the first one's own colors).
+static var _variant := 0
 
 
 static func _paint(i: int, fallback: Color) -> Color:
+	if _variant > 0:
+		return _alt(fallback)
 	return boat_paint[i] if boat_paint.size() > i else fallback
 
 
-## Stage of the player's boat or plant right now (1..15).
+## 1 for the second boat or plant (their own paint), else 0.
+static func variant_of(key: String) -> int:
+	return 1 if key == "boat2" or key == "plant2" else 0
+
+
+## A color in the second unit's paint: bright colors turn around the color
+## wheel, light neutrals (white, cream, steel) get a mint tint, dark ones
+## stay. Unchanged for the first unit.
+static func _v(c: Color) -> Color:
+	return _alt(c) if _variant > 0 else c
+
+
+static func _alt(c: Color) -> Color:
+	if c.s < 0.16:
+		return c if c.v < 0.55 else c.lerp(Color("aef0d8"), 0.42)
+	return Color.from_hsv(fposmod(c.h + 0.3, 1.0), c.s, c.v, c.a)
+
+
+## Round gold badge with two bars ("II"), the mark of the second boat and
+## plant. Reads the same when the boat is mirrored.
+static func second_badge(ci: CanvasItem, at: Vector2, r: float = 9.0) -> void:
+	Art.t_circle(ci, at, r, Art.GOLD, 2.4, 0.4)
+	for x: float in [-0.3, 0.3]:
+		Art.flat(ci, Art.rrect_pts(Rect2(at.x + x * r - r * 0.12, at.y - r * 0.5, r * 0.24, r), 1.0), Art.INK)
+
+
+## Stage of the player's boat or plant right now (1..20); works for the
+## second ones ("boat2", "plant2") too.
 ## (Looks GameState up at run time so Props also loads in test scripts.)
 static func current_stage(key: String) -> int:
 	var tree := Engine.get_main_loop() as SceneTree
@@ -356,18 +391,23 @@ static func number_tag(ci: CanvasItem, at: Vector2, text: String, ore: Color, po
 # --- Boat ------------------------------------------------------------------------------
 
 ## The player's boat at its current stage (kept for older callers).
-static func boat(ci: CanvasItem, t: float, crates: int, ore: Color, captain: bool, cap_emotion: String, blink: bool, crew: Callable = Callable()) -> void:
-	boat_at_stage(ci, current_stage("boat"), t, crates, ore, captain, cap_emotion, blink, crew)
+## `key` "boat2" draws the second boat (its stage and paint).
+static func boat(ci: CanvasItem, t: float, crates: int, ore: Color, captain: bool, cap_emotion: String, blink: bool, crew: Callable = Callable(),
+		key: String = "boat") -> void:
+	boat_at_stage(ci, current_stage(key), t, crates, ore, captain, cap_emotion, blink, crew, 0.0, variant_of(key))
 
 
-## Boat look `stage` (1..15, see BOAT_STAGE_* names), origin at the
+## Boat look `stage` (1..20, see BOAT_STAGE_* names), origin at the
 ## waterline, facing +x. crates 0..3 of `ore` on deck; `captain` puts the
 ## boat manager at the helm; `crew` is called at the moment the sailor
 ## should be drawn (between cabin and hull, feet at (52, -40)); `night`
-## 0..1 lights the lamps and windows (their glow: boat_lights).
+## 0..1 lights the lamps and windows (their glow: boat_lights). `variant`
+## 1 paints it as the second boat.
 static func boat_at_stage(ci: CanvasItem, stage: int, t: float, crates: int = 0, ore: Color = Art.GOLD, captain: bool = false,
-		cap_emotion: String = "happy", blink: bool = false, crew: Callable = Callable(), night: float = 0.0) -> void:
+		cap_emotion: String = "happy", blink: bool = false, crew: Callable = Callable(), night: float = 0.0, variant: int = 0) -> void:
 	var o := {"t": t, "crates": crates, "ore": ore, "captain": captain, "emo": cap_emotion, "blink": blink, "crew": crew, "night": night}
+	var before := _variant
+	_variant = variant
 	match clampi(stage, 1, STAGES):
 		1: _boat_rowboat(ci, o)
 		2: _boat_sailboat(ci, o)
@@ -384,6 +424,14 @@ static func boat_at_stage(ci: CanvasItem, stage: int, t: float, crates: int = 0,
 		13: _boat_subcarrier(ci, o)
 		14: _boat_yacht(ci, o)
 		15: _boat_ark(ci, o)
+		16: _boat_storm(ci, o)
+		17: _boat_galleon(ci, o)
+		18: _boat_liner(ci, o)
+		19: _boat_leviathan(ci, o)
+		20: _boat_throne(ci, o)
+	if variant > 0:
+		second_badge(ci, Vector2(64, -20))
+	_variant = before
 
 
 ## Chimney tops (local, facing +x) where smoke comes out; empty = none.
@@ -394,12 +442,14 @@ static func boat_smoke_points(stage: int) -> PackedVector2Array:
 		7: return PackedVector2Array([Vector2(-64, -168), Vector2(-38, -168)])
 		8: return PackedVector2Array([Vector2(-73, -160)])
 		12: return PackedVector2Array([Vector2(-88, -162)])
+		16: return PackedVector2Array([Vector2(-84, -162), Vector2(-64, -154)])
+		18: return PackedVector2Array([Vector2(-92, -150), Vector2(-68, -146), Vector2(-44, -142)])
 	return PackedVector2Array()
 
 
 ## Top of the boat above the waterline (for effects above it).
 static func boat_height(stage: int) -> float:
-	return [0, 80, 160, 132, 90, 130, 150, 170, 162, 100, 182, 100, 162, 136, 124, 150][clampi(stage, 1, STAGES)]
+	return [0, 80, 160, 132, 90, 130, 150, 170, 162, 100, 182, 100, 162, 136, 124, 150, 190, 204, 186, 150, 216][clampi(stage, 1, STAGES)]
 
 
 ## Night glow of the lamps and windows, drawn with the boat's transform
@@ -435,6 +485,11 @@ static func _boat_light_spots(stage: int) -> Array[Vector3]:
 		13: return [Vector3(-14, -134, 8), Vector3(-14, -86, 12), Vector3(-56, -64, 7)]
 		14: return [Vector3(-30, -124, 8), Vector3(-8, -84, 11), Vector3(-40, -60, 12)]
 		15: return [Vector3(-58, -150, 10), Vector3(-26, -168, 10), Vector3(-58, -60, 11)]
+		16: return [Vector3(-8, -172, 8), Vector3(-73, -101, 12), Vector3(-66, -68, 7)]
+		17: return [Vector3(-118, -86, 8), Vector3(-101, -55, 11), Vector3(-40, -162, 7)]
+		18: return [Vector3(95, -102, 8), Vector3(-64, -105, 11), Vector3(-30, -59, 7), Vector3(-80, -59, 7)]
+		19: return [Vector3(-4, -80, 8), Vector3(-52, -68, 12)]
+		20: return [Vector3(-107, -118, 7), Vector3(-3, -118, 7), Vector3(-56, -115, 12)]
 	return []
 
 
@@ -988,6 +1043,287 @@ static func _boat_ark(ci: CanvasItem, o: Dictionary) -> void:
 		Art.flat_now(ci, Art.star_pts(p, s, s * 0.35, 4), Color(0.9, 1.0, 1.0, 0.95))
 
 
+# 16. Storm cruiser ------------------------------------------------------------------
+
+const _SPARK_A := [Vector2(-8, -196), Vector2(-14, -204), Vector2(-6, -208), Vector2(-13, -218)]
+const _SPARK_B := [Vector2(-8, -196), Vector2(-1, -205), Vector2(-9, -210), Vector2(-2, -220)]
+
+
+static func _boat_storm(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var night: float = o["night"]
+	var bolt := _paint(1, Color("ffe14a"))
+	var steel_light := _v(Color("dfe5f0"))
+	flag(ci, Vector2(-114, -40), 42, _paint(4, Color("ffe14a")), t)
+	# Two funnels behind the bridge.
+	_chimney(ci, -84, -162, -112, 17, _paint(3, Color("3d4f78")), bolt)
+	_chimney(ci, -64, -154, -112, 17, _paint(3, Color("3d4f78")), bolt)
+	# Stepped bridge with a raked front.
+	Art.toon(ci, PackedVector2Array([Vector2(-108, -38), Vector2(-108, -86), Vector2(-40, -86), Vector2(-16, -38)]), steel_light, 3.0, 0.5)
+	Art.toon(ci, PackedVector2Array([Vector2(-100, -84), Vector2(-100, -116), Vector2(-54, -116), Vector2(-36, -84)]), steel_light, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-104, -122, 58, 8), 3, _paint(2, Color("3d4f78")), 2.6, 0.2)
+	_cabin_glass(ci, Rect2(-92, -111, 34, 18), 5, o, Vector2(-74, -96), 0.42)
+	for i in 3:
+		_window(ci, Rect2(-100 + i * 18, -76, 13, 12), 3, night, false)
+	# Lattice radar mast on the deck, a lightning rod on top.
+	Art.t_rect(ci, Rect2(-12, -166, 8, 128), 2, Art.METAL, 2.4, 0.0)
+	for i in 4:
+		Art.line_c(ci, PackedVector2Array([Vector2(-12, -52 - i * 28), Vector2(-4, -74 - i * 28)]), Color("8a96b0"), 1.8)
+	Art.stroke(ci, PackedVector2Array([Vector2(-26, -138), Vector2(10, -138)]), Art.METAL, 4.0, 2.0)
+	Art.push(ci, Vector2(-8, -150), 0.0, Vector2(cos(t * 3.0), 1.0))
+	Art.t_rect(ci, Rect2(-17, -3, 34, 6), 3, Art.WHITE, 2.0, 0.0)
+	Art.pop(ci)
+	lamp(ci, Vector2(-8, -172), night)
+	Art.stroke(ci, PackedVector2Array([Vector2(-8, -182), Vector2(-8, -194)]), Art.BRASS, 2.5, 1.2)
+	if fposmod(t, 1.7) < 0.3:
+		Art.polyline(ci, PackedVector2Array(_SPARK_A if int(t * 12.0) % 2 == 0 else _SPARK_B), bolt, 2.6)
+	_deck_stuff(ci, o)
+	var hull := _hull(ci, PackedVector2Array([Vector2(-118, -40), Vector2(20, -42), Vector2(104, -50), Vector2(124, -60), Vector2(106, -22),
+			Vector2(80, 6), Vector2(-92, 6), Vector2(-116, -16)]), _paint(0, Color("3d4f78")), Color(0, 0, 0, 0), 0, 0, Color("1c2440"), -6)
+	# Lightning bolt stripe along the hull.
+	var zig := PackedVector2Array()
+	var low := PackedVector2Array()
+	for i in 9:
+		var x := -116.0 + i * 28.0
+		var y := -33.0 + (6.0 if i % 2 == 0 else -2.0)
+		zig.append(Vector2(x, y))
+		low.append(Vector2(x, y + 7.0))
+	low.reverse()
+	zig.append_array(low)
+	Art.flat(ci, Art.clipped(zig, hull), bolt)
+	_portholes(ci, [-80.0, -56.0, -32.0, -8.0, 16.0, 40.0], -15, night, 4.2)
+	Art.line_c(ci, PackedVector2Array([Vector2(-116, -41), Vector2(120, -59)]), Art.INK, 2.5)
+
+
+# 17. Sky galleon --------------------------------------------------------------------
+
+## Square sail hanging from a yard at `top`, bellied by the wind (shape
+## cached per wind step; it breathes by a transform).
+static func _square_sail(ci: CanvasItem, x: float, top: float, bottom: float, hw: float, cloth: Color, stripe: Color, t: float) -> void:
+	var belly := 4.0 + _q(wind, 4.0) * 7.0
+	var pts := PackedVector2Array([Vector2(-hw, 0), Vector2(hw, 0)])
+	var h := bottom - top
+	for i in 7:
+		var f := i / 6.0
+		pts.append(Vector2(hw + sin(f * PI) * belly * 0.5, h * f))
+	for i in 7:
+		var f := i / 6.0
+		pts.append(Vector2(lerpf(hw, -hw, f), h + sin(f * PI) * belly))
+	Art.push(ci, Vector2(x, top), 0.0, Vector2(downwind, 1.0 + sin(t * 1.9 + x) * 0.025))
+	Art.toon(ci, pts, cloth, 2.4, 0.3)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-hw - 20, h * 0.55, hw * 2.0 + 40, 6), 1), pts), stripe)
+	Art.pop(ci)
+	Art.stroke(ci, PackedVector2Array([Vector2(x - hw - 5, top), Vector2(x + hw + 5, top)]), Art.WOOD_DARK, 3.5, 1.5)
+
+
+static func _boat_galleon(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var night: float = o["night"]
+	var cloth := Art.CREAM
+	var stripe := _paint(4, Art.GOLD)
+	# Main mast with a crow's nest and a pennant, the fore mast.
+	Art.t_rect(ci, Rect2(-44, -176, 8, 136), 3, Art.WOOD_DARK, 2.5, 0.0)
+	Art.t_rect(ci, Rect2(28, -150, 7, 110), 3, Art.WOOD_DARK, 2.5, 0.0)
+	_square_sail(ci, -40, -150, -104, 30, cloth, stripe, t)
+	_square_sail(ci, -40, -100, -58, 36, cloth, stripe, t + 0.7)
+	_square_sail(ci, 32, -130, -80, 26, cloth, stripe, t + 1.3)
+	Art.t_rect(ci, Rect2(-52, -170, 24, 10), 3, Art.WOOD, 2.4, 0.3)
+	lamp(ci, Vector2(-40, -162), night)
+	flag(ci, Vector2(-40, -176), 18, _paint(4, Art.RED), t, 0.7)
+	_deck_stuff(ci, o)
+	var hull := _hull(ci, PackedVector2Array([Vector2(-124, -74), Vector2(-104, -76), Vector2(-94, -44), Vector2(20, -40), Vector2(96, -46),
+			Vector2(114, -60), Vector2(102, -22), Vector2(78, 6), Vector2(-92, 6), Vector2(-118, -22)]), _paint(0, Color("9a5230")),
+			_paint(1, Art.GOLD), -30, 6, Color("2a2f5e"), -6)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-160, -20, 320, 3), 1), hull), Art.GOLD)
+	# Stern gallery: the captain's window and gold trim.
+	Art.t_rect(ci, Rect2(-126, -84, 34, 8), 3, Art.GOLD, 2.4, 0.2)
+	_cabin_glass(ci, Rect2(-114, -68, 22, 20), 6, o, Vector2(-103, -56), 0.36)
+	lamp(ci, Vector2(-120, -92), night)
+	_portholes(ci, [-60.0, -30.0, 0.0, 30.0], -26, night, 4.2)
+	# Bowsprit with a golden figure.
+	Art.stroke(ci, PackedVector2Array([Vector2(104, -54), Vector2(134, -72)]), Art.WOOD_DARK, 4.0, 1.8)
+	Art.t_circle(ci, Vector2(114, -58), 5, Art.GOLD, 2.0, 0.3)
+	# Feathered wings, beating slowly, and a propeller at the stern.
+	Art.push(ci, Vector2(4, -30), -0.25 + sin(t * 2.0) * 0.14, Vector2(0.8, 0.8))
+	Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(8, 4), Vector2(-20, -24), Vector2(-60, -40), Vector2(-86, -34), Vector2(-66, -22),
+			Vector2(-80, -12), Vector2(-52, -8), Vector2(-60, 2), Vector2(-24, 6)]), 2), Art.WHITE, 2.6, 0.5)
+	Art.line_c(ci, PackedVector2Array([Vector2(-24, -8), Vector2(-62, -24)]), Color("c9d6ee"), 1.8)
+	Art.line_c(ci, PackedVector2Array([Vector2(-20, 0), Vector2(-52, -6)]), Color("c9d6ee"), 1.8)
+	Art.pop(ci)
+	Art.push(ci, Vector2(-126, -44), 0.0, Vector2(1.0, cos(t * 9.0)))
+	Art.t_ellipse(ci, Vector2(0, -12), Vector2(4, 11), Art.METAL, 1.8, 0.0)
+	Art.t_ellipse(ci, Vector2(0, 12), Vector2(4, 11), Art.METAL, 1.8, 0.0)
+	Art.pop(ci)
+	Art.t_circle(ci, Vector2(-126, -44), 4, Art.GOLD, 1.8, 0.0)
+
+
+# 18. Aurora liner -------------------------------------------------------------------
+
+static func _boat_liner(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var night: float = o["night"]
+	var teal := _paint(3, Color("2bc8b4"))
+	var pink := _v(Color("ff7ab8"))
+	var violet := _v(Color("8a6cf0"))
+	# Aurora ribbons waving above the funnels (stronger at night).
+	var a := 0.16 + 0.3 * night
+	for r in 2:
+		var y0 := -176.0 - r * 12.0
+		for i in 8:
+			var x0 := -134.0 + i * 20.0
+			var ya := y0 + sin(t * 1.3 + i * 0.8 + r) * 7.0
+			var yb := y0 + sin(t * 1.3 + (i + 1) * 0.8 + r) * 7.0
+			var c0 := Color(teal.lerp(pink, i / 8.0), a * sin(PI * i / 8.0 + 0.2))
+			var c1 := Color(teal.lerp(pink, (i + 1) / 8.0), a * sin(PI * (i + 1) / 8.0 + 0.2))
+			Art.grad(ci, PackedVector2Array([Vector2(x0, ya - 12), Vector2(x0 + 20, yb - 12), Vector2(x0 + 20, yb + 10), Vector2(x0, ya + 10)]),
+					PackedColorArray([Color(c0, 0.0), Color(c1, 0.0), c1, c0]))
+	for f: Array in [[-92.0, -150.0, teal], [-68.0, -146.0, pink], [-44.0, -142.0, violet]]:
+		_chimney(ci, f[0], f[1], -110, 17, f[2], Art.WHITE)
+	# Three decks stepping up.
+	var glass := Color("27418a").lerp(LIT, _q(night * 0.7, 4.0))
+	Art.t_rect(ci, Rect2(-114, -74, 124, 36), 7, Art.WHITE, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-108, -66, 112, 12), 4, glass, 2.0, 0.0)
+	Art.t_rect(ci, Rect2(-102, -100, 98, 28), 7, Art.WHITE, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-96, -92, 86, 10), 4, glass, 2.0, 0.0)
+	Art.t_rect(ci, Rect2(-86, -120, 56, 22), 6, Art.WHITE, 3.0, 0.4)
+	_cabin_glass(ci, Rect2(-80, -116, 30, 14), 4, o, Vector2(-65, -106), 0.34)
+	Art.line_c(ci, PackedVector2Array([Vector2(-110, -76), Vector2(8, -76)]), _paint(2, Color("2bc8b4")), 3.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(-98, -102), Vector2(-8, -102)]), _paint(2, Color("2bc8b4")), 3.0)
+	# Bow mast with a lamp.
+	Art.t_rect(ci, Rect2(92, -96, 6, 50), 2, Art.METAL, 2.2, 0.0)
+	lamp(ci, Vector2(95, -102), night)
+	flag(ci, Vector2(-120, -44), 40, _paint(4, Color("ff7ab8")), t)
+	_deck_stuff(ci, o)
+	var hull := _hull(ci, PackedVector2Array([Vector2(-124, -44), Vector2(20, -46), Vector2(104, -52), Vector2(120, -62), Vector2(106, -22),
+			Vector2(82, 6), Vector2(-96, 6), Vector2(-120, -18)]), _paint(0, Art.WHITE), _paint(1, Color("2bc8b4")), -38, 5, Color("1f2a4e"), -8)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-160, -31, 320, 4), 1), hull), pink)
+	var xs := []
+	for i in 9:
+		xs.append(-96.0 + i * 22.0)
+	_portholes(ci, xs, -19, night, 3.8)
+	Art.line_c(ci, PackedVector2Array([Vector2(-122, -45), Vector2(116, -61)]), Art.INK, 2.5)
+
+
+# 19. Leviathan ----------------------------------------------------------------------
+
+const _FLUKE := [Vector2(6, 6), Vector2(-4, -26), Vector2(-30, -54), Vector2(-12, -52), Vector2(-2, -42), Vector2(6, -66), Vector2(20, -60),
+		Vector2(12, -30), Vector2(18, 6)]
+
+
+static func _boat_leviathan(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var night: float = o["night"]
+	var skin := _paint(0, Color("5a7fd8"))
+	# Tail flukes waving at the stern.
+	Art.push(ci, Vector2(-108, -20), sin(t * 1.5) * 0.14)
+	Art.toon(ci, Art.smooth_pts(PackedVector2Array(_FLUKE), 2), skin, 3.0, 0.5)
+	Art.pop(ci)
+	# Spout from the blowhole every few seconds.
+	var sp := fposmod(t, 3.4)
+	if sp < 1.2:
+		var k := sin(sp / 1.2 * PI)
+		Art.push(ci, Vector2(-2, -48), 0.0, Vector2(1.0, k))
+		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(-5, 0), Vector2(-8, -40), Vector2(-20, -62), Vector2(0, -56), Vector2(20, -62),
+				Vector2(8, -40), Vector2(5, 0)]), 2), Color("dff6ff"), 2.2, 0.0)
+		Art.pop(ci)
+		for i in 4:
+			var f := fposmod(sp * 1.6 + i * 0.25, 1.0)
+			Art.disc(ci, Vector2(-2 + (i - 1.5) * 12.0 * f, -48 - 62.0 * k + f * 30.0), 3.0, Color(0.87, 0.97, 1.0, k))
+	# Howdah on its back: the captain's cabin under a striped roof.
+	Art.t_rect(ci, Rect2(-80, -88, 64, 44), 10, Art.CREAM, 3.0, 0.5)
+	Art.toon(ci, PackedVector2Array([Vector2(-90, -84), Vector2(-48, -114), Vector2(-6, -84)]), _paint(2, Art.CORAL), 3.0, 0.4)
+	_cabin_glass(ci, Rect2(-70, -80, 34, 20), 6, o, Vector2(-53, -66))
+	Art.line_c(ci, PackedVector2Array([Vector2(-4, -88), Vector2(-4, -82)]), Art.INK, 1.6)
+	lamp(ci, Vector2(-4, -74), night)
+	flag(ci, Vector2(-48, -112), 20, _paint(4, Art.GOLD), t, 0.8)
+	_deck_stuff(ci, o)
+	# The whale itself is the hull.
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(-118, -26), Vector2(-96, -44), Vector2(-40, -50), Vector2(40, -48), Vector2(98, -40),
+			Vector2(124, -20), Vector2(118, 0), Vector2(94, 8), Vector2(-80, 8), Vector2(-112, -8)]), 3)
+	Art.toon(ci, body, skin, 3.2, 0.7)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-160, -9, 320, 30), 2), body), _paint(1, Color("d8e8ff")))
+	for i in 5:
+		var x := -40.0 + i * 26.0
+		Art.line_c(ci, PackedVector2Array([Vector2(x, -4), Vector2(x + 18, -4)]), Art.shade_of(_paint(1, Color("d8e8ff")), 0.25), 1.8)
+	# Harness strap under the howdah.
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-60, -60, 10, 80), 1), body), _paint(4, Art.GOLD))
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-30, -60, 10, 80), 1), body), _paint(4, Art.GOLD))
+	# Friendly face: eye (blinks), smile, cheek; barnacles.
+	if fposmod(t, 4.2) < 0.14:
+		Art.arc_c(ci, Vector2(88, -24), 5.0, 0.2, PI - 0.2, 8, Art.INK, 2.6)
+	else:
+		Art.t_ellipse(ci, Vector2(88, -24), Vector2(5, 6.5), Art.WHITE, 2.2, 0.0)
+		Art.t_ellipse(ci, Vector2(89.5, -23), Vector2(2.6, 3.6), Art.INK, 0.0, 0.0)
+		Art.disc(ci, Vector2(90.5, -25), 1.1, Art.WHITE)
+	Art.arc_c(ci, Vector2(106, -22), 13.0, 0.5, 1.5, 8, Art.INK, 2.4)
+	Art.disc(ci, Vector2(98, -12), 4.5, Color(1.0, 0.5, 0.55, 0.45))
+	for b: Vector3 in [Vector3(60, -36, 3), Vector3(68, -40, 2.2), Vector3(-80, -30, 2.6)]:
+		Art.t_circle(ci, Vector2(b.x, b.y), b.z, Color("eef1f8"), 1.4, 0.0)
+
+
+# 20. Ocean throne -------------------------------------------------------------------
+
+const _CROWN := [Vector2(-15, 0), Vector2(-18, -18), Vector2(-9, -9), Vector2(0, -22), Vector2(9, -9), Vector2(18, -18), Vector2(15, 0)]
+
+
+static func _boat_throne(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var night: float = o["night"]
+	var royal := _paint(2, Color("8a6cf0"))
+	var glow := 0.5 + 0.5 * sin(t * 1.8)
+	halo(ci, Vector2(-56, -150), 76.0, Color(1.0, 0.85, 0.45, 0.2 + glow * 0.12))
+	flag(ci, Vector2(-122, -42), 44, _paint(4, Color("d8363c")), t)
+	# Towers with gold caps and pennants.
+	for x: float in [-116.0, -12.0]:
+		Art.t_rect(ci, Rect2(x, -142, 18, 60), 4, Art.WHITE, 2.8, 0.4)
+		Art.toon(ci, PackedVector2Array([Vector2(x - 3, -140), Vector2(x + 9, -166), Vector2(x + 21, -140)]), Art.GOLD, 2.6, 0.5)
+		_window(ci, Rect2(x + 4, -126, 10, 14), 5, night, false)
+	for x: float in [-107.0, -3.0]:
+		Art.stroke(ci, PackedVector2Array([Vector2(x, -164), Vector2(x, -180)]), Art.WOOD_DARK, 2.5, 1.2)
+		Art.push(ci, Vector2(x, -180), sin(t * 3.0 + x) * 0.12, Vector2(downwind, 1.0))
+		Art.toon(ci, PackedVector2Array([Vector2(1, 0), Vector2(18, 4), Vector2(1, 9)]), royal, 2.0, 0.0)
+		Art.pop(ci)
+	# Drum with the throne window, onion dome, and the crown on top.
+	var dome := Art.smooth_pts(PackedVector2Array([Vector2(-84, -132), Vector2(-86, -150), Vector2(-72, -170), Vector2(-56, -188),
+			Vector2(-40, -170), Vector2(-26, -150), Vector2(-28, -132)]), 3)
+	Art.toon(ci, dome, royal, 3.0, 0.6)
+	for x: float in [-68.0, -44.0]:
+		Art.line_c(ci, PackedVector2Array([Vector2(x, -136), Vector2(-56, -184)]), Art.GOLD, 2.2)
+	Art.t_rect(ci, Rect2(-82, -136, 52, 48), 6, Art.WHITE, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-86, -140, 60, 7), 3, Art.GOLD, 2.4, 0.2)
+	_cabin_glass(ci, Rect2(-69, -130, 26, 28), 11, o, Vector2(-56, -114), 0.38)
+	Art.push(ci, Vector2(-56, -190), sin(t * 1.4) * 0.05)
+	Art.toon(ci, PackedVector2Array(_CROWN), Art.GOLD, 2.6, 0.5)
+	for g: Vector3 in [Vector3(-9, -5, 0), Vector3(0, -6, 1), Vector3(9, -5, 2)]:
+		Art.t_circle(ci, Vector2(g.x, g.y), 3.2, [Art.RED, Color("5affd8"), Color("8ef0ff")][int(g.z)], 1.4, 0.0)
+	Art.pop(ci)
+	# Colonnade hall.
+	Art.t_rect(ci, Rect2(-110, -90, 108, 50), 8, Art.WHITE, 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-104, -82, 96, 34), 4, Color("5b3fa8").lerp(LIT, _q(night * 0.6, 4.0)), 2.0, 0.0)
+	for i in 5:
+		var x := -100.0 + i * 21.0
+		Art.t_rect(ci, Rect2(x, -80, 8, 36), 2, Art.WHITE, 2.0, 0.2)
+		Art.t_rect(ci, Rect2(x - 2, -82, 12, 4), 1, Art.GOLD, 1.4, 0.0)
+	Art.t_rect(ci, Rect2(-114, -96, 116, 8), 3, Art.GOLD, 2.6, 0.2)
+	_deck_stuff(ci, o)
+	var hull := _hull(ci, PackedVector2Array([Vector2(-124, -42), Vector2(20, -44), Vector2(104, -54), Vector2(122, -66), Vector2(106, -24),
+			Vector2(82, 6), Vector2(-96, 6), Vector2(-120, -18)]), _paint(0, Art.CREAM), _paint(1, Art.GOLD), -35, 7, Color("5b3fa8"), -10)
+	var gems := [Color("ff5a8a"), Color("5affd8"), Color("8ef0ff"), Color("fff27a")]
+	for i in 4:
+		var p := Vector2(-88 + i * 40, -20)
+		Art.toon(ci, PackedVector2Array([p + Vector2(0, -7), p + Vector2(6, 0), p + Vector2(0, 7), p + Vector2(-6, 0)]), gems[i], 2.0, 0.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(-122, -43), Vector2(118, -65)]), Art.INK, 2.5)
+	# Trident at the bow.
+	Art.stroke(ci, PackedVector2Array([Vector2(110, -58), Vector2(134, -82)]), Art.GOLD, 3.0, 1.6)
+	Art.push(ci, Vector2(134, -82), 0.78)
+	Art.toon(ci, PackedVector2Array([Vector2(-9, 2), Vector2(-9, -10), Vector2(-5, -4), Vector2(0, -14), Vector2(5, -4), Vector2(9, -10), Vector2(9, 2)]),
+			Art.GOLD, 2.0, 0.0)
+	Art.pop(ci)
+	for i in 4:
+		var s := maxf(0.0, sin(t * 1.7 + i * 1.6)) * 7.0
+		Art.flat_now(ci, Art.star_pts(Vector2(-110 + i * 60, -160 + (i % 2) * 70), s, s * 0.35, 4), Color(1, 0.95, 0.6, 0.95))
+
+
 # --- Island, plant and friends ------------------------------------------------------
 
 ## Island ground; origin at the waterline where the shore begins, extends +x.
@@ -1040,21 +1376,24 @@ static func palm(ci: CanvasItem, t: float, wind_amount: float = 0.5, shake: floa
 # --- Plant ---------------------------------------------------------------------------
 
 ## The player's plant at its current stage (kept for older callers).
-static func plant(ci: CanvasItem, t: float, working: bool, gear_rot: float, flash: float) -> void:
-	plant_at_stage(ci, current_stage("plant"), t, working, gear_rot, flash)
+## `key` "plant2" draws the second plant (its stage and paint).
+static func plant(ci: CanvasItem, t: float, working: bool, gear_rot: float, flash: float, key: String = "plant") -> void:
+	plant_at_stage(ci, current_stage(key), t, working, gear_rot, flash, 0.0, variant_of(key))
 
 
-## Plant look `stage` (1..15, see PLANT_STAGE_* names); origin on the
+## Plant look `stage` (1..20, see PLANT_STAGE_* names); origin on the
 ## ground under the left wall. `working` spins the machines and lights the
 ## windows, `gear_rot` turns the gears (default: from t), `flash` 0..1
 ## swells the coin sign after a payout, `night` 0..1 lights the windows
-## (their glow: plant_lights).
+## (their glow: plant_lights). `variant` 1 paints it as the second plant.
 static func plant_at_stage(ci: CanvasItem, stage: int, t: float, working: bool = true, gear_rot: float = INF,
-		flash: float = 0.0, night: float = 0.0) -> void:
+		flash: float = 0.0, night: float = 0.0, variant: int = 0) -> void:
 	var gr := t * 3.0 if is_inf(gear_rot) else gear_rot
 	var lit := maxf(1.0 if working else 0.0, night)
 	var o := {"t": t, "working": working, "gear": gr, "flash": flash, "lit": lit, "night": night}
 	var s := clampi(stage, 1, STAGES)
+	var before := _variant
+	_variant = variant
 	match s:
 		1: _plant_tent(ci, o)
 		2: _plant_shack(ci, o)
@@ -1071,9 +1410,17 @@ static func plant_at_stage(ci: CanvasItem, stage: int, t: float, working: bool =
 		13: _plant_robot(ci, o)
 		14: _plant_palace(ci, o)
 		15: _plant_citadel(ci, o)
+		16: _plant_pearl(ci, o)
+		17: _plant_tidal(ci, o)
+		18: _plant_starforge(ci, o)
+		19: _plant_metropolis(ci, o)
+		20: _plant_heart(ci, o)
 	for w: Array in _plant_windows(s):
 		_window(ci, w[0], w[1], lit, w[1] < 8.0)
 	_hopper(ci, s)
+	if variant > 0:
+		second_badge(ci, Vector2(92, -14), 10.0)
+	_variant = before
 
 
 ## Chimney tops (local) where smoke (or steam) comes out.
@@ -1088,12 +1435,14 @@ static func plant_smoke_points(stage: int) -> PackedVector2Array:
 		8: return PackedVector2Array([Vector2(96, -196)])
 		9: return PackedVector2Array([Vector2(130, -120)])
 		13: return PackedVector2Array([Vector2(132, -124)])
+		17: return PackedVector2Array([Vector2(30, -214), Vector2(62, -186)])
+		18: return PackedVector2Array([Vector2(16, -172), Vector2(134, -172)])
 	return PackedVector2Array()
 
 
 ## Top of the plant above its ground (for effects above it).
 static func plant_height(stage: int) -> float:
-	return [0, 124, 144, 156, 176, 202, 170, 212, 200, 176, 132, 200, 150, 160, 186, 200][clampi(stage, 1, STAGES)]
+	return [0, 124, 144, 156, 176, 202, 170, 212, 200, 176, 132, 200, 150, 160, 186, 200, 212, 218, 226, 242, 246][clampi(stage, 1, STAGES)]
 
 
 ## Night glow of the windows, drawn with the plant's transform on a layer
@@ -1131,6 +1480,11 @@ static func _plant_windows(stage: int) -> Array:
 		13: return [[Rect2(10, -84, 32, 24), 4.0]]
 		14: return [[Rect2(26, -86, 18, 30), 9.0], [Rect2(58, -86, 18, 30), 9.0], [Rect2(90, -86, 18, 30), 9.0]]
 		15: return [[Rect2(16, -70, 24, 24), 12.0], [Rect2(58, -54, 22, 22), 11.0]]
+		16: return [[Rect2(14, -88, 24, 34), 12.0], [Rect2(46, -88, 24, 34), 12.0]]
+		17: return [[Rect2(88, -104, 20, 20), 5.0], [Rect2(114, -104, 20, 20), 5.0]]
+		18: return [[Rect2(98, -98, 20, 20), 10.0], [Rect2(124, -98, 20, 20), 10.0]]
+		19: return [[Rect2(8, -46, 22, 18), 5.0], [Rect2(36, -46, 22, 18), 5.0], [Rect2(64, -46, 22, 18), 5.0]]
+		20: return [[Rect2(14, -92, 26, 26), 13.0], [Rect2(48, -92, 26, 26), 13.0]]
 	return []
 
 
@@ -1144,6 +1498,11 @@ static func _plant_lamps(stage: int) -> Array[Vector3]:
 		13: return [Vector3(128, -152, 6)]
 		14: return [Vector3(75, -186, 8)]
 		15: return [Vector3(48, -206, 12)]
+		16: return [Vector3(75, -206, 8), Vector3(12, -182, 6), Vector3(138, -182, 6)]
+		17: return [Vector3(108, -61, 16)]
+		18: return [Vector3(75, -200, 18), Vector3(40, -46, 16)]
+		19: return [Vector3(87, -244, 8), Vector3(47, -214, 6), Vector3(121, -194, 6)]
+		20: return [Vector3(75, -208, 7), Vector3(14, -198, 6), Vector3(136, -188, 6)]
 	return []
 
 
@@ -1157,8 +1516,14 @@ static func _coin_sign(ci: CanvasItem, r: Rect2, flash: float, color: Color = Co
 	Art.coin(ci, r.get_center(), minf(r.size.y * 0.36, 11.0) + flash * 3.0)
 
 
+const _HOPPER_LATE := [Color("f3c6d8"), Color("aab6c8"), Color("8a6cf0"), Color("8ef0ff"), Art.GOLD]
+
+
 static func _hopper(ci: CanvasItem, stage: int) -> void:
 	var c := Art.WOOD if stage <= 3 else (Art.GOLD if stage == 14 else (Color("b58cff") if stage == 15 else Art.METAL))
+	if stage >= 16:
+		c = _HOPPER_LATE[stage - 16]
+	c = _v(c)
 	if stage <= 3:
 		Art.stroke(ci, PackedVector2Array([Vector2(-28, -42), Vector2(-30, 0)]), Art.WOOD_DARK, 4.0, 2.0)
 		Art.stroke(ci, PackedVector2Array([Vector2(-2, -42), Vector2(0, 0)]), Art.WOOD_DARK, 4.0, 2.0)
@@ -1188,13 +1553,13 @@ static func _big_gears(ci: CanvasItem, o: Dictionary, color: Color = Art.GOLD) -
 
 static func _plant_tent(ci: CanvasItem, o: Dictionary) -> void:
 	var t: float = o["t"]
-	flag(ci, Vector2(75, -96), 28, Art.GOLD, t, 0.8)
+	flag(ci, Vector2(75, -96), 28, _v(Art.GOLD), t, 0.8)
 	var tent := PackedVector2Array([Vector2(-2, 0), Vector2(8, -60), Vector2(75, -98), Vector2(142, -60), Vector2(152, 0)])
 	Art.toon(ci, tent, Art.CREAM, 3.2, 0.4)
 	for i in 5:
 		var x0 := -20.0 + i * 38.0
 		var stripe := PackedVector2Array([Vector2(x0, 4), Vector2(x0 + 18, 4), Vector2(75 + (x0 + 18 - 75) * 0.12, -100), Vector2(75 + (x0 - 75) * 0.12, -100)])
-		Art.flat(ci, Art.clipped(stripe, tent), Art.RED)
+		Art.flat(ci, Art.clipped(stripe, tent), _v(Art.RED))
 	# Bunting along the eaves.
 	var bunting := PackedVector2Array()
 	for i in 8:
@@ -1217,7 +1582,7 @@ static func _plant_tent(ci: CanvasItem, o: Dictionary) -> void:
 	# Lantern at the entrance and the coin sign.
 	Art.line(ci, Vector2(96, -76), Vector2(96, -68), Art.INK, 1.6)
 	lamp(ci, Vector2(96, -60), o["night"])
-	_coin_sign(ci, Rect2(48, -90, 40, 22), o["flash"])
+	_coin_sign(ci, Rect2(48, -90, 40, 22), o["flash"], _v(Color("35507e")))
 
 
 # 2. Wooden shack ---------------------------------------------------------------------
@@ -1225,11 +1590,11 @@ static func _plant_tent(ci: CanvasItem, o: Dictionary) -> void:
 static func _plant_shack(ci: CanvasItem, o: Dictionary) -> void:
 	Art.t_rect(ci, Rect2(26, -138, 10, 62), 2, Art.METAL, 2.3, 0.0)
 	Art.t_rect(ci, Rect2(22, -144, 18, 8), 2, Color("5a5f7a"), 2.3, 0.0)
-	Art.t_rect(ci, Rect2(0, -86, 150, 86), 4, Art.WOOD, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -86, 150, 86), 4, _v(Art.WOOD), 3.2, 0.5)
 	for i in 9:
 		Art.line(ci, Vector2(14 + i * 15, -80), Vector2(14 + i * 15, -4), Art.WOOD_DARK, 1.8)
 	Art.push(ci, Vector2(75, -92), -0.08)
-	Art.t_rect(ci, Rect2(-90, -9, 180, 16), 3, Color("8fa3b8"), 3.0, 0.4)
+	Art.t_rect(ci, Rect2(-90, -9, 180, 16), 3, _v(Color("8fa3b8")), 3.0, 0.4)
 	for i in 11:
 		Art.line(ci, Vector2(-82 + i * 16, -6), Vector2(-82 + i * 16, 5), Color("6f8298"), 1.6)
 	Art.pop(ci)
@@ -1241,10 +1606,10 @@ static func _plant_shack(ci: CanvasItem, o: Dictionary) -> void:
 
 static func _plant_workshop(ci: CanvasItem, o: Dictionary) -> void:
 	var gr: float = o["gear"]
-	Art.t_rect(ci, Rect2(18, -150, 24, 70), 3, Color("c0503e"), 3.0, 0.5)
+	Art.t_rect(ci, Rect2(18, -150, 24, 70), 3, _v(Color("c0503e")), 3.0, 0.5)
 	Art.t_rect(ci, Rect2(14, -156, 32, 9), 3, Color("3a3f5c"), 2.8, 0.0)
-	Art.t_rect(ci, Rect2(2, -98, 146, 70), 4, Color("e8b87a"), 3.2, 0.4)
-	Art.toon(ci, PackedVector2Array([Vector2(-10, -94), Vector2(75, -136), Vector2(160, -94)]), Color("d65a4a"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(2, -98, 146, 70), 4, _v(Color("e8b87a")), 3.2, 0.4)
+	Art.toon(ci, PackedVector2Array([Vector2(-10, -94), Vector2(75, -136), Vector2(160, -94)]), _v(Color("d65a4a")), 3.2, 0.5)
 	Art.t_rect(ci, Rect2(0, -34, 150, 34), 4, Color("a8a4b8"), 3.2, 0.5)
 	for i in 5:
 		Art.line(ci, Vector2(12 + i * 30, -30), Vector2(12 + i * 30, -4), Color("8a86a0"), 1.8)
@@ -1259,12 +1624,12 @@ static func _plant_workshop(ci: CanvasItem, o: Dictionary) -> void:
 # 4. Small factory (the classic plant) ------------------------------------------------
 
 static func _plant_factory(ci: CanvasItem, o: Dictionary) -> void:
-	Art.t_rect(ci, Rect2(18, -168, 26, 84), 4, Color("d65a4a"), 3.0, 0.5)
+	Art.t_rect(ci, Rect2(18, -168, 26, 84), 4, _v(Color("d65a4a")), 3.0, 0.5)
 	for i in 3:
 		Art.flat(ci, Art.rrect_pts(Rect2(18, -160 + i * 22, 26, 7), 1), Color("fff1e0"))
 	Art.t_rect(ci, Rect2(14, -174, 34, 10), 3, Color("3a3f5c"), 2.8, 0.0)
-	Art.t_rect(ci, Rect2(0, -100, 150, 100), 6, Art.CREAM, 3.2, 0.5)
-	_saw_roof(ci, -100, Art.TEAL)
+	Art.t_rect(ci, Rect2(0, -100, 150, 100), 6, _v(Art.CREAM), 3.2, 0.5)
+	_saw_roof(ci, -100, _v(Art.TEAL))
 	_door(ci, Art.WOOD)
 	_coin_sign(ci, Rect2(44, -150, 62, 28), o["flash"])
 	_big_gears(ci, o)
@@ -1273,8 +1638,8 @@ static func _plant_factory(ci: CanvasItem, o: Dictionary) -> void:
 # 5. Brick works ----------------------------------------------------------------------
 
 static func _plant_brick(ci: CanvasItem, o: Dictionary) -> void:
-	var brick := Color("c85a44")
-	Art.t_rect(ci, Rect2(14, -196, 28, 92), 4, Color("b34a3a"), 3.0, 0.5)
+	var brick := _v(Color("c85a44"))
+	Art.t_rect(ci, Rect2(14, -196, 28, 92), 4, _v(Color("b34a3a")), 3.0, 0.5)
 	for i in 3:
 		Art.flat(ci, Art.rrect_pts(Rect2(14, -186 + i * 26, 28, 6), 1), Color("fff1e0"))
 	Art.t_rect(ci, Rect2(10, -202, 36, 10), 3, Color("3a3f5c"), 2.8, 0.0)
@@ -1300,22 +1665,22 @@ static func _plant_conveyor(ci: CanvasItem, o: Dictionary) -> void:
 	Art.t_rect(ci, Rect2(20, -140, 16, 44), 3, Color("d65a4a"), 2.8, 0.4)
 	Art.t_rect(ci, Rect2(16, -146, 24, 8), 3, Color("3a3f5c"), 2.5, 0.0)
 	# Tower with a bucket elevator.
-	Art.t_rect(ci, Rect2(98, -170, 48, 80), 5, Color("dfe6f0"), 3.0, 0.4)
+	Art.t_rect(ci, Rect2(98, -170, 48, 80), 5, _v(Color("dfe6f0")), 3.0, 0.4)
 	var slot := Rect2(110, -162, 22, 60)
 	Art.t_rect(ci, slot, 3, Color("3a3f5c"), 2.2, 0.0)
 	for k in 4:
 		var y := slot.end.y - 10.0 - fposmod((t * 22.0 if working else 0.0) + k * 15.0, 52.0)
 		Art.t_rect(ci, Rect2(113, y, 16, 8), 2, Art.GOLD, 1.6, 0.0)
-	Art.t_rect(ci, Rect2(94, -176, 56, 9), 3, Art.TEAL, 2.8, 0.2)
+	Art.t_rect(ci, Rect2(94, -176, 56, 9), 3, _v(Art.TEAL), 2.8, 0.2)
 	# Hall with a round roof.
-	Art.t_rect(ci, Rect2(0, -98, 150, 98), 6, Art.CREAM, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -98, 150, 98), 6, _v(Art.CREAM), 3.2, 0.5)
 	var roof := PackedVector2Array()
 	for i in 13:
 		var f := i / 12.0
 		roof.append(Vector2(lerpf(-8, 102, f), -94 - sin(f * PI) * 22.0))
 	roof.append(Vector2(102, -90))
 	roof.append(Vector2(-8, -90))
-	Art.toon(ci, roof, Art.TEAL, 3.0, 0.5)
+	Art.toon(ci, roof, _v(Art.TEAL), 3.0, 0.5)
 	# Belt from the roof up into the tower.
 	Art.stroke(ci, PackedVector2Array([Vector2(40, -118), Vector2(100, -150)]), Color("3a3f5c"), 9.0, 2.2)
 	if working:
@@ -1335,12 +1700,12 @@ static func _plant_conveyor(ci: CanvasItem, o: Dictionary) -> void:
 static func _plant_twin(ci: CanvasItem, o: Dictionary) -> void:
 	for c: Vector3 in [Vector3(27, -206, 26), Vector3(61, -186, 24)]:
 		var x := c.x
-		Art.t_rect(ci, Rect2(x - c.z / 2.0, c.y + 6, c.z, -c.y - 100), 4, Color("e8ecf5"), 3.0, 0.5)
+		Art.t_rect(ci, Rect2(x - c.z / 2.0, c.y + 6, c.z, -c.y - 100), 4, _v(Color("e8ecf5")), 3.0, 0.5)
 		for i in 3:
-			Art.flat(ci, Art.rrect_pts(Rect2(x - c.z / 2.0, c.y + 14 + i * 26, c.z, 10), 1), Art.RED)
+			Art.flat(ci, Art.rrect_pts(Rect2(x - c.z / 2.0, c.y + 14 + i * 26, c.z, 10), 1), _v(Art.RED))
 		Art.t_rect(ci, Rect2(x - c.z / 2.0 - 4, c.y, c.z + 8, 10), 3, Color("3a3f5c"), 2.8, 0.0)
-	Art.t_rect(ci, Rect2(0, -112, 150, 112), 6, Color("d7dce8"), 3.2, 0.5)
-	_saw_roof(ci, -112, Art.TEAL, 4)
+	Art.t_rect(ci, Rect2(0, -112, 150, 112), 6, _v(Color("d7dce8")), 3.2, 0.5)
+	_saw_roof(ci, -112, _v(Art.TEAL), 4)
 	_coin_sign(ci, Rect2(96, -68, 42, 20), o["flash"])
 	_door(ci, Color("5a6f9a"))
 	_big_gears(ci, o)
@@ -1352,7 +1717,7 @@ static func _plant_refinery(ci: CanvasItem, o: Dictionary) -> void:
 	var t: float = o["t"]
 	var working: bool = o["working"]
 	# Column with platforms and a flare stack.
-	Art.t_rect(ci, Rect2(56, -190, 22, 110), 6, Color("e8ecf5"), 3.0, 0.5)
+	Art.t_rect(ci, Rect2(56, -190, 22, 110), 6, _v(Color("e8ecf5")), 3.0, 0.5)
 	for y: float in [-170.0, -140.0, -110.0]:
 		Art.t_rect(ci, Rect2(50, y, 34, 5), 1, Art.GOLD, 2.0, 0.0)
 	Art.t_rect(ci, Rect2(92, -180, 8, 100), 2, Color("aab6c8"), 2.4, 0.0)
@@ -1365,13 +1730,13 @@ static func _plant_refinery(ci: CanvasItem, o: Dictionary) -> void:
 	for x: float in [8.0, 36.0]:
 		Art.stroke(ci, PackedVector2Array([Vector2(x, -110), Vector2(x, 0)]), Color("aab6c8"), 4.0, 2.0)
 	Art.t_circle(ci, Vector2(22, -112), 26, Art.WHITE, 3.0, 0.6)
-	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-10, -116, 70, 7), 1), Art.circle_pts(Vector2(22, -112), 26)), Art.TEAL)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-10, -116, 70, 7), 1), Art.circle_pts(Vector2(22, -112), 26)), _v(Art.TEAL))
 	# Pipes.
 	Art.stroke(ci, PackedVector2Array([Vector2(46, -100), Vector2(56, -100)]), Art.METAL, 5.0, 2.0)
 	Art.stroke(ci, PackedVector2Array([Vector2(78, -120), Vector2(92, -120)]), Art.METAL, 5.0, 2.0)
 	# Main building.
-	Art.t_rect(ci, Rect2(44, -82, 106, 82), 6, Art.CREAM, 3.2, 0.5)
-	Art.t_rect(ci, Rect2(40, -88, 114, 10), 3, Color("35507e"), 2.8, 0.2)
+	Art.t_rect(ci, Rect2(44, -82, 106, 82), 6, _v(Art.CREAM), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(40, -88, 114, 10), 3, _v(Color("35507e")), 2.8, 0.2)
 	_coin_sign(ci, Rect2(50, -52, 44, 22), o["flash"])
 	_door(ci, Color("5a6f9a"))
 	Art.gear(ci, Vector2(22, -22), 16, Art.GOLD, float(o["gear"]))
@@ -1384,7 +1749,7 @@ static func _plant_lab(ci: CanvasItem, o: Dictionary) -> void:
 	var glow := 0.5 + 0.5 * sin(t * 2.2)
 	halo(ci, Vector2(75, -142), 70.0, Color(0.55, 0.95, 1.0, 0.28 + glow * 0.2))
 	Art.t_rect(ci, Rect2(52, -114, 46, 16), 4, Color("aab6c8"), 2.8, 0.3)
-	Art.crystal(ci, Vector2(75, -112), 62, 17, 0.0, Color("8ef0ff"), 2.8)
+	Art.crystal(ci, Vector2(75, -112), 62, 17, 0.0, _v(Color("8ef0ff")), 2.8)
 	Art.crystal(ci, Vector2(60, -112), 30, 8, -0.4, Color("b58cff"), 2.2)
 	Art.crystal(ci, Vector2(91, -112), 34, 8, 0.4, Color("ff9ff0"), 2.2)
 	# Vent pipe and satellite dish.
@@ -1393,8 +1758,8 @@ static func _plant_lab(ci: CanvasItem, o: Dictionary) -> void:
 	Art.push(ci, Vector2(20, -116), -0.5 + sin(t * 0.7) * 0.2)
 	Art.toon(ci, PackedVector2Array([Vector2(-12, -2), Vector2(12, -2), Vector2(8, 4), Vector2(-8, 4)]), Art.WHITE, 2.2, 0.0)
 	Art.pop(ci)
-	Art.t_rect(ci, Rect2(0, -100, 150, 100), 18, Color("f4f7ff"), 3.2, 0.5)
-	Art.flat(ci, Art.rrect_pts(Rect2(3, -40, 144, 7), 1), Art.TEAL)
+	Art.t_rect(ci, Rect2(0, -100, 150, 100), 18, _v(Color("f4f7ff")), 3.2, 0.5)
+	Art.flat(ci, Art.rrect_pts(Rect2(3, -40, 144, 7), 1), _v(Art.TEAL))
 	# Bubbling flask tube by the door.
 	Art.t_rect(ci, Rect2(88, -78, 14, 34), 7, Color(0.6, 1.0, 0.9, 0.9), 2.2, 0.0)
 	for k in 3:
@@ -1409,7 +1774,7 @@ static func _plant_lab(ci: CanvasItem, o: Dictionary) -> void:
 
 static func _plant_solar(ci: CanvasItem, o: Dictionary) -> void:
 	var t: float = o["t"]
-	Art.t_rect(ci, Rect2(0, -96, 150, 96), 8, Color("eef3fa"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -96, 150, 96), 8, _v(Color("eef3fa")), 3.2, 0.5)
 	# Tilted solar panels on the roof, a glint sweeping across.
 	var roof := PackedVector2Array([Vector2(-8, -92), Vector2(158, -92), Vector2(146, -130), Vector2(4, -130)])
 	Art.toon(ci, roof, Color("27418a"), 3.0, 0.0)
@@ -1423,9 +1788,9 @@ static func _plant_solar(ci: CanvasItem, o: Dictionary) -> void:
 	if g > -0.1 and g < 1.1:
 		Art.flat_now(ci, Art.clipped(glint, roof), Color(1, 1, 1, 0.35))
 	Art.stroke(ci, PackedVector2Array([Vector2(20, -92), Vector2(20, -80)]), Art.METAL, 3.0, 1.5)
-	_coin_sign(ci, Rect2(100, -84, 44, 22), o["flash"], Color("2bc8b4"))
+	_coin_sign(ci, Rect2(100, -84, 44, 22), o["flash"], _v(Color("2bc8b4")))
 	_door(ci, Color("7fd8ff"), 5.0)
-	_big_gears(ci, o, Color("5cd05f"))
+	_big_gears(ci, o, _v(Color("5cd05f")))
 
 
 # 11. Turbine plant -------------------------------------------------------------------
@@ -1443,13 +1808,13 @@ static func _plant_turbine(ci: CanvasItem, o: Dictionary) -> void:
 			Art.pop(ci)
 		Art.t_circle(ci, Vector2.ZERO, 6, Art.GREEN, 2.2, 0.0)
 		Art.pop(ci)
-	Art.t_rect(ci, Rect2(0, -96, 150, 96), 8, Color("e6f4ea"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -96, 150, 96), 8, _v(Color("e6f4ea")), 3.2, 0.5)
 	var roof := PackedVector2Array()
 	for i in 13:
 		var f := i / 12.0
 		roof.append(Vector2(lerpf(-8, 158, f), -92 - sin(f * PI) * 16.0))
-	Art.toon(ci, roof, Art.GREEN, 3.0, 0.5)
-	_coin_sign(ci, Rect2(48, -126, 54, 22), o["flash"], Art.GREEN_DARK)
+	Art.toon(ci, roof, _v(Art.GREEN), 3.0, 0.5)
+	_coin_sign(ci, Rect2(48, -126, 54, 22), o["flash"], _v(Art.GREEN_DARK))
 	_door(ci, Color("5a6f9a"))
 	_big_gears(ci, o, Art.GREEN)
 
@@ -1465,7 +1830,7 @@ static func _plant_dome(ci: CanvasItem, o: Dictionary) -> void:
 		dome.append(c + Vector2(cos(a) * 72.0, sin(a) * 80.0))
 	# Garden inside: glowing crystals and a little tree.
 	halo(ci, c + Vector2(0, -24), 70.0, Color(0.6, 1.0, 0.85, 0.3 + sin(t * 1.6) * 0.06))
-	Art.flat(ci, dome, Color(0.72, 0.95, 1.0, 1.0))
+	Art.flat(ci, dome, _v(Color(0.72, 0.95, 1.0, 1.0)))
 	Art.crystals(ci, c + Vector2(-32, 0), 34, {"ore": Color("8ef0ff"), "ore2": Color("b58cff")}, 5, 3)
 	Art.crystals(ci, c + Vector2(34, 0), 30, {"ore": Color("ff9ff0"), "ore2": Color("fff27a")}, 8, 3)
 	Art.stroke(ci, PackedVector2Array([c, c + Vector2(0, -40)]), Art.WOOD, 5.0, 2.0)
@@ -1486,7 +1851,7 @@ static func _plant_dome(ci: CanvasItem, o: Dictionary) -> void:
 	Art.t_rect(ci, Rect2(71, -146, 8, 14), 2, Art.GOLD, 2.2, 0.0)
 	Art.t_circle(ci, Vector2(75, -150), 6, Art.GOLD, 2.2, 0.3)
 	# Base.
-	Art.t_rect(ci, Rect2(-6, -58, 162, 58), 8, Color("e8e0f0"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-6, -58, 162, 58), 8, _v(Color("e8e0f0")), 3.2, 0.5)
 	_coin_sign(ci, Rect2(80, -50, 20, 20), o["flash"], Color("8a6cf0"))
 	_door(ci, Color("7fd8ff"), 6.0)
 
@@ -1503,9 +1868,9 @@ static func _plant_robot(ci: CanvasItem, o: Dictionary) -> void:
 	# Robot arm on the roof.
 	var a1 := -0.5 + (sin(t * 1.6) * 0.45 if working else 0.0)
 	var a2 := 1.2 + (sin(t * 1.6 + 1.2) * 0.5 if working else 0.0)
-	Art.t_rect(ci, Rect2(28, -124, 26, 16), 4, Color("ff9f1c"), 2.6, 0.3)
+	Art.t_rect(ci, Rect2(28, -124, 26, 16), 4, _v(Color("ff9f1c")), 2.6, 0.3)
 	Art.push(ci, Vector2(41, -120), a1)
-	Art.t_rect(ci, Rect2(-5, -44, 10, 46), 4, Color("ff9f1c"), 2.5, 0.3)
+	Art.t_rect(ci, Rect2(-5, -44, 10, 46), 4, _v(Color("ff9f1c")), 2.5, 0.3)
 	Art.push(ci, Vector2(0, -42), a2)
 	Art.t_rect(ci, Rect2(-4, -34, 8, 36), 3, Color("ffb13b"), 2.3, 0.3)
 	Art.stroke(ci, PackedVector2Array([Vector2(-6, -34), Vector2(-8, -42)]), Art.METAL, 3.0, 1.2)
@@ -1516,7 +1881,7 @@ static func _plant_robot(ci: CanvasItem, o: Dictionary) -> void:
 	Art.t_circle(ci, Vector2.ZERO, 6, Art.METAL, 2.0, 0.0)
 	Art.pop(ci)
 	Art.t_rect(ci, Rect2(122, -120, 18, 12), 2, Color("5a5f7a"), 2.3, 0.0)
-	Art.t_rect(ci, Rect2(0, -112, 150, 112), 6, Color("aab6c8"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -112, 150, 112), 6, _v(Color("aab6c8")), 3.2, 0.5)
 	for i in 8:
 		Art.disc(ci, Vector2(10 + i * 18.5, -104), 2.0, Color("7a8698"))
 	# Screen with a robot face.
@@ -1544,18 +1909,18 @@ static func _plant_palace(ci: CanvasItem, o: Dictionary) -> void:
 	# Central onion dome with a spire.
 	var dome := Art.smooth_pts(PackedVector2Array([Vector2(44, -102), Vector2(40, -128), Vector2(58, -152), Vector2(75, -172),
 			Vector2(92, -152), Vector2(110, -128), Vector2(106, -102)]), 3)
-	Art.toon(ci, dome, Art.GOLD, 3.2, 0.7)
+	Art.toon(ci, dome, _v(Art.GOLD), 3.2, 0.7)
 	Art.stroke(ci, PackedVector2Array([Vector2(75, -172), Vector2(75, -186)]), Art.GOLD, 3.0, 1.5)
 	Art.disc(ci, Vector2(75, -188), 4.0, Art.GOLD)
 	# Side towers with small gold domes and flags.
 	for x: float in [-4.0, 126.0]:
 		Art.t_rect(ci, Rect2(x, -128, 28, 128), 4, Art.CREAM, 3.0, 0.4)
-		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(x - 2, -126), Vector2(x + 14, -156), Vector2(x + 30, -126)]), 3), Art.GOLD, 3.0, 0.6)
-		flag(ci, Vector2(x + 14, -154), 20, Art.RED, t + x, 0.7)
+		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(x - 2, -126), Vector2(x + 14, -156), Vector2(x + 30, -126)]), 3), _v(Art.GOLD), 3.0, 0.6)
+		flag(ci, Vector2(x + 14, -154), 20, _v(Art.RED), t + x, 0.7)
 		_window(ci, Rect2(x + 8, -112, 12, 20), 6.0, float(o["lit"]), false)
 	# Main hall with columns.
 	Art.t_rect(ci, Rect2(20, -104, 110, 104), 5, Color("fff6e4"), 3.2, 0.4)
-	Art.t_rect(ci, Rect2(16, -108, 118, 10), 3, Art.GOLD, 2.8, 0.3)
+	Art.t_rect(ci, Rect2(16, -108, 118, 10), 3, _v(Art.GOLD), 2.8, 0.3)
 	for i in 5:
 		var x := 24.0 + i * 22.0
 		Art.t_rect(ci, Rect2(x, -54, 8, 54), 2, Art.WHITE, 2.2, 0.2)
@@ -1574,8 +1939,8 @@ static func _plant_citadel(ci: CanvasItem, o: Dictionary) -> void:
 	var t: float = o["t"]
 	halo(ci, Vector2(48, -206), 46.0, Color(0.55, 0.95, 1.0, 0.3 + sin(t * 2.0) * 0.1))
 	# Coral spires with pearls on top.
-	var spires := [[Vector2(8, 0), 150.0, 16.0, Color("ff7a8a")], [Vector2(48, 0), 190.0, 20.0, Color("ff9fb8")],
-			[Vector2(112, 0), 168.0, 18.0, Color("b58cff")], [Vector2(142, 0), 128.0, 14.0, Color("ffa84a")]]
+	var spires := [[Vector2(8, 0), 150.0, 16.0, _v(Color("ff7a8a"))], [Vector2(48, 0), 190.0, 20.0, _v(Color("ff9fb8"))],
+			[Vector2(112, 0), 168.0, 18.0, _v(Color("b58cff"))], [Vector2(142, 0), 128.0, 14.0, _v(Color("ffa84a"))]]
 	for s: Array in spires:
 		var b: Vector2 = s[0]
 		var h: float = s[1]
@@ -1594,13 +1959,13 @@ static func _plant_citadel(ci: CanvasItem, o: Dictionary) -> void:
 		var a := PI + PI * i / 14.0
 		var r := 52.0 + (4.0 if i % 2 == 0 else 0.0)
 		shell.append(c + Vector2(cos(a), sin(a)) * r)
-	Art.toon(ci, shell, Color("ffd6e0"), 3.0, 0.5)
+	Art.toon(ci, shell, _v(Color("ffd6e0")), 3.0, 0.5)
 	for i in 6:
 		var a := PI + PI * (i + 1) / 7.0
 		Art.line(ci, c + Vector2(0, 4), c + Vector2(cos(a), sin(a)) * 48.0, Color("f0a8bc"), 2.2)
 	Art.t_circle(ci, c + Vector2(0, -8), 8, Color("fbf8ff"), 2.2, 0.4)
 	# Body.
-	Art.t_rect(ci, Rect2(0, -86, 150, 86), 16, Color("ff9fb8"), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(0, -86, 150, 86), 16, _v(Color("ff9fb8")), 3.2, 0.5)
 	_coin_sign(ci, Rect2(96, -80, 44, 22), o["flash"], Color("8a6cf0"))
 	_door(ci, Color("b58cff"), 16.0)
 	for k in 4:
@@ -1608,6 +1973,253 @@ static func _plant_citadel(ci: CanvasItem, o: Dictionary) -> void:
 		var p := Vector2(20 + k * 38 + sin(f * 7.0 + k) * 4.0, -60 - f * 150.0)
 		Art.arc(ci, p, 3.0 + f * 2.0, 0, TAU, 10, Color(1, 1, 1, 0.7 * (1.0 - f)), 1.5)
 	Art.gear(ci, Vector2(22, -22), 14, Color("5affd8"), float(o["gear"]))
+
+
+# 16. Pearl palace --------------------------------------------------------------------
+
+static func _plant_pearl(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var pink := _v(Color("fde4ee"))
+	var gold := Art.GOLD
+	# Slim spires with pearls on top.
+	for x: float in [12.0, 138.0]:
+		Art.t_rect(ci, Rect2(x - 9, -170, 18, 170), 6, pink, 3.0, 0.4)
+		Art.toon(ci, PackedVector2Array([Vector2(x - 11, -168), Vector2(x, -180), Vector2(x + 11, -168)]), gold, 2.4, 0.3)
+		Art.t_circle(ci, Vector2(x, -186), 7, Color("fbf8ff"), 2.2, 0.4)
+	# The great pearl in a golden shell cup, with a finial.
+	var c := Vector2(75, -150)
+	halo(ci, c, 64.0, Color(1.0, 0.85, 0.95, 0.3 + sin(t * 1.7) * 0.08))
+	Art.t_circle(ci, c, 40, _v(Color("f6f0ff")), 3.0, 0.5)
+	Art.arc_c(ci, c, 30.0, PI * 1.1, PI * 1.45, 8, Color(1.0, 0.7, 0.9, 0.9), 4.0)
+	Art.arc_c(ci, c, 30.0, PI * 1.55, PI * 1.8, 8, Color(0.6, 0.95, 1.0, 0.9), 4.0)
+	Art.disc(ci, c + Vector2(-14, -16), 6.0, Color(1, 1, 1, 0.9))
+	Art.stroke(ci, PackedVector2Array([Vector2(75, -190), Vector2(75, -202)]), gold, 3.0, 1.5)
+	Art.disc(ci, Vector2(75, -206), 4.0, gold)
+	var cup := PackedVector2Array([Vector2(30, -124)])
+	for i in 11:
+		var a := PI * i / 10.0
+		cup.append(Vector2(75, -124) + Vector2(-cos(a) * 48.0, sin(a) * 22.0 - (3.0 if i % 2 == 1 else 0.0)))
+	Art.toon(ci, cup, gold, 3.0, 0.5)
+	# Hall with shell arches over the windows and a garland of pearls.
+	Art.t_rect(ci, Rect2(0, -112, 150, 112), 10, pink, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-4, -116, 158, 9), 4, gold, 2.6, 0.2)
+	for x: float in [26.0, 58.0]:
+		Art.arc_c(ci, Vector2(x, -86), 15.0, PI, TAU, 10, _v(Color("f0a8bc")), 4.0)
+	var garland := PackedVector2Array()
+	for i in 9:
+		var f := i / 8.0
+		garland.append(Vector2(6 + f * 138.0, -104 + sin(f * PI * 2.0 - PI / 2.0) * -4.0 + 4.0))
+	Art.line_c(ci, garland, Color(1, 1, 1, 0.7), 1.5)
+	for p in garland:
+		Art.t_circle(ci, p, 3.2, Color("fbf8ff"), 1.4, 0.0)
+	_coin_sign(ci, Rect2(80, -98, 46, 22), o["flash"], _v(Color("d85a8a")))
+	_door(ci, _v(Color("f0a8bc")), 14.0)
+	Art.gear(ci, Vector2(22, -22), 14, _v(Color("ffb3c7")), float(o["gear"]))
+	for i in 3:
+		var s := maxf(0.0, sin(t * 1.5 + i * 2.1)) * 7.0
+		Art.flat_now(ci, Art.star_pts(Vector2(30 + i * 45, -196 + (i % 2) * 40), s, s * 0.35, 4), Color(1, 0.95, 0.9, 0.95))
+
+
+# 17. Tidal foundry -------------------------------------------------------------------
+
+static func _plant_tidal(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var working: bool = o["working"]
+	var steel := _v(Color("5a7fa8"))
+	var sea := _v(Color("2bc8b4"))
+	# Two chimneys with wave bands.
+	for c: Vector3 in [Vector3(30, -214, 26), Vector3(62, -186, 20)]:
+		Art.t_rect(ci, Rect2(c.x - c.z / 2.0, c.y + 6, c.z, -c.y - 110), 4, _v(Color("dfe6f0")), 3.0, 0.5)
+		for i in 2:
+			Art.flat(ci, Art.rrect_pts(Rect2(c.x - c.z / 2.0, c.y + 18 + i * 28, c.z, 8), 1), sea)
+		Art.t_rect(ci, Rect2(c.x - c.z / 2.0 - 4, c.y, c.z + 8, 10), 3, Color("3a3f5c"), 2.8, 0.0)
+	# Foundry hall with a rolling-wave roof.
+	Art.t_rect(ci, Rect2(0, -120, 150, 120), 6, steel, 3.2, 0.5)
+	var roof := PackedVector2Array([Vector2(-8, -112)])
+	for i in 17:
+		var f := i / 16.0
+		roof.append(Vector2(lerpf(-8, 158, f), -122 - absf(sin(f * PI * 3.0)) * 14.0))
+	roof.append(Vector2(158, -112))
+	Art.toon(ci, roof, sea, 3.0, 0.5)
+	for i in 3:
+		Art.arc_c(ci, Vector2(20 + i * 55, -122), 8.0, PI, TAU, 8, Color(1, 1, 1, 0.8), 2.4)
+	# Glowing pour hatch.
+	var heat := 0.75 + 0.25 * sin(t * 6.0) if working else 0.35
+	halo(ci, Vector2(108, -61), 30.0, Color(1.0, 0.6, 0.2, 0.3 * heat))
+	Art.t_rect(ci, Rect2(88, -72, 40, 20), 5, Color("ff9a3c").lerp(Color("fff27a"), _q(heat, 4.0)), 2.6, 0.0)
+	_coin_sign(ci, Rect2(92, -148, 48, 22), o["flash"], _v(Color("35507e")))
+	for x: float in [98.0, 132.0]:
+		Art.line_c(ci, PackedVector2Array([Vector2(x, -126), Vector2(x, -120)]), Art.INK, 2.0)
+	_door(ci, _v(Color("35507e")))
+	# Tide wheel turning in a stream from the flume.
+	Art.t_rect(ci, Rect2(-6, -104, 56, 9), 3, _v(Color("7fb8e0")), 2.4, 0.0)
+	var flow := t * 1.4 if working else 0.0
+	for k in 4:
+		var f := fposmod(flow + k / 4.0, 1.0)
+		Art.disc(ci, Vector2(48 + f * 10.0, -94 + f * 34.0), 3.0, Color(0.75, 0.93, 1.0, 0.9 * (1.0 - f * 0.6)))
+	Art.push(ci, Vector2(40, -48), float(o["gear"]) * 0.6)
+	Art.t_circle(ci, Vector2.ZERO, 30, _v(Color("8e552c")), 2.8, 0.0)
+	Art.t_circle(ci, Vector2.ZERO, 22, Color("5a3a2a"), 0.0, 0.0)
+	for i in 8:
+		Art.push(ci, Vector2.ZERO, TAU * i / 8.0)
+		Art.t_rect(ci, Rect2(-3, -36, 6, 24), 2, Art.WOOD, 2.0, 0.0)
+		Art.pop(ci)
+	Art.t_circle(ci, Vector2.ZERO, 7, Art.GOLD, 2.0, 0.0)
+	Art.pop(ci)
+
+
+# 18. Starforge -----------------------------------------------------------------------
+
+const _STAR_DOTS := [Vector3(46, -150, 1.4), Vector3(62, -162, 1.1), Vector3(92, -158, 1.3), Vector3(104, -140, 1.0), Vector3(58, -134, 1.0)]
+
+
+static func _plant_starforge(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var working: bool = o["working"]
+	var night_blue := _v(Color("2e3470"))
+	var gold := Art.GOLD
+	# Slim chimneys with star caps.
+	for x: float in [16.0, 134.0]:
+		Art.t_rect(ci, Rect2(x - 8, -166, 16, 70), 3, _v(Color("8a6cf0")), 2.8, 0.4)
+		Art.toon(ci, Art.star_pts(Vector2(x, -170), 10, 4.5, 5), gold, 2.2, 0.0)
+	# The observatory dome and the forged star above it.
+	var dome := PackedVector2Array()
+	for i in 19:
+		var a := PI + PI * i / 18.0
+		dome.append(Vector2(75, -112) + Vector2(cos(a) * 56.0, sin(a) * 60.0))
+	Art.toon(ci, dome, night_blue.lightened(0.12), 3.0, 0.5)
+	for s: Vector3 in _STAR_DOTS:
+		Art.disc(ci, Vector2(s.x, s.y), s.z * 1.8, Color(1, 0.97, 0.8, 0.9))
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(70, -180, 10, 70), 2), dome), Color("141838"))
+	var pulse := 0.5 + 0.5 * sin(t * 2.4)
+	var star_at := Vector2(75, -200)
+	Art.grad(ci, PackedVector2Array([star_at, star_at + Vector2(-10, 30), star_at + Vector2(10, 30)]),
+			PackedColorArray([Color(1, 0.9, 0.5, 0.6), Color(1, 0.9, 0.5, 0.0), Color(1, 0.9, 0.5, 0.0)]))
+	halo(ci, star_at, 44.0, Color(1.0, 0.9, 0.5, 0.3 + pulse * 0.2))
+	Art.push(ci, star_at, t * 0.6)
+	Art.toon(ci, Art.star_pts(Vector2.ZERO, 20, 9, 5), Color("fff27a"), 2.8, 0.3)
+	Art.pop(ci)
+	for i in 3:
+		var a := t * 1.3 + TAU * i / 3.0
+		Art.push(ci, star_at + Vector2(cos(a) * 32.0, sin(a) * 12.0), a)
+		Art.toon(ci, Art.star_pts(Vector2.ZERO, 6, 2.6, 4), [Color("8ef0ff"), Color("ff9ff0"), Art.WHITE][i], 1.6, 0.0)
+		Art.pop(ci)
+	# Forge hall.
+	Art.t_rect(ci, Rect2(0, -114, 150, 114), 8, night_blue, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-4, -118, 158, 9), 3, gold, 2.6, 0.2)
+	# Forge mouth: glowing arch, sparks fly while it works.
+	var heat := 0.7 + 0.3 * sin(t * 9.0) if working else 0.3
+	Art.t_rect(ci, Rect2(14, -80, 52, 56), 22, Color("4a4f6a"), 3.0, 0.3)
+	Art.t_rect(ci, Rect2(22, -70, 36, 44), 16, Color("ff7a2a").lerp(Color("fff27a"), _q(heat, 4.0)), 2.4, 0.0)
+	Art.t_rect(ci, Rect2(22, -40, 36, 14), 4, Color("c0503e"), 2.0, 0.0)
+	if working:
+		for k in 5:
+			var f := fposmod(t * 1.8 + k * 0.2, 1.0)
+			Art.disc(ci, Vector2(40 + (k - 2) * 9.0 * f, -60 - f * 48.0 + f * f * 30.0), 2.2, Color(1.0, 0.85, 0.3, 1.0 - f))
+	# Anvil and a hammer striking it.
+	Art.toon(ci, PackedVector2Array([Vector2(62, -26), Vector2(98, -26), Vector2(92, -18), Vector2(84, -18), Vector2(86, -6), Vector2(74, -6),
+			Vector2(76, -18), Vector2(66, -18)]), Color("5a5f7a"), 2.4, 0.3)
+	var hit := absf(sin(t * 4.0)) if working else 0.3
+	Art.push(ci, Vector2(96, -58), -0.2 - hit * 0.7)
+	Art.t_rect(ci, Rect2(-3, -2, 6, 34), 2, Art.WOOD, 2.0, 0.0)
+	Art.t_rect(ci, Rect2(-10, 28, 20, 12), 3, Art.METAL, 2.2, 0.3)
+	Art.pop(ci)
+	_coin_sign(ci, Rect2(98, -136, 44, 22), o["flash"], _v(Color("8a6cf0")))
+	_door(ci, _v(Color("5a4fb8")), 8.0)
+
+
+# 19. Crystal metropolis ----------------------------------------------------------------
+
+const _TOWERS := [[6.0, 26.0, 150.0, 0], [34.0, 28.0, 214.0, 1], [70.0, 34.0, 240.0, 2], [108.0, 28.0, 194.0, 3], [134.0, 22.0, 140.0, 0]]
+
+
+static func _plant_metropolis(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var cols := [_v(Color("5ad8d0")), _v(Color("a88cff")), _v(Color("8ef0ff")), _v(Color("ff9fd0"))]
+	halo(ci, Vector2(87, -170), 80.0, Color(0.6, 0.95, 1.0, 0.18 + sin(t * 1.4) * 0.05))
+	# Glass towers with pointed tops, a facet of light and floor lines.
+	for tw: Array in _TOWERS:
+		var x: float = tw[0]
+		var w: float = tw[1]
+		var h: float = tw[2]
+		var c: Color = cols[tw[3]]
+		var body := PackedVector2Array([Vector2(x, -40), Vector2(x, -h + 24), Vector2(x + w * 0.5, -h), Vector2(x + w, -h + 24), Vector2(x + w, -40)])
+		Art.toon(ci, body, c, 3.0, 0.3)
+		Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(x + w * 0.18, -h, w * 0.18, h), 1), body), Color(1, 1, 1, 0.4))
+		var y := -64.0
+		while y > -h + 30.0:
+			Art.line_c(ci, PackedVector2Array([Vector2(x + 3, y), Vector2(x + w - 3, y)]), Art.shade_of(c, 0.25), 1.6)
+			y -= 22.0
+	# Sky bridge.
+	Art.t_rect(ci, Rect2(58, -150, 56, 9), 3, _v(Color("e8f4ff")), 2.4, 0.2)
+	# Beacon on the tallest tower.
+	Art.stroke(ci, PackedVector2Array([Vector2(87, -240), Vector2(87, -246)]), Art.METAL, 2.5, 1.2)
+	var blink := 1.0 if fposmod(t, 1.4) < 0.7 else 0.4
+	Art.t_circle(ci, Vector2(87, -248), 4, Art.RED.lerp(Color("ffb0a0"), _q(blink - 0.4, 4.0)), 1.8, 0.0)
+	# Floating shards.
+	for i in 3:
+		var p := Vector2([22.0, 128.0, 60.0][i], [-176.0, -168.0, -226.0][i] + sin(t * 1.6 + i * 2.0) * 5.0)
+		Art.push(ci, p, 0.3 * (i - 1))
+		Art.crystal(ci, Vector2(0, 8), 16, 5, 0.0, cols[(i + 1) % 4], 2.0)
+		Art.pop(ci)
+	# Podium with the door and the coin sign.
+	Art.t_rect(ci, Rect2(-4, -60, 158, 60), 6, _v(Color("e8f4ff")), 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-8, -64, 166, 8), 3, _v(Color("5ad8d0")), 2.6, 0.2)
+	_coin_sign(ci, Rect2(66, -118, 42, 22), o["flash"], _v(Color("2a4fb8")))
+	_door(ci, _v(Color("8ef0ff")), 6.0)
+
+
+# 20. Ocean heart works -------------------------------------------------------------------
+
+static func _heart_pts(r: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 24:
+		var a := TAU * i / 24.0
+		pts.append(Vector2(16.0 * pow(sin(a), 3), -(13.0 * cos(a) - 5.0 * cos(2 * a) - 2.0 * cos(3 * a) - cos(4 * a))) * r / 16.0)
+	return pts
+
+
+static func _plant_heart(ci: CanvasItem, o: Dictionary) -> void:
+	var t: float = o["t"]
+	var ocean := _v(Color("3a4fb8"))
+	var gold := Art.GOLD
+	var beat := 1.0 + maxf(0.0, sin(t * 3.2)) * 0.06
+	var c := Vector2(75, -176)
+	halo(ci, c, 78.0 * beat, Color(1.0, 0.45, 0.6, 0.26 + (beat - 1.0) * 3.0))
+	# Coral towers with pearls.
+	for s: Array in [[Vector2(14, 0), 192.0, 16.0, _v(Color("ff7a8a"))], [Vector2(136, 0), 182.0, 15.0, _v(Color("ffa84a"))]]:
+		var b: Vector2 = s[0]
+		var h: float = s[1]
+		var w: float = s[2]
+		var pts := Art.smooth_pts(PackedVector2Array([b + Vector2(-w, 0), b + Vector2(-w * 0.8, -h * 0.5), b + Vector2(-w * 0.55, -h * 0.85),
+				b + Vector2(0, -h), b + Vector2(w * 0.55, -h * 0.85), b + Vector2(w * 0.8, -h * 0.5), b + Vector2(w, 0)]), 3)
+		Art.toon(ci, pts, s[3], 3.0, 0.6)
+		Art.t_circle(ci, b + Vector2(0, -h - 6), 6, Color("fbf8ff"), 2.2, 0.4)
+	# Golden arms from the towers holding the heart, and pipes into it.
+	Art.arc_c(ci, c + Vector2(0, 30), 62.0, PI * 1.08, PI * 1.92, 16, Art.INK, 8.0)
+	Art.arc_c(ci, c + Vector2(0, 30), 62.0, PI * 1.08, PI * 1.92, 16, gold, 4.0)
+	Art.stroke(ci, PackedVector2Array([Vector2(46, -104), Vector2(62, -150)]), gold, 5.0, 2.0)
+	Art.stroke(ci, PackedVector2Array([Vector2(104, -104), Vector2(88, -150)]), gold, 5.0, 2.0)
+	Art.push(ci, c, sin(t * 1.1) * 0.05, Vector2(beat, beat))
+	var heart := _heart_pts(40.0)
+	Art.toon(ci, heart, Color("ff4d7a"), 3.2, 0.5)
+	Art.flat(ci, Art.clipped(PackedVector2Array([Vector2(0, -40), Vector2(40, -40), Vector2(40, 40), Vector2(0, 40)]), heart), Color(0.6, 0.0, 0.25, 0.22))
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(-16, -12), Vector2(9, 5), 12, -0.6), heart), Color(1, 1, 1, 0.75))
+	Art.pop(ci)
+	# Main hall with a wave frieze.
+	Art.t_rect(ci, Rect2(0, -106, 150, 106), 14, ocean, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-4, -110, 158, 9), 4, gold, 2.6, 0.2)
+	var frieze := PackedVector2Array()
+	for i in 19:
+		frieze.append(Vector2(6 + i * 7.7, -56 + sin(i * 1.2) * 3.0))
+	Art.line_c(ci, frieze, Color(1, 1, 1, 0.8), 2.4)
+	_coin_sign(ci, Rect2(82, -98, 46, 22), o["flash"], _v(Color("d8363c")))
+	_door(ci, gold.darkened(0.1), 14.0)
+	Art.gear(ci, Vector2(22, -24), 14, Color("5affd8"), float(o["gear"]))
+	for k in 4:
+		var f := fposmod(t * 0.35 + k / 4.0, 1.0)
+		var p := Vector2(30 + k * 30 + sin(f * 7.0 + k) * 4.0, -120 - f * 120.0)
+		Art.arc(ci, p, 3.0 + f * 2.0, 0, TAU, 10, Color(1, 1, 1, 0.7 * (1.0 - f)), 1.5)
 
 
 ## Conveyor belt from `a` to `b` (world points), items slide along by `t`.
@@ -1631,6 +2243,82 @@ static func conveyor(ci: CanvasItem, a: Vector2, b: Vector2, t: float, running: 
 			Art.push(ci, p, atan2(dir.y, dir.x))
 			Art.crystal(ci, Vector2(0, 3), 11, 4.5, 0.0, ore, 1.6)
 			Art.pop(ci)
+
+
+# --- Second boat and plant: for-sale markers ------------------------------------------
+
+## Grassy terrace behind the shore where the second plant stands; origin
+## at its left foot on the waterline, top `h` above it, `w` wide on top.
+static func terrace(ci: CanvasItem, w: float, h: float) -> void:
+	var hill := Art.smooth_pts(PackedVector2Array([Vector2(-34, 12), Vector2(-26, -h * 0.55), Vector2(-12, -h + 2), Vector2(w * 0.5, -h - 3),
+			Vector2(w, -h), Vector2(w + 40, -h * 0.6), Vector2(w + 60, 12)]), 4)
+	Art.toon(ci, hill, Art.SAND, 3.0, 0.5)
+	var grass := Art.smooth_pts(PackedVector2Array([Vector2(-18, -h + 6), Vector2(-10, -h - 1), Vector2(w * 0.5, -h - 5), Vector2(w + 4, -h - 2),
+			Vector2(w + 22, -h + 8), Vector2(w * 0.5, -h + 9), Vector2(0, -h + 10)]), 3)
+	Art.toon(ci, grass, Art.GRASS, 2.6, 0.4)
+
+
+## Wooden sign on a post saying the price (a coin and the number) with the
+## "II" badge of the second boat/plant. Origin at the foot of the post; the
+## 34 px board sits on top of the `post`. `ready` 0..1 (can afford) adds a
+## green plus and a warm glow.
+const SIGN_POST := 40.0
+
+
+static func sale_sign_width(price: String) -> float:
+	var tw := UiTheme.heavy_font().get_string_size(price, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	return roundf(tw + 64.0)
+
+
+static func sale_sign(ci: CanvasItem, price: String, ready: float = 0.0, post: float = SIGN_POST) -> void:
+	var w := sale_sign_width(price)
+	var top := -post - 34.0
+	if post > 0.0:
+		Art.stroke(ci, PackedVector2Array([Vector2(0, 0), Vector2(0, -post)]), Art.WOOD_DARK, 5.0, 2.0)
+	if ready > 0.01:
+		halo(ci, Vector2(0, top + 17), w * 0.75, Color(1.0, 0.9, 0.45, 0.45 * ready))
+	Art.t_rect(ci, Rect2(-w / 2.0, top, w, 34), 8, Art.CREAM, 3.0, 0.4)
+	second_badge(ci, Vector2(-w / 2.0 + 15, top + 17), 8.0)
+	Art.coin(ci, Vector2(-w / 2.0 + 34, top + 17), 9.0)
+	Art.text(ci, Vector2(-w / 2.0 + 46, top + 24), price, 18, Art.INK, 0, false)
+	if ready > 0.5:
+		Art.t_circle(ci, Vector2(w / 2.0 - 2, top + 1), 9, Art.GREEN, 2.4, 0.3)
+		Art.flat(ci, Art.rrect_pts(Rect2(w / 2.0 - 7, top - 0.5, 10, 3), 1), Art.WHITE)
+		Art.flat(ci, Art.rrect_pts(Rect2(w / 2.0 - 3.5, top - 4, 3, 10), 1), Art.WHITE)
+
+
+## Red and white mooring buoy with a lamp on top (glow: buoy_light at
+## BUOY_LAMP); origin at the waterline.
+const BUOY_LAMP := Vector2(0, -34)
+
+
+static func buoy(ci: CanvasItem, lit: float) -> void:
+	var body := Art.ellipse_pts(Vector2(0, -6), Vector2(17, 13), 20)
+	Art.toon(ci, body, Art.RED, 2.8, 0.6)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-20, -9, 40, 6), 1), body), Art.WHITE)
+	Art.stroke(ci, PackedVector2Array([Vector2(0, -16), Vector2(0, -28)]), Art.METAL, 3.0, 1.5)
+	Art.t_circle(ci, BUOY_LAMP, 5, LAMP_OFF.lerp(LIT, _q(lit, 4.0)), 2.2, 0.0)
+
+
+## Empty building plot: a patch of dug earth with stakes and a rope
+## fence, `w` wide; origin on the ground at its left end.
+static func plot(ci: CanvasItem, w: float) -> void:
+	Art.flat(ci, Art.ellipse_pts(Vector2(w / 2.0, -2), Vector2(w / 2.0 + 6, 8), 20), Color("c98a4e"))
+	for p: Vector2 in [Vector2(w * 0.3, -4), Vector2(w * 0.62, -2)]:
+		Art.t_ellipse(ci, p, Vector2(9, 4), Color("a86a38"), 1.8, 0.0)
+	var n := 5
+	var tops := PackedVector2Array()
+	for i in n:
+		var x := w * i / (n - 1.0)
+		var y := -6.0 if i % 2 == 0 else 2.0
+		Art.t_rect(ci, Rect2(x - 3, y - 26, 6, 28), 2, Art.WOOD, 2.2, 0.0)
+		tops.append(Vector2(x, y - 20))
+	Art.line_c(ci, tops, Color("f1ddb9"), 2.4)
+	for i in n - 1:
+		var a := tops[i]
+		var b := tops[i + 1]
+		Art.toon(ci, PackedVector2Array([a.lerp(b, 0.5) + Vector2(-5, 0), a.lerp(b, 0.5) + Vector2(5, 0), a.lerp(b, 0.5) + Vector2(0, 8)]),
+				Art.GOLD if i % 2 == 0 else Art.CORAL, 1.6, 0.0)
 
 
 # --- Underwater bits -------------------------------------------------------------------

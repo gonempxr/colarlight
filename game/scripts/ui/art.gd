@@ -59,6 +59,15 @@ const DEPTH_STYLE: Array[Dictionary] = [
 	{"rock": Color("3a2a44"), "floor": Color("6a5078"), "ore": Color("ff5ae0"), "ore2": Color("ffc8f4"), "suit": Color("7fd34e"), "water": Color("1a0b26"), "deco": "crater"},  # meteor
 	{"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("0a0f22"), "deco": "tentacles"},  # kraken
 	{"rock": Color("1a1640"), "floor": Color("3a3478"), "ore": Color("fff27a"), "ore2": Color("ffffff"), "suit": Color("ff5a8a"), "water": Color("070722"), "deco": "stars"},  # star
+	{"rock": Color("3a302c"), "floor": Color("6e5e52"), "ore": Color("c8f03c"), "ore2": Color("f6ffb0"), "suit": Color("5ab8ff"), "water": Color("1e1612"), "deco": "vents"},  # vent
+	{"rock": Color("34455a"), "floor": Color("7c8ea0"), "ore": Color("f0e2c0"), "ore2": Color("9fe0ff"), "suit": Color("ff8a3d"), "water": Color("0a2030"), "deco": "whale"},  # whale
+	{"rock": Color("4e5478"), "floor": Color("aab4d0"), "ore": Color("cfdcf0"), "ore2": Color("ffffff"), "suit": Color("ff5ab4"), "water": Color("1c2444"), "deco": "mirror"},  # mirror
+	{"rock": Color("262c40"), "floor": Color("4e5a78"), "ore": Color("6ab0ff"), "ore2": Color("eaf6ff"), "suit": Color("ffd23f"), "water": Color("0c1426"), "deco": "storm"},  # storm
+	{"rock": Color("4a1e24"), "floor": Color("8a4238"), "ore": Color("ff5a2a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("2a0c12"), "deco": "dragon"},  # dragon
+	{"rock": Color("2a3268"), "floor": Color("6a74b8"), "ore": Color("ffc23a"), "ore2": Color("fff0a0"), "suit": Color("b07cff"), "water": Color("10184a"), "deco": "throne"},  # crown
+	{"rock": Color("1a1228"), "floor": Color("3c2c58"), "ore": Color("9a4aff"), "ore2": Color("e0b8ff"), "suit": Color("5affd8"), "water": Color("0e0818"), "deco": "void"},  # void
+	{"rock": Color("2c3a36"), "floor": Color("6a7e70"), "ore": Color("ffb347"), "ore2": Color("fff0c8"), "suit": Color("ff6f61"), "water": Color("0c2422"), "deco": "clocks"},  # time
+	{"rock": Color("1c2a5a"), "floor": Color("4a64a8"), "ore": Color("4de8ff"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("0a1450"), "deco": "heart"},  # heart
 ]
 
 

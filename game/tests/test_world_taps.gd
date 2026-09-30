@@ -2,7 +2,9 @@ extends SceneTree
 ## Taps on the surface world (headless is fine):
 ##   godot --headless --path . --resolution 390x844 -s res://tests/test_world_taps.gd
 ## The boat and the plant still take their taps; the sun, clouds, birds,
-## fish, palm and lighthouse react; a drag over them does nothing.
+## fish, palm and lighthouse react; a drag over them does nothing. The
+## second boat and plant: their for-sale signs select them, once bought
+## they take their own taps.
 
 var _failures := 0
 var _checks := 0
@@ -62,7 +64,17 @@ func _initialize() -> void:
 	check(world.pokes.has("sun"), "the sun reacts")
 
 	taps.clear()
+	# A cloud well inside the screen and clear of the cards (they drift off the edges).
 	var c: Dictionary = surface._clouds[0]
+	var best := INF
+	for cl: Dictionary in surface._clouds:
+		var cp: Vector2 = surface._cloud_pos(cl)
+		if cp.x < 60.0 or cp.x > surface.size.x - 60.0 or surface._on_card(cp) or surface._building_at(cp) != "":
+			continue
+		var d := absf(cp.x - surface.size.x * 0.5)
+		if d < best:
+			best = d
+			c = cl
 	await _click(surface._cloud_pos(c))
 	check(float(c["poke"]) > 0.0, "a cloud puffs and rains")
 	await _frames(20)
@@ -103,6 +115,51 @@ func _initialize() -> void:
 	await _click(dn.moon_pos(surface.size.x))
 	check(world.pokes.has("moon"), "the moon reacts")
 
+	# The second boat and plant: for sale once the third dive site is open;
+	# a tap on their sign selects them (the upgrade panel sells them).
+	var selected: Array[String] = []
+	world.stage_selected.connect(func(k: String) -> void: selected.append(k))
+	check(surface.second_state("boat2") == "", "no for-sale signs before the third dive site")
+	gs.levels["d2"] = 1
+	gs._timer["boat"] = -1.0
+	await _frames(3)
+	check(surface.second_state("boat2") == "sale" and surface.second_state("plant2") == "sale", "for-sale signs from the third dive site on")
+	for key in ["plant2", "boat2"]:
+		var r: Rect2 = surface._sign_rect(key)
+		selected.clear()
+		taps.clear()
+		await _tap(r.get_center())
+		check(selected == [key], "tapping the %s sign selects it (%s)" % [key, selected])
+		check(taps.is_empty(), "the %s sign taps nothing else (%s)" % [key, taps])
+	# Bought: they stand in the world and take their own taps.
+	gs.coins = 1e12
+	check(gs.open_building("plant2") and gs.open_building("boat2"), "buy the second boat and plant")
+	await create_timer(0.4).timeout
+	check(surface.second_state("boat2") == "open" and surface.second_state("plant2") == "open", "second boat and plant are shown")
+	taps.clear()
+	selected.clear()
+	await _tap(surface.boat2_world_pos() + Vector2(0, -30))
+	check("boat2" in taps, "tapping the second boat taps it (%s)" % [taps])
+	check(selected.is_empty(), "tapping the second boat selects nothing")
+	# On phones the sky cards cover the island; move them away to reach the plants.
+	surface.boat_card.visible = false
+	surface.plant_card.visible = false
+	await _frames(2)
+	taps.clear()
+	var p2: Vector2 = surface.plant2_world_pos() + Vector2(12, -60)
+	var why := "hit %s, card %s, drag %s" % [surface._building_at(p2), surface._on_card(p2), Scroller.is_drag()]
+	await _tap(p2)
+	check(taps == ["plant2"], "tapping the second plant taps it (%s; %s)" % [taps, why])
+	taps.clear()
+	await _tap(surface.plant_world_pos() + Vector2(40, -80))
+	check(taps == ["plant"], "the first plant still takes its taps (%s)" % [taps])
+	surface.boat_card.visible = true
+	surface.plant_card.visible = true
+	gs.levels["boat2"] = 60
+	gs.upgraded.emit("boat2", 1)
+	await _frames(3)
+	check(surface._stage["boat2"] > 1 and surface._t - float(surface._stage_fx["boat2"]) < 1.0, "a new stage of the second boat is celebrated")
+
 	# A new stage: celebrate once.
 	var before: int = surface._stage["boat"]
 	gs.levels["boat"] = 60
@@ -139,6 +196,19 @@ func _click(world_pos: Vector2) -> void:
 	var up := down.duplicate()
 	up.pressed = false
 	root.push_input(up)
+	await _frames(2)
+
+
+## A tap released right on the surface (its local space is the world's):
+## the headless window is tiny, so real clicks far from the corner land on
+## other UI. Tests the surface's own routing, cards included.
+func _tap(world_pos: Vector2) -> void:
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = world_pos
+	up.global_position = _win(world_pos)
+	surface._gui_input(up)
 	await _frames(2)
 
 

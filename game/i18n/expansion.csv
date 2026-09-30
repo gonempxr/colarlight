@@ -1,0 +1,29 @@
+keys,en,ru,es,zh
+DEPTH_VENT,Hydrothermal Vents,Гидротермальные источники,Fuentes hidrotermales,热泉喷口
+DEPTH_WHALE,Whale Fall,Кладбище китов,Cementerio de ballenas,鲸落
+DEPTH_MIRROR,Mirror Lake,Зеркальное озеро,Lago espejo,镜湖
+DEPTH_STORM,Storm Trench,Грозовой жёлоб,Fosa de tormentas,风暴海沟
+DEPTH_DRAGON,Dragon's Lair,Логово дракона,Guarida del dragón,龙巢
+DEPTH_CROWN,Sunken Crown,Затонувшая корона,Corona hundida,沉没王冠
+DEPTH_VOID,The Void,Бездонная пустота,El Vacío,虚空
+DEPTH_TIME,Time Grotto,Грот времени,Gruta del tiempo,时光洞窟
+DEPTH_HEART,Heart of the Ocean,Сердце океана,Corazón del océano,海洋之心
+BOAT_STAGE_16,Storm Cruiser,Штормовой крейсер,Crucero de tormenta,风暴巡洋舰
+BOAT_STAGE_17,Sky Galleon,Небесный галеон,Galeón celeste,天空大帆船
+BOAT_STAGE_18,Aurora Liner,Лайнер «Аврора»,Transatlántico Aurora,极光邮轮
+BOAT_STAGE_19,Leviathan,Левиафан,Leviatán,利维坦号
+BOAT_STAGE_20,Ocean Throne,Трон океана,Trono del océano,海洋王座
+PLANT_STAGE_16,Pearl Palace,Жемчужный дворец,Palacio de perlas,珍珠宫殿
+PLANT_STAGE_17,Tidal Foundry,Приливная литейная,Fundición de mareas,潮汐铸造厂
+PLANT_STAGE_18,Starforge,Звёздная кузня,Forja estelar,星辰熔炉
+PLANT_STAGE_19,Crystal Metropolis,Хрустальный мегаполис,Metrópolis de cristal,水晶都市
+PLANT_STAGE_20,Ocean Heart Works,Фабрика «Сердце океана»,Fábrica Corazón del Océano,海洋之心工厂
+STAGE_BOAT2,Boat 2,Лодка 2,Barco 2,运输船 2
+STAGE_PLANT2,Plant 2,Завод 2,Planta 2,加工厂 2
+BUY_BOAT2,Second boat,Вторая лодка,Segundo barco,第二艘运输船
+BUY_PLANT2,Second plant,Второй завод,Segunda planta,第二座加工厂
+BUY_BOAT2_DESC,Carries ore from the same raft. Two boats move twice as much!,Возит руду с того же плота. Две лодки везут вдвое больше!,Lleva mineral de la misma balsa. ¡Dos barcos llevan el doble!,从同一个木筏运矿石。两艘船运得多一倍！
+BUY_PLANT2_DESC,Works the same pile on the shore. Two plants make coins twice as fast!,Перерабатывает ту же кучу на берегу. Два завода делают монеты вдвое быстрее!,Procesa la misma pila de la orilla. ¡Dos plantas hacen monedas el doble de rápido!,处理岸边同一堆矿石。两座工厂赚钱快一倍！
+BUY_FOR,Buy %s,Купить %s,Comprar %s,购买 %s
+HINT_BOAT2,Ore piles up at the raft: buy a second boat!,Руда копится у плота: купи вторую лодку!,El mineral se acumula en la balsa: ¡compra un segundo barco!,木筏上矿石堆积：买第二艘船吧！
+HINT_PLANT2,Ore piles up on the shore: buy a second plant!,Руда копится на берегу: купи второй завод!,El mineral se acumula en la orilla: ¡compra una segunda planta!,岸边矿石堆积：建第二座工厂吧！

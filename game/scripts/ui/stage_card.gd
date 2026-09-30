@@ -3,10 +3,14 @@ extends PanelContainer
 ## Compact cream card for one stage: a coloured name tab, manager portrait,
 ## level with milestone bar, output per second and an upgrade button that
 ## opens the upgrade panel. The boat and the plant also show their building
-## stage (1..15). With `hero` the card also shows a picture of the stage
-## (the PC side column).
+## stage (1..20) and, once the second one is for sale, "1 | 2" tabs that
+## switch the card between the two units (a closed second one shows its
+## price and buys it). With `hero` the card also shows a picture of the
+## stage (the PC side column).
 
 var key := ""
+## "boat" or "plant" for building cards (key may be "boat2"), else the key.
+var base := ""
 var world: World
 var hero := false
 
@@ -20,10 +24,13 @@ var _tag: Label
 var _head: PanelContainer
 var _stage: Label
 var _pic: ArtView
+var _units: HBoxContainer
+var _unit_btns: Array[Button] = []
 
 
 func _init(stage_key: String) -> void:
 	key = stage_key
+	base = stage_key
 
 
 func _ready() -> void:
@@ -51,8 +58,28 @@ func _ready() -> void:
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.custom_minimum_size.x = 150
-	_head.add_child(_name)
-	if key in ["boat", "plant"]:
+	_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Head row: [1] name [2]; the unit tabs show once a second one is for sale.
+	_units = HBoxContainer.new()
+	_units.add_theme_constant_override("separation", 4)
+	_head.add_child(_units)
+	if base in ["boat", "plant"]:
+		for i in 2:
+			var b := Button.new()
+			b.text = str(i + 1)
+			b.custom_minimum_size = Vector2(34, 32)
+			b.add_theme_font_size_override("font_size", 17)
+			b.visible = false
+			b.pressed.connect(_select_unit.bind(i))
+			_unit_btns.append(b)
+		_units.add_child(_unit_btns[0])
+		_units.add_child(_name)
+		_units.add_child(_unit_btns[1])
+	else:
+		_units.add_child(_name)
+	# The stage line only on the roomy PC cards; phone cards float over the
+	# sky and must stay short (the name tab carries the star count there).
+	if base in ["boat", "plant"] and hero:
 		_stage = Label.new()
 		_stage.theme_type_variation = &"SoftLabel"
 		_stage.add_theme_font_override("font", UiTheme.heavy_font())
@@ -127,41 +154,81 @@ func _draw_hero(ci: CanvasItem, s: Vector2, t: float) -> void:
 	Art.flat(ci, Art.rrect_pts(Rect2(Vector2.ZERO, s), 14.0), bg)
 	Art.flat(ci, Art.rrect_pts(Rect2(0, s.y * 0.62, s.x, s.y * 0.38), 14.0), Color("5ec4e6"))
 	# Props.boat/plant draw the current building stage; taller stages shrink to fit.
-	match key:
+	match base:
 		"boat":
-			var bs := minf(0.9, s.y * 0.62 / Props.boat_height(Props.current_stage("boat")))
+			var bs := minf(0.9, s.y * 0.62 / Props.boat_height(Props.current_stage(key)))
 			Art.push(ci, Vector2(s.x * 0.5, s.y * 0.7), 0.0, Vector2(bs, bs))
-			Props.boat(ci, t, 2, Art.DEPTH_STYLE[0]["ore2"], GameState.has_manager("boat"), "happy", Chars.blinking(t, 7.0))
+			Props.boat(ci, t, 2, Art.DEPTH_STYLE[0]["ore2"], GameState.has_manager(key), "happy", Chars.blinking(t, 7.0), Callable(), key)
 			Art.pop(ci)
 		"plant":
 			Art.flat(ci, Art.rrect_pts(Rect2(0, s.y * 0.72, s.x, s.y * 0.28), 14.0), Color("f5d58f"))
-			var ps := minf(0.75, s.y * 0.72 / Props.plant_height(Props.current_stage("plant")))
+			var ps := minf(0.75, s.y * 0.72 / Props.plant_height(Props.current_stage(key)))
 			Art.push(ci, Vector2(s.x * 0.5, s.y * 0.8), 0.0, Vector2(ps, ps))
-			Props.plant(ci, t, GameState.cycle_progress("plant") >= 0.0, t * 2.0, 0.0)
+			Props.plant(ci, t, GameState.cycle_progress(key) >= 0.0, t * 2.0, 0.0, key)
 			Art.pop(ci)
 
 
 func _on_upgrade() -> void:
 	if Scroller.is_drag():
 		return
+	if GameState.is_second(key) and not GameState.is_open(key):
+		Sfx.play("unlock" if GameState.open_building(key) else "deny")
+		refresh()
+		return
 	Sfx.play("click")
 	world.select(key)
+
+
+## 0 = the first boat/plant, 1 = the second one.
+func _select_unit(i: int) -> void:
+	if Scroller.is_drag():
+		return
+	Sfx.play("click")
+	show_unit(base if i == 0 else base + "2")
+
+
+func show_unit(stage_key: String) -> void:
+	key = stage_key
+	_manager.set_key(key)
+	refresh()
 
 
 func refresh() -> void:
 	var gs := GameState
 	var data := GameState.stage_data(key)
 	var level: int = gs.get_level(key)
-	match key:
-		"boat":
-			_name.text = tr("STAGE_BOAT")
-		"plant":
-			_name.text = tr("STAGE_PLANT")
-		_:
-			_name.text = tr("DEPTH_%s" % String(data["id"]).to_upper())
+	_name.text = Views.stage_name(key)
+	if not _unit_btns.is_empty():
+		var tabs: bool = gs.is_open("d2") or gs.is_open(base + "2")
+		_name.custom_minimum_size.x = 60.0 if tabs else 150.0
+		_name.add_theme_font_size_override("font_size", 16 if tabs and not hero else 19)
+		_name.autowrap_mode = TextServer.AUTOWRAP_OFF if tabs else TextServer.AUTOWRAP_WORD_SMART
+		for i in 2:
+			var on := (i == 1) == gs.is_second(key)
+			_unit_btns[i].visible = tabs
+			_unit_btns[i].theme_type_variation = &"BlueButton" if on else &"CreamButton"
+		var second_open: bool = gs.is_open(base + "2")
+		_unit_btns[1].text = "2" if second_open else ""
+		_unit_btns[1].icon = null if second_open else Icons.get_icon("lock", 20)
+	var for_sale := gs.is_second(key) and level == 0
+	_manager.visible = not for_sale
+	_bar.visible = not for_sale
+	if for_sale:
+		# A closed second boat/plant: its price and what one level would add.
+		if _stage:
+			_stage.text = tr("BUY_%s_DESC" % key.to_upper())
+		_level.text = tr("BUY_%s" % key.to_upper())
+		_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(Balance.output(data["value"], 1) * gs.income_mult())
+		var price: float = gs.unlock_cost(key)
+		_upgrade.text = tr("BUY_FOR") % NumFormat.short(price)
+		_upgrade.theme_type_variation = &"GoldButton" if gs.coins >= price else &"DarkButton"
+		_tag.visible = false
+		return
 	if _stage:
 		var st := Balance.building_stage(level)
-		_stage.text = "%s  ★%d/%d" % [tr("%s_STAGE_%d" % [key.to_upper(), st]), st, Balance.BUILDING_STAGES]
+		_stage.text = "%s  ★%d/%d" % [tr("%s_STAGE_%d" % [base.to_upper(), st]), st, Balance.BUILDING_STAGES]
+	elif base in ["boat", "plant"] and not _unit_btns[1].visible:
+		_name.text += " ★%d" % Balance.building_stage(level)
 	_level.text = tr("LEVEL") % level
 	var ms := Balance.milestones(level)
 	var prev := 0 if ms == 0 else (Balance.MILESTONE_FIRST if ms == 1 else (ms - 1) * Balance.MILESTONE_STEP)
@@ -171,7 +238,7 @@ func refresh() -> void:
 	var cost: float = gs.upgrade_cost(key)
 	_upgrade.text = NumFormat.short(cost)
 	_upgrade.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
-	var group := key if key in ["boat", "plant"] else "dives"
+	var group := base if base in ["boat", "plant"] else "dives"
 	_tag.visible = gs.bottleneck() == group and gs.next_depth() != "d1"
 	_tag.text = tr("BOTTLENECK")
 	_manager.queue_redraw()

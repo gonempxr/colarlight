@@ -47,9 +47,9 @@ class Sheet extends Control:
 
 	func _divers() -> void:
 		var arms := ["pick", "pick", "pick", "swim", "rope", "cheer", "idle"]
-		for i in 21:
+		for i in Art.DEPTH_STYLE.size():
 			var st: Dictionary = Art.DEPTH_STYLE[i]
-			var c := Vector2(70 + (i % 7) * 200, 150 + floori(i / 7.0) * 250)
+			var c := Vector2(70 + (i % 10) * 200, 150 + floori(i / 10.0) * 250)
 			var arm: String = arms[i % 7]
 			Chars.diver(self, c, 1.2, st["suit"], 1.0, 0.0, t, arm, fposmod(t * 0.7 + i * 0.13, 1.0), i % 3 == 1, st["ore"], "happy", false, t + i, i)
 			OreArt.deposit(self, c + Vector2(110, 0), 55, i, i * 31 + 3, t, 4)
@@ -57,19 +57,19 @@ class Sheet extends Control:
 
 	func _swing() -> void:
 		# One diver per tier through the dig cycle, frozen at set phases.
-		for tier in 7:
+		for tier in Chars.GEAR_TIERS:
 			var d := tier * 3
 			var st: Dictionary = Art.DEPTH_STYLE[d]
 			for k in 6:
 				var ph: float = [0.2, 0.52, 0.59, 0.62, 0.645, 0.72][k]
-				var c := Vector2(60 + k * 220, 110 + tier * 125)
+				var c := Vector2(60 + k * 220, 100 + tier * 115)
 				Chars.diver(self, c, 0.9, st["suit"], 1.0, 0.0, 0.0, "dig", ph, false, st["ore"], "focus", false, t, d)
 				OreArt.deposit(self, c + Vector2(80, 0), 50, d, d * 31 + 3, t, 3)
 				Art.disc(self, c + Chars.dig_tip(tier) * 0.9, 2.5, Color.RED)
 
 	func _ores() -> void:
-		for i in 21:
-			var c := Vector2(90 + (i % 7) * 195, 130 + floori(i / 7.0) * 250)
+		for i in Art.DEPTH_STYLE.size():
+			var c := Vector2(90 + (i % 10) * 195, 130 + floori(i / 10.0) * 250)
 			Art.flat(self, PackedVector2Array([c + Vector2(-95, -120), c + Vector2(100, -120), c + Vector2(100, 110), c + Vector2(-95, 110)]), Art.DEPTH_STYLE[i]["water"])
 			Art.flat(self, PackedVector2Array([c + Vector2(-95, 0), c + Vector2(100, 0), c + Vector2(100, 40), c + Vector2(-95, 40)]), Art.DEPTH_STYLE[i]["floor"])
 			OreArt.deposit(self, c + Vector2(10, 2), 70, i, i * 31 + 3, t, 5)
@@ -80,10 +80,10 @@ class Sheet extends Control:
 			Art.text(self, c + Vector2(0, 100), "%d %s" % [i, OreArt.KINDS[i]], 16)
 
 	func _people() -> void:
-		var holds := ["sack", "coinbag", "briefcase", "wrench", "hammer", "clipboard", "coinbag", "sack", "hammer"]
-		var arms := [0.2, 0.3, 0.15, 0.3, 2.2 - absf(sin(t * 7.0)) * 1.6, 1.2, 1.9, 2.5, 0.4]
+		var holds := ["sack", "coinbag", "briefcase", "wrench", "hammer", "clipboard", "coinbag", "sack", "hammer", "coinbag", "clipboard"]
+		var arms := [0.2, 0.3, 0.15, 0.3, 2.2 - absf(sin(t * 7.0)) * 1.6, 1.2, 1.9, 2.5, 0.4, 0.3, 1.2]
 		for i in holds.size():
-			var l := Chars.manager_look(["d0", "d1", "d2", "d3", "d4", "d5", "boat", "plant", "x"][i])
+			var l := Chars.manager_look(["d0", "d1", "d2", "d3", "d4", "d5", "boat", "plant", "x", "boat2", "plant2"][i])
 			Chars.person(self, Vector2(80 + i * 150, 190), 1.4, 1.0 if i % 2 == 0 else -1.0, l, {"emotion": "happy", "arm_r": arms[i], "arm_l": -0.3, "hold": holds[i]})
 		for i in 9:
 			var l := Chars.manager_look("plant")

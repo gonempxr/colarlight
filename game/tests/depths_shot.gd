@@ -42,7 +42,7 @@ func _initialize() -> void:
 	for i in steps:
 		gs.advance(0.05)
 		await process_frame
-	main._scroller.scroll_to(620.0 + 260.0 * first - 40.0)
+	main._scroller.scroll_to((620.0 + 260.0 * first - 40.0) * main._scroller.zoom)
 	for i in 12:
 		gs.advance(0.0)
 		await process_frame

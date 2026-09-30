@@ -422,7 +422,7 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 			Sfx.play("dig")
 			if randf() < 0.06:
 				Sfx.voice("hup", randf_range(1.0, 1.4))
-		var busy := 0.22 if Chars.tool_of(tier) == "pick" else 0.3
+		var busy := 0.22 if Chars.swings(Chars.tool_of(tier)) else 0.3
 		if phase >= Chars.DIG_IMPACT and phase < Chars.DIG_IMPACT + busy and view.grow(40.0).has_point(tip):
 			_draw_chips(tip, (phase - Chars.DIG_IMPACT) / busy, site, facing, id)
 	elif trip == "drop":
@@ -466,6 +466,16 @@ func _draw_chips(at: Vector2, f: float, site: int, facing: float, id: int) -> vo
 			Art.glow(self, at, 22.0 * s + 4.0, Color(1, 1, 1, 0.5 * (1.0 - f)), 12)
 		"drill":
 			Art.glow(self, at, 16.0, Color(1, 0.95, 0.8, 0.45 * (1.0 - f)), 12)
+		"plasma":
+			Art.glow(self, at, 24.0 * s + 4.0, Color(Chars.PLASMA, 0.5 * (1.0 - f)), 12)
+		"trident":
+			Art.glow(self, at, 20.0 * s + 4.0, Color(Chars.AQUA, 0.5 * (1.0 - f)), 12)
+			Art.arc(self, at, 6.0 + f * 22.0, 0, TAU, 16, Color(1, 1, 1, 0.6 * (1.0 - f)), 2.0)
+		"hammer":
+			Art.glow(self, at, 26.0 * s + 4.0, Color(1, 0.9, 0.5, 0.45 * (1.0 - f)), 12)
+			Art.push(self, at, f * 2.0, Vector2(s, s) * 1.2)
+			Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 0.95, 0.7, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
+			Art.pop(self)
 		_:
 			Art.push(self, at, 0.0, Vector2(s, s))
 			Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 1, 0.8, snappedf(1.0 - f, 0.05)), 1.2, 0.0)

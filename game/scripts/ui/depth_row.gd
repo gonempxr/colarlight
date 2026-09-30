@@ -18,6 +18,8 @@ var _t := 0.0
 var _flash := 0.0
 var _bg: PaintLayer
 var _bg_sig := []
+## The cave outline of the frame being drawn (decor clips light to it).
+var _cp := PackedVector2Array()
 
 
 func key() -> String:
@@ -207,6 +209,7 @@ func _draw() -> void:
 	var st := style()
 	var cave := cave_rect()
 	var cave_poly := _cave_poly()
+	_cp = cave_poly
 	Art.push(self, Vector2(cave.get_center().x + 20, CAVE_TOP + 4))
 	Props.lantern(self, _t + index, Color("ffd780"))
 	Art.pop(self)
@@ -430,6 +433,8 @@ func _draw_decor_deep(st: Dictionary, cave: Rect2) -> void:
 				Art.push(self, Vector2(x, y + 2))
 				_stone_lantern(ore)
 				Art.pop(self)
+		_:
+			_draw_decor_abyss(st, cave)
 
 
 func _stone_lantern(light: Color) -> void:
@@ -471,3 +476,344 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 	else:
 		Art.lock(ci, Vector2(size.x / 2.0, 36), 20)
 	Art.ring(ci, cave_poly, Art.INK, 5.0)
+
+
+
+## Decor of the abyss (hydrothermal vents and below): each site has its
+## own set piece. Shapes are cached; motion goes through Art.push or snapped
+## values, and light effects are clipped to the cave.
+func _draw_decor_abyss(st: Dictionary, cave: Rect2) -> void:
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	# 1 on wide screens, smaller in the narrow caves of phones.
+	var fit := clampf((cave.end.x - World.CAVE_L) / 520.0, 0.55, 1.0)
+	match st["deco"]:
+		"vents":
+			var hot := snappedf(0.75 + 0.25 * sin(_t * 2.1), 0.05)
+			Art.glow(self, Vector2(x0 - 14, y - 70), 90.0, Color(1.0, 0.5, 0.2, 0.16 * hot), 16)
+			Art.push(self, Vector2(x0 - 14, y + 2), 0.0, Vector2(2.0, 2.3))
+			OreArt.abyss_piece(self, "vent", ore, ore2, _t, 1)
+			Art.pop(self)
+			Art.push(self, Vector2(x1 + 36, y + 2), 0.0, Vector2(1.5, 1.6))
+			OreArt.abyss_piece(self, "vent", ore, ore2, _t * 0.9, 3)
+			Art.pop(self)
+			for k in 5:
+				Art.push(self, Vector2(mid - 44 + k * 8, y + 3), sin(_t * 1.5 + k * 1.1) * 0.08)
+				OreArt.tube_worm(self, 30.0 + float((k * 7) % 4) * 6.0)
+				Art.pop(self)
+			for p: Vector3 in [Vector3(x0 + 26, 7, 2.5), Vector3(mid + 30, 9, 3), Vector3(x1 - 10, 6, 2)]:
+				Art.flat(self, Art.ellipse_pts(Vector2(p.x, y + 2), Vector2(p.y, p.z), 10), Color(ore, 0.85))
+			# Mineral specks shimmering up in the hot water.
+			for k in 4:
+				var f := fposmod(_t * 0.18 + k * 0.25, 1.0)
+				Art.dot(self, Vector2(x0 - 14 + sin(_t + k * 2.0) * 16.0, y - 60 - f * 110.0), 1.8, Color(ore2, 0.7 * sin(f * PI)))
+		"whale":
+			# A fallen whale: its spine arching over the floor, ribs curving
+			# down from it, the skull resting at the far end.
+			var bone: Color = ore
+			var x_a := x0 - 80.0
+			var x_b := x1 + 40.0
+			var n := 7
+			var spine := PackedVector2Array()
+			for k in n:
+				var f := float(k) / (n - 1)
+				spine.append(Vector2(lerpf(x_a, x_b, f), y - 34.0 - sin(f * PI) * 46.0 * (0.6 + 0.4 * fit)))
+			for k in range(1, n - 1):
+				var rib := _rib(spine[k], y + 3.0)
+				Art.line_c(self, rib, Art.INK, 8.0)
+				Art.line_c(self, rib, bone, 4.0)
+				Art.dot(self, rib[rib.size() - 1] + Vector2(0, -2), 2.4, Color("ef3a4a"))
+			Art.line_c(self, spine, Art.INK, 10.0)
+			Art.line_c(self, spine, Art.shade_of(bone, 0.15), 5.0)
+			for p in spine:
+				Art.t_circle(self, p, 5.5, bone, 2.2, 0.0)
+			Art.push(self, Vector2(x_b + 62.0 * fit, y + 4), 0.0, Vector2(1.4, 1.4) * fit)
+			OreArt.whale_skull(self, bone, ore2, _t)
+			Art.pop(self)
+			Art.push(self, spine[0] + Vector2(-8, 4), 0.5)
+			Art.toon(self, _FLUKE, bone, 2.2, 0.3)
+			Art.pop(self)
+			# Ghostly plankton drifting through the bones.
+			for k in 4:
+				var f := fposmod(_t * 0.05 + k * 0.25, 1.0)
+				var gp := Vector2(lerpf(x_a - 20, x_b + 40, f), top + 40 + k * 22 + sin(_t * 0.9 + k) * 10.0)
+				Art.glow(self, gp, 10.0, Color(ore2, 0.35), 10)
+				Art.disc(self, gp, 1.8, Color(ore2, 0.9))
+		"mirror":
+			# A brine pool: a lake on the sea floor, still as a mirror.
+			Art.push(self, Vector2(mid, y + 3), 0.0, Vector2(fit, 1.0))
+			Art.toon(self, _BRINE, Art.shade_of(st["floor"], 0.25), 2.4, 0.0)
+			Art.flat(self, _BRINE_IN, Color("c8d6f0"))
+			Art.flat(self, _BRINE_LOW, Color("8fa4d8"))
+			for k in 2:
+				var f := fposmod(_t * 0.4 + k * 0.5, 1.0)
+				Art.push(self, Vector2(k * 18.0 - 9.0, -3), 0.0, Vector2(1.0, 0.22) * (0.3 + f))
+				Art.arc_c(self, Vector2.ZERO, 30.0, 0, TAU, 20, Color(1, 1, 1, snappedf(0.8 * (1.0 - f), 0.1)), 3.0)
+				Art.pop(self)
+			Art.pop(self)
+			for k in 3:
+				var sx := lerpf(x0 - 40, x1 + 50, k / 2.0)
+				OreArt.piece(self, "mirror", Vector2(sx, top - 2), 0.7 + (k % 2) * 0.25, PI, st, _t, k)
+			# Light from the pool dancing on the ceiling.
+			for k in 6:
+				var cp := Vector2(lerpf(x0 - 60, x1 + 60, fposmod(k * 0.37, 1.0)) + sin(_t * 1.3 + k) * 8.0, top + 20 + (k % 3) * 12.0)
+				Art.dot(self, cp, 2.4 + sin(_t * 2.0 + k * 1.7), Color(1, 1, 1, 0.45))
+			for p: Vector3 in [Vector3(x0 - 20, 0.6, 1), Vector3(x1 + 30, 0.5, 2)]:
+				OreArt.piece(self, "mirror", Vector2(p.x, y + 2), p.y, 0.15, st, _t, int(p.z))
+		"storm":
+			var period := 3.4
+			var f := fposmod(_t / period + index * 0.31, 1.0)
+			var strike := int(floorf(_t / period + index * 0.31))
+			if f < 0.1:
+				Art.flat(self, _cp, Color(0.75, 0.88, 1.0, snappedf(0.2 * (1.0 - f / 0.1), 0.02)))
+			# Rain of sparks.
+			for k in 8:
+				var g := fposmod(_t * 0.9 + k * 0.137 + k * k * 0.05, 1.0)
+				var rx := lerpf(x0 - 70, x1 + 80, fposmod(k * 0.43, 1.0))
+				var ry := lerpf(top + 40, y - 6, g)
+				Art.line(self, Vector2(rx, ry), Vector2(rx - 3, ry + 9), Color(ore2, 0.35), 1.6)
+			var clouds := [Vector3(x0 - 40, top + 22, 1.0), Vector3(mid + 20, top + 14, 1.2), Vector3(x1 + 50, top + 26, 0.9)]
+			for k in clouds.size():
+				var cl: Vector3 = clouds[k]
+				Art.push(self, Vector2(cl.x + sin(_t * 0.3 + k * 2.0) * 10.0, cl.y), 0.0, Vector2.ONE * cl.z * fit)
+				Art.toon(self, _CLOUD, Color("3a4466"), 2.4, 0.0)
+				Art.flat(self, _CLOUD_LOW, Color("2a3252"))
+				Art.pop(self)
+			if f < 0.1:
+				var rng := RandomNumberGenerator.new()
+				rng.seed = strike * 13 + index
+				var bx := lerpf(x0 - 40, x1 + 50, rng.randf())
+				OreArt.bolt(self, Vector2(bx, top + 30), Vector2(bx + rng.randf_range(-40, 40), y - 2), strike, ore, 1.0 - f / 0.1)
+				Art.glow(self, Vector2(bx, y - 4), 30.0, Color(ore2, 0.5 * (1.0 - f / 0.1)), 12)
+			OreArt.piece(self, "storm", Vector2(x0 - 30, y + 2), 0.8, -0.15, st, _t, 1)
+		"dragon":
+			# A dragon asleep on its hoard; it opens an eye at each delivery.
+			var s := 0.95 * fit
+			var at := Vector2(mid - 10, y + 3)
+			Art.push(self, at, 0.0, Vector2(s, s))
+			Art.toon(self, _HOARD, Color("ffc93c"), 2.4, 0.4)
+			Art.toon(self, _TAIL, Color("2f7a5a"), 2.4, 0.0)
+			Art.toon(self, _SPADE, Color("ff7a3a"), 2.2, 0.0)
+			var breathe := 1.0 + 0.03 * sin(_t * 1.3)
+			Art.push(self, Vector2.ZERO, 0.0, Vector2(1.0, breathe))
+			for k in _SPIKES.size():
+				var sp: Vector3 = _SPIKES[k]
+				Art.push(self, Vector2(sp.x, sp.y), sp.z)
+				Art.toon(self, _SPIKE, Color("ff7a3a"), 2.2, 0.0)
+				Art.pop(self)
+			Art.toon(self, _DRAGON, Color("3a8a64"), 2.6, 0.6)
+			Art.flat(self, _BELLY, Color("e8c070"))
+			for p: Vector2 in _DSCALES:
+				Art.arc_c(self, p, 7.0, 0.3, PI - 0.3, 4, Color("2a6a4c"), 1.6)
+			Art.pop(self)
+			for h: PackedVector2Array in _HORNS:
+				Art.toon(self, h, Color("f1e6cc"), 2.2, 0.3)
+			Art.toon(self, _HEAD, Color("3a8a64"), 2.6, 0.5)
+			Art.flat(self, _JAW, Color("e8c070"))
+			Art.toon(self, _TOOTH, Art.WHITE, 1.4, 0.0)
+			Art.flat(self, Art.circle_pts(Vector2(110, -15), 2.2, 8), Art.INK)
+			if _flash > 0.05:
+				Art.toon(self, _DEYE, Color("ffd84a"), 1.8, 0.0)
+				Art.flat(self, _DPUPIL, Art.INK)
+			else:
+				Art.arc_c(self, Vector2(86, -24), 6.0, 0.3, PI - 0.3, 6, Art.INK, 2.4)
+			Art.pop(self)
+			# Warm breath: embers and smoke from the nostrils.
+			var nose := at + Vector2(112, -15) * s
+			Art.glow(self, nose, 14.0, Color(1.0, 0.5, 0.2, 0.3 + 0.15 * sin(_t * 1.3)), 10)
+			for k in 2:
+				var g := fposmod(_t * 0.35 + k * 0.5, 1.0)
+				Art.dot(self, nose + Vector2(6.0 + g * 14.0, -g * 40.0), 3.0 + g * 5.0, Color(0.6, 0.5, 0.5, 0.45 * (1.0 - g)))
+		"throne":
+			for k in 2:
+				var bx := x0 - 40.0 if k == 0 else x1 + 60.0
+				Art.push(self, Vector2(bx, top - 2), sin(_t * 1.1 + k * 2.0) * 0.05)
+				Art.toon(self, _BANNER, Color("6a3ac0"), 2.4, 0.4)
+				Art.flat(self, _BANNER_TRIM, Color("ffc93c"))
+				Art.t_rect(self, Rect2(-19, -3, 38, 7), 3, Color("ffc93c"), 2.0, 0.0)
+				Art.flat(self, _EMBLEM, Color("ffc93c"))
+				Art.flat(self, _EMBLEM_IN, Color(ore2, 0.9))
+				Art.pop(self)
+			Art.push(self, Vector2(mid + 4, y + 3), 0.0, Vector2.ONE * (0.75 + 0.25 * fit))
+			Art.t_rect(self, Rect2(-26, -112, 52, 88), 12, Color("ffc93c"), 2.6, 0.3)
+			Art.flat(self, Art.rrect_pts(Rect2(-18, -102, 36, 72), 8), Color("a02848"))
+			for x: float in [-26.0, 0.0, 26.0]:
+				Art.flat(self, Art.circle_pts(Vector2(x, -114 - (6.0 if x == 0.0 else 0.0)), 5.0, 10), Color("ffc93c"))
+			OreArt.piece(self, "crown", Vector2(0, -56), 0.9, 0.0, st, _t, 1)
+			for x: float in [-30.0, 22.0]:
+				Art.t_rect(self, Rect2(x, -26, 8, 26), 2, Color("e0a52c"), 0.0, 0.0)
+			Art.t_rect(self, Rect2(-34, -36, 68, 12), 4, Color("ffc93c"), 2.4, 0.0)
+			Art.t_rect(self, Rect2(-29, -44, 58, 10), 5, Color("c0304a"), 2.2, 0.3)
+			Art.pop(self)
+			for p: Vector3 in [Vector3(x0 - 6, 5, 0), Vector3(x1 + 18, 5, 2)]:
+				Art.t_ellipse(self, Vector2(p.x, y + 1), Vector2(p.y + 3, 2.4), Color("ffc93c"), 1.6, 0.0)
+			for k in 3:
+				var tw := 0.5 + 0.5 * sin(_t * 2.6 + k * 2.1)
+				Art.push(self, Vector2(lerpf(x0 - 30, x1 + 40, k / 2.0), top + 60 + (k % 2) * 30), _t * 0.5 + k, Vector2.ONE * (0.4 + tw * 0.6))
+				Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.6, 4), Color(1, 0.95, 0.7, 0.9), 0.0, 0.0)
+				Art.pop(self)
+		"void":
+			# A slow whirlpool of nothing in the back wall.
+			var c := Vector2(mid + 6, top + 86)
+			var pulse := 0.5 + 0.5 * sin(_t * 1.4)
+			Art.glow(self, c, 88.0 * fit + 10.0, Color(ore, 0.22 + 0.08 * pulse), 18)
+			Art.push(self, c, _t * 0.45, Vector2.ONE * (0.6 + 0.4 * fit))
+			for k in 3:
+				Art.push(self, Vector2.ZERO, TAU * k / 3.0)
+				Art.flat(self, _ARM, Color(ore, 0.55))
+				Art.flat(self, _ARM_IN, Color(ore2, 0.45))
+				Art.pop(self)
+			Art.t_circle(self, Vector2.ZERO, 20, OreArt.VOID_BODY, 2.4, 0.0)
+			Art.arc_c(self, Vector2.ZERO, 17.5, 0, TAU, 20, Color(ore2, 0.8), 1.8)
+			Art.pop(self)
+			for k in 6:
+				var g := fposmod(_t * 0.22 + k / 6.0, 1.0)
+				var a := g * 5.0 + k * 1.3
+				var r := 90.0 * (1.0 - g) * fit + 16.0
+				Art.dot(self, c + Vector2(cos(a) * r, sin(a) * r * 0.6), 1.2 + 1.6 * (1.0 - g), Color(ore2, 0.8 * sin(g * PI)))
+			for p: Vector3 in [Vector3(x0 - 34, 0.7, 0), Vector3(x1 + 44, 0.55, 1)]:
+				Art.push(self, Vector2(p.x, y - 64 + sin(_t * 1.1 + p.z * 2.0) * 7.0))
+				OreArt.void_orb(self, ore, ore2, _t, p.y, p.z > 0.5)
+				Art.pop(self)
+		"clocks":
+			var c := Vector2(x0 - 30, top + 70)
+			Art.push(self, c + Vector2(0, 30), sin(_t * 2.0) * 0.32)
+			Art.line_c(self, _PENDULUM, Art.INK, 4.6)
+			Art.line_c(self, _PENDULUM, OreArt.BRASS, 2.2)
+			Art.t_circle(self, Vector2(0, 58), 8, OreArt.BRASS, 2.4, 0.5)
+			Art.pop(self)
+			Art.t_circle(self, c, 34, OreArt.BRASS, 2.6, 0.5)
+			Art.t_circle(self, c, 28, ore2, 1.8, 0.0)
+			Art.push(self, c)
+			for k in 12:
+				Art.line_c(self, _TICKS[k], Art.shade_of(ore, 0.35), 2.0 if k % 3 == 0 else 1.2)
+			Art.pop(self)
+			Art.push(self, c, _t * 0.6)
+			Art.line_c(self, PackedVector2Array([Vector2(0, 4), Vector2(0, -22)]), Art.INK, 2.2)
+			Art.pop(self)
+			Art.push(self, c, _t * 0.05 + 1.0)
+			Art.line_c(self, PackedVector2Array([Vector2(0, 3), Vector2(0, -14)]), Art.INK, 3.2)
+			Art.pop(self)
+			Art.t_circle(self, c, 3, ore, 1.4, 0.0)
+			var gc := Vector2(x1 + 50, top + 56)
+			for g in 2:
+				Art.push(self, gc + Vector2(-30, 28) * fit * g, _t * 0.4 * (1.0 - g * 2.6) - g * 0.2, Vector2.ONE * (1.6 - g * 0.6) * (0.4 + 0.6 * fit))
+				Art.toon(self, _GEAR, Color("b07a34") if g == 0 else Color("c98a3a"), 2.0, 0.0)
+				Art.t_circle(self, Vector2.ZERO, 6.5, Color("6a4a24"), 1.6, 0.0)
+				Art.pop(self)
+			# Sand trickling from a crack in the ceiling into a little dune.
+			var sx := mid + 24
+			Art.line_c(self, PackedVector2Array([Vector2(sx, top), Vector2(sx, y - 4)]), Color(ore, 0.55), 1.4)
+			for k in 3:
+				var g := fposmod(_t * 0.7 + k / 3.0, 1.0)
+				Art.dot(self, Vector2(sx, lerpf(top, y - 4, g)), 1.6, ore)
+			Art.push(self, Vector2(sx, y + 2))
+			Art.toon(self, _DUNE, ore, 2.0, 0.4)
+			Art.pop(self)
+			OreArt.piece(self, "time", Vector2(x0 + 14, y + 2), 0.65, 0.1, st, _t, 1)
+		"heart":
+			# The heart of the ocean beats in the back wall; light pours out.
+			var c := Vector2(mid + 4, top + 84)
+			var beat := maxf(0.0, sin(_t * 3.2)) * 0.06
+			Art.glow(self, c, 110.0 * fit + 20.0, Color(ore, 0.2 + beat * 2.0), 20)
+			OreArt.heart_rays(self, c, 150.0 * fit + 30.0, ore2, _t, 8)
+			Art.push(self, c, 0.0, Vector2.ONE * (2.6 * fit + 0.6) * (1.0 + beat))
+			Art.flat(self, OreArt.HEART, Color("ff8fc8", 0.28))
+			Art.pop(self)
+			Art.push(self, Vector2(x0 - 30, y + 2), 0.0, Vector2.ONE * 1.2)
+			Props.coral(self, Color("ff7ab8"), index, _t)
+			Art.pop(self)
+			for k in 2:
+				var a := _t * 0.5 + k * PI
+				Art.fish(self, c + Vector2(cos(a) * 70.0 * fit + 10.0, sin(a) * 26.0), 9.0, Color("ffc93c") if k == 0 else Color("ff8fc8"), -1.0 if sin(a) > 0.0 else 1.0, _t + k)
+			for k in 6:
+				var g := fposmod(_t * 0.12 + k / 6.0, 1.0)
+				var sp := Vector2(lerpf(x0 - 60, x1 + 70, fposmod(k * 0.41, 1.0)) + sin(_t + k) * 8.0, lerpf(y - 10, top + 10, g))
+				Art.push(self, sp, _t + k, Vector2.ONE * (0.4 + 0.6 * sin(g * PI)))
+				Art.toon(self, Art.star_pts(Vector2.ZERO, 6, 1.5, 4), Color("fff0fa") if k % 2 else Color(ore2), 0.0, 0.0)
+				Art.pop(self)
+			for p: Vector3 in [Vector3(x0 + 4, 4.0, 0), Vector3(x0 + 16, 3.0, 0), Vector3(x1 + 10, 3.5, 0)]:
+				Art.t_circle(self, Vector2(p.x, y - p.y + 1), p.y, Color("f4f0ff"), 1.4, 0.0)
+			Art.push(self, Vector2(x1 + 44, y + 2), 0.0, Vector2.ONE * 0.8)
+			OreArt.piece(self, "heart", Vector2.ZERO, 1.0, 0.1, st, _t, 2)
+			Art.pop(self)
+
+
+static var _FLUKE := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-10, -12), Vector2(-22, -14), Vector2(-14, -3),
+		Vector2(-22, 10), Vector2(-10, 10)]), 2)
+static var _BRINE := Art.ellipse_pts(Vector2(0, -2), Vector2(70, 10), 28)
+static var _BRINE_IN := Art.ellipse_pts(Vector2(0, -2.5), Vector2(64, 7), 28)
+static var _BRINE_LOW := Art.clipped(Art.ellipse_pts(Vector2(8, 2), Vector2(64, 6), 24), _BRINE_IN)
+static var _CLOUD := Art.union([Art.circle_pts(Vector2(-30, 0), 16, 18), Art.circle_pts(Vector2(-8, -8), 20, 20),
+		Art.circle_pts(Vector2(16, -4), 17, 18), Art.circle_pts(Vector2(34, 2), 12, 14), Art.rrect_pts(Rect2(-42, 0, 84, 14), 7, 3)])
+static var _CLOUD_LOW := Art.clipped(Art.rrect_pts(Rect2(-50, 4, 100, 20), 4, 2), _CLOUD)
+static var _HOARD := Art.smooth_pts(PackedVector2Array([Vector2(-100, 0), Vector2(-70, -10), Vector2(-30, -16), Vector2(20, -16),
+		Vector2(70, -12), Vector2(120, -6), Vector2(135, 0)]), 3)
+static var _DRAGON := Art.smooth_pts(PackedVector2Array([Vector2(-72, -4), Vector2(-66, -24), Vector2(-48, -44), Vector2(-20, -56),
+		Vector2(10, -54), Vector2(38, -42), Vector2(58, -24), Vector2(64, -6), Vector2(0, -2)]), 3)
+static var _BELLY := Art.clipped(Art.ellipse_pts(Vector2(-2, 4), Vector2(62, 18), 24), _DRAGON)
+static var _DSCALES: Array[Vector2] = [Vector2(-38, -38), Vector2(-14, -44), Vector2(12, -42), Vector2(-26, -26), Vector2(0, -30), Vector2(26, -28)]
+static var _SPIKE := PackedVector2Array([Vector2(-7, 2), Vector2(0, -14), Vector2(7, 2)])
+static var _SPIKES: Array[Vector3] = [Vector3(-52, -38, -0.8), Vector3(-30, -51, -0.45), Vector3(-6, -56, -0.1), Vector3(18, -53, 0.25), Vector3(40, -41, 0.6)]
+static var _TAIL := Geometry2D.offset_polyline(PackedVector2Array([Vector2(-64, -8), Vector2(-86, -4), Vector2(-104, -8),
+		Vector2(-112, -20), Vector2(-104, -30)]), 5.0, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]
+static var _SPADE := PackedVector2Array([Vector2(-104, -30), Vector2(-96, -40), Vector2(-102, -46), Vector2(-112, -40)])
+static var _HEAD := Art.smooth_pts(PackedVector2Array([Vector2(58, -28), Vector2(76, -36), Vector2(96, -28), Vector2(118, -20),
+		Vector2(121, -8), Vector2(112, 0), Vector2(70, 0), Vector2(56, -10)]), 3)
+static var _JAW := Art.clipped(Art.rrect_pts(Rect2(66, -7, 60, 12), 4, 2), _HEAD)
+static var _TOOTH := PackedVector2Array([Vector2(100, -7), Vector2(105, -7), Vector2(102.5, -2)])
+static var _HORNS: Array[PackedVector2Array] = [PackedVector2Array([Vector2(66, -30), Vector2(50, -52), Vector2(74, -34)]),
+		PackedVector2Array([Vector2(78, -34), Vector2(68, -56), Vector2(86, -34)])]
+static var _DEYE := Art.ellipse_pts(Vector2(86, -24), Vector2(6, 4.5), 14)
+static var _DPUPIL := PackedVector2Array([Vector2(85, -28), Vector2(87, -28), Vector2(87, -20), Vector2(85, -20)])
+static var _EMBLEM := PackedVector2Array([Vector2(0, 22), Vector2(12, 34), Vector2(0, 46), Vector2(-12, 34)])
+static var _EMBLEM_IN := PackedVector2Array([Vector2(0, 28), Vector2(6, 34), Vector2(0, 40), Vector2(-6, 34)])
+static var _BANNER := PackedVector2Array([Vector2(-16, 0), Vector2(16, 0), Vector2(16, 64), Vector2(0, 54), Vector2(-16, 64)])
+static var _BANNER_TRIM := PackedVector2Array([Vector2(-16, 56), Vector2(0, 46), Vector2(16, 56), Vector2(16, 60), Vector2(0, 50), Vector2(-16, 60)])
+static var _ARM := _spiral_arm(1.0)
+static var _ARM_IN := _spiral_arm(0.45)
+static var _GEAR := Art.gear_pts(20.0, 8)
+static var _PENDULUM := PackedVector2Array([Vector2(0, 0), Vector2(0, 52)])
+static var _TICKS: Array[PackedVector2Array] = _ticks()
+static var _DUNE := Art.smooth_pts(PackedVector2Array([Vector2(-18, 1), Vector2(-8, -6), Vector2(0, -8), Vector2(9, -5), Vector2(18, 1)]), 3)
+
+
+## One rib of the whale: from the spine curving out and down to the floor.
+static func _rib(top_pt: Vector2, floor_y: float) -> PackedVector2Array:
+	var a := top_pt
+	var b := Vector2(top_pt.x - 16.0, floor_y)
+	var ctrl := Vector2(top_pt.x - 44.0, lerpf(top_pt.y, floor_y, 0.35))
+	var pts := PackedVector2Array()
+	for k in 6:
+		var f := k / 5.0
+		pts.append(a.lerp(ctrl, f).lerp(ctrl.lerp(b, f), f))
+	return pts
+
+
+static func _spiral_arm(w: float) -> PackedVector2Array:
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	for k in 13:
+		var f := k / 12.0
+		var a := f * 2.4
+		var r := lerpf(18.0, 78.0, f)
+		var hw := lerpf(9.0, 1.0, f) * w
+		var d := Vector2.from_angle(a)
+		left.append(d * (r + hw))
+		right.append(d * (r - hw))
+	right.reverse()
+	left.append_array(right)
+	return left
+
+
+static func _ticks() -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for k in 12:
+		var d := Vector2.from_angle(TAU * k / 12.0)
+		out.append(PackedVector2Array([d * (22.0 if k % 3 == 0 else 24.0), d * 26.5]))
+	return out

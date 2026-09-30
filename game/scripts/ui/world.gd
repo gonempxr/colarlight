@@ -131,6 +131,10 @@ func stage_anchor(key: String) -> Vector2:
 			return surface.boat_world_pos() + Vector2(0, -60)
 		"plant":
 			return surface.plant_world_pos() + Vector2(75, -120)
+		"boat2":
+			return surface.boat2_world_pos() + Vector2(0, -44)
+		"plant2":
+			return surface.plant2_world_pos() + Vector2(60, -96)
 	var i := GameState.depth_index(key)
 	return Vector2((CAVE_L + scene_right()) / 2.0, row_y(i) + 120.0)
 

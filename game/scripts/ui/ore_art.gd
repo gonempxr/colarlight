@@ -9,11 +9,15 @@ extends RefCounted
 ## stands on (0, 0), then placed with Art.push, so their geometry is cached.
 
 const KINDS: Array[String] = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "amber", "sapphire", "gold",
-		"ruby", "ice", "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star"]
+		"ruby", "ice", "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star",
+		"vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart"]
 ## Kinds that give off light (a soft pulsing glow behind them).
-const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken"]
+const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
+		"vent", "storm", "dragon", "void", "time", "heart"]
 ## Kinds that sit in a mound of rock.
-const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian"]
+const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm"]
+## Kinds with a big centerpiece of their own (loose pieces lie in front of it).
+const CENTERPIECE: Array[String] = ["gold", "kraken", "atlantis", "pearl", "vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart"]
 
 
 static func kind_of(depth: int) -> String:
@@ -54,6 +58,8 @@ static func deposit(ci: CanvasItem, base: Vector2, size: float, depth: int, seed
 			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.45)
 			_clam(ci, ore, st["ore2"], t, seed)
 			Art.pop(ci)
+		"vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart":
+			centerpiece(ci, kind, base, s, st, t, seed)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var order: Array[int] = []
@@ -69,7 +75,7 @@ static func deposit(ci: CanvasItem, base: Vector2, size: float, depth: int, seed
 		var h: float = specs[i][1] * (1.0 - absf(off) * 0.17)
 		var rot: float = (specs[i][2] + off * 0.14) * _tilt(kind)
 		var y := base.y + 2.0
-		if big and kind in ["gold", "kraken", "atlantis", "pearl"]:
+		if big and kind in CENTERPIECE:
 			# Loose treasure in front of the big piece.
 			h *= 0.55
 			y += 4.0
@@ -136,6 +142,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			_cut_gem(ci, ore, ore2)
 		"star":
 			_star(ci, ore, ore2, t, i)
+		"vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart":
+			abyss_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)
@@ -151,10 +159,12 @@ static func chunk(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: flo
 	match kind:
 		"gold":
 			piece(ci, kind, Vector2(0, 10 * s), s * 1.5, 0.0, st, 0.0, 0)
-		"kraken", "atlantis":
+		"kraken", "atlantis", "time":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 1)
-		"pearl", "copper", "moon", "lava", "meteor", "sapphire", "star", "fossil":
+		"pearl", "copper", "moon", "lava", "meteor", "sapphire", "star", "fossil", "dragon":
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.3, 0.0, st, 0.0, 1)
+		"crown", "void", "heart":
+			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 0)
 		_:
 			piece(ci, kind, Vector2(0, 20 * s), s, 0.0, st, 0.0, 0)
 	Art.pop(ci)
@@ -167,8 +177,12 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 	var c: Color = st["ore"]
 	Art.push(ci, at, rot, Vector2(size, size) / 4.0)
 	match kind:
-		"star", "moon", "glow":
+		"star", "moon", "glow", "storm", "crown", "heart":
 			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5.0, 2.2, 4), st["ore2"], 1.2, 0.0)
+		"dragon":
+			Art.toon(ci, _CHIP, c.lightened(0.2), 1.2, 0.0)
+		"mirror":
+			Art.toon(ci, _CHIP, Color("eef4ff"), 1.2, 0.0)
 		"pearl":
 			Art.t_circle(ci, Vector2.ZERO, 3.2, c, 1.2, 0.0)
 		"lava":
@@ -187,7 +201,8 @@ static var _CHIP := PackedVector2Array([Vector2(-3, -3), Vector2(3, -2), Vector2
 
 static func _tilt(kind: String) -> float:
 	match kind:
-		"glow", "gold", "atlantis", "jade", "moon", "pearl", "copper", "fossil", "lava", "meteor", "star", "kraken":
+		"glow", "gold", "atlantis", "jade", "moon", "pearl", "copper", "fossil", "lava", "meteor", "star", "kraken", \
+				"vent", "whale", "dragon", "crown", "void", "time", "heart":
 			return 0.35
 	return 1.0
 
@@ -201,6 +216,8 @@ static func _mound(ci: CanvasItem, base: Vector2, s: float, st: Dictionary, kind
 			rock = Color("3a2c46")
 		"obsidian":
 			rock = Color("2b2340")
+		"storm":
+			rock = Color("2a2c44")
 	Art.push(ci, base + Vector2(0, 3), 0.0, Vector2(s, s))
 	Art.toon(ci, _MOUND, Art.shade_of(rock, 0.1), 2.2, 0.5)
 	Art.flat(ci, Art.ellipse_pts(Vector2(-12, -12), Vector2(6, 2.5), 10, -0.2), Color(1, 1, 1, 0.14))
@@ -655,3 +672,546 @@ static func _star(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void
 
 static var _STAR := Art.smooth_pts(Art.star_pts(Vector2.ZERO, 19, 9, 5), 2)
 static var _STAR_IN := Art.smooth_pts(Art.star_pts(Vector2(-1, -2), 9, 4.5, 5), 2)
+
+
+# --- The abyss (depths 21-29) ----------------------------------------------------------
+#
+# Each kind has its own pieces and a big centerpiece. Animated values are
+# snapped or applied through Art.push, so the shape cache stays small.
+
+const JEWELS: Array[Color] = [Color("ff3d6e"), Color("3fb0ff"), Color("4fe08a")]
+const BRASS := Color("d8963a")
+const VOID_BODY := Color("150a24")
+
+
+static func abyss_piece(ci: CanvasItem, kind: String, c: Color, c2: Color, t: float, i: int) -> void:
+	match kind:
+		"vent":
+			if i % 2 == 0:
+				_sulfur(ci, c, c2, i)
+			else:
+				_chimney(ci, c, c2, t, i)
+		"whale":
+			if i % 2 == 0:
+				_vertebra(ci, c, c2)
+			else:
+				_ambergris(ci, c, c2, t, i)
+		"mirror":
+			_mirror_shard(ci, c, c2, t, i)
+		"storm":
+			_storm_crystal(ci, c, c2, t, i)
+		"dragon":
+			match i % 3:
+				0:
+					_scale(ci, c, c2, i)
+				1:
+					_ember(ci, c, c2, t, i)
+				_:
+					_coins(ci, Color("ffd23f"), Color("fff1a8"))
+		"crown":
+			match i % 3:
+				0:
+					_crown(ci, c, c2, i)
+				1:
+					_chalice(ci, c, c2, i)
+				_:
+					var j: Color = JEWELS[(i / 3) % JEWELS.size()]
+					_cut_gem(ci, j, j.lightened(0.5))
+		"void":
+			_orb(ci, c, c2, t, i)
+		"time":
+			if i % 4 == 0:
+				_hourglass(ci, c, c2, t, i)
+			else:
+				_watch(ci, c, c2, t, i)
+		"heart":
+			if i % 3 == 2:
+				_sea_pearl(ci, c, c2)
+			else:
+				_heart_gem(ci, c, c2, t, i)
+
+
+## The big piece of an abyss deposit, standing on `base`; `s` = size / 40.
+static func centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, st: Dictionary, t: float, seed: int) -> void:
+	var c: Color = st["ore"]
+	var c2: Color = st["ore2"]
+	match kind:
+		"vent":
+			# A black smoker with tube worms at its foot.
+			Art.push(ci, base + Vector2(-8 * s, 2), 0.0, Vector2(s, s) * 1.45)
+			_chimney(ci, c, c2, t, seed)
+			Art.pop(ci)
+			for k in 3:
+				Art.push(ci, base + Vector2((13 + k * 5) * s, 3), sin(t * 1.6 + k * 1.3) * 0.1, Vector2(s, s) * (0.9 - k * 0.15))
+				tube_worm(ci, 22.0 - k * 3.0)
+				Art.pop(ci)
+		"whale":
+			Art.push(ci, base + Vector2(-10 * s, 3), 0.0, Vector2(s, s) * 0.95)
+			whale_skull(ci, c, c2, t)
+			Art.pop(ci)
+		"mirror":
+			Art.push(ci, base + Vector2(-4 * s, 2), -0.05, Vector2(s, s) * 0.82)
+			_standing_mirror(ci, c, c2, t)
+			Art.pop(ci)
+		"dragon":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.1)
+			Art.toon(ci, _HOARD, Color("ffc93c"), 2.0, 0.4)
+			for p: Vector2 in [Vector2(-16, -8), Vector2(12, -9), Vector2(-4, -14), Vector2(22, -4)]:
+				Art.flat(ci, Art.ellipse_pts(p, Vector2(4, 1.8), 10), Color("fff1a8"))
+			var wob := snappedf(sin(t * 9.0) * 0.1 * maxf(0.0, sin(t * 0.9 + seed)), 0.02)
+			Art.push(ci, Vector2(2, -12), wob)
+			dragon_egg(ci, c, c2, t)
+			Art.pop(ci)
+			Art.pop(ci)
+		"crown":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.12)
+			Art.t_rect(ci, Rect2(-24, -12, 48, 12), 5, Color("c0304a"), 2.2, 0.5)
+			for x: float in [-23.0, 23.0]:
+				Art.flat(ci, Art.circle_pts(Vector2(x, -2), 2.8, 8), Color("ffc93c"))
+			Art.push(ci, Vector2(0, -9), 0.0, Vector2(1.35, 1.35))
+			_crown(ci, c, c2, 0)
+			Art.pop(ci)
+			var tw := 0.5 + 0.5 * sin(t * 3.3 + seed)
+			Art.push(ci, Vector2(13, -38), t * 0.7, Vector2.ONE * (0.5 + tw * 0.6))
+			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5, 1.4, 4), Color(1, 1, 1, 0.95), 0.0, 0.0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"void":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 0.95)
+			Art.toon(ci, _PEDESTAL, Color("2b2340"), 2.0, 0.4)
+			Art.flat(ci, _PEDESTAL_TOP, Color(c, 0.55))
+			Art.push(ci, Vector2(0, -34 + snappedf(sin(t * 1.3 + seed) * 3.0, 0.5)), 0.0)
+			void_orb(ci, c, c2, t, 1.6, true)
+			Art.pop(ci)
+			Art.pop(ci)
+		"time":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s))
+			Art.push(ci, Vector2(-17, -40), t * 0.6, Vector2.ONE * 0.65)
+			Art.toon(ci, _GEAR, Color("b07a34"), 3.0, 0.0)
+			Art.pop(ci)
+			Art.push(ci, Vector2.ZERO, 0.0, Vector2(1.25, 1.25))
+			_hourglass(ci, c, c2, t, seed)
+			Art.pop(ci)
+			Art.pop(ci)
+		"heart":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.1)
+			Art.toon(ci, _SCALLOP, Color("ffc93c"), 2.0, 0.4)
+			for k in range(1, 7):
+				var a := lerpf(PI + 0.45, TAU - 0.45, k / 7.0)
+				Art.line_c(ci, PackedVector2Array([Vector2(0, -3), Vector2(cos(a) * 17.0, -8.0 + sin(a) * 17.0)]), Color("e0921c"), 1.6)
+			var bob := snappedf(sin(t * 1.8 + seed) * 2.0, 0.5)
+			heart_rays(ci, Vector2(0, -30 + bob), 34.0, c, t)
+			Art.push(ci, Vector2(0, -14 + bob), 0.0, Vector2(1.05, 1.05))
+			_heart_gem(ci, c, c2, t, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+
+
+# vent -----------------------------------------------------------------
+
+static func _sulfur(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 4 == 2 else 1.0, 1.0))
+	Art.push(ci, Vector2(-8, 1), -0.45, Vector2(0.55, 0.55))
+	Art.toon(ci, _SULFUR, Art.shade_of(c, 0.12), 2.6, 0.0)
+	Art.pop(ci)
+	Art.toon(ci, _SULFUR, c, 2.0, 0.0)
+	Art.flat(ci, PackedVector2Array([Vector2(1, -37), Vector2(10, -19), Vector2(7, 0), Vector2(1, 0)]), Art.shade_of(c, 0.22))
+	Art.flat(ci, PackedVector2Array([Vector2(-1, -36), Vector2(-8, -19), Vector2(-4, -19)]), c2)
+	Art.line_c(ci, PackedVector2Array([Vector2(-6, -4), Vector2(-7, -17)]), Color(1, 1, 1, 0.55), 1.4)
+	Art.pop(ci)
+
+
+static var _SULFUR := PackedVector2Array([Vector2(-7, 0), Vector2(-10, -18), Vector2(0, -38), Vector2(10, -19), Vector2(7, 0)])
+
+
+static func _chimney(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var hot := snappedf(0.7 + 0.3 * sin(t * 3.0 + i * 1.3), 0.1)
+	var rock := Color("3b3434")
+	Art.toon(ci, _CHIMNEY, rock, 2.0, 0.5)
+	for y: float in [-12.0, -24.0]:
+		Art.line_c(ci, PackedVector2Array([Vector2(-8.2 + (y + 24.0) * -0.05, y), Vector2(0, y + 1.5), Vector2(8.4 + (y + 24.0) * 0.06, y)]), Color("241e22"), 1.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-4, -6), Vector2(4.5, 2.4), 10, 0.3), c)
+	Art.flat(ci, Art.ellipse_pts(Vector2(4, -18), Vector2(2.6, 1.8), 8), c2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -29), Vector2(2.2, 1.5), 8), c)
+	Art.flat(ci, _CHIMNEY_MOUTH, Color(1.0, 0.55, 0.2, hot))
+	# Dark smoke pouring out of the top.
+	for k in 3:
+		var f := fposmod(t * 0.45 + k / 3.0 + i * 0.21, 1.0)
+		Art.dot(ci, Vector2(sin(f * 5.0 + k + i) * 2.5 + f * 5.0, -36.0 - f * 28.0), 3.0 + f * 5.5, Color(0.42, 0.37, 0.4, 0.8 * (1.0 - f)))
+
+
+static var _CHIMNEY := Art.smooth_pts(PackedVector2Array([Vector2(-11, 0), Vector2(-8, -12), Vector2(-7, -24), Vector2(-5, -34),
+		Vector2(5, -34), Vector2(7, -24), Vector2(8, -12), Vector2(12, 0)]), 2)
+static var _CHIMNEY_MOUTH := Art.ellipse_pts(Vector2(0, -34), Vector2(4.5, 1.8), 10)
+
+
+## A tube worm `h` px tall standing on 0,0: white tube, red plume.
+static func tube_worm(ci: CanvasItem, h: float) -> void:
+	Art.t_rect(ci, Rect2(-2.2, -h, 4.4, h), 2.2, Color("f4efe6"), 1.6, 0.0)
+	Art.push(ci, Vector2(0, -h), 0.0, Vector2(0.75, 0.75))
+	Art.toon(ci, _PLUME, Color("ef3a4a"), 1.8, 0.0)
+	Art.pop(ci)
+
+
+static var _PLUME := Art.smooth_pts(PackedVector2Array([Vector2(-2, 1), Vector2(-5, -3), Vector2(-4, -7), Vector2(0, -9),
+		Vector2(4, -7), Vector2(5, -3), Vector2(2, 1)]), 2)
+
+
+# whale ----------------------------------------------------------------
+
+static func _vertebra(ci: CanvasItem, c: Color, c2: Color) -> void:
+	Art.toon(ci, _VERTEBRA, c, 2.0, 0.4)
+	Art.flat(ci, _CENTRUM, Art.shade_of(c, 0.15))
+	Art.flat(ci, _CANAL, Art.shade_of(c, 0.55))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-10, -16), Vector2(3, 1.2), 8), Color(1, 1, 1, 0.6))
+	Art.flat(ci, Art.ellipse_pts(Vector2(4, -6), Vector2(2, 1.4), 8), Color(c2, 0.5))
+
+
+static var _CENTRUM := Art.circle_pts(Vector2(1, -8), 5.5, 10)
+static var _CANAL := Art.circle_pts(Vector2(0, -20.5), 2.6, 8)
+static var _VERTEBRA := Art.union([Art.circle_pts(Vector2(0, -9), 9.0, 18), Art.rrect_pts(Rect2(-17, -19, 34, 6), 3, 2),
+		PackedVector2Array([Vector2(-4, -18), Vector2(4, -18), Vector2(1.8, -38), Vector2(-1.8, -38)])])
+
+
+static func _ambergris(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var wax := c.lerp(Color("a89468"), 0.55)
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 4 == 1 else 1.0, 0.85))
+	Art.toon(ci, _NUGGET, wax, 2.0, 0.5)
+	Art.arc_c(ci, Vector2(-3, -12), 6.0, 0.4, 3.6, 5, Color(c, 0.8), 1.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -18), Vector2(3.5, 1.8), 10, -0.3), Color(1, 1, 1, 0.5))
+	Art.dot(ci, Vector2(7, -15), 1.6, Color(c2, 0.5 + 0.4 * sin(t * 2.0 + i)))
+	Art.pop(ci)
+
+
+## A whale skull lying on its jaw (~80 wide, ~28 tall), snout to +x.
+static func whale_skull(ci: CanvasItem, c: Color, c2: Color, t: float) -> void:
+	Art.toon(ci, _SKULL, c, 2.2, 0.5)
+	Art.line_c(ci, PackedVector2Array([Vector2(-26, -5), Vector2(0, -6), Vector2(36, -3)]), Art.shade_of(c, 0.3), 1.6)
+	for k in 6:
+		Art.line_c(ci, PackedVector2Array([Vector2(6 + k * 5, -5), Vector2(6 + k * 5, -1.5)]), Art.shade_of(c, 0.25), 1.2)
+	Art.flat(ci, _SKULL_EYE, Color("2a2438"))
+	Art.dot(ci, Vector2(-17, -14), 2.2 + 0.6 * sin(t * 2.0), Color(c2, 0.9))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-20, -22), Vector2(6, 1.6), 10, -0.2), Color(1, 1, 1, 0.55))
+
+
+static var _SKULL := Art.smooth_pts(PackedVector2Array([Vector2(-34, 0), Vector2(-36, -12), Vector2(-28, -24), Vector2(-14, -28),
+		Vector2(2, -22), Vector2(20, -13), Vector2(38, -6), Vector2(40, 0)]), 3)
+static var _SKULL_EYE := Art.ellipse_pts(Vector2(-17, -14), Vector2(5.5, 4.2), 12, 0.2)
+
+
+# mirror ---------------------------------------------------------------
+
+static func _mirror_shard(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var k := i % _MSHARDS.size()
+	var shape: PackedVector2Array = _MSHARDS[k]
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, shape, c, 2.0, 0.0)
+	Art.flat(ci, _MSHARD_LOW[k], Color("7d8cc0"))
+	# A glint sweeps up the glass now and then.
+	var sweep := fposmod(t * 0.35 + i * 0.27, 1.0)
+	for g in 2:
+		var a := snappedf(clampf(1.0 - absf(sweep * 3.0 - 1.0 - g * 0.6) * 2.5, 0.0, 1.0), 0.25)
+		if a > 0.0:
+			Art.flat(ci, _MSHARD_GLINT[k * 2 + g], Color(1, 1, 1, 0.3 + 0.6 * a))
+	Art.line_c(ci, PackedVector2Array([shape[1] + Vector2(1.5, 0), shape[2] + Vector2(0.5, 2.5)]), Color(c2, 0.9), 1.4)
+	Art.pop(ci)
+
+
+static var _MSHARDS: Array[PackedVector2Array] = [
+	PackedVector2Array([Vector2(-8, 0), Vector2(-11, -22), Vector2(-3, -40), Vector2(6, -30), Vector2(10, 0)]),
+	PackedVector2Array([Vector2(-10, 0), Vector2(-7, -28), Vector2(2, -36), Vector2(9, -18), Vector2(7, 0)]),
+	PackedVector2Array([Vector2(-6, 0), Vector2(-9, -16), Vector2(-1, -44), Vector2(8, -24), Vector2(6, 0)]),
+]
+static var _MSHARD_LOW: Array[PackedVector2Array] = _shard_parts(0)
+static var _MSHARD_GLINT: Array[PackedVector2Array] = _shard_parts(1)
+
+
+static func _shard_parts(which: int) -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for sh: PackedVector2Array in _MSHARDS:
+		if which == 0:
+			out.append(Art.clipped(PackedVector2Array([Vector2(-20, 0), Vector2(-20, -12), Vector2(20, -20), Vector2(20, 0)]), sh))
+		else:
+			for g in 2:
+				var y := -14.0 - g * 12.0
+				out.append(Art.clipped(PackedVector2Array([Vector2(-20, y + 10), Vector2(-20, y + 5), Vector2(20, y - 12), Vector2(20, y - 7)]), sh))
+	return out
+
+
+static func _standing_mirror(ci: CanvasItem, c: Color, c2: Color, t: float) -> void:
+	var frame := Color("b8c4dc")
+	for x: float in [-10.0, 10.0]:
+		Art.t_rect(ci, Rect2(x - 3, -6, 6, 6), 2, Art.shade_of(frame, 0.2), 1.8, 0.0)
+	Art.t_ellipse(ci, Vector2(0, -32), Vector2(19, 27), frame, 2.4, 0.4)
+	Art.toon(ci, _MIRROR_GLASS, Color("dfeaff"), 1.6, 0.0)
+	Art.flat(ci, _MIRROR_LOW, Color("8fa4d8"))
+	var sweep := fposmod(t * 0.3, 1.0)
+	for g in 2:
+		var a := snappedf(clampf(1.0 - absf(sweep * 3.0 - 1.0 - g * 0.5) * 2.0, 0.0, 1.0), 0.25)
+		Art.flat(ci, _MIRROR_GLINT[g], Color(1, 1, 1, 0.35 + 0.55 * a))
+	Art.t_circle(ci, Vector2(0, -60), 4, c2, 1.8, 0.0)
+	Art.t_circle(ci, Vector2(0, -60), 2, Color("ff8fc0"), 0.0, 0.0)
+	for sx: float in [-1.0, 1.0]:
+		Art.flat(ci, Art.circle_pts(Vector2(17.5 * sx, -32), 2.2, 8), c)
+
+
+static var _MIRROR_GLASS := Art.ellipse_pts(Vector2(0, -32), Vector2(14.5, 22), 24)
+static var _MIRROR_LOW := Art.clipped(PackedVector2Array([Vector2(-20, -10), Vector2(-20, -24), Vector2(20, -30), Vector2(20, -10)]), _MIRROR_GLASS)
+static var _MIRROR_GLINT: Array[PackedVector2Array] = [
+	Art.clipped(PackedVector2Array([Vector2(-20, -32), Vector2(-20, -40), Vector2(20, -58), Vector2(20, -50)]), _MIRROR_GLASS),
+	Art.clipped(PackedVector2Array([Vector2(-20, -22), Vector2(-20, -25), Vector2(20, -43), Vector2(20, -40)]), _MIRROR_GLASS),
+]
+
+
+# storm ----------------------------------------------------------------
+
+static func _storm_crystal(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var flick := snappedf(0.55 + 0.45 * absf(sin(t * 7.0 + i * 2.3) * sin(t * 2.9 + i)), 0.25)
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.crystal(ci, Vector2.ZERO, 42, 8, 0.0, c, 2.0)
+	Art.line_c(ci, _BOLT_IN, Color(c2, flick), 2.0)
+	Art.dot(ci, Vector2(0, -41), 2.2 + flick * 2.0, Color(c2, 0.6 + 0.4 * flick))
+	Art.pop(ci)
+	# A crackle of electricity every now and then.
+	var f := fposmod(t * 0.9 + i * 0.37, 1.0)
+	if f < 0.1:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(t * 0.9 + i * 0.37) * 7 + i
+		var pts := PackedVector2Array([Vector2(0, -41)])
+		var end := Vector2(rng.randf_range(-22, 22), rng.randf_range(-30, -16))
+		for k in range(1, 4):
+			pts.append(pts[0].lerp(end, k / 4.0) + Vector2(rng.randf_range(-4, 4), rng.randf_range(-4, 4)))
+		pts.append(end)
+		Art.polyline(ci, pts, Color(c, 0.8), 3.0)
+		Art.polyline(ci, pts, Color(1, 1, 1, 0.95), 1.2)
+
+
+static var _BOLT_IN := PackedVector2Array([Vector2(-1, -5), Vector2(3, -15), Vector2(-2, -22), Vector2(2, -33)])
+
+
+## A zigzag lightning bolt from `a` to `b` (new shape each strike: `seed`).
+static func bolt(ci: CanvasItem, a: Vector2, b: Vector2, seed: int, c: Color, alpha: float, width: float = 4.0) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var pts := PackedVector2Array([a])
+	var n := 6
+	var side := (b - a).orthogonal().normalized()
+	for k in range(1, n):
+		pts.append(a.lerp(b, float(k) / n) + side * rng.randf_range(-9, 9))
+	pts.append(b)
+	Art.polyline(ci, pts, Color(c, 0.7 * alpha), width + 3.0)
+	Art.polyline(ci, pts, Color(1, 1, 1, alpha), width * 0.45)
+
+
+# dragon ---------------------------------------------------------------
+
+static func _scale(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.push(ci, Vector2(-8, 1), -0.3, Vector2(0.62, 0.62))
+	Art.toon(ci, _SCALE, Art.shade_of(c, 0.25), 2.8, 0.0)
+	Art.pop(ci)
+	Art.toon(ci, _SCALE, c, 2.0, 0.5)
+	Art.line_c(ci, PackedVector2Array([Vector2(0, -5), Vector2(0, -31)]), Art.shade_of(c, 0.35), 1.8)
+	Art.line_c(ci, _SCALE_RIM, c2, 1.8)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -24), Vector2(1.8, 5), 8, 0.3), Color(1, 1, 1, 0.45))
+	Art.pop(ci)
+
+
+static var _SCALE := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-10, -10), Vector2(-12, -24), Vector2(-7, -34),
+		Vector2(0, -37), Vector2(7, -34), Vector2(12, -24), Vector2(10, -10)]), 2)
+static var _SCALE_RIM := PackedVector2Array([Vector2(-9, -25), Vector2(-5, -32), Vector2(0, -34), Vector2(5, -32), Vector2(9, -25)])
+
+
+static func _ember(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var hot := snappedf(0.6 + 0.4 * sin(t * 4.0 + i * 1.7), 0.1)
+	Art.toon(ci, _DROP, c.lerp(Color("ff9a2a"), 0.4), 2.0, 0.4)
+	Art.flat(ci, PackedVector2Array([Vector2(0, -36), Vector2(9, -14), Vector2(0, -1)]), Art.shade_of(c, 0.2))
+	Art.flat(ci, _FLAME, Color(c2, hot))
+	Art.flat(ci, _FLAME_CORE, Color(1, 1, 0.9, hot))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-4, -22), Vector2(1.8, 5), 8, 0.35), Color(1, 1, 1, 0.6))
+
+
+static var _FLAME := Art.smooth_pts(PackedVector2Array([Vector2(0, -26), Vector2(4, -16), Vector2(5, -8), Vector2(0, -4), Vector2(-5, -8), Vector2(-3, -15)]), 2)
+static var _FLAME_CORE := Art.smooth_pts(PackedVector2Array([Vector2(0, -17), Vector2(2.4, -10), Vector2(0, -6.5), Vector2(-2.4, -10)]), 2)
+static var _HOARD := Art.smooth_pts(PackedVector2Array([Vector2(-32, 0), Vector2(-24, -9), Vector2(-10, -15), Vector2(6, -16),
+		Vector2(22, -10), Vector2(32, 0)]), 3)
+
+
+## A dragon egg (~34 tall, standing on 0,0) with glowing cracks.
+static func dragon_egg(ci: CanvasItem, c: Color, c2: Color, t: float) -> void:
+	var hot := snappedf(0.55 + 0.45 * sin(t * 2.6), 0.1)
+	var shell := Art.shade_of(c, 0.3)
+	Art.toon(ci, _EGG, shell, 2.2, 0.6)
+	for p: Vector2 in [Vector2(-5, -24), Vector2(4, -24), Vector2(-8, -16), Vector2(8, -18)]:
+		Art.arc_c(ci, p, 4.0, 0.2, PI - 0.2, 4, Art.shade_of(shell, 0.3), 1.3)
+	Art.line_c(ci, _EGG_CRACK, Color(c2, hot), 2.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -27), Vector2(2.6, 5), 10, 0.4), Color(1, 1, 1, 0.45))
+
+
+static var _EGG := Art.smooth_pts(PackedVector2Array([Vector2(0, -36), Vector2(9, -30), Vector2(13, -16), Vector2(10, -4),
+		Vector2(0, 0), Vector2(-10, -4), Vector2(-13, -16), Vector2(-9, -30)]), 3)
+static var _EGG_CRACK := PackedVector2Array([Vector2(-6, -12), Vector2(-2, -16), Vector2(1, -12), Vector2(5, -17), Vector2(8, -14)])
+
+
+# crown ----------------------------------------------------------------
+
+static func _crown(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.toon(ci, _CROWN, c, 2.0, 0.5)
+	Art.t_rect(ci, Rect2(-14, -7, 28, 5), 2, Art.shade_of(c, 0.18), 0.0, 0.0)
+	for k in 3:
+		Art.flat(ci, _CROWN_GEMS[k], JEWELS[(k + i) % 3])
+		Art.flat(ci, _CROWN_PEARLS[k], Color("fbf8ff"))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-7, -13), Vector2(1.6, 3.4), 8, 0.3), Color(c2, 0.9))
+
+
+static var _CROWN_GEMS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-8, -4.5), 2.2, 6), Art.circle_pts(Vector2(0, -4.5), 2.2, 6), Art.circle_pts(Vector2(8, -4.5), 2.2, 6)]
+static var _CROWN_PEARLS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-15, -21), 2.4, 8), Art.circle_pts(Vector2(0, -25), 2.4, 8), Art.circle_pts(Vector2(15, -21), 2.4, 8)]
+static var _CROWN := PackedVector2Array([Vector2(-14, 0), Vector2(-15, -19), Vector2(-7, -11), Vector2(0, -23),
+		Vector2(7, -11), Vector2(15, -19), Vector2(14, 0)])
+
+
+static func _chalice(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.t_ellipse(ci, Vector2(0, -2), Vector2(9, 3), Art.shade_of(c, 0.15), 1.8, 0.0)
+	Art.t_rect(ci, Rect2(-2.5, -16, 5, 14), 1.5, c, 1.6, 0.0)
+	Art.toon(ci, _CUP, c, 2.0, 0.5)
+	Art.flat(ci, Art.ellipse_pts(Vector2(0, -36), Vector2(11, 2.4), 12), Art.shade_of(c, 0.4))
+	Art.flat(ci, _CHALICE_GEM, JEWELS[(i / 3 + 1) % 3])
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -29), Vector2(1.4, 3.4), 8), Color(c2, 0.9))
+
+
+static var _CHALICE_GEM := Art.circle_pts(Vector2(0, -26), 3.0, 8)
+static var _CUP := Art.smooth_pts(PackedVector2Array([Vector2(-12, -36), Vector2(12, -36), Vector2(10, -24), Vector2(3, -16),
+		Vector2(-3, -16), Vector2(-10, -24)]), 2)
+
+
+# void -----------------------------------------------------------------
+
+static func _orb(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	Art.flat(ci, _ORB_SHADOW, Color(0, 0, 0, 0.3))
+	Art.push(ci, Vector2(0, -16 + snappedf(sin(t * 1.6 + i * 1.1) * 2.5, 0.5)))
+	void_orb(ci, c, c2, t, 1.0, i % 2 == 1)
+	Art.pop(ci)
+
+
+static var _ORB_SHADOW := Art.ellipse_pts(Vector2(0, -1), Vector2(9, 2.2), 12)
+
+
+## A dark orb of radius 13 * `r` centered on 0,0, lit by a purple rim;
+## `ring` adds a tilted ring around it.
+static func void_orb(ci: CanvasItem, c: Color, c2: Color, t: float, r: float, ring: bool) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(r, r))
+	Art.dot(ci, Vector2.ZERO, 18.0, Color(c, 0.22))
+	if ring:
+		Art.push(ci, Vector2.ZERO, -0.35, Vector2(1.0, 0.3))
+		Art.arc_c(ci, Vector2.ZERO, 20.0, PI, TAU, 8, Color(c2, 0.7), 3.0)
+		Art.pop(ci)
+	Art.t_circle(ci, Vector2.ZERO, 13, VOID_BODY, 2.0, 0.0)
+	Art.push(ci, Vector2.ZERO, t * 0.8)
+	Art.arc_c(ci, Vector2.ZERO, 6.0, 0.0, 3.8, 5, Color(c, 0.45), 1.6)
+	Art.pop(ci)
+	Art.arc_c(ci, Vector2.ZERO, 11.0, -0.35, 1.9, 6, c, 2.6)
+	Art.toon(ci, _ORB_GLINT, Color(1, 1, 1, 0.9), 0.0, 0.0)
+	if ring:
+		Art.push(ci, Vector2.ZERO, -0.35, Vector2(1.0, 0.3))
+		Art.arc_c(ci, Vector2.ZERO, 20.0, 0.0, PI, 8, c2, 3.0)
+		Art.pop(ci)
+	Art.pop(ci)
+
+
+static var _ORB_GLINT := Art.star_pts(Vector2(-4.5, -5), 3.2, 0.9, 4)
+static var _PEDESTAL := PackedVector2Array([Vector2(-16, 0), Vector2(-11, -6), Vector2(-8, -14), Vector2(8, -14), Vector2(11, -6), Vector2(16, 0)])
+static var _PEDESTAL_TOP := PackedVector2Array([Vector2(-7, -14), Vector2(7, -14), Vector2(5, -12), Vector2(-5, -12)])
+
+
+# time -----------------------------------------------------------------
+
+static func _hourglass(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var level := snappedf(fposmod(t * 0.08 + i * 0.31, 1.0), 0.1)
+	for x: float in [-9.0, 9.0]:
+		Art.t_rect(ci, Rect2(x - 1.2, -37, 2.4, 34), 0.0, Art.shade_of(BRASS, 0.2), 0.0, 0.0)
+	Art.toon(ci, _GLASS, Color(c2, 0.35), 1.6, 0.0)
+	if level < 1.0:
+		Art.push(ci, Vector2(0, -20), 0.0, Vector2(1.0, 1.0 - level))
+		Art.flat(ci, _SAND_TOP, c)
+		Art.pop(ci)
+		Art.line_c(ci, PackedVector2Array([Vector2(0, -20), Vector2(0, -7)]), c, 1.3)
+	Art.push(ci, Vector2(0, -6), 0.0, Vector2(1.0, maxf(0.1, level)))
+	Art.flat(ci, _SAND_BOT, c)
+	Art.pop(ci)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-4, -29), Vector2(1.2, 3.5), 8), Color(1, 1, 1, 0.7))
+	Art.t_rect(ci, Rect2(-12, -41, 24, 5), 2, BRASS, 1.8, 0.0)
+	Art.t_rect(ci, Rect2(-12, -5, 24, 5), 2, BRASS, 1.8, 0.0)
+
+
+static var _GEAR := Art.gear_pts(20.0, 8)
+static var _GLASS := PackedVector2Array([Vector2(-7, -36), Vector2(7, -36), Vector2(6.5, -29), Vector2(4.5, -24), Vector2(1.5, -20),
+		Vector2(4.5, -16), Vector2(6.5, -11), Vector2(7, -5), Vector2(-7, -5), Vector2(-6.5, -11), Vector2(-4.5, -16), Vector2(-1.5, -20),
+		Vector2(-4.5, -24), Vector2(-6.5, -29)])
+## Top sand in its bulb, anchored at the neck (0, -20); the bottom pile
+## anchored at the floor of the glass (0, -6).
+static var _SAND_TOP := PackedVector2Array([Vector2(-5.5, -9), Vector2(5.5, -9), Vector2(4.5, -5), Vector2(1, 0), Vector2(-1, 0), Vector2(-4.5, -5)])
+static var _SAND_BOT := Art.smooth_pts(PackedVector2Array([Vector2(-6, 1), Vector2(-4, -3), Vector2(0, -8), Vector2(4, -3), Vector2(6, 1)]), 2)
+
+
+static var _WATCH_KNOB := PackedVector2Array([Vector2(-2.5, -28), Vector2(2.5, -28), Vector2(3, -33), Vector2(0, -35), Vector2(-3, -33)])
+static var _WATCH_FACE := Art.circle_pts(Vector2(0, -15), 11, 14)
+
+
+static func _watch(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var ctr := Vector2(0, -15)
+	Art.toon(ci, _WATCH_KNOB, BRASS, 1.4, 0.0)
+	Art.t_circle(ci, ctr, 14, BRASS, 2.0, 0.0)
+	Art.flat(ci, _WATCH_FACE, c.lerp(c2, 0.75))
+	Art.push(ci, ctr, t * 1.2 + i)
+	Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, -8.5)]), Art.INK, 1.6)
+	Art.pop(ci)
+	Art.push(ci, ctr, t * 0.1 + i * 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, -5.5)]), c.darkened(0.3), 2.2)
+	Art.pop(ci)
+	Art.flat(ci, Art.circle_pts(ctr, 1.6, 8), Art.INK)
+	Art.flat(ci, Art.ellipse_pts(ctr + Vector2(-6, -6), Vector2(3, 1.5), 8, -0.7), Color(1, 1, 1, 0.6))
+
+
+# heart ----------------------------------------------------------------
+
+## The heart gem, ~32 tall, standing on its tip at 0,0; it beats.
+static func _heart_gem(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var beat := maxf(0.0, sin(t * 3.2 + i)) * 0.07
+	Art.push(ci, Vector2(0, -15), 0.0, Vector2.ONE * (1.0 + beat))
+	Art.toon(ci, HEART, c, 2.0, 0.0)
+	Art.flat(ci, _HEART_SHADE, Art.shade_of(c, 0.28))
+	Art.flat(ci, _HEART_IN, c.lerp(c2, 0.35))
+	for p: Vector2 in [Vector2(-7, -9), Vector2(7, -9), Vector2(0, 13)]:
+		Art.line_c(ci, PackedVector2Array([Vector2(0, -2), p]), Color(c2, 0.6), 1.2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-8, -9), Vector2(2, 3.5), 8, 0.6), Color(1, 1, 1, 0.8))
+	Art.toon(ci, Art.star_pts(Vector2(5, -8), 3.2, 0.9, 4), Color("ffd0ec"), 0.0, 0.0)
+	Art.pop(ci)
+
+
+## Heart outline centered on 0,0 (~30 wide, ~32 tall, tip down).
+static var HEART := Art.smooth_pts(PackedVector2Array([Vector2(0, -8), Vector2(5, -14), Vector2(11, -15), Vector2(15, -10),
+		Vector2(14, -2), Vector2(8, 7), Vector2(0, 15), Vector2(-8, 7), Vector2(-14, -2), Vector2(-15, -10), Vector2(-11, -15), Vector2(-5, -14)]), 3)
+## The same heart with few points, for small copies (pendants, badges).
+static var HEART_LO := Art.smooth_pts(PackedVector2Array([Vector2(0, -8), Vector2(6, -15), Vector2(14, -12), Vector2(14, -2),
+		Vector2(0, 15), Vector2(-14, -2), Vector2(-14, -12), Vector2(-6, -15)]), 2)
+static var _HEART_IN := Art.smooth_pts(PackedVector2Array([Vector2(0, -3), Vector2(4, -7), Vector2(7, -5), Vector2(6, 0),
+		Vector2(0, 6), Vector2(-6, 0), Vector2(-7, -5), Vector2(-4, -7)]), 2)
+static var _HEART_SHADE := Art.clipped(PackedVector2Array([Vector2(2, -20), Vector2(20, -20), Vector2(20, 20), Vector2(-4, 20)]), HEART)
+
+
+static func _sea_pearl(ci: CanvasItem, c: Color, c2: Color) -> void:
+	Art.t_circle(ci, Vector2(0, -10), 10, c2, 2.0, 0.4)
+	Art.flat(ci, _PEARL_SHEEN, Color(c, 0.75))
+	Art.flat(ci, Art.circle_pts(Vector2(-3.5, -13.5), 2.8, 10), Color(1, 1, 1, 0.95))
+	Art.flat(ci, Art.circle_pts(Vector2(4, -5), 1.4, 8), Color("ffb8e0"))
+
+
+## Soft rays of light turning around `c` (the finale's heart).
+static func heart_rays(ci: CanvasItem, c: Vector2, r: float, color: Color, t: float, n: int = 6) -> void:
+	var clear := Color(color, 0.0)
+	var col := Color(color, 0.35)
+	for k in n:
+		var a := t * 0.25 + TAU * k / n
+		var d1 := Vector2.from_angle(a - 0.12) * r
+		var d2 := Vector2.from_angle(a + 0.12) * r
+		Art.grad(ci, PackedVector2Array([c, c + d1, c + d2]), PackedColorArray([col, clear, clear]))

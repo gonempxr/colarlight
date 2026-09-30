@@ -39,27 +39,40 @@ const DEPTHS: Array[Dictionary] = [
 	{"id": "meteor", "value": 1.55e15, "cost0": 5.0e11, "unlock": 5.0e11, "manager": 1.0e12, "cycle": 11.9},
 	{"id": "kraken", "value": 1.09e16, "cost0": 2.2e12, "unlock": 2.2e12, "manager": 4.4e12, "cycle": 12.0},
 	{"id": "star", "value": 7.6e16, "cost0": 1.4e13, "unlock": 1.4e13, "manager": 2.8e13, "cycle": 12.0},
+	{"id": "vent", "value": 5.32e17, "cost0": 2.1e13, "unlock": 2.1e13, "manager": 4.2e13, "cycle": 12.0},
+	{"id": "whale", "value": 3.72e18, "cost0": 9e13, "unlock": 9e13, "manager": 1.8e14, "cycle": 12.0},
+	{"id": "mirror", "value": 2.61e19, "cost0": 1.3e14, "unlock": 1.3e14, "manager": 2.6e14, "cycle": 12.0},
+	{"id": "storm", "value": 1.82e20, "cost0": 5.8e14, "unlock": 5.8e14, "manager": 1.2e15, "cycle": 12.0},
+	{"id": "dragon", "value": 1.28e21, "cost0": 8.6e14, "unlock": 8.6e14, "manager": 1.7e15, "cycle": 12.0},
+	{"id": "crown", "value": 8.94e21, "cost0": 3.8e15, "unlock": 3.8e15, "manager": 7.6e15, "cycle": 12.0},
+	{"id": "void", "value": 6.26e22, "cost0": 5.5e15, "unlock": 5.5e15, "manager": 1.1e16, "cycle": 12.0},
+	{"id": "time", "value": 4.38e23, "cost0": 2.4e16, "unlock": 2.4e16, "manager": 4.8e16, "cycle": 12.0},
+	{"id": "heart", "value": 3.07e24, "cost0": 3.5e16, "unlock": 3.5e16, "manager": 7e16, "cycle": 12.0},
 ]
 const FOREMAN_MULT := 2.0
 
 ## The boat and the plant change their look (and name) as they grow, like
 ## buildings in Clash of Clans: a new stage at every output milestone
-## (level 10, 25, 50, 75...), 15 stages in all.
-const BUILDING_STAGES := 15
+## (level 10, 25, 50, 75...), 20 stages in all.
+const BUILDING_STAGES := 20
 
 ## Boat: carries ore from the dive sites to the shore. Plant: turns ore into
 ## coins. Both run on taps until their manager automates them for good
 ## (the automation survives a Dive).
 const BOAT := {"value": 1.5, "cost0": 8.0, "manager": 25.0, "cycle": 5.0}
 const PLANT := {"value": 1.7, "cost0": 10.0, "manager": 45.0, "cycle": 3.0}
+## The second boat and plant: bought in each run once the ocean is busy,
+## bigger per level than the first ones. Provisional numbers (see sim.py).
+const BOAT2 := {"value": 60.0, "cost0": 2.0e4, "manager": 4.0e5, "cycle": 6.0, "unlock": 2.0e5}
+const PLANT2 := {"value": 68.0, "cost0": 2.5e4, "manager": 5.0e5, "cycle": 3.6, "unlock": 2.5e5}
 
 ## A tap on a working stage pushes its cycle forward by this share.
 const TAP_BOOST := 0.1
 
 ## Dive Deeper: needs the coins and a deeper depth open every time
 ## (PRESTIGE_GATE_FIRST, then PRESTIGE_GATE_STEP more per Dive).
-const PRESTIGE_COST := 1.0e7
-const PRESTIGE_COST_GROWTH := 6.4
+const PRESTIGE_COST := 1.2e7
+const PRESTIGE_COST_GROWTH := 6.6
 const PRESTIGE_GATE_FIRST := 5
 const PRESTIGE_GATE_STEP := 2
 const PRESTIGE_MULT_STEP := 3.0

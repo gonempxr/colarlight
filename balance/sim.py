@@ -14,7 +14,8 @@ import sys
 GROWTH = 1.08                     # upgrade cost growth per level
 MILESTONE_FIRST = 10              # x2 output at level 10, then every 25 levels (25, 50, 75...)
 IDS = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "amber", "sapphire", "gold", "ruby", "ice",
-       "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star"]
+       "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star",
+       "vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart"]
 # value: coins/s per level at depth; cost0: level 1->2 upgrade cost; unlock: cost to open.
 # Depths after the sixth follow a fixed pattern (value x7, cost0 x10, unlock x UNLOCK_STEP).
 FIRST = [
@@ -30,7 +31,8 @@ FIRST = [
 # Dive Deeper price), so every run opens about two new depths.
 UNLOCKS = [0, 90, 1300, 1.2e5, 1.0e6, 2.3e6,
            6.8e6, 3.0e7, 4.5e7, 2.0e8, 3.0e8, 1.3e9, 1.9e9, 8.4e9,
-           1.2e10, 5.3e10, 7.8e10, 3.4e11, 5.0e11, 2.2e12, 1.4e13]
+           1.2e10, 5.3e10, 7.8e10, 3.4e11, 5.0e11, 2.2e12, 1.4e13,
+           2.1e13, 9.0e13, 1.3e14, 5.8e14, 8.6e14, 3.8e15, 5.5e15, 2.4e16, 3.5e16]
 DEPTHS = [dict(d) for d in FIRST]
 while len(DEPTHS) < len(IDS):
     prev = DEPTHS[-1]
@@ -43,20 +45,23 @@ for k, u in enumerate(UNLOCKS):
         DEPTHS[k]["cost0"] = u
 BOAT = {"value": 1.5, "cost0": 8}
 PLANT = {"value": 1.7, "cost0": 10}
+# Second boat and plant: bought once per run, bigger per level (balance.gd BOAT2/PLANT2).
+BOAT2 = {"value": 60.0, "cost0": 2.0e4, "unlock": 2.0e5}
+PLANT2 = {"value": 68.0, "cost0": 2.5e4, "unlock": 2.5e5}
 # Dive sites work on their own from the start. The boat and the plant run
 # only on taps (at this efficiency) until their manager is hired.
 TAP_EFFICIENCY = 0.35
 # A dive site's foreman doubles its output.
 FOREMAN_MULT = 2.0
-MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3}
+MANAGER_COST = {"boat": 25, "plant": 45, "d0": 400, "d1": 2.5e3, "boat2": 4.0e5, "plant2": 5.0e5}
 for k in range(2, len(DEPTHS)):
     MANAGER_COST[f"d{k}"] = float(f"{DEPTHS[k]['unlock'] * 2.0:.2g}")
 # Diving Deeper needs this depth open (deeper every time) and the coins.
 PRESTIGE_GATE_FIRST = 5
 PRESTIGE_GATE_STEP = 2
-PRESTIGE_COST0 = 1.0e7
-PRESTIGE_COST_GROWTH = 6.4
-RUNS = 9
+PRESTIGE_COST0 = 1.2e7
+PRESTIGE_COST_GROWTH = 6.6
+RUNS = 13
 
 
 def prestige_gate(times: int) -> int:
@@ -92,6 +97,8 @@ class Game:
         self.depth_lv = [1] + [0] * (len(DEPTHS) - 1)
         self.boat_lv = 1
         self.plant_lv = 1
+        self.boat2_lv = 0
+        self.plant2_lv = 0
         self.managers = set(keep)
         self.mult = mult
 
@@ -102,6 +109,8 @@ class Game:
             dives += output(d["value"], self.depth_lv[k]) * eff
         boat = output(BOAT["value"], self.boat_lv) * (1.0 if "boat" in self.managers else TAP_EFFICIENCY)
         plant = output(PLANT["value"], self.plant_lv) * (1.0 if "plant" in self.managers else TAP_EFFICIENCY)
+        boat += output(BOAT2["value"], self.boat2_lv) * (1.0 if "boat2" in self.managers else TAP_EFFICIENCY)
+        plant += output(PLANT2["value"], self.plant2_lv) * (1.0 if "plant2" in self.managers else TAP_EFFICIENCY)
         return dives, boat, plant
 
     def income(self) -> float:
@@ -124,6 +133,15 @@ class Game:
         for s in ("boat", "plant"):
             if s not in self.managers:
                 opts.append((f"manager {s}", MANAGER_COST[s], ("mgr", s)))
+        for s, data in (("boat2", BOAT2), ("plant2", PLANT2)):
+            lv = getattr(self, s + "_lv")
+            if lv == 0:
+                if self.depth_lv[2] > 0:
+                    opts.append((f"open {s}", data["unlock"], ("open2", s)))
+            else:
+                opts.append((f"{s} -> {lv + 1}", up_cost(data["cost0"], lv), ("lv2", s)))
+                if s not in self.managers:
+                    opts.append((f"manager {s}", MANAGER_COST[s], ("mgr", s)))
         return opts
 
     def apply(self, action):
@@ -138,6 +156,10 @@ class Game:
             self.plant_lv += 1
         elif kind == "mgr":
             self.managers.add(action[1])
+        elif kind == "open2":
+            setattr(self, action[1] + "_lv", 1)
+        elif kind == "lv2":
+            setattr(self, action[1] + "_lv", getattr(self, action[1] + "_lv") + 1)
 
     def potential(self) -> float:
         """Smooth stand-in for min(): rewards raising any stage, the weakest most.
@@ -149,10 +171,10 @@ class Game:
 
     def gain_of(self, action) -> float:
         before = self.potential()
-        saved = (list(self.depth_lv), self.boat_lv, self.plant_lv, set(self.managers))
+        saved = (list(self.depth_lv), self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, set(self.managers))
         self.apply(action)
         after = self.potential()
-        self.depth_lv, self.boat_lv, self.plant_lv, self.managers = saved
+        self.depth_lv, self.boat_lv, self.plant_lv, self.boat2_lv, self.plant2_lv, self.managers = saved
         return after - before
 
 
@@ -164,14 +186,14 @@ def best_option(g: Game):
     inc = max(g.income(), 1e-9)
     opts = g.options()
     for label, cost, action in opts:
-        if action[0] == "open" and cost <= inc * OPEN_WITHIN_SEC:
+        if action[0] in ("open", "open2") and cost <= inc * OPEN_WITHIN_SEC:
             return (label, cost, action)
     for label, cost, action in opts:
         if action[0] == "mgr" and cost <= inc * MANAGER_WITHIN_SEC:
             return (label, cost, action)
     best, best_score = None, 0.0
     for label, cost, action in opts:
-        if action[0] == "open":
+        if action[0] in ("open", "open2"):
             continue
         gain = g.gain_of(action)
         if gain <= 0:
@@ -228,7 +250,7 @@ def main():
         mult = prestige_mult(i)
         gate = prestige_gate(i)
         t, events, g = run(mult, prestige_cost(i), trace, keep=keep, gate=gate)
-        keep = tuple(m for m in g.managers if m in ("boat", "plant"))
+        keep = tuple(m for m in g.managers if m in ("boat", "plant", "boat2", "plant2"))
         print(f"=== Run {i + 1} (income x{mult:g}, needs {IDS[gate]} + {prestige_cost(i):.2g}) ===")
         for et, label in events:
             if label.startswith("open") or label.startswith("PRESTIGE"):
@@ -238,7 +260,7 @@ def main():
             break
         total += t
         deepest = max(k for k, lv in enumerate(g.depth_lv) if lv > 0)
-        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, boat {g.boat_lv}, plant {g.plant_lv}, income {g.income():.3g}/s")
+        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, boat {g.boat_lv}+{g.boat2_lv}, plant {g.plant_lv}+{g.plant2_lv}, income {g.income():.3g}/s")
 
 
 if __name__ == "__main__":

@@ -197,14 +197,11 @@ func _unhandled_input(event: InputEvent) -> void:
 ## The card the player sees for a stage (PC: the side column for the boat
 ## and the plant).
 func stage_card(key: String) -> StageCard:
-	if _wide and key == "boat":
-		return _side_boat
-	if _wide and key == "plant":
-		return _side_plant
-	if key == "boat":
-		return _world.surface.boat_card
-	if key == "plant":
-		return _world.surface.plant_card
+	# The second boat/plant share the first one's card (its "2" tab).
+	if GameState.is_boat(key):
+		return _side_boat if _wide else _world.surface.boat_card
+	if GameState.is_plant(key):
+		return _side_plant if _wide else _world.surface.plant_card
 	var i := GameState.depth_index(key)
 	return _world.rows[i].card if i >= 0 else null
 
@@ -306,6 +303,11 @@ func _place_sheet() -> void:
 
 func _on_stage_selected(key: String) -> void:
 	_panel.show_stage(key)
+	if GameState.is_boat(key) or GameState.is_plant(key):
+		# Keep the card on the same unit as the panel.
+		var card := stage_card(key)
+		if card and card.key != key:
+			card.show_unit(key)
 	if not _wide:
 		var was_open := _sheet_open
 		_sheet_open = true
@@ -369,10 +371,12 @@ func _on_settings_changed() -> void:
 
 
 func _on_milestone(key: String, level: int) -> void:
-	if (key == "boat" or key == "plant") and 1 + Balance.milestones(level) <= Balance.BUILDING_STAGES:
-		# A milestone of the boat or the plant is a new building stage (up to 15).
+	var building := GameState.is_boat(key) or GameState.is_plant(key)
+	if building and 1 + Balance.milestones(level) <= Balance.BUILDING_STAGES:
+		# A milestone of a boat or a plant is a new building stage (up to 20).
 		var stage := Balance.building_stage(level)
-		_show_toast(tr("STAGE_UP") % [Views.stage_name(key), tr("%s_STAGE_%d" % [key.to_upper(), stage])])
+		var line := "BOAT" if GameState.is_boat(key) else "PLANT"
+		_show_toast(tr("STAGE_UP") % [Views.stage_name(key), tr("%s_STAGE_%d" % [line, stage])])
 		Sfx.play("unlock")
 		return
 	_show_toast(tr("MILESTONE_TOAST") % [Views.stage_name(key), level])

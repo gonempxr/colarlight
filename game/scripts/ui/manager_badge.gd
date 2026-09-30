@@ -16,6 +16,13 @@ func _init(stage_key: String) -> void:
 	key = stage_key
 
 
+## The boat and plant cards switch between the first and the second unit.
+func set_key(stage_key: String) -> void:
+	key = stage_key
+	_sig = []
+	queue_redraw()
+
+
 func _ready() -> void:
 	custom_minimum_size = Vector2(SIZE, SIZE + 20)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -54,9 +61,9 @@ func _process(delta: float) -> void:
 
 func _tint() -> Color:
 	match key:
-		"boat":
+		"boat", "boat2":
 			return Color("8fd0ff")
-		"plant":
+		"plant", "plant2":
 			return Color("ffd98a")
 	return Art.DEPTH_STYLE[GameState.depth_index(key)]["water"].lightened(0.45)
 

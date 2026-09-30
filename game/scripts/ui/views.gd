@@ -20,6 +20,10 @@ static func stage_name(key: String) -> String:
 			return t("STAGE_BOAT")
 		"plant":
 			return t("STAGE_PLANT")
+		"boat2":
+			return t("STAGE_BOAT2")
+		"plant2":
+			return t("STAGE_PLANT2")
 	return t("DEPTH_%s" % String(GameState.stage_data(key)["id"]).to_upper())
 
 

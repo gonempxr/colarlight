@@ -120,6 +120,10 @@ func _count() -> int:
 
 
 func _on_buy() -> void:
+	if GameState.is_second(key) and not GameState.is_open(key):
+		Sfx.play("unlock" if GameState.open_building(key) else "deny")
+		refresh()
+		return
 	var n := _count()
 	if GameState.upgrade(key, n):
 		Sfx.play("upgrade")
@@ -136,19 +140,31 @@ func refresh() -> void:
 	var name := ""
 	var desc := ""
 	var what := ""
-	match key:
-		"boat":
-			name = tr("STAGE_BOAT")
-			desc = tr("DESC_BOAT")
-			what = tr("STAT_CARRY")
-		"plant":
-			name = tr("STAGE_PLANT")
-			desc = tr("DESC_PLANT")
-			what = tr("STAT_PROCESS")
-		_:
-			name = tr("DEPTH_%s" % String(data["id"]).to_upper())
-			desc = tr("DESC_DEPTH")
-			what = tr("STAT_OUTPUT")
+	name = Views.stage_name(key)
+	if GameState.is_boat(key):
+		desc = tr("DESC_BOAT")
+		what = tr("STAT_CARRY")
+	elif GameState.is_plant(key):
+		desc = tr("DESC_PLANT")
+		what = tr("STAT_PROCESS")
+	else:
+		desc = tr("DESC_DEPTH")
+		what = tr("STAT_OUTPUT")
+	if GameState.is_second(key) and not gs.is_open(key):
+		# Not bought yet: what it is, what it adds, and its price.
+		var price: float = gs.unlock_cost(key)
+		_title.text = tr("BUY_%s" % key.to_upper())
+		_desc.text = tr("BUY_%s_DESC" % key.to_upper())
+		_stats.text = "%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(Balance.output(data["value"], 1) * gs.income_mult())]
+		_gain.text = ""
+		for b in _modes:
+			b.visible = false
+		_buy.text = tr("BUY_FOR") % NumFormat.short(price)
+		_buy.theme_type_variation = &"GoldButton" if gs.coins >= price else &"DarkButton"
+		_close.visible = not docked
+		return
+	for b in _modes:
+		b.visible = true
 	_title.text = "%s · %s" % [name, tr("LEVEL") % gs.get_level(key)]
 	_desc.text = desc
 	var level: int = gs.get_level(key)
@@ -198,15 +214,15 @@ func _draw_hero() -> void:
 	else:
 		Art.t_rect(_hero, ground, 14, Art.SEA_TOP, 0.0, 0.0)
 		# Later stages are taller: shrink them to fit the box.
-		var bs := minf(1.1, (s.y - 44.0) / Props.boat_height(Props.current_stage("boat")))
+		var bs := minf(1.1, (s.y - 44.0) / Props.boat_height(Props.current_stage(key)))
 		Art.push(_hero, Vector2(s.x - 170, s.y - 34 + sin(_t * 1.6) * 3.0), sin(_t * 1.4) * 0.03, Vector2(bs, bs))
-		if key == "boat":
-			Props.boat(_hero, _t, 2, Art.DEPTH_STYLE[0]["ore2"], GameState.has_manager("boat"), "happy", Chars.blinking(_t, 7.0))
+		if GameState.is_boat(key):
+			Props.boat(_hero, _t, 2, Art.DEPTH_STYLE[0]["ore2"], GameState.has_manager(key), "happy", Chars.blinking(_t, 7.0), Callable(), key)
 		else:
 			Art.pop(_hero)
-			var ps := minf(1.0, (s.y - 44.0) / Props.plant_height(Props.current_stage("plant")))
+			var ps := minf(1.0, (s.y - 44.0) / Props.plant_height(Props.current_stage(key)))
 			Art.push(_hero, Vector2(s.x - 250, s.y - 36), 0.0, Vector2(ps, ps))
-			Props.plant(_hero, _t, true, _t * 3.0, 0.0)
+			Props.plant(_hero, _t, true, _t * 3.0, 0.0, key)
 		Art.pop(_hero)
 	# The manager, or an empty chair waiting for one.
 	if GameState.has_manager(key):

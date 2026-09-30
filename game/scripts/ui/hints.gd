@@ -17,14 +17,24 @@ static func pick(main: Node) -> Dictionary:
 		return _hint("daily", t("HINT_DAILY"), true, Callable(), "daily")
 	if Progress.has_feature("quests") and Progress.quests_ready() > 0:
 		return _hint("quests", t("HINT_QUESTS"), true, Callable(), "quests")
-	for k in ["boat", "plant"]:
-		if not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
+	for k in GameState.BUILDINGS:
+		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
-			return _hint("hire_" + k, t("HINT_HIRE_" + k.to_upper()), true, func(): return _control(card._manager), "")
+			var line := "HINT_HIRE_BOAT" if GameState.is_boat(k) else "HINT_HIRE_PLANT"
+			return _hint("hire_" + k, t(line), true, func():
+				if card.key != k:
+					card.show_unit(k)
+				return _control(card._manager), "")
 	if not gs.has_manager("boat") and gs.hold > 0.0 and gs.cycle_progress("boat") < 0.0:
 		return _hint("tap_boat", t("HINT_TAP_BOAT"), true, func(): return _world(world, world.surface.boat_world_pos() + Vector2(0, -40)), "")
 	if not gs.has_manager("plant") and gs.dock > 0.0 and gs.cycle_progress("plant") < 0.0:
 		return _hint("tap_plant", t("HINT_TAP_PLANT"), true, func(): return _world(world, world.surface.plant_world_pos() + Vector2(40, -80)), "")
+	# The second boat/plant when ore piles up in front of the first one.
+	for k in ["boat2", "plant2"]:
+		var group := "boat" if k == "boat2" else "plant"
+		if gs.is_open("d2") and not gs.is_open(k) and gs.bottleneck() == group and gs.coins >= gs.unlock_cost(k):
+			var card: StageCard = main.stage_card(k)
+			return _hint("buy_" + k, t("HINT_" + k.to_upper()), true, func(): return _control(card._unit_btns[1] if card._unit_btns[1].visible else card._upgrade), "")
 	var next: String = gs.next_depth()
 	if next != "" and gs.coins >= gs.unlock_cost(next):
 		var row: DepthRow = world.rows[gs.depth_index(next)]
@@ -63,6 +73,10 @@ static func pick(main: Node) -> Dictionary:
 static func _weakest(gs: Node) -> String:
 	var group: String = gs.bottleneck()
 	if group != "dives":
+		# With two boats (or plants), the cheaper one to upgrade.
+		var second := group + "2"
+		if gs.is_open(second) and gs.upgrade_cost(second) < gs.upgrade_cost(group):
+			return second
 		return group
 	var best := ""
 	var best_cost := INF
@@ -132,6 +146,9 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 		[gs.has_manager("boat"), t("HINT_AUTO_BOAT")],
 		[gs.has_manager("plant"), t("HINT_AUTO_PLANT")],
 	]
+	for k in ["boat2", "plant2"]:
+		if gs.is_open(k):
+			rows.append([gs.has_manager(k), Views.stage_name(k)])
 	for r in rows:
 		var h2 := HBoxContainer.new()
 		h2.add_theme_constant_override("separation", 10)
