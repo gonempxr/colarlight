@@ -167,6 +167,9 @@ func _after_title() -> void:
 
 
 func _process(delta: float) -> void:
+	if _wide:
+		# The lightbulb rides below the top bar while it slides down on PC.
+		_hint_btn.position.y = 24.0 + _hud.bar_bottom()
 	_refresh_left -= delta
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC

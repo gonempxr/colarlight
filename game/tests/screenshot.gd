@@ -96,6 +96,11 @@ func _initialize() -> void:
 			main.open_players()
 		"tutorial":
 			pr.tutorial_step = 0
+		"bar":
+			main._hud._reveal_hold = 10.0
+		"nobar":
+			main._hud._intro_show = 0.0
+			main._hud._reveal_hold = 0.0
 		"hint":
 			main.open_hint()
 		"toast":

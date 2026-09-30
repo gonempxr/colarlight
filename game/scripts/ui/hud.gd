@@ -204,6 +204,14 @@ func is_notch() -> bool:
 	return _notch
 
 
+## Lowest point of the sliding bar on PC (0 while hidden), so things in the
+## top corners can move out of its way.
+func bar_bottom() -> float:
+	if not _notch or not _bar.visible:
+		return 0.0
+	return maxf(0.0, _bar.position.y + _bar.size.y)
+
+
 ## Height the HUD takes from the top of the screen (the notch on PC).
 func used_height() -> float:
 	return _pill.size.y if _notch else size.y
