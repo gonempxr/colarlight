@@ -33,9 +33,9 @@ func _initialize() -> void:
 	pr.reset()
 	for f in Content.FEATURES:
 		pr.features[f] = true
-	pr.tutorial_step = 7
+	pr.tutorial_step = 9
 	pr.daily_last = pr.today()
-	gs.levels.merge({"d0": 34, "d1": 27, "d2": 12 if d2 > 0 else 0, "boat": boat, "plant": plant, "boat2": boat2, "plant2": plant2}, true)
+	gs.levels.merge({"d0": 34, "d1": 27, "d2": 12 if d2 > 0 else 0, "lift": boat, "boat": boat, "plant": plant, "boat2": boat2, "plant2": plant2}, true)
 	for k in ["d0", "d1", "boat", "plant", "boat2", "plant2"]:
 		gs.managers[k] = gs.levels[k] > 0
 	gs.coins = 480250.0

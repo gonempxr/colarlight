@@ -12,7 +12,7 @@ func _initialize() -> void:
 	gs.reset()
 	var second := int(OS.get_environment("W2_SECOND")) if OS.get_environment("W2_SECOND") != "" else 0
 	var first := int(OS.get_environment("W2_FIRST")) if OS.get_environment("W2_FIRST") != "" else 300
-	gs.levels.merge({"d0": 150, "d1": 120, "d2": 100, "d3": 80, "d4": 60, "d5": 40, "boat": first, "plant": first}, true)
+	gs.levels.merge({"d0": 150, "d1": 120, "d2": 100, "d3": 80, "d4": 60, "d5": 40, "lift": first, "boat": first, "plant": first}, true)
 	if second > 0 and gs.levels.has("boat2"):
 		gs.levels["boat2"] = second
 		gs.levels["plant2"] = second
@@ -33,6 +33,8 @@ func _initialize() -> void:
 	match only:
 		"no_divers":
 			main._world.divers.visible = false
+		"no_lift":
+			main._world.lift.visible = false
 		"no_rows":
 			for r in main._world.rows:
 				r.visible = false

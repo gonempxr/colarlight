@@ -186,6 +186,7 @@ func test_upgrades() -> void:
 	gs.reset()
 	var low: float = fi.upgrade_cost("helper")
 	gs.levels["d0"] = 200
+	gs.levels["lift"] = 200
 	gs.levels["boat"] = 200
 	gs.levels["plant"] = 200
 	check(fi.upgrade_cost("helper") > low * 5.0, "upgrade prices follow income")

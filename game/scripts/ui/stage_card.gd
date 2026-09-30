@@ -26,6 +26,8 @@ var _stage: Label
 var _pic: ArtView
 var _units: HBoxContainer
 var _unit_btns: Array[Button] = []
+## Red dots on the unit tabs: that unit can hire its manager right now.
+var _unit_dots: Array[Control] = []
 
 
 func _init(stage_key: String) -> void:
@@ -72,9 +74,22 @@ func _ready() -> void:
 			b.visible = false
 			b.pressed.connect(_select_unit.bind(i))
 			_unit_btns.append(b)
+			var dot := Control.new()
+			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			# Bottom-right corner: the card's top edge can sit under the top bar.
+			dot.size = Vector2(16, 16)
+			b.resized.connect(func() -> void: dot.position = b.size - Vector2(11, 11))
+			dot.visible = false
+			dot.draw.connect(func() -> void: Art.t_circle(dot, Vector2(8, 8), 7.5, Art.RED, 2.5, 0.3))
+			b.add_child(dot)
+			_unit_dots.append(dot)
 		_units.add_child(_unit_btns[0])
 		_units.add_child(_name)
 		_units.add_child(_unit_btns[1])
+		# Just bought the second one: show it (its manager slot is next).
+		GameState.depth_opened.connect(func(k: String) -> void:
+			if k == base + "2":
+				show_unit(k))
 	else:
 		_units.add_child(_name)
 	# The stage line only on the roomy PC cards; phone cards float over the
@@ -141,6 +156,8 @@ func _ready() -> void:
 
 static func head_color(stage_key: String) -> Color:
 	match stage_key:
+		"lift":
+			return Color("2bb5a0")
 		"boat":
 			return Color("3aa6f0")
 		"plant":
@@ -166,6 +183,12 @@ func _draw_hero(ci: CanvasItem, s: Vector2, t: float) -> void:
 			Art.push(ci, Vector2(s.x * 0.5, s.y * 0.8), 0.0, Vector2(ps, ps))
 			Props.plant(ci, t, GameState.cycle_progress(key) >= 0.0, t * 2.0, 0.0, key)
 			Art.pop(ci)
+
+
+## An open unit without a manager whose manager the player can afford.
+static func unit_wants_manager(unit: String) -> bool:
+	var gs := GameState
+	return gs.is_open(unit) and not gs.has_manager(unit) and gs.coins >= gs.manager_cost(unit)
 
 
 func _on_upgrade() -> void:
@@ -210,6 +233,8 @@ func refresh() -> void:
 		var second_open: bool = gs.is_open(base + "2")
 		_unit_btns[1].text = "2" if second_open else ""
 		_unit_btns[1].icon = null if second_open else Icons.get_icon("lock", 20)
+		for i in 2:
+			_unit_dots[i].visible = tabs and unit_wants_manager(base if i == 0 else base + "2")
 	var for_sale := gs.is_second(key) and level == 0
 	_manager.visible = not for_sale
 	_bar.visible = not for_sale

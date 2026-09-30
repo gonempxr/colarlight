@@ -1,0 +1,26 @@
+keys,en,ru,es,zh
+STAGE_LIFT,Lift,Лифт,Ascensor,升降机
+DESC_LIFT,The lift brings the ore from the crates at every depth up to the raft.,Лифт поднимает руду из ящиков на всех глубинах на плот.,El ascensor sube el mineral de las cajas de cada profundidad a la balsa.,升降机把各个深度箱子里的矿石运上木筏。
+PANEL_MANUAL,Without a manager it works only when you tap it.,"Без управляющего работает, только когда по нему тапаешь.",Sin gerente solo trabaja cuando lo tocas.,没有经理时，只有点击它才会工作。
+PANEL_HIRE,Hire a manager  %s,Нанять управляющего  %s,Contratar gerente  %s,雇用经理  %s
+PANEL_HIRE_FOREMAN,Hire a foreman (×2)  %s,Нанять бригадира (×2)  %s,Contratar capataz (×2)  %s,雇用领班（×2）  %s
+STAT_TRIP,Per trip: %s in %s s,За рейс: %s за %s с,Por viaje: %s en %s s,每趟：%s，用时 %s 秒
+STAT_WAITING,Waiting at the depths: %s,Ждёт на глубинах: %s,Esperando abajo: %s,深处等待：%s
+LIFT_STAGE_1,Rope Bucket,Ведро на верёвке,Cubo con cuerda,绳索吊桶
+LIFT_STAGE_2,Wooden Cage,Деревянная клеть,Jaula de madera,木制吊笼
+LIFT_STAGE_3,Iron Cage,Железная клеть,Jaula de hierro,铁制吊笼
+LIFT_STAGE_4,Diving Bell,Водолазный колокол,Campana de buceo,潜水钟
+LIFT_STAGE_5,Bathyscaphe,Батискаф,Batiscafo,深潜器
+LIFT_STAGE_6,Golden Bathyscaphe,Золотой батискаф,Batiscafo dorado,黄金深潜器
+TUT_TAP_LIFT,Ore waits in the crate at the depth. Tap the lift to bring it up!,Руда ждёт в ящике на глубине. Тапни по лифту — он поднимет её!,El mineral espera en la caja de abajo. ¡Toca el ascensor para subirlo!,矿石在深处的箱子里等着。点击升降机把它运上来！
+TUT_HIRE_LIFT,Hire an operator: the lift will run by itself!,Найми лифтёра — лифт будет ездить сам!,Contrata un operador: ¡el ascensor irá solo!,雇用操作员：升降机会自动运行！
+HINT_TAP_LIFT,Ore is piling up in the crates at the depths! Tap the lift to bring it up to the raft.,"Руда копится в ящиках на глубине! Нажми на лифт, чтобы поднять её на плот.",¡El mineral se acumula en las cajas de abajo! Toca el ascensor para subirlo a la balsa.,矿石堆在深处的箱子里！点击升降机把它运上木筏。
+HINT_HIRE_LIFT,Hire a lift operator: tap the round portrait on the Lift card. Then the lift runs by itself!,Найми лифтёра: нажми на круглый портрет на карточке «Лифт». Тогда лифт будет ездить сам!,Contrata un operador: toca el retrato redondo de la tarjeta Ascensor. ¡Así el ascensor irá solo!,雇一位操作员：点“升降机”卡片上的圆形头像。升降机就会自己运行！
+HINT_SAVE_LIFT,Save %s coins for a lift operator. Then the lift runs by itself.,"Накопи %s монет на лифтёра, и лифт будет ездить сам.",Ahorra %s monedas para un operador. Así el ascensor irá solo.,攒够%s金币雇用操作员，升降机就会自己运行。
+HINT_AUTO_LIFT,Lift: runs by itself once you hire an operator.,"Лифт: ездит сам, когда наймёшь лифтёра.",Ascensor: va solo cuando contratas a un operador.,升降机：雇用操作员后自己运行。
+HINT_HIRE_BOAT2,Boat 2 needs its own captain! On the Boat card open tab 2 and tap the round portrait. Then it sails by itself.,Лодке 2 нужен свой капитан! На карточке лодки открой вкладку 2 и нажми на круглый портрет. Тогда она будет плавать сама.,¡El Barco 2 necesita su propio capitán! En la tarjeta del barco abre la pestaña 2 y toca el retrato redondo. Así navegará solo.,运输船 2 需要自己的船长！在运输船卡片上打开第 2 页，点圆形头像。它就会自己航行。
+HINT_HIRE_PLANT2,Plant 2 needs its own manager! On the Plant card open tab 2 and tap the round portrait. Then it works by itself.,Заводу 2 нужен свой мастер! На карточке завода открой вкладку 2 и нажми на круглый портрет. Тогда он будет работать сам.,¡La Planta 2 necesita su propio encargado! En la tarjeta de la planta abre la pestaña 2 y toca el retrato redondo. Así trabajará sola.,加工厂 2 需要自己的厂长！在加工厂卡片上打开第 2 页，点圆形头像。它就会自己运转。
+HINT_SAVE_BOAT2,Save %s coins for a captain for Boat 2. Then it sails by itself.,"Накопи %s монет на капитана для лодки 2, и она будет плавать сама.",Ahorra %s monedas para el capitán del Barco 2. Así navegará solo.,攒够%s金币给运输船 2 雇船长，它就会自己航行。
+HINT_SAVE_PLANT2,Save %s coins for a manager for Plant 2. Then it works by itself.,"Накопи %s монет на мастера для завода 2, и он будет работать сам.",Ahorra %s monedas para el encargado de la Planta 2. Así trabajará sola.,攒够%s金币给加工厂 2 雇厂长，它就会自己运转。
+HINT_AUTO_BOAT2,Boat 2: sails by itself once you hire its own captain.,"Лодка 2: плавает сама, когда наймёшь ей капитана.",Barco 2: navega solo cuando le contratas un capitán.,运输船 2：给它雇船长后自己航行。
+HINT_AUTO_PLANT2,Plant 2: works by itself once you hire its own manager.,"Завод 2: работает сам, когда наймёшь ему мастера.",Planta 2: trabaja sola cuando le contratas un encargado.,加工厂 2：给它雇厂长后自己运转。

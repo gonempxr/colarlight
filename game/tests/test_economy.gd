@@ -83,7 +83,7 @@ func test_bulk_and_affordable() -> void:
 
 func test_tap_runs_one_cycle() -> void:
 	var gs := _fresh()
-	check(gs.is_auto("d0") and not gs.is_auto("boat") and not gs.is_auto("plant"), "divers work alone, boat and plant need taps")
+	check(gs.is_auto("d0") and not gs.is_auto("lift") and not gs.is_auto("boat") and not gs.is_auto("plant"), "divers work alone, lift, boat and plant need taps")
 	check(gs.cycle_progress("d0") < 0.0, "idle before the first tick")
 	check(gs.tap("d0"), "tap starts dive")
 	gs.advance(gs.cycle_time("d0") * 0.5)
@@ -91,8 +91,14 @@ func test_tap_runs_one_cycle() -> void:
 	check(gs.tap("d0"), "tap while diving helps")
 	check(near(gs.cycle_progress("d0"), 0.5 + Balance.TAP_BOOST), "tap pushes the dive forward")
 	gs.advance(gs.cycle_time("d0") * (0.5 - Balance.TAP_BOOST))
-	check(near(gs.hold, gs.cycle_capacity("d0")), "one dive delivers one load")
+	check(near(gs.pit, gs.cycle_capacity("d0")), "one dive leaves one load in the crate")
+	check(gs.hold == 0.0, "divers no longer bring ore to the raft")
 	check(gs.cycle_progress("d0") >= 0.0, "divers go again on their own")
+	check(not gs.tap("boat"), "boat has nothing to carry yet")
+	check(gs.tap("lift"), "lift runs on tap")
+	gs.advance(gs.cycle_time("lift"))
+	check(gs.cycle_progress("lift") < 0.0, "lift without operator stops after one trip")
+	check(gs.hold > 0.0, "lift brought the ore up to the raft")
 	check(gs.tap("boat"), "boat sails on tap")
 	gs.advance(gs.cycle_time("boat"))
 	check(gs.cycle_progress("boat") < 0.0, "boat without captain stops after one trip")
@@ -127,6 +133,8 @@ func test_chain_moves_ore_to_coins() -> void:
 	var gs := _fresh()
 	gs.tap("d0")
 	gs.advance(gs.cycle_time("d0"))
+	check(gs.tap("lift"), "lift goes down for the ore")
+	gs.advance(gs.cycle_time("lift"))
 	var ore: float = gs.hold
 	check(gs.tap("boat"), "boat sails with ore")
 	check(near(gs.hold, maxf(0.0, ore - gs.cycle_capacity("boat"))), "boat loads up to capacity")
@@ -149,7 +157,7 @@ func test_manager_loops() -> void:
 	var t: float = gs.cycle_time("d0")
 	for i in 10:
 		gs.advance(t / 4.0)
-	check(near(gs.hold, gs.cycle_capacity("d0") * 2.0), "manager keeps diving: 2.5 cycles -> 2 loads")
+	check(near(gs.pit, gs.cycle_capacity("d0") * 2.0), "manager keeps diving: 2.5 cycles -> 2 loads")
 	check(gs.cycle_progress("d0") >= 0.0, "still diving")
 	gs.free()
 
@@ -172,12 +180,15 @@ func test_bottleneck() -> void:
 		gs.managers[key] = gs.is_open(key)
 	gs.levels["plant"] = 100
 	gs.levels["boat"] = 100
-	check(gs.bottleneck() == "dives", "divers limit when boat and plant are strong")
+	gs.levels["lift"] = 100
+	check(gs.bottleneck() == "dives", "divers limit when lift, boat and plant are strong")
 	check(near(gs.income_rate(), gs.dives_rate()), "income is the weakest link")
 	gs.levels["d0"] = 400
 	check(gs.bottleneck() == "boat", "boat limits when divers are strong")
+	gs.levels["lift"] = 20
+	check(gs.bottleneck() == "lift" and near(gs.income_rate(), gs.lift_rate()), "a weak lift is the bottleneck")
 	# A long stretch of play should earn about income_rate per second.
-	gs.levels = {"d0": 30, "d1": 0, "d2": 0, "d3": 0, "d4": 0, "d5": 0, "boat": 40, "plant": 40}
+	gs.levels = {"d0": 30, "d1": 0, "d2": 0, "d3": 0, "d4": 0, "d5": 0, "lift": 40, "boat": 40, "plant": 40}
 	# Warm up: the first ore needs a dive, a boat trip and a plant cycle to become coins.
 	for i in 300:
 		gs.advance(0.1)
@@ -232,19 +243,20 @@ func test_rush() -> void:
 	gs2.advance(0.0001)
 	gs2.rush_left = 10.0
 	gs2.advance(gs2.cycle_time("d0") / 2.0)
-	check(near(gs2.hold, gs2.cycle_capacity("d0")), "rush doubles speed")
+	check(near(gs2.pit, gs2.cycle_capacity("d0")), "rush doubles speed")
 	gs.free()
 	gs2.free()
 
 
 func test_offline_only_with_managers() -> void:
 	var gs := _fresh()
-	check(gs.simulate_offline(3600.0) == 0.0, "no coins offline without boat and plant managers")
-	check(gs.hold > 0.0, "divers still fill the raft offline")
-	gs.hold = 0.0
-	for key in ["d0", "boat", "plant"]:
+	check(gs.simulate_offline(3600.0) == 0.0, "no coins offline without lift, boat and plant managers")
+	check(gs.pit > 0.0 and gs.hold == 0.0, "divers still fill the crates offline, the lift waits")
+	gs.pit = 0.0
+	for key in ["d0", "lift", "boat", "plant"]:
 		gs.managers[key] = true
 	gs.levels["d0"] = 20
+	gs.levels["lift"] = 30
 	gs.levels["boat"] = 30
 	gs.levels["plant"] = 30
 	var earned: float = gs.simulate_offline(3600.0)
@@ -280,7 +292,7 @@ func test_save_load_roundtrip() -> void:
 	check(loaded.get_level("d0") == 17 and loaded.get_level("d1") == 3 and loaded.get_level("boat") == 9, "levels restored")
 	check(loaded.has_manager("d0") and not loaded.has_manager("boat"), "managers restored")
 	check(loaded.prestige_count == 2, "prestige restored")
-	check(loaded.hold > 5.0, "diver manager kept diving offline")
+	check(loaded.pit > 0.0 and near(loaded.hold, 5.0), "diver manager kept diving offline into the crates")
 	check(loaded.take_offline_report().is_empty(), "no coins, no report")
 	loaded.free()
 	DirAccess.remove_absolute(TEST_SAVE)

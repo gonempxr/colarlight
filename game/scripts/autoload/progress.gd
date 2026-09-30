@@ -14,7 +14,9 @@ signal item_unlocked(id: String)
 signal artifact_leveled(id: String, level: int)
 signal chest_spawned
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
+## Version 2 added the lift to the tutorial (Tutor.STEPS): old step -> new.
+const TUTORIAL_V1_TO_V2: Array[int] = [0, 1, 1, 1, 5, 7, 8, 9]
 const CHEST_FIRST_SEC := 120.0
 const CHEST_GAP_SEC := Vector2(150.0, 240.0)
 const TICK_SEC := 1.0
@@ -578,6 +580,8 @@ func load_game() -> bool:
 			if id == "" or (is_owned(id) and Content.cosmetic(id).get("slot") == slot):
 				equipped[slot] = id
 	tutorial_step = maxi(0, _int(d.get("tutorial_step")))
+	if _int(d.get("version")) < 2:
+		tutorial_step = TUTORIAL_V1_TO_V2[mini(tutorial_step, TUTORIAL_V1_TO_V2.size() - 1)]
 	daily_day = maxi(0, _int(d.get("daily_day")))
 	daily_last = str(d.get("daily_last", ""))
 	puzzle_level = maxi(1, _int(d.get("puzzle_level")))

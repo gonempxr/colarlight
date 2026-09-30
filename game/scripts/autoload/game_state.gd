@@ -1,16 +1,17 @@
 extends Node
-## The whole economy: dive sites -> boat -> plant -> coins.
+## The whole economy: dive sites -> lift -> boat -> plant -> coins.
 ## Registered as the GameState autoload. UI only reads from here and calls actions.
 ##
-## Stage keys: "d0".."dN" (dive sites, shallow to deep), "boat", "plant",
+## Stage keys: "d0".."dN" (dive sites, shallow to deep), "lift", "boat", "plant",
 ## and the second boat and plant, "boat2" and "plant2", bought later in a run
 ## (closed at level 0). Both boats carry from the same raft to the same
 ## shore; both plants work the same shore pile.
 ## Divers always work on their own; a tap pushes their dive forward and a
-## site's manager (foreman) doubles its output. The boat and the plant run
-## one cycle per tap until their manager automates them; that automation
-## is kept through a Dive (prestige).
-## Divers put ore into `hold` (at the boat), the boat moves it to `dock`
+## site's manager (foreman) doubles its output. The lift, the boat and the
+## plant run one cycle per tap until their manager automates them; that
+## automation is kept through a Dive (prestige).
+## Divers put ore into the crates at their depth (`pit`, one pool), the
+## lift brings it up to the raft (`hold`), the boat moves it to `dock`
 ## (on shore), the plant turns dock ore into coins.
 
 signal changed
@@ -41,6 +42,8 @@ var total_earned := 0.0
 var prestige_count := 0
 var levels: Dictionary = {}
 var managers: Dictionary = {}
+## Ore the divers left in the crates at the depths, waiting for the lift.
+var pit := 0.0
 var hold := 0.0
 var dock := 0.0
 var rush_meter := 0.0
@@ -57,6 +60,10 @@ var _timer: Dictionary = {}
 var _load: Dictionary = {}
 var _autosave_left := Balance.AUTOSAVE_SEC
 var _offline_report: Dictionary = {}
+## Deepest site the running lift trip goes to (-1 while the lift waits).
+var lift_trip_depth := -1
+## Level of a stage right before its last upgrade (for look changes).
+var upgraded_from: Dictionary = {}
 
 
 func _ready() -> void:
@@ -104,7 +111,7 @@ func reset() -> void:
 func _reset_run(keep_automation: bool = false) -> void:
 	var kept := {}
 	if keep_automation:
-		for k in ["boat", "plant", "boat2", "plant2"]:
+		for k in AUTOMATED:
 			kept[k] = managers.get(k, false)
 	levels = {}
 	managers = {}
@@ -114,10 +121,13 @@ func _reset_run(keep_automation: bool = false) -> void:
 		_timer[key] = -1.0
 		_load[key] = 0.0
 	levels["d0"] = 1
+	levels["lift"] = 1
 	levels["boat"] = 1
 	levels["plant"] = 1
+	pit = 0.0
 	hold = 0.0
 	dock = 0.0
+	lift_trip_depth = -1
 	rush_meter = 0.0
 	rush_left = 0.0
 	_offline_report = {}
@@ -129,11 +139,14 @@ static func stage_keys() -> Array[String]:
 	var keys: Array[String] = []
 	for i in Balance.DEPTHS.size():
 		keys.append("d%d" % i)
+	keys.append("lift")
 	keys.append_array(BUILDINGS)
 	return keys
 
 
 const BUILDINGS: Array[String] = ["boat", "plant", "boat2", "plant2"]
+## Stages that stand still until their manager is hired (kept through a Dive).
+const AUTOMATED: Array[String] = ["lift", "boat", "plant", "boat2", "plant2"]
 
 
 static func is_boat(key: String) -> bool:
@@ -149,12 +162,18 @@ static func is_second(key: String) -> bool:
 	return key == "boat2" or key == "plant2"
 
 
+static func is_lift(key: String) -> bool:
+	return key == "lift"
+
+
 static func depth_index(key: String) -> int:
 	return int(key.substr(1)) if key.begins_with("d") else -1
 
 
 static func stage_data(key: String) -> Dictionary:
 	match key:
+		"lift":
+			return Balance.LIFT
 		"boat":
 			return Balance.BOAT
 		"plant":
@@ -215,22 +234,43 @@ func plants_rate() -> float:
 	return rate("plant") + rate("plant2")
 
 
+func lift_rate() -> float:
+	return rate("lift")
+
+
 ## Coins per second with every stage automated: the weakest link.
 func income_rate() -> float:
-	return minf(dives_rate(), minf(boats_rate(), plants_rate()))
+	return minf(minf(dives_rate(), lift_rate()), minf(boats_rate(), plants_rate()))
 
 
-## Which group limits income: "dives", "boat" (both boats) or "plant".
+## Which group limits income: "dives", "lift", "boat" (both boats) or "plant".
 func bottleneck() -> String:
 	var d := dives_rate()
+	var l := lift_rate()
 	var b := boats_rate()
 	var p := plants_rate()
-	if d <= b and d <= p:
+	if d <= l and d <= b and d <= p:
 		return "dives"
+	if l <= b and l <= p:
+		return "lift"
 	return "boat" if b <= p else "plant"
 
 
+## Index of the deepest open dive site.
+func deepest_open() -> int:
+	var deepest := 0
+	for i in Balance.DEPTHS.size():
+		if levels.get("d%d" % i, 0) > 0:
+			deepest = i
+	return deepest
+
+
 func cycle_time(key: String) -> float:
+	if key == "lift":
+		# Deeper shafts make longer trips (each trip carries more). A trip
+		# keeps the depth it started with, so opening a depth never jumps it.
+		var deep := lift_trip_depth if lift_trip_depth >= 0 else deepest_open()
+		return Balance.LIFT["cycle"] + Balance.LIFT["cycle_step"] * deep
 	return stage_data(key)["cycle"]
 
 
@@ -314,6 +354,7 @@ func upgrade(key: String, count: int = 1) -> bool:
 	if coins < cost:
 		return false
 	coins -= cost
+	upgraded_from[key] = get_level(key)
 	var before := Balance.milestones(get_level(key))
 	levels[key] = get_level(key) + count
 	if Balance.milestones(levels[key]) > before:
@@ -417,7 +458,13 @@ func advance(seconds: float) -> void:
 
 func _start_cycle(key: String) -> bool:
 	var amount := cycle_capacity(key)
-	if is_boat(key):
+	if key == "lift":
+		amount = minf(pit, amount)
+		if amount <= 0.0:
+			return false
+		pit -= amount
+		lift_trip_depth = deepest_open()
+	elif is_boat(key):
 		amount = minf(hold, amount)
 		if amount <= 0.0:
 			return false
@@ -437,12 +484,15 @@ func _finish_cycle(key: String) -> void:
 	var amount: float = _load[key]
 	_timer[key] = -1.0
 	_load[key] = 0.0
-	if is_boat(key):
+	if key == "lift":
+		hold += amount
+		lift_trip_depth = -1
+	elif is_boat(key):
 		dock += amount
 	elif is_plant(key):
 		_earn(amount)
 	else:
-		hold += amount
+		pit += amount
 	cycle_finished.emit(key, amount)
 
 
@@ -467,6 +517,7 @@ func _add_rush() -> void:
 func simulate_offline(seconds: float) -> float:
 	var earned := 0.0
 	var dives := dives_rate()
+	var lift := lift_rate() if has_manager("lift") else 0.0
 	var boat := 0.0
 	var plant := 0.0
 	for k in BUILDINGS:
@@ -479,7 +530,10 @@ func simulate_offline(seconds: float) -> float:
 	while left > 0.0:
 		var dt := minf(OFFLINE_STEP, left)
 		left -= dt
-		hold += dives * dt
+		pit += dives * dt
+		var lifted := minf(pit, lift * dt)
+		pit -= lifted
+		hold += lifted
 		var moved := minf(hold, boat * dt)
 		hold -= moved
 		dock += moved
@@ -487,7 +541,7 @@ func simulate_offline(seconds: float) -> float:
 		dock -= made
 		earned += made
 		# Once nothing flows the rest of the time adds nothing but ore piles.
-		if dives == 0.0 and moved == 0.0 and made == 0.0:
+		if dives == 0.0 and lifted == 0.0 and moved == 0.0 and made == 0.0:
 			break
 	if earned > 0.0:
 		_earn(earned)
@@ -505,6 +559,7 @@ func save_game() -> bool:
 		"prestige_count": prestige_count,
 		"levels": levels,
 		"managers": managers,
+		"pit": pit,
 		"hold": hold,
 		"dock": dock,
 		"boost_left": boost_left,
@@ -566,6 +621,8 @@ func _apply_save(data: Dictionary) -> void:
 	prestige_count = maxi(0, int(_num(data.get("prestige_count"), 0.0)))
 	var saved_levels = data.get("levels", {})
 	var saved_managers = data.get("managers", {})
+	# Saves from before the lift: it gets set up below, after the rest.
+	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
 	for key in stage_keys():
 		if saved_levels is Dictionary:
 			var minimum := 0 if depth_index(key) > 0 or is_second(key) else 1
@@ -582,9 +639,29 @@ func _apply_save(data: Dictionary) -> void:
 			managers[key] = false
 		elif levels[key] == 0:
 			closed = true
+	pit = maxf(0.0, _num(data.get("pit"), 0.0))
 	hold = maxf(0.0, _num(data.get("hold"), 0.0))
 	dock = maxf(0.0, _num(data.get("dock"), 0.0))
 	boost_left = clampf(_num(data.get("boost_left"), 0.0), 0.0, 24.0 * 3600.0)
+	if old_save:
+		_migrate_lift()
+
+
+## A save from before the lift: open the lift at a level that keeps up with
+## the rest of the chain (so nothing suddenly stalls), and let it run by
+## itself if the boat already did. Artifact bonuses may be loaded later and
+## the lift has none of its own, hence a little headroom.
+const LIFT_MIGRATE_HEADROOM := 1.25
+
+
+func _migrate_lift() -> void:
+	var target := minf(dives_rate(), minf(boats_rate(), plants_rate())) * LIFT_MIGRATE_HEADROOM
+	var level := 1
+	levels["lift"] = level
+	while rate("lift") < target and level < 5000:
+		level += 1
+		levels["lift"] = level
+	managers["lift"] = has_manager("boat")
 
 
 static func _num(value, fallback: float) -> float:

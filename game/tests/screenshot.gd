@@ -4,7 +4,9 @@ extends SceneTree
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
-## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial.
+## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial |
+## sheet:<stage> (e.g. sheet:lift) | second (a new second boat and plant
+## without managers: the red tab dots).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -35,7 +37,7 @@ func _initialize() -> void:
 		pr.fresh["puzzle"] = true
 		pr.pearls = 135
 		pr.pearls_total = 180
-		pr.tutorial_step = 7
+		pr.tutorial_step = 9
 		pr.artifacts["compass"] = {"level": 2, "pieces": 1}
 		pr.artifacts["bell_shell"] = {"level": 1, "pieces": 3}
 		pr.artifacts["fish_idol"] = {"level": 0, "pieces": 2}
@@ -52,14 +54,14 @@ func _initialize() -> void:
 		pr.quests[0]["count"] = pr.quests[0]["goal"]
 	match scenario:
 		"mid":
-			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "boat": 45, "plant": 41}, true)
-			for k in ["d0", "d1", "boat", "plant"]:
+			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "lift": 40, "boat": 45, "plant": 41}, true)
+			for k in ["d0", "d1", "lift", "boat", "plant"]:
 				gs.managers[k] = true
 			gs.coins = 48250.0
 			gs.hold = 1840.0
 			gs.dock = 620.0
 		"late":
-			gs.levels.merge({"d0": 62, "d1": 58, "d2": 42, "d3": 32, "d4": 11, "d5": 1, "boat": 168, "plant": 152}, true)
+			gs.levels.merge({"d0": 62, "d1": 58, "d2": 42, "d3": 32, "d4": 11, "d5": 1, "lift": 160, "boat": 168, "plant": 152}, true)
 			for k in gs.stage_keys():
 				gs.managers[k] = true
 			gs.coins = 6.3e7
@@ -68,12 +70,16 @@ func _initialize() -> void:
 			for k in gs.stage_keys():
 				gs.levels[k] = 60
 				gs.managers[k] = true
-			gs.levels.merge({"boat": 360, "plant": 360}, true)
+			gs.levels.merge({"lift": 300, "boat": 360, "plant": 360}, true)
 			gs.coins = 2.0e13
 			gs.hold = 3.4e12
 			gs.dock = 9.1e11
 		_:
 			gs.coins = 12.0
+	if overlay == "second":
+		gs.levels.merge({"boat2": 3, "plant2": 2}, true)
+		gs.managers["boat2"] = false
+		gs.managers["plant2"] = false
 	load("res://scripts/ui/main.gd").show_title = overlay == "title"
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 5:
@@ -88,6 +94,9 @@ func _initialize() -> void:
 	match overlay:
 		"sheet":
 			main._on_stage_selected("d1")
+		"second":
+			main.stage_card("boat").show_unit("boat")
+			main.stage_card("plant").show_unit("plant")
 		"avatar":
 			main.open_avatar_editor()
 		"quests", "daily", "museum":
@@ -110,7 +119,9 @@ func _initialize() -> void:
 		"prestige":
 			main._open_prestige()
 		_:
-			if overlay.begins_with("wardrobe"):
+			if overlay.begins_with("sheet:"):
+				main._on_stage_selected(overlay.split(":")[1])
+			elif overlay.begins_with("wardrobe"):
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")

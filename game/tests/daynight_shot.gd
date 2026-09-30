@@ -26,10 +26,10 @@ func _initialize() -> void:
 	pr.reset()
 	for f in Content.FEATURES:
 		pr.features[f] = true
-	pr.tutorial_step = 7
+	pr.tutorial_step = 9
 	pr.daily_last = pr.today()
-	gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "boat": boat_level, "plant": plant_level}, true)
-	for k in ["d0", "d1", "boat", "plant"]:
+	gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "lift": boat_level, "boat": boat_level, "plant": plant_level}, true)
+	for k in ["d0", "d1", "lift", "boat", "plant"]:
 		gs.managers[k] = true
 	gs.coins = 48250.0
 	gs.hold = 1840.0

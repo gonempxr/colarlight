@@ -33,7 +33,7 @@ func _initialize() -> void:
 	pr.autosave_enabled = false
 	pr.save_path = "user://test_taps_progress.json"
 	pr.reset()
-	pr.tutorial_step = 7
+	pr.tutorial_step = 9
 	TranslationServer.set_locale("en")
 	load("res://scripts/ui/main.gd").show_title = false
 	var dn: GDScript = load("res://scripts/ui/day_night.gd")
@@ -56,6 +56,38 @@ func _initialize() -> void:
 	taps.clear()
 	await _click(surface.raft_pos() + Vector2(0, -60))
 	check("boat" in taps, "tapping the raft taps the boat")
+
+	# The lift: its cabin and its winch take taps (a trip) and show it in
+	# the panel; the raft next to them still belongs to the boat.
+	var lift: Control = world.lift
+	gs.pit = 50.0
+	taps.clear()
+	var selected: Array[String] = []
+	world.stage_selected.connect(func(k: String) -> void: selected.append(k))
+	await _click(lift.cabin_pos() + Vector2(0, -30))
+	check(taps == ["lift"], "tapping the lift's cabin taps the lift (%s)" % [taps])
+	check(gs.cycle_progress("lift") >= 0.0, "a tap sends the lift down")
+	var wide: bool = main._wide
+	check(selected == (["lift"] if wide else []), "a hand-run lift opens the panel only on wide screens (%s)" % [selected])
+	gs.managers["lift"] = true
+	selected.clear()
+	await _click(lift.cabin_pos() + Vector2(0, -30))
+	check(selected == ["lift"], "with its operator a tap shows the lift in the panel (%s)" % [selected])
+	gs.managers["lift"] = false
+	main._close_sheet()
+	await create_timer(0.4).timeout
+	taps.clear()
+	await _click(lift.OPERATOR + Vector2(0, -30))
+	check(taps == ["lift"], "tapping the lift's operator taps the lift (%s)" % [taps])
+	main._close_sheet()
+	await create_timer(0.4).timeout
+	taps.clear()
+	await _click(surface.raft_pos() + Vector2(0, -60))
+	check(taps == ["boat"], "the raft still taps the boat (%s)" % [taps])
+
+	main._close_sheet()
+	await create_timer(0.4).timeout
+
 
 	taps.clear()
 	var sun: Vector2 = dn.sun_pos(surface.size.x)
@@ -89,11 +121,14 @@ func _initialize() -> void:
 	await _click(Vector2(b["x"], b["y"]))
 	check(float(b["flee"]) >= 0.0, "a bird flies away")
 
-	var f: Dictionary = world._fish[0]
-	var fp: Vector2 = world._fish_pos(f, world.size.x)
-	if fp.x > 20.0 and fp.x < world.size.x - 20.0:
-		await _click(fp)
-		check(world.t - float(f["dart"]) < 1.0, "a fish darts")
+	# A fish in the open water (the lift's card floats over part of it).
+	var card_rect: Rect2 = world.lift.card.get_rect().grow(50.0)
+	for f: Dictionary in world._fish:
+		var fp: Vector2 = world._fish_pos(f, world.size.x)
+		if fp.x > 20.0 and fp.x < world.size.x - 20.0 and not card_rect.has_point(fp):
+			await _click(fp)
+			check(world.t - float(f["dart"]) < 1.0, "a fish darts")
+			break
 
 	await _click(surface._palm_pos() + load("res://scripts/ui/props.gd").PALM_TOP)
 	check(not surface._coconut.is_empty(), "the palm drops a coconut")
@@ -117,8 +152,7 @@ func _initialize() -> void:
 
 	# The second boat and plant: for sale once the third dive site is open;
 	# a tap on their sign selects them (the upgrade panel sells them).
-	var selected: Array[String] = []
-	world.stage_selected.connect(func(k: String) -> void: selected.append(k))
+	selected.clear()
 	check(surface.second_state("boat2") == "", "no for-sale signs before the third dive site")
 	gs.levels["d2"] = 1
 	gs._timer["boat"] = -1.0

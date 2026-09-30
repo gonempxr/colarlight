@@ -16,12 +16,13 @@ Read this first, then continue the work. Everything below was true on 2026-09-30
 Coralight: Dive Tycoon is an idle tycoon/clicker in the style of Idle Miner Tycoon, built with **Godot 4.7.2** for the web. It must work well on both PC and phone.
 
 **Core loop:**
-1. Divers mine ore at the depths.
-2. The ore goes up to the raft.
+1. Divers mine ore at the depths and drop it into the lift's crate at each depth (`GameState.pit`).
+2. The lift (stage `"lift"`) takes it up to the raft (`hold`): each trip goes down to the deepest open depth.
 3. The boat carries it to the shore.
 4. The plant turns it into coins.
 
-Income is min(dives, boat, plant). The boat and plant are manual until their manager is hired.
+Income is min(dives, lift, boat, plant). The lift, boat and plant are manual until their manager is hired. Their managers survive Dive Deeper (`GameState.AUTOMATED`); the lift goes back to level 1.
+Saves from before the lift (no `"lift"` level) get a lift strong enough for their chain, with an operator if the boat had a captain (`_migrate_lift`). Progress save version 2 remaps old tutorial steps.
 
 **Content:**
 - 21 depths.
@@ -57,12 +58,12 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
 ## Commands (run from game/)
 - **Import after adding a class_name or assets:** `godot --headless --path . --import`
 - **Tests:** `godot --headless --path . -s res://tests/<name>.gd`
-  - `check_scripts` (0 broken), `test_economy` (108), `test_progress` (73), `test_match3` (116), `test_puzzle_ui` (57), `test_fishing` (109), `test_world_taps` (15), `test_diver_trip` ("0 jumps").
-  - `test_ui` (19) needs `--resolution 390x844`.
+  - `check_scripts` (0 broken), `test_economy` (115), `test_progress` (73), `test_match3` (116), `test_puzzle_ui` (57), `test_fishing` (109), `test_world_taps` (34), `test_diver_trip` ("0 jumps").
+  - `test_ui` (19), `test_second` (38) and `test_lift` (98) need `--resolution 390x844`.
 - **Screenshots:** `xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 -s res://tests/screenshot.gd -- out.png ru mid 0 - 1.0`
-  - Arguments: out, lang, scenario (start / mid / late / deep), scroll, overlay (`-`, `toast`, `hint`, `daily`), ui_scale.
+  - Arguments: out, lang, scenario (start / mid / late / deep), scroll, overlay (`-`, `toast`, `hint`, `daily`, `sheet:lift`, `second`), ui_scale.
   - Use 1920x1080 or 1440x900 for PC.
-- **Preview sheets:** `tests/stage_sheet.gd`, `daynight_shot.gd`, `diver_sheet.gd`, `fishing_shot.gd`, `depths_shot.gd`.
+- **Preview sheets:** `tests/lift_sheet.gd` (the 6 lift cabins), `tests/stage_sheet.gd`, `daynight_shot.gd`, `diver_sheet.gd`, `fishing_shot.gd`, `depths_shot.gd`.
 - **Web export:** `godot --headless --path . --export-release Web build/web/index.html`
   - It uses the slim single-thread template in `tools/web_template/`.
   - The wasm is about 30 MB.
@@ -82,9 +83,10 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
 - Other files:
   - `hud.gd`: the PC notch, whose bar slides down when the mouse is at the top.
   - `stage_card.gd`, `upgrade_panel.gd`, `scroller.gd` (smooth wheel and fling), `dock.gd`, `hints.gd`, `hint_button.gd`, `tutor.gd`.
+  - The lift: `lift_view.gd` (winch, operator, cable, cabin, the crates at each depth) and `lift_card.gd` (its compact card at the top of the shaft).
   - World drawing: `world.gd`, `surface_view.gd`, `props.gd` (the building stages), `day_night.gd`, `diver_layer.gd`, `depth_row.gd`, `chars.gd`, `ore_art.gd`, `pointer_art.gd`, `art.gd` (the toon kit).
   - `scripts/puzzle/` holds the match-3; `scripts/fishing/` holds fishing.
-  - Strings live in `i18n/strings.csv`, `puzzle.csv` and `fishing.csv`.
+  - Strings live in `i18n/strings.csv`, `puzzle.csv`, `fishing.csv` and `lift.csv`.
 
 ## Gotchas
 - Draw only through the `Art.*` helpers with push/pop, never `ci.draw_*` directly, because shapes are batched and cached. Cache animated values in steps, or the shape cache floods.

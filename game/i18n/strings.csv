@@ -27,7 +27,7 @@ STAT_CARRY,Carries,Перевозит,Transporta,运输量
 STAT_PROCESS,Processes,Перерабатывает,Procesa,加工量
 STAT_DIVERS,Divers,Дайверы,Buzos,潜水员
 STAT_MILESTONE,×2 at level %d,×2 на уровне %d,×2 en el nivel %d,等级 %d 时 ×2
-DESC_DEPTH,Divers dive here on their own and bring ore up to the raft. Tap to help them!,"Дайверы сами ныряют сюда и поднимают руду на плот. Тапай, чтобы помочь!",Los buzos bajan solos y suben mineral a la balsa. ¡Toca para ayudarles!,潜水员自己下潜，把矿石运回木筏。点击来帮忙！
+DESC_DEPTH,Divers dive here on their own and leave the ore in the lift's crate. Tap to help them!,"Дайверы сами ныряют сюда и складывают руду в ящик лифта. Тапай, чтобы помочь!",Los buzos bajan solos y dejan el mineral en la caja del ascensor. ¡Toca para ayudarles!,潜水员自己下潜，把矿石放进升降机的箱子。点击来帮忙！
 DESC_BOAT,The boat carries ore from the raft to the shore.,Лодка возит руду с плота на берег.,El barco lleva el mineral de la balsa a la orilla.,运输船把矿石从木筏运到岸边。
 DESC_PLANT,The plant turns ore into coins.,Завод перерабатывает руду в монеты.,La planta convierte el mineral en monedas.,加工厂把矿石变成金币。
 ON_RAFT,On raft,На плоту,En la balsa,木筏上
