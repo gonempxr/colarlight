@@ -99,6 +99,16 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
 - In tweens, `set_parallel(true)` makes later steps parallel too. Use `.parallel()` per tweener.
 - Retina/HiDPI: the UI scale must account for pixel density, not just the viewport width.
 
+## State on 2026-09-30 (expansion)
+- Branch `expansion` adds a second boat and plant (for sale once depth 3 opens), 30 depths, 20 building stages and prestige gate min(5 + 2n, 29), cost 1.2e7 × 6.6^n. The numbers above describe v2.1.
+- v2.1 is saved as branches `save/v2.1` (source) and `save/site-v2.1` (site).
+- The expansion is published only as a test page at /colarlight/beta/. Mark decides whether to keep it.
+- **Beta saves:** every page on gonempxr.github.io shares one browser save. So the beta is exported with a temporary edit to project.godot:
+  - `config/use_custom_user_dir=true`
+  - `config/custom_user_dir_name="coralight-beta"`
+
+  Do not commit this edit. On first start, `Profiles._import_main_saves()` copies the main save into the beta once, reading the main save without writing to it. Export the real release without these settings.
+
 ## Open items and known risks
 - **Balance** comes from the simulator (about 2–3.5 h per Dive run, about 24 h to the last depth). It is not tested with real players yet, so ask Mark for feedback.
 - **Phone speed:** the phone build is about 6–12% heavier than before the day/night and art update (measured with software GL). It has not been measured on a real phone.
