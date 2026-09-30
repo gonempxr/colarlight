@@ -146,7 +146,7 @@ func select(key: String) -> void:
 ## moves the whole world as one transform, so it stays smooth at full rate.
 const ANIM_HZ := 30.0
 ## Low quality (phones by default) animates the scene a little slower.
-const LOW_HZ := 24.0
+const LOW_HZ := 30.0
 const PEOPLE := 0
 const SCENERY := 1
 const FISH := 4
@@ -171,6 +171,14 @@ static func _schedule() -> void:
 		_since[g] += dt
 		_fire[g] = _hurry
 	_hurry = false
+	# Normal quality: everything animates on every frame (the web shell
+	# already keeps fast screens near 60 fps).
+	if not half_rate:
+		for g in 2:
+			_fire[g] = true
+			_since[g] = 0.0
+			_count[g] += 1
+		return
 	# The group waiting longest goes, the other one waits for the next
 	# frame. On a slow device the two simply alternate, so every frame costs
 	# about half of the scene there too.

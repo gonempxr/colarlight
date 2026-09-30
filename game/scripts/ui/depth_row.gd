@@ -160,7 +160,7 @@ func _process(delta: float) -> void:
 		refresh()
 	# The cave life moves slowly: each site redraws on every other SCENERY
 	# frame of the world (neighbors alternate), about 15 times a second.
-	if shown and World.tick(World.SCENERY) and (World.tick_count(World.SCENERY) + index) % 2 == 0:
+	if shown and World.tick(World.SCENERY):
 		queue_redraw()
 	# The still background repaints only when something it shows changes
 	# (checked every few frames, rows taking turns, or right after a site opens).

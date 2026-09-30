@@ -82,10 +82,12 @@ static func water_color(t: float) -> Color:
 
 ## Backdrop colors (sky, water, rock) a little less saturated, so cards,
 ## buttons and characters stand out against them.
-const CALM := 0.18
+const CALM := 0.0
 
 
 static func calm(c: Color, amount: float = CALM) -> Color:
+	if amount <= 0.0:
+		return c
 	var g := c.get_luminance()
 	return Color(c.lerp(Color(g, g, g), amount), c.a)
 
@@ -131,7 +133,7 @@ static func rrect_pts(r: Rect2, radius: float, seg: int = 0) -> PackedVector2Arr
 
 ## Steps for an arc of `angle` radians so no chord strays more than
 ## ARC_TOL px from the curve (small corners need only one or two).
-const ARC_TOL := 0.6
+const ARC_TOL := 0.25
 
 
 static func arc_steps(radius: float, angle: float, most: int) -> int:
@@ -207,12 +209,12 @@ static func clipped(pts: PackedVector2Array, clip: PackedVector2Array) -> Packed
 
 const AA := 1.0          # soft edge width, in local pixels
 ## Shapes smaller than this (longest side, local px) get no soft edge.
-const FRINGE_MIN := 22.0
+const FRINGE_MIN := 6.0
 ## Big previews (the wardrobe, the avatar editor) set this to 0 to keep
 ## the soft edge on every shape. Part of every cache key.
 static var fringe_min := FRINGE_MIN
 ## The same for discs and dots: radius.
-const DOT_FRINGE_MIN := 3.0
+const DOT_FRINGE_MIN := 1.5
 
 ## Phones: skip the soft outer edge of outlines (it doubles the triangle
 ## count; on dense phone screens the difference is hard to see).
@@ -336,7 +338,7 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 				best = p
 		# A round offset doubles the points of a smooth shape; drop the
 		# ones that don't change it (half the outline triangles).
-		best = _simplify(best, 0.4)
+		best = _simplify(best, 0.2)
 		outer = _tris(best)
 		# Small shapes (eyes, gloves, rivets, icons) go without the soft edge:
 		# at that size it can't be seen, and it is half of their triangles.

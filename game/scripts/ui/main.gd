@@ -249,6 +249,7 @@ func _layout() -> void:
 	var dock_h := _dock_height()
 	_hud.position = Vector2.ZERO
 	_hud.size = Vector2(view.x, HUD_H)
+	_hud.area_w = view.x - minf(SIDE_W, view.x * 0.4) - 24.0 if _wide else 0.0
 	_hud.set_notch(_wide)
 	if _wide:
 		var side := minf(SIDE_W, view.x * 0.4)

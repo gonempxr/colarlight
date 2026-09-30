@@ -6,8 +6,8 @@ extends Control
 ## They are small pictures on cards and panels: gentle bobbing and gears,
 ## so a lower rate than the world's looks the same.
 
-const ANIM_HZ := 20.0
-const LOW_HZ := 15.0
+const ANIM_HZ := 60.0
+const LOW_HZ := 30.0
 
 var painter: Callable
 var animated := false

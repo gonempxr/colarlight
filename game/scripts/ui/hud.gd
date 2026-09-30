@@ -36,6 +36,9 @@ var _pill: PanelContainer
 var _pill_slot: Control
 var _notch := false
 var _reveal := 1.0
+## PC: width of the ocean area on the left. The bar and the notch stay over
+## it, so the side column (boat and plant tabs) is never covered.
+var area_w := 0.0
 var _reveal_hold := 0.0
 var _intro_show := 3.0
 
@@ -237,11 +240,12 @@ func _style_pill(notch: bool) -> void:
 
 
 func _place() -> void:
+	var w := area_w if _notch and area_w > 0.0 else size.x
 	_bar.position = Vector2.ZERO
-	_bar.size = Vector2(size.x, size.y)
+	_bar.size = Vector2(w, size.y)
 	if _notch:
 		_pill.reset_size()
-		_pill.position = Vector2(roundf((size.x - _pill.size.x) / 2.0), 0.0)
+		_pill.position = Vector2(roundf((w - _pill.size.x) / 2.0), 0.0)
 
 
 ## Thin gold frame inside the notch, following its rounded lower corners.
@@ -335,7 +339,7 @@ static func _set_pop(l: Control, s: float) -> void:
 
 func _update_reveal(delta: float) -> void:
 	var mouse := get_viewport().get_mouse_position()
-	var near := mouse.y < NOTCH_REVEAL_Y or (_reveal > 0.5 and mouse.y < _bar.size.y + 6.0)
+	var near := mouse.x < _bar.size.x and (mouse.y < NOTCH_REVEAL_Y or (_reveal > 0.5 and mouse.y < _bar.size.y + 6.0))
 	var modal_open := false
 	for c in get_parent().get_children():
 		if c is Modal and c.visible:
