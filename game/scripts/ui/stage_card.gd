@@ -15,6 +15,7 @@ var world: World
 var hero := false
 
 var _name: Label
+var _name_fs := 0
 var _level: Label
 var _rate: Label
 var _bar: ProgressBar
@@ -154,6 +155,45 @@ func _ready() -> void:
 	refresh()
 
 
+## The bottleneck and the next depth to open cost about 0.1 ms to work out
+## (every open site's rate is added up), and every card asks on every
+## refresh: they are worked out once per frame for all the cards, and again
+## right after a state change.
+static var _bn_frame := -1
+static var _bn := ""
+static var _nd := ""
+static var _bn_hooked := false
+
+
+static func _bn_update() -> void:
+	var f := Engine.get_process_frames()
+	if f == _bn_frame:
+		return
+	_bn_frame = f
+	_bn = GameState.bottleneck()
+	_nd = GameState.next_depth()
+
+
+static func _bn_bust(_a = null, _b = null) -> void:
+	_bn_frame = -1
+
+
+static func bottleneck_cached() -> String:
+	if not _bn_hooked:
+		_bn_hooked = true
+		GameState.upgraded.connect(_bn_bust)
+		GameState.manager_hired.connect(_bn_bust)
+		GameState.depth_opened.connect(_bn_bust)
+		GameState.changed.connect(_bn_bust)
+	_bn_update()
+	return _bn
+
+
+static func next_depth_cached() -> String:
+	_bn_update()
+	return _nd
+
+
 static func head_color(stage_key: String) -> Color:
 	match stage_key:
 		"lift":
@@ -224,7 +264,10 @@ func refresh() -> void:
 	if not _unit_btns.is_empty():
 		var tabs: bool = gs.is_open("d2") or gs.is_open(base + "2")
 		_name.custom_minimum_size.x = 60.0 if tabs else 150.0
-		_name.add_theme_font_size_override("font_size", 16 if tabs and not hero else 19)
+		var fs := 16 if tabs and not hero else 19
+		if fs != _name_fs:
+			_name_fs = fs
+			_name.add_theme_font_size_override("font_size", fs)
 		_name.autowrap_mode = TextServer.AUTOWRAP_OFF if tabs else TextServer.AUTOWRAP_WORD_SMART
 		for i in 2:
 			var on := (i == 1) == gs.is_second(key)
@@ -264,6 +307,6 @@ func refresh() -> void:
 	_upgrade.text = NumFormat.short(cost)
 	_upgrade.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
 	var group := base if base in ["boat", "plant"] else "dives"
-	_tag.visible = gs.bottleneck() == group and gs.next_depth() != "d1"
+	_tag.visible = bottleneck_cached() == group and next_depth_cached() != "d1"
 	_tag.text = tr("BOTTLENECK")
 	_manager.queue_redraw()

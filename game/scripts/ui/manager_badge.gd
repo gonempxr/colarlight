@@ -47,7 +47,8 @@ func _gui_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if not GameState.has_manager(key) or not is_visible_in_tree():
+	# Blinks and moods don't need more than the scene's own frame rate.
+	if not World.anim_tick() or not GameState.has_manager(key) or not is_visible_in_tree():
 		return
 	if not get_global_rect().intersects(get_viewport_rect()):
 		return

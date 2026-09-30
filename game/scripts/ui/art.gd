@@ -131,7 +131,7 @@ static func rrect_pts(r: Rect2, radius: float, seg: int = 0) -> PackedVector2Arr
 
 ## Steps for an arc of `angle` radians so no chord strays more than
 ## ARC_TOL px from the curve (small corners need only one or two).
-const ARC_TOL := 0.3
+const ARC_TOL := 0.6
 
 
 static func arc_steps(radius: float, angle: float, most: int) -> int:
@@ -206,6 +206,13 @@ static func clipped(pts: PackedVector2Array, clip: PackedVector2Array) -> Packed
 # Thousands of small polygons as separate calls were far too slow on phones.
 
 const AA := 1.0          # soft edge width, in local pixels
+## Shapes smaller than this (longest side, local px) get no soft edge.
+const FRINGE_MIN := 22.0
+## Big previews (the wardrobe, the avatar editor) set this to 0 to keep
+## the soft edge on every shape. Part of every cache key.
+static var fringe_min := FRINGE_MIN
+## The same for discs and dots: radius.
+const DOT_FRINGE_MIN := 3.0
 
 ## Phones: skip the soft outer edge of outlines (it doubles the triangle
 ## count; on dense phone screens the difference is hard to see).
@@ -225,6 +232,8 @@ static var _bc := PackedColorArray()
 static func clear_cache() -> void:
 	_geo.clear()
 	_cols.clear()
+	_pc.clear()
+	_pc_verts = 0
 
 
 static func _area(p: PackedVector2Array) -> float:
@@ -299,7 +308,7 @@ static func _simplify(ring: PackedVector2Array, tol: float) -> PackedVector2Arra
 
 
 static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
-	var k := hash([pts, w, shade])
+	var k := hash([pts, w, shade, fringe_min])
 	var g = _geo.get(k)
 	if g != null:
 		return g
@@ -327,9 +336,11 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 				best = p
 		# A round offset doubles the points of a smooth shape; drop the
 		# ones that don't change it (half the outline triangles).
-		best = _simplify(best, 0.2)
+		best = _simplify(best, 0.4)
 		outer = _tris(best)
-		if not outer.is_empty() and not low_power:
+		# Small shapes (eyes, gloves, rivets, icons) go without the soft edge:
+		# at that size it can't be seen, and it is half of their triangles.
+		if not outer.is_empty() and not low_power and maxf(_bounds(pts).size.x, _bounds(pts).size.y) >= fringe_min:
 			fringe = _fringe(best, AA)
 	var fill := _tris(pts)
 	var shadow := PackedVector2Array()
@@ -403,6 +414,13 @@ static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
 static func _put(ci: CanvasItem, v: PackedVector2Array, c: PackedColorArray) -> void:
 	if v.is_empty():
 		return
+	if _rec:
+		if _xf == Transform2D.IDENTITY:
+			_rv.append_array(v)
+		else:
+			_rv.append_array(_xf * v)
+		_rc.append_array(c)
+		return
 	if ci != _bci:
 		flush()
 		_bci = ci
@@ -415,11 +433,93 @@ static func _put(ci: CanvasItem, v: PackedVector2Array, c: PackedColorArray) -> 
 	_bc.append_array(c)
 
 
+# --- Part cache --------------------------------------------------------------------
+#
+# A part of a sprite that looks the same for the same few numbers (a diver's
+# torso for one suit and emotion, a manager's portrait) is drawn once into
+# a list of triangles and pasted after that with one call. The caller makes
+# the key out of those few numbers, snapped so the same ones come back:
+#
+#   var k := hash([...])
+#   if not Art.cache_begin(ci, k):
+#       ...draw the part as usual...
+#       Art.cache_end(ci, k)
+#
+# The part is recorded in the local space of the moment of the call, so it
+# can sit under any push(). Nothing that draws text or uses CanvasItem.draw_*
+# may go inside.
+
+const PART_CACHE_VERTS := 450000
+
+static var _pc := {}
+static var _pc_verts := 0
+## Counts frames, to drop the parts nobody asked for lately.
+static var _pc_tick := 0
+static var _rec := false
+static var _rec_key := 0
+static var _rv := PackedVector2Array()
+static var _rc := PackedColorArray()
+static var _rec_xf := Transform2D.IDENTITY
+static var _rec_stack: Array[Transform2D] = []
+
+
+## True when the part for `key` was already cached and has been drawn. False
+## means: draw it now, then call cache_end with the same key.
+static func cache_begin(ci: CanvasItem, key: int) -> bool:
+	var e = _pc.get(key)
+	if e != null:
+		e[2] = _pc_tick
+		_put(ci, e[0], e[1])
+		return true
+	if _rec:
+		# A part inside a part is recorded as a piece of the outer one.
+		return false
+	_rec = true
+	_rec_key = key
+	_rv = PackedVector2Array()
+	_rc = PackedColorArray()
+	_rec_xf = _xf
+	_rec_stack = _stack
+	_xf = Transform2D.IDENTITY
+	_stack = []
+	return false
+
+
+## Drops the parts not used for a couple of seconds; everything when that
+## is not enough.
+static func _evict() -> void:
+	var cutoff := _pc_tick - 2
+	for k in _pc.keys():
+		var e: Array = _pc[k]
+		if e[2] < cutoff:
+			_pc_verts -= (e[0] as PackedVector2Array).size()
+			_pc.erase(k)
+	if _pc_verts > PART_CACHE_VERTS * 0.8:
+		_pc.clear()
+		_pc_verts = 0
+
+
+static func cache_end(ci: CanvasItem, key: int) -> void:
+	if not _rec or _rec_key != key:
+		return
+	_rec = false
+	_xf = _rec_xf
+	_stack = _rec_stack
+	if _pc_verts > PART_CACHE_VERTS:
+		_evict()
+	_pc[key] = [_rv, _rc, _pc_tick]
+	_pc_verts += _rv.size()
+	_put(ci, _rv, _rc)
+	_rv = PackedVector2Array()
+	_rc = PackedColorArray()
+
+
 ## Sends the collected triangles as one draw call. Runs by itself when
 ## another canvas item starts drawing and right before the frame renders
 ## (a script's _draw runs after the `draw` signal, so that can't be used);
 ## call it by hand before drawing directly with CanvasItem.draw_*.
 static func flush() -> void:
+	_pc_tick = Engine.get_process_frames() / 60
 	if _bci != null and not _bv.is_empty() and is_instance_valid(_bci):
 		RenderingServer.canvas_item_add_triangle_array(_bci.get_canvas_item(), PackedInt32Array(), _bv, _bc)
 	_bv = PackedVector2Array()
@@ -460,7 +560,7 @@ static func grad(ci: CanvasItem, p: PackedVector2Array, c: PackedColorArray) -> 
 
 
 static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
-	var k := hash(["c", c, r, w, shade])
+	var k := hash(["c", c, r, w, shade, fringe_min])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(circle_pts(c, r), w, shade)
@@ -469,7 +569,7 @@ static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float
 
 
 static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
-	var k := hash(["r", r, radius, w, shade])
+	var k := hash(["r", r, radius, w, shade, fringe_min])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(rrect_pts(r, radius), w, shade)
@@ -478,7 +578,7 @@ static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: floa
 
 
 static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w: float = 3.0, shade: float = 1.0, rot: float = 0.0) -> void:
-	var k := hash(["e", c, radii, w, shade, rot])
+	var k := hash(["e", c, radii, w, shade, rot, fringe_min])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(ellipse_pts(c, radii, 0, rot), w, shade)
@@ -501,7 +601,7 @@ static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
 	_put(ci, fv, _solid(color, fv.size()))
-	if not low_power:
+	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
 		_put(ci, fr2, _fringe_cols(color, fr2.size()))
 	_xf = save
 
@@ -771,24 +871,21 @@ static func glow(ci: CanvasItem, c: Vector2, r: float, color: Color, n: int = 18
 ## cached (animated alpha would flood the color cache).
 static func dot(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	r = maxf(0.25, snappedf(r, 0.25))
-	var k := hash(["d", r])
+	# Alpha in steps of 5%: the colors of the animated dots are cached too.
+	color.a = snappedf(color.a, 0.05)
+	var k := -int(r * 4.0) - 1
 	var g = _geo.get(k)
 	if g == null:
 		var ring_pts := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
 		g = [_tris(ring_pts), _fringe(ring_pts, AA)]
 		_geo[k] = g
 	var fv: PackedVector2Array = g[0]
-	var fr: PackedVector2Array = g[1]
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
 	_put(ci, fv, _solid(color, fv.size()))
-	if not low_power:
-		var cols := PackedColorArray()
-		cols.resize(fr.size())
-		var clear := Color(color, 0.0)
-		for i in fr.size():
-			cols[i] = color if _QUAD_ALPHA[i % 6] > 0.5 else clear
-		_put(ci, fr, cols)
+	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
+		var fr: PackedVector2Array = g[1]
+		_put(ci, fr, _fringe_cols(color, fr.size()))
 	_xf = save
 
 

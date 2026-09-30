@@ -19,6 +19,9 @@ const DROP_END := 0.88
 const SPOTS: Array[Vector3] = [Vector3(-58, 0, 1), Vector3(-44, -80, 1), Vector3(-150, 0, 1), Vector3(-200, -80, 1), Vector3(-250, -2, 1)]
 ## Divers hovering at work lean forward so the tool reaches down.
 const HOVER_TILT := 0.45
+## How far past the edge of the view a site is still drawn.
+const _SITE_MARGIN := 60.0
+static var _KEYS: Array[String] = _make_keys()
 
 var world: World
 var _t := 0.0
@@ -30,7 +33,23 @@ var _idle_since := {}
 static var suit_paint: Array = []
 var _dig_phase := {}
 var _trip := {}
+## What every diver of the site being drawn shares (see _begin_site).
+var _s_key := ""
+var _s_style: Dictionary
+var _s_ledge := 0.0
+var _s_crate := Vector2.ZERO
+var _s_dp := Vector2.ZERO
+var _s_mood := ""
+var _s_wide := 1.0
+var _s_rushing := false
 var _rng := RandomNumberGenerator.new()
+
+
+static func _make_keys() -> Array[String]:
+	var out: Array[String] = []
+	for i in Balance.DEPTHS.size():
+		out.append("d%d" % i)
+	return out
 
 
 func _ready() -> void:
@@ -121,7 +140,7 @@ func _draw() -> void:
 					hinted = true
 					_draw_tap_hint(at)
 	for i in Balance.DEPTHS.size():
-		var key := "d%d" % i
+		var key: String = _KEYS[i]
 		if not gs.is_open(key):
 			continue
 		var n: int = gs.divers(key)
@@ -131,9 +150,16 @@ func _draw() -> void:
 				_idle_since[key] = _t
 		else:
 			_idle_since.erase(key)
+		# A site far off screen has nothing to draw (a diver never strays
+		# more than a row's height from its ledge).
+		var row_top := World.row_y(i)
+		if row_top > view.end.y + _SITE_MARGIN or row_top + World.ROW_H < view.position.y - _SITE_MARGIN:
+			continue
+		_begin_site(i, key)
 		_draw_veins(i, n, view)
 		for j in n:
 			_draw_diver(i, j, p, view)
+		
 		if p < 0.0 and not gs.has_manager(key):
 			var hint_at := Vector2(world.rows[i].deposit_pos().x - 40, World.row_y(i) + 70)
 			if not hinted and view.has_point(hint_at):
@@ -191,20 +217,27 @@ func _draw_tap_hint(at: Vector2) -> void:
 ## Small veins of ore for the third diver on (the first two share the big
 ## deposit): they appear as the site hires more divers.
 func _draw_veins(site: int, n: int, view: Rect2) -> void:
-	var ledge := World.row_y(site) + DepthRow.LEDGE_Y + 2.0
-	var dp: Vector2 = world.rows[site].deposit_pos()
+	var ledge := _s_ledge
+	var dp := _s_dp
+	var vis := view.grow(80.0)
 	for j in range(2, mini(n, SPOTS.size())):
 		var sp := _spot(j)
 		var high := sp.y < -20.0
 		var at := Vector2(dp.x + sp.x + 50.0, ledge + (sp.y + 12.0 if high else 0.0))
-		if not view.grow(80.0).has_point(at):
+		if not vis.has_point(at):
 			continue
-		if high:
-			# A rock pillar holds the vein up where the hovering diver works.
-			Art.push(self, Vector2(at.x, ledge))
-			Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
-			Art.pop(self)
-		OreArt.deposit(self, at, 32.0 if high else 36.0, site, site * 13 + j, _t, 2, false)
+		# The vein glows and sways slowly: drawn once per quarter second.
+		# (each vein on its own beat, so they don't all redraw in one frame)
+		var tq := int(_t * 4.0 + ((site * 5 + j * 3) % 8) / 8.0)
+		var key := hash([40, site, j, tq])
+		Art.push(self, Vector2(at.x, ledge))
+		if not Art.cache_begin(self, key):
+			if high:
+				# A rock pillar holds the vein up where the hovering diver works.
+				Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+			OreArt.deposit(self, Vector2(0, at.y - ledge), 32.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
+			Art.cache_end(self, key)
+		Art.pop(self)
 
 
 ## The pose of a diver at point p (0..1) of its trip: where it is, which
@@ -309,8 +342,7 @@ static var _PILLAR := Art.smooth_pts(PackedVector2Array([Vector2(-22, 3), Vector
 func _spot(j: int) -> Vector3:
 	var sp: Vector3 = SPOTS[j % SPOTS.size()]
 	if sp.x < -100.0:
-		var wide := clampf((world.scene_right() - World.CAVE_L) / 340.0, 1.0, 1.8)
-		sp.x *= wide
+		sp.x *= _s_wide
 	return sp
 
 
@@ -329,24 +361,34 @@ func home_pos(site: int, j: int) -> Vector2:
 	return Vector2(World.CAVE_L + 40.0 + j * 26.0, World.row_y(site) + DepthRow.LEDGE_Y + 2.0)
 
 
+## The things every diver of a site shares, worked out once per site.
+func _begin_site(site: int, key: String) -> void:
+	_s_key = key
+	_s_style = Art.DEPTH_STYLE[site]
+	_s_ledge = World.row_y(site) + DepthRow.LEDGE_Y + 2.0
+	_s_crate = LiftView.crate_pos(site)
+	_s_dp = world.rows[site].deposit_pos()
+	_s_mood = world.mood(key)
+	_s_wide = clampf((world.scene_right() - World.CAVE_L) / 340.0, 1.0, 1.8)
+	_s_rushing = GameState.is_rushing()
+
+
 func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
-	var st: Dictionary = Art.DEPTH_STYLE[site]
-	var key := "d%d" % site
+	var st := _s_style
+	var key := _s_key
 	var suit: Color = st["suit"] if suit_paint.is_empty() else suit_paint[j % suit_paint.size()]
 	var ore: Color = st["ore"]
-	var row_top := World.row_y(site)
-	var ledge := row_top + DepthRow.LEDGE_Y + 2.0
+	var ledge := _s_ledge
 	var home := home_pos(site, j)
-	var crate_at := LiftView.crate_pos(site)
+	var crate_at := _s_crate
 	var crate := Vector2(crate_at.x + 36.0 + j * 6.0, ledge - 4.0)
-	var dp: Vector2 = world.rows[site].deposit_pos()
 	var sp := _spot(j)
-	var spot := Vector2(dp.x + sp.x, ledge + sp.y)
+	var spot := Vector2(_s_dp.x + sp.x, ledge + sp.y)
 	var hover := sp.y < -20.0
-	var mood := world.mood(key)
+	var mood := _s_mood
 	var hop := world.hop(key, j)
 	var blink := Chars.blinking(_t, site * 3.1 + j * 1.3)
-	var rushing := GameState.is_rushing()
+	var rushing := _s_rushing
 	var seed := site * 0.7 + j
 	var id := site * 10 + j
 	if p < 0.0:

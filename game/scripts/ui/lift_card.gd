@@ -107,7 +107,7 @@ func refresh() -> void:
 	var cost: float = gs.upgrade_cost("lift")
 	_upgrade.text = NumFormat.short(cost)
 	_upgrade.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
-	var neck: bool = gs.bottleneck() == "lift" and gs.next_depth() != "d1"
+	var neck: bool = StageCard.bottleneck_cached() == "lift" and StageCard.next_depth_cached() != "d1"
 	_tag.visible = neck
 	_tag.text = tr("BOTTLENECK")
 	_bar.visible = not neck

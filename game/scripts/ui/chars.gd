@@ -182,6 +182,15 @@ static func mark(ci: CanvasItem, kind: String, at: Vector2, t: float) -> void:
 
 ## Head at the origin, radius 20, with hair, hat and face extras.
 static func head(ci: CanvasItem, l: Dictionary, emotion: String, blink: bool, look_dir: Vector2 = Vector2.ZERO) -> void:
+	look_dir = Vector2(snappedf(look_dir.x, 0.1), snappedf(look_dir.y, 0.1))
+	var key := hash([23, l, emotion, blink, look_dir, Art.fringe_min])
+	if Art.cache_begin(ci, key):
+		return
+	_head_draw(ci, l, emotion, blink, look_dir)
+	Art.cache_end(ci, key)
+
+
+static func _head_draw(ci: CanvasItem, l: Dictionary, emotion: String, blink: bool, look_dir: Vector2) -> void:
 	var skin := _skin(l)
 	var hc := _hair_color(l)
 	var hair: String = l.get("hair", "short")
@@ -325,15 +334,21 @@ static func _hat(ci: CanvasItem, hat: String) -> void:
 ## Round portrait: shoulders and head inside a colored frame.
 static func portrait(ci: CanvasItem, center: Vector2, r: float, l: Dictionary, emotion: String, blink: bool, bg: Color) -> void:
 	Art.push(ci, center, 0.0, Vector2.ONE * (r / 50.0))
-	var disc := Art.circle_pts(Vector2.ZERO, 46.0, 40)
-	Art.toon(ci, Art.circle_pts(Vector2.ZERO, 46.0, 40), bg, 4.0, 0.0)
+	# Drawn once per face, mood and blink; the blink is just another entry.
+	var key := hash([24, l, emotion, blink, bg, Art.fringe_min])
+	if Art.cache_begin(ci, key):
+		Art.pop(ci)
+		return
+	var disc := Art.circle_pts(Vector2.ZERO, 46.0, 32)
+	Art.toon(ci, disc, bg, 4.0, 0.0)
 	Art.flat(ci, Art.clipped(Art.circle_pts(Vector2(-10, -18), 30.0, 28), disc), Color(1, 1, 1, 0.18))
 	var shoulders := Art.clipped(Art.rrect_pts(Rect2(-36, 24, 72, 50), 22), disc)
 	_torso_colors(ci, shoulders, l, 1.0)
 	Art.push(ci, Vector2(0, 0), 0.0, Vector2(1.3, 1.3))
 	head(ci, l, emotion, blink)
 	Art.pop(ci)
-	Art.arc_c(ci, Vector2.ZERO, 46.0, 0, TAU, 48, Art.INK, 4.0)
+	Art.arc_c(ci, Vector2.ZERO, 46.0, 0, TAU, 32, Art.INK, 4.0)
+	Art.cache_end(ci, key)
 	Art.pop(ci)
 
 
@@ -387,27 +402,32 @@ static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l:
 	if clothes == "suit":
 		pants = Art.shade_of(outfit, 0.15)
 	var walk: float = pose.get("walk", -1.0)
-	# Shadow on the ground.
-	Art.flat(ci, Art.ellipse_pts(Vector2(0, 1), Vector2(17, 3.5), 16), Color(0, 0, 0, 0.18))
-	# Legs.
-	for sx: float in [-1.0, 1.0]:
-		var swing := sin(walk * TAU + (0.0 if sx < 0 else PI)) * 0.5 if walk >= 0.0 else 0.0
-		Art.push(ci, Vector2(6.0 * sx, -18), swing)
-		Art.t_rect(ci, Rect2(-4.5, -2, 9, 17), 4, pants, 2.2, 0.0)
-		Art.t_ellipse(ci, Vector2(2.5, 15.5), Vector2(7, 4), Color("3b2a2a"), 2.2, 0.0)
-		Art.pop(ci)
+	# Shadow on the ground and legs (the walk cycle in 16 steps).
+	var wq := -1 if walk < 0.0 else int(fposmod(walk, 1.0) * 16.0 + 0.5) % 16
+	var leg_key := hash([20, pants, wq])
+	if not Art.cache_begin(ci, leg_key):
+		Art.flat(ci, Art.ellipse_pts(Vector2(0, 1), Vector2(17, 3.5), 16), Color(0, 0, 0, 0.18))
+		for sx: float in [-1.0, 1.0]:
+			var swing := sin(wq / 16.0 * TAU + (0.0 if sx < 0 else PI)) * 0.5 if wq >= 0 else 0.0
+			Art.push(ci, Vector2(6.0 * sx, -18), swing)
+			Art.t_rect(ci, Rect2(-4.5, -2, 9, 17), 4, pants, 2.2, 0.0)
+			Art.t_ellipse(ci, Vector2(2.5, 15.5), Vector2(7, 4), Color("3b2a2a"), 2.2, 0.0)
+			Art.pop(ci)
+		Art.cache_end(ci, leg_key)
 	# Back arm.
 	_arm(ci, Vector2(-13, -41), pose.get("arm_l", 0.1), l, false, "")
-	# Body.
-	var body := Art.smooth_pts(PackedVector2Array([Vector2(-12, -46), Vector2(12, -46), Vector2(15, -30), Vector2(15, -17), Vector2(0, -15), Vector2(-15, -17), Vector2(-15, -30)]), 3)
-	Art.toon(ci, body, Art.INK, 2.5, 0.0)
-	Art.push(ci, Vector2(0, -71))
-	_torso_colors(ci, Art.moved(body, Vector2(0, 71)), l, 1.0)
-	Art.pop(ci)
-	Art.polyline(ci, body, Art.INK, 2.5, true)
-	# Belt for pants.
-	if clothes in ["shirt", "vest", "sailor", "lab"]:
-		Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-16, -21, 32, 6), 1), body), pants)
+	# Body and belt.
+	var body_key := hash([21, l, Art.fringe_min])
+	if not Art.cache_begin(ci, body_key):
+		var body := Art.smooth_pts(PackedVector2Array([Vector2(-12, -46), Vector2(12, -46), Vector2(15, -30), Vector2(15, -17), Vector2(0, -15), Vector2(-15, -17), Vector2(-15, -30)]), 3)
+		Art.toon(ci, body, Art.INK, 2.5, 0.0)
+		Art.push(ci, Vector2(0, -71))
+		_torso_colors(ci, Art.moved(body, Vector2(0, 71)), l, 1.0)
+		Art.pop(ci)
+		Art.polyline(ci, body, Art.INK, 2.5, true)
+		if clothes in ["shirt", "vest", "sailor", "lab"]:
+			Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-16, -21, 32, 6), 1), body), pants)
+		Art.cache_end(ci, body_key)
 	# Head.
 	Art.push(ci, Vector2(1, -68), pose.get("tilt", 0.0))
 	head(ci, l, pose.get("emotion", "happy"), pose.get("blink", false), pose.get("look", Vector2.ZERO))
@@ -418,6 +438,11 @@ static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l:
 
 
 static func _arm(ci: CanvasItem, shoulder: Vector2, angle: float, l: Dictionary, front: bool, hold: String, hold_color: Color = Art.GOLD) -> void:
+	var aq := roundi(angle / ARM_STEP)
+	var key := hash([22, l, front, hold, hold_color, aq, Art.fringe_min])
+	if Art.cache_begin(ci, key):
+		return
+	angle = aq * ARM_STEP
 	var clothes: String = l.get("clothes", "shirt")
 	var sleeve := _outfit(l)
 	match clothes:
@@ -445,6 +470,7 @@ static func _arm(ci: CanvasItem, shoulder: Vector2, angle: float, l: Dictionary,
 		Art.push(ci, hand)
 		Art.t_circle(ci, Vector2.ZERO, 5.0, glove, 2.2, 0.0)
 		Art.pop(ci)
+	Art.cache_end(ci, key)
 
 
 ## Things held by a handle: they point out of the fist.
@@ -543,6 +569,7 @@ const SHOULDER_B := Vector2(-11, -39)
 const ARM_LEN := 17.0
 ## Point of the dig cycle (0..1) where the tool hits the deposit.
 const DIG_IMPACT := 0.64
+const ARM_STEP := 0.05
 
 
 static func gear_tier(depth: int) -> int:
@@ -675,6 +702,7 @@ static func diver(ci: CanvasItem, pos: Vector2, scale: float, suit: Color, facin
 	var st: Dictionary = Art.DEPTH_STYLE[clampi(depth, 0, Art.DEPTH_STYLE.size() - 1)]
 	var tool := tool_of(tier)
 	_small = scale < 1.0
+	_depth = clampi(depth, 0, Art.DEPTH_STYLE.size() - 1)
 	var digging := arm in ["dig", "pick"]
 	# Arm angles (radians from straight down, + = forward), wrist, lean.
 	var fa := 0.0
@@ -764,34 +792,43 @@ static func _arm_pair(arm: String, hit: float, t: float, tier: int, carry: bool)
 # --- Diver parts ---------------------------------------------------------------
 
 static func _diver_legs(ci: CanvasItem, tier: int, suit: Color, dark: Color, kick: float, t: float, st: Dictionary, amp: float = 1.0) -> void:
+	# Each leg is drawn once per suit and knee bend (in steps of 0.06 rad,
+	# about half a pixel at the toe) and turned at the hip.
 	for sx: float in [-1.0, 1.0]:
 		var ph := kick * TAU + (0.0 if sx < 0 else PI)
 		var a := sin(ph) * 0.45 * amp
-		var flex := -cos(ph) * 0.3 * amp
-		var leg := suit if sx > 0 else dark
+		var fq := roundi(-cos(ph) * 0.3 * amp / 0.06)
+		var near := sx > 0
 		Art.push(ci, Vector2(5.0 * sx, -17), a)
-		match tier:
-			3:
-				Art.t_rect(ci, Rect2(-5.5, -2, 11, 14), 5, leg, 2.2, 0.0)
-				Art.flat(ci, Art.rrect_pts(Rect2(-6, 3, 12, 4), 2, 2), Art.shade_of(Art.METAL, 0.1 if sx > 0 else 0.35))
-			4:
-				Art.t_rect(ci, Rect2(-5, -2, 10, 14), 4.5, leg, 2.2, 0.0)
-				Art.t_rect(ci, Rect2(-5, 5, 10, 3), 1, Color(1, 0.6, 0.2, 0.9) if sx > 0 else Color(0.8, 0.45, 0.2, 0.9), 0.0, 0.0)
-			7:
-				Art.t_rect(ci, Rect2(-6, -2, 12, 14), 5.5, Art.shade_of(MECH, 0.0 if sx > 0 else 0.3), 2.2, 0.0)
-				Art.flat(ci, _KNEE, leg)
-			8:
-				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
-				Art.t_rect(ci, Rect2(-5.5, 3, 11, 9), 3.5, Art.shade_of(MYTH_GOLD, 0.0 if sx > 0 else 0.3), 0.0, 0.0)
-			9:
-				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, Art.shade_of(KING_WHITE, 0.0 if sx > 0 else 0.3), 2.2, 0.0)
-				Art.t_rect(ci, Rect2(-5, 4, 10, 3), 1, Art.shade_of(MYTH_GOLD, 0.0 if sx > 0 else 0.3), 0.0, 0.0)
-			_:
-				Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
-		Art.push(ci, Vector2(0, 11), flex)
-		_foot(ci, tier, sx > 0, t, st, suit)
+		var key := _dk(1, suit, fq + 16, int(near))
+		if not Art.cache_begin(ci, key):
+			_leg_shape(ci, tier, suit if near else dark, near)
+			Art.push(ci, Vector2(0, 11), fq * 0.06)
+			_foot(ci, tier, near, t, st, suit)
+			Art.pop(ci)
+			Art.cache_end(ci, key)
 		Art.pop(ci)
-		Art.pop(ci)
+
+
+static func _leg_shape(ci: CanvasItem, tier: int, leg: Color, near: bool) -> void:
+	match tier:
+		3:
+			Art.t_rect(ci, Rect2(-5.5, -2, 11, 14), 5, leg, 2.2, 0.0)
+			Art.flat(ci, Art.rrect_pts(Rect2(-6, 3, 12, 4), 2, 2), Art.shade_of(Art.METAL, 0.1 if near else 0.35))
+		4:
+			Art.t_rect(ci, Rect2(-5, -2, 10, 14), 4.5, leg, 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-5, 5, 10, 3), 1, Color(1, 0.6, 0.2, 0.9) if near else Color(0.8, 0.45, 0.2, 0.9), 0.0, 0.0)
+		7:
+			Art.t_rect(ci, Rect2(-6, -2, 12, 14), 5.5, Art.shade_of(MECH, 0.0 if near else 0.3), 2.2, 0.0)
+			Art.flat(ci, _KNEE, leg)
+		8:
+			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-5.5, 3, 11, 9), 3.5, Art.shade_of(MYTH_GOLD, 0.0 if near else 0.3), 0.0, 0.0)
+		9:
+			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, Art.shade_of(KING_WHITE, 0.0 if near else 0.3), 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-5, 4, 10, 3), 1, Art.shade_of(MYTH_GOLD, 0.0 if near else 0.3), 0.0, 0.0)
+		_:
+			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, leg, 2.2, 0.0)
 
 
 static func _foot(ci: CanvasItem, tier: int, near: bool, t: float, st: Dictionary, suit: Color) -> void:
@@ -852,6 +889,38 @@ const KING_CAPE := Color("c0304a")
 
 
 static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: float, moving: bool, st: Dictionary) -> void:
+	# What moves on the pack, in steps: the cape's sway (9) and the crystals'
+	# glow (the last tier). The jets of tiers 5 and 7 are drawn after the cache.
+	var dyn := 0
+	if tier == 9:
+		dyn = roundi((sin(t * 2.0) * 0.05 + (0.22 if moving else 0.0)) / 0.02)
+	elif tier == 6 or tier > 9:
+		dyn = roundi((0.5 + 0.5 * sin(t * 2.0)) * 6.0)
+	var key := _dk(2, suit, dyn)
+	if not Art.cache_begin(ci, key):
+		_back_static(ci, tier, suit, st, dyn)
+		Art.cache_end(ci, key)
+	match tier:
+		5:
+			# Thruster jets: flickering cones of light.
+			for k in 2:
+				var x := -27.0 + k * 7.0
+				var fl := 0.75 + 0.25 * sin(t * 31.0 + k * 2.0)
+				var jl := (16.0 if moving else 7.0) * fl
+				Art.flat_now(ci, PackedVector2Array([Vector2(x + 1, -23), Vector2(x + 8, -23), Vector2(x + 4.5, -23 + jl)]), Color(NEON, 0.75))
+				Art.flat_now(ci, PackedVector2Array([Vector2(x + 2.5, -23), Vector2(x + 6.5, -23), Vector2(x + 4.5, -23 + jl * 0.6)]), Color(1, 1, 1, 0.85))
+		7:
+			Art.dot(ci, Vector2(-21, -40), 3.2, Color(PLASMA, 0.6 + 0.4 * sin(t * 4.0)))
+			# Twin plasma jets under the pack.
+			var jl := (15.0 if moving else 6.0) * (0.75 + 0.25 * sin(t * 29.0))
+			for x: float in [-26.0, -16.0]:
+				Art.push(ci, Vector2(x, -21), 0.0, Vector2(1.0, jl / 10.0))
+				Art.flat(ci, _JET, Color(PLASMA, 0.75))
+				Art.flat(ci, _JET_IN, Color(1, 1, 1, 0.85))
+				Art.pop(ci)
+
+
+static func _back_static(ci: CanvasItem, tier: int, suit: Color, st: Dictionary, dyn: int) -> void:
 	match tier:
 		0:
 			Art.t_rect(ci, Rect2(-23, -50, 11, 30), 5.5, Art.METAL, 2.2, 0.6)
@@ -880,24 +949,10 @@ static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: 
 				Art.t_rect(ci, Rect2(x, -54, 9, 26), 4, Color("e9eef6") if k == 1 else Color("c9d2e2"), 2.2, 0.5)
 				Art.toon(ci, PackedVector2Array([Vector2(x + 1, -29), Vector2(x + 8, -29), Vector2(x + 9.5, -23), Vector2(x - 0.5, -23)]), Color("4a5068"), 2.0, 0.0)
 				Art.t_rect(ci, Rect2(x + 3, -50, 3, 14), 1.5, NEON, 0.0, 0.0)
-				# Thruster jet: a flickering cone of light and bubbles.
-				var fl := 0.75 + 0.25 * sin(t * 31.0 + k * 2.0)
-				var jl := (16.0 if moving else 7.0) * fl
-				Art.flat_now(ci, PackedVector2Array([Vector2(x + 1, -23), Vector2(x + 8, -23), Vector2(x + 4.5, -23 + jl)]), Color(NEON, 0.75))
-				Art.flat_now(ci, PackedVector2Array([Vector2(x + 2.5, -23), Vector2(x + 6.5, -23), Vector2(x + 4.5, -23 + jl * 0.6)]), Color(1, 1, 1, 0.85))
 		7:
 			Art.t_rect(ci, Rect2(-28, -63, 14, 8), 2, MECH_LIGHT, 1.8, 0.0)
 			Art.t_rect(ci, Rect2(-30, -57, 18, 36), 6, MECH, 2.4, 0.3)
 			Art.t_circle(ci, Vector2(-21, -40), 5.5, MECH_CORE, 1.8, 0.0)
-			var g := 0.6 + 0.4 * sin(t * 4.0)
-			Art.dot(ci, Vector2(-21, -40), 3.2, Color(PLASMA, g))
-			# Twin plasma jets under the pack.
-			var jl := (15.0 if moving else 6.0) * (0.75 + 0.25 * sin(t * 29.0))
-			for x: float in [-26.0, -16.0]:
-				Art.push(ci, Vector2(x, -21), 0.0, Vector2(1.0, jl / 10.0))
-				Art.flat(ci, _JET, Color(PLASMA, 0.75))
-				Art.flat(ci, _JET_IN, Color(1, 1, 1, 0.85))
-				Art.pop(ci)
 		8:
 			# A round golden shield on the back with a trident on it.
 			Art.t_circle(ci, Vector2(-20, -40), 14, MYTH_DARK, 2.4, 0.4)
@@ -905,14 +960,13 @@ static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: 
 			Art.flat(ci, _SHIELD_MARK, MYTH_DARK)
 		9:
 			# The royal cape, flowing back while swimming.
-			var sway := sin(t * 2.0) * 0.05 + (0.22 if moving else 0.0)
-			Art.push(ci, Vector2(-8, -53), sway)
+			Art.push(ci, Vector2(-8, -53), dyn * 0.02)
 			Art.toon(ci, _CAPE, KING_CAPE, 2.4, 0.0)
 			Art.flat(ci, _CAPE_LINING, Art.shade_of(KING_CAPE, 0.4))
 			Art.pop(ci)
 		_:
 			var c: Color = st["ore"]
-			var g := 0.5 + 0.5 * sin(t * 2.0)
+			var g := dyn / 6.0
 			Art.dot(ci, Vector2(-20, -44), 16.0 + g * 3.0, Color(c, 0.14))
 			Art.crystal(ci, Vector2(-14, -34), 30, 5, -0.75, c, 2.0)
 			Art.crystal(ci, Vector2(-15, -42), 36, 5.5, -0.3, st["ore2"], 2.0)
@@ -920,6 +974,25 @@ static func _diver_back(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: 
 
 
 static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t: float, st: Dictionary) -> void:
+	# The pulse of the lights on the chest, in 6 steps.
+	var dyn := 0
+	match tier:
+		5:
+			dyn = roundi((0.7 + 0.3 * sin(t * 4.0)) * 6.0)
+		7:
+			dyn = roundi((0.75 + 0.25 * sin(t * 4.0)) * 6.0)
+		9:
+			dyn = roundi(maxf(0.0, sin(t * 3.2)) * 6.0)
+		6:
+			dyn = roundi((0.5 + 0.5 * sin(t * 2.5)) * 6.0)
+	var key := _dk(3, suit, dyn)
+	if Art.cache_begin(ci, key):
+		return
+	_torso_static(ci, tier, suit, dark, st, dyn / 6.0)
+	Art.cache_end(ci, key)
+
+
+static func _torso_static(ci: CanvasItem, tier: int, suit: Color, dark: Color, st: Dictionary, pulse: float) -> void:
 	match tier:
 		0:
 			Art.t_rect(ci, Rect2(-13, -46, 26, 32), 11, suit, 2.5, 0.8)
@@ -958,7 +1031,7 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 		5:
 			Art.t_rect(ci, Rect2(-14, -48, 28, 35), 11, Color("2a2f45"), 2.5, 0.5)
 			Art.toon(ci, _EXO_CHEST, suit, 2.0, 0.6)
-			var g := snappedf(0.7 + 0.3 * sin(t * 4.0), 0.05)
+			var g := pulse
 			Art.t_rect(ci, Rect2(-12, -24, 24, 3), 1.5, Color(NEON, g), 0.0, 0.0)
 			Art.polyline(ci, PackedVector2Array([Vector2(-8, -43), Vector2(-3, -34), Vector2(3, -34), Vector2(8, -43)]), Color(NEON, g), 2.0)
 			Art.t_circle(ci, Vector2(0, -38), 3.4, Color(NEON, 1.0), 1.5, 0.0)
@@ -968,7 +1041,7 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 			Art.t_rect(ci, Rect2(-15, -49, 30, 36), 12, MECH, 2.6, 0.8)
 			Art.toon(ci, _MECH_CHEST, suit, 2.0, 0.0)
 			Art.flat(ci, _MECH_CORE_PTS, MECH_CORE)
-			Art.dot(ci, Vector2(0, -37), 2.8, Color(PLASMA, 0.75 + 0.25 * sin(t * 4.0)))
+			Art.dot(ci, Vector2(0, -37), 2.8, Color(PLASMA, pulse))
 			Art.t_rect(ci, Rect2(-15, -24, 30, 6), 2, MECH_LIGHT, 1.8, 0.0)
 			Art.t_rect(ci, Rect2(-3, -25, 6, 8), 1.5, PLASMA, 0.0, 0.0)
 			Art.t_rect(ci, Rect2(-19, -56, 40, 11), 5, MECH_LIGHT, 2.5, 0.0)
@@ -989,7 +1062,7 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 			Art.t_rect(ci, Rect2(-19, -57, 40, 12), 6, KING_WHITE, 2.5, 0.3)
 			for p: Vector2 in [Vector2(-12, -50), Vector2(-3, -51), Vector2(7, -50), Vector2(15, -51)]:
 				Art.flat(ci, Art.ellipse_pts(p, Vector2(1.1, 2.0), 6), Art.INK)
-			var beat := maxf(0.0, sin(t * 3.2)) * 0.1
+			var beat := pulse * 0.1
 			Art.dot(ci, Vector2(0, -36), 7.5, Color(c, 0.3))
 			Art.push(ci, Vector2(0, -36), 0.0, Vector2.ONE * (0.36 + beat * 0.36))
 			Art.toon(ci, OreArt.HEART_LO, c, 4.5, 0.0)
@@ -998,7 +1071,7 @@ static func _diver_torso(ci: CanvasItem, tier: int, suit: Color, dark: Color, t:
 		_:
 			var c: Color = st["ore"]
 			var c2: Color = st["ore2"]
-			var g := 0.5 + 0.5 * sin(t * 2.5)
+			var g := pulse
 			Art.t_rect(ci, Rect2(-14, -48, 28, 35), 11, suit, 2.5, 0.8)
 			Art.toon(ci, _CRYSTAL_PLATE, Color(c, 0.9), 1.8, 0.0)
 			Art.flat(ci, PackedVector2Array([Vector2(0, -44), Vector2(9, -36), Vector2(0, -26)]), Color(c2, 0.55))
@@ -1023,17 +1096,47 @@ static var _CAPE_LINING := Art.clipped(Art.smooth_pts(PackedVector2Array([Vector
 		Vector2(-20, 52), Vector2(-34, 44)]), 2), _CAPE)
 
 
+const FACE_SKIN := Color("ffd9b8")
+## Where the face sits in each gear tier's helmet: position and scale.
+const FACE_AT: Array = [
+	[Vector2(6, -70), 0.58], [Vector2(5, -66), 0.62], [Vector2(5, -67), 0.6], [Vector2(7, -70), 0.6], [Vector2(6, -68), 0.6],
+	[Vector2(5, -65), 0.62], [Vector2(5, -66), 0.62], [Vector2(8, -70), 0.58], [Vector2(8, -66), 0.6], [Vector2(5, -65), 0.62]]
+
+
+## The helmet with its face is drawn once per mood and blink (the lamp's
+## pulse in steps), then pasted.
 static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emotion: String, blink: bool, t: float, st: Dictionary) -> void:
-	var skin := Color("ffd9b8")
+	# The pulse of the lamp (tiers 5 and 7) in 6 steps.
+	var dyn := 0
+	if tier == 5:
+		dyn = roundi((0.6 + 0.4 * sin(t * 5.0)) * 6.0)
+	elif tier == 7:
+		dyn = roundi((0.6 + 0.4 * sin(t * 4.0)) * 6.0)
+	var key := hash([4, _depth, suit, emotion, blink, dyn, _small])
+	if Art.cache_begin(ci, key):
+		return
+	_head_pre(ci, tier, suit, st, dyn / 6.0)
+	var fa: Array = FACE_AT[mini(tier, 9)]
+	var fs: float = fa[1]
+	Art.push(ci, fa[0], 0.0, Vector2(fs, fs))
+	_face_draw(ci, emotion, blink, FACE_SKIN)
+	Art.pop(ci)
+	_head_post(ci, tier, suit, st, dyn / 6.0)
+	Art.cache_end(ci, key)
+
+
+static func _head_pre(ci: CanvasItem, tier: int, suit: Color, st: Dictionary, pulse: float) -> void:
+	var skin := FACE_SKIN
+	var c: Color = st["ore"]
+	var c2: Color = st["ore2"]
+	var g := pulse
 	match tier:
 		0:
 			# Brass helmet with a porthole for the face.
 			Art.t_circle(ci, Vector2(2, -70), 21, Art.BRASS, 2.8, 0.7)
 			Art.t_rect(ci, Rect2(-3, -95, 10, 6), 2, Color("d19230"), 2.2, 0.0)
 			Art.t_circle(ci, Vector2(-15, -71), 5, Color("d19230"), 2.0, 0.0)
-			_porthole(ci, Vector2(6, -70), 14.5, 12.0, Color("b8782a"), skin, emotion, blink, 0.58)
-			for b: Vector2 in [Vector2(6, -86.5), Vector2(-9, -76), Vector2(-9, -63), Vector2(21, -76), Vector2(21, -63)]:
-				Art.flat(ci, Art.circle_pts(b, 1.8, 8), Color("9a5f1a"))
+			_porthole_pre(ci, Vector2(6, -70), 14.5, 12.0, Color("b8782a"))
 		1:
 			# Neoprene hood, the face, a mask and a regulator.
 			var hood := Art.shade_of(suit, 0.55)
@@ -1044,21 +1147,64 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 			Art.line_c(ci, PackedVector2Array([Vector2(-17, -72), Vector2(-5, -71)]), Art.INK, 3.5)
 			Art.toon(ci, _MASK_RIM, Color("ff6f61"), 1.6, 0.0)
 			Art.flat(ci, _MASK_GLASS, skin.lerp(Color(0.75, 0.95, 1.0), 0.35))
-			Art.push(ci, Vector2(5, -66), 0.0, Vector2(0.62, 0.62))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
-			Art.flat(ci, Art.rrect_pts(Rect2(-1, -72, 4, 3), 1.2), Color(1, 1, 1, 0.7))
-			Art.t_rect(ci, Rect2(4, -59.5, 7, 5), 2.2, Color("3a3f5c"), 1.6, 0.0)
-			Art.line_c(ci, _HOSE, Art.INK, 5.2)
-			Art.line_c(ci, _HOSE, Color("3a3f5c"), 2.4)
 		2:
 			var hood := Color("2a2f45")
 			Art.t_circle(ci, Vector2(1, -68), 19.5, hood, 2.6, 0.5)
 			Art.toon(ci, _FULL_MASK, Color("ffb52e"), 2.4, 0.4)
 			Art.toon(ci, _FULL_GLASS, skin, 1.8, 0.0)
-			Art.push(ci, Vector2(5, -67), 0.0, Vector2(0.6, 0.6))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
+		3:
+			# Hard-suit dome: metal, a big front window, rivets and a lamp.
+			Art.t_circle(ci, Vector2(2, -71), 22, Color("a9b4c8"), 2.8, 0.7)
+			Art.t_rect(ci, Rect2(-19, -73, 42, 6), 2, suit, 0.0, 0.0)
+			Art.t_circle(ci, Vector2(-15, -71), 5.5, Color("8a94a8"), 2.0, 0.0)
+			Art.flat(ci, Art.circle_pts(Vector2(-15, -71), 3, 10), Color(0.75, 0.95, 1.0, 0.8))
+			_porthole_pre(ci, Vector2(7, -70), 14.5, 12.5, Color("6a7488"))
+		4:
+			# Heat-proof hood with a big orange visor.
+			Art.toon(ci, _HEAT_HOOD, Color("dfe4ec"), 2.6, 0.6)
+			Art.toon(ci, _VISOR, skin, 2.2, 0.0)
+		5:
+			# Glass bubble helmet over a sleek cap, with an antenna light.
+			Art.t_circle(ci, Vector2(3, -68), 16.5, skin, 2.2, 0.3)
+			Art.toon(ci, _CAP5, Color("2a2f45"), 1.8, 0.3)
+		7:
+			# Armored mech helm: a wide visor, an ear light, a fin on top.
+			Art.toon(ci, _MECH_FIN, suit, 2.2, 0.3)
+			Art.t_rect(ci, Rect2(-18, -93, 42, 42), 15, MECH, 2.8, 0.6)
+			Art.t_circle(ci, Vector2(-16, -72), 6.5, MECH_LIGHT, 2.2, 0.0)
+			Art.dot(ci, Vector2(-16, -72), 2.6, Color(PLASMA, pulse))
+			Art.t_rect(ci, Rect2(-7.5, -85.5, 31, 28), 9.5, suit, 0.0, 0.0)
+			Art.flat(ci, _MECH_VISOR, skin)
+		8:
+			# Atlantean helm: a gold dome with a fin crest, the face open.
+			Art.toon(ci, _CREST, suit, 2.2, 0.0)
+			Art.t_circle(ci, Vector2(2, -71), 21, MYTH_GOLD, 2.8, 0.6)
+			Art.toon(ci, _MYTH_OPEN, skin, 2.0, 0.0)
+		9:
+			# The ocean king: a glass dome with a crown on top.
+			Art.t_circle(ci, Vector2(3, -68), 16.5, skin, 2.2, 0.3)
+			Art.toon(ci, _CAP5, KING_CAPE, 1.8, 0.3)
+		_:
+			# Crystal dome: faceted, glowing, the face inside.
+			Art.t_circle(ci, Vector2(3, -68), 16, skin, 2.2, 0.3)
+
+
+static func _head_post(ci: CanvasItem, tier: int, suit: Color, st: Dictionary, pulse: float) -> void:
+	var skin := FACE_SKIN
+	var c: Color = st["ore"]
+	var c2: Color = st["ore2"]
+	var g := pulse
+	match tier:
+		0:
+			_porthole_post(ci, Vector2(6, -70), 12.0)
+			for b: Vector2 in [Vector2(6, -86.5), Vector2(-9, -76), Vector2(-9, -63), Vector2(21, -76), Vector2(21, -63)]:
+				Art.flat(ci, Art.circle_pts(b, 1.8, 8), Color("9a5f1a"))
+		1:
+			Art.flat(ci, Art.rrect_pts(Rect2(-1, -72, 4, 3), 1.2), Color(1, 1, 1, 0.7))
+			Art.t_rect(ci, Rect2(4, -59.5, 7, 5), 2.2, Color("3a3f5c"), 1.6, 0.0)
+			Art.line_c(ci, _HOSE, Art.INK, 5.2)
+			Art.line_c(ci, _HOSE, Color("3a3f5c"), 2.4)
+		2:
 			Art.flat(ci, _FULL_GLASS, Color(0.7, 0.95, 1.0, 0.1))
 			Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(-2, -76), Vector2(6, 3), 12, -0.5), _FULL_GLASS), Color(1, 1, 1, 0.55))
 			Art.t_rect(ci, Rect2(2, -56, 8, 5), 2, Color("3a3f5c"), 1.6, 0.0)
@@ -1066,36 +1212,18 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 			Art.t_rect(ci, Rect2(-2, -91, 11, 8), 3, Color("3a3f5c"), 2.0, 0.0)
 			Art.t_circle(ci, Vector2(8, -87), 3.2, Color("fff6c2"), 1.6, 0.0)
 		3:
-			# Hard-suit dome: metal, a big front window, rivets and a lamp.
-			Art.t_circle(ci, Vector2(2, -71), 22, Color("a9b4c8"), 2.8, 0.7)
-			Art.t_rect(ci, Rect2(-19, -73, 42, 6), 2, suit, 0.0, 0.0)
-			Art.t_circle(ci, Vector2(-15, -71), 5.5, Color("8a94a8"), 2.0, 0.0)
-			Art.flat(ci, Art.circle_pts(Vector2(-15, -71), 3, 10), Color(0.75, 0.95, 1.0, 0.8))
-			_porthole(ci, Vector2(7, -70), 14.5, 12.5, Color("6a7488"), skin, emotion, blink, 0.6)
+			_porthole_post(ci, Vector2(7, -70), 12.5)
 			for a in 8:
 				var ang := TAU * a / 8.0
 				Art.flat(ci, Art.circle_pts(Vector2(7, -70) + Vector2(cos(ang), sin(ang)) * 13.3, 1.2, 6), Color("dfe4ec"))
 			Art.t_rect(ci, Rect2(-3, -96, 12, 7), 2.5, Color("6a7488"), 2.2, 0.0)
 			Art.t_circle(ci, Vector2(9, -92.5), 3, Color("fff6c2"), 1.6, 0.0)
 		4:
-			# Heat-proof hood with a big orange visor.
-			Art.toon(ci, _HEAT_HOOD, Color("dfe4ec"), 2.6, 0.6)
-			Art.toon(ci, _VISOR, skin, 2.2, 0.0)
-			Art.push(ci, Vector2(6, -68), 0.0, Vector2(0.6, 0.6))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.flat(ci, _VISOR, Color(1.0, 0.55, 0.1, 0.5))
 			Art.flat(ci, Art.clipped(PackedVector2Array([Vector2(-8, -84), Vector2(0, -84), Vector2(-8, -60), Vector2(-14, -60)]), _VISOR), Color(1, 0.95, 0.8, 0.55))
 			for k in 3:
 				Art.line_c(ci, PackedVector2Array([Vector2(-14, -88 + k * 5), Vector2(-9, -89 + k * 5)]), Color("b9c2d0"), 1.6)
 		5:
-			# Glass bubble helmet over a sleek cap, with an antenna light.
-			var g := 0.6 + 0.4 * sin(t * 5.0)
-			Art.t_circle(ci, Vector2(3, -68), 16.5, skin, 2.2, 0.3)
-			Art.toon(ci, _CAP5, Color("2a2f45"), 1.8, 0.3)
-			Art.push(ci, Vector2(5, -65), 0.0, Vector2(0.62, 0.62))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.flat(ci, Art.circle_pts(Vector2(2, -70), 21.5, 22), Color(0.75, 0.97, 1.0, 0.2))
 			Art.arc_c(ci, Vector2(2, -70), 21.5, 0, TAU, 22, Art.INK, 2.6)
 			Art.arc_c(ci, Vector2(2, -70), 18.5, PI * 1.05, PI * 1.45, 5, Color(1, 1, 1, 0.8), 2.6)
@@ -1105,36 +1233,13 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 			Art.dot(ci, Vector2(-12, -100), 2.2, Color(NEON, g))
 			Art.dot(ci, Vector2(-12, -100), 5.0, Color(NEON, 0.25 * g))
 		7:
-			# Armored mech helm: a wide visor, an ear light, a fin on top.
-			Art.toon(ci, _MECH_FIN, suit, 2.2, 0.3)
-			Art.t_rect(ci, Rect2(-18, -93, 42, 42), 15, MECH, 2.8, 0.6)
-			Art.t_circle(ci, Vector2(-16, -72), 6.5, MECH_LIGHT, 2.2, 0.0)
-			Art.dot(ci, Vector2(-16, -72), 2.6, Color(PLASMA, 0.6 + 0.4 * sin(t * 4.0)))
-			Art.t_rect(ci, Rect2(-7.5, -85.5, 31, 28), 9.5, suit, 0.0, 0.0)
-			Art.flat(ci, _MECH_VISOR, skin)
-			Art.push(ci, Vector2(8, -70), 0.0, Vector2(0.58, 0.58))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.flat(ci, _MECH_VISOR, Color(PLASMA, 0.1))
 			Art.flat(ci, _MECH_GLINT, Color(1, 1, 1, 0.5))
 		8:
-			# Atlantean helm: a gold dome with a fin crest, the face open.
-			Art.toon(ci, _CREST, suit, 2.2, 0.0)
-			Art.t_circle(ci, Vector2(2, -71), 21, MYTH_GOLD, 2.8, 0.6)
-			Art.toon(ci, _MYTH_OPEN, skin, 2.0, 0.0)
-			Art.push(ci, Vector2(8, -66), 0.0, Vector2(0.6, 0.6))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.t_rect(ci, Rect2(-6, -86, 29, 5.5), 2.5, MYTH_DARK, 0.0, 0.0)
 			Art.flat(ci, _BROW_GEM, AQUA)
 			Art.arc_c(ci, Vector2(2, -71), 20.5, PI * 1.05, PI * 1.4, 5, Color(1, 1, 1, 0.75), 2.2)
 		9:
-			# The ocean king: a glass dome with a crown on top.
-			Art.t_circle(ci, Vector2(3, -68), 16.5, skin, 2.2, 0.3)
-			Art.toon(ci, _CAP5, KING_CAPE, 1.8, 0.3)
-			Art.push(ci, Vector2(5, -65), 0.0, Vector2(0.62, 0.62))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.flat(ci, Art.circle_pts(Vector2(2, -70), 21.5, 22), Color(0.8, 0.95, 1.0, 0.18))
 			Art.arc_c(ci, Vector2(2, -70), 21.5, 0, TAU, 12, Art.INK, 2.6)
 			Art.arc_c(ci, Vector2(2, -70), 18.5, PI * 1.05, PI * 1.45, 4, Color(1, 1, 1, 0.8), 2.6)
@@ -1144,13 +1249,6 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 				Art.flat(ci, _KING_GEMS[k], KING_JEWELS[k])
 				Art.flat(ci, _KING_PEARLS[k], KING_WHITE)
 		_:
-			# Crystal dome: faceted, glowing, the face inside.
-			var c: Color = st["ore"]
-			var c2: Color = st["ore2"]
-			Art.t_circle(ci, Vector2(3, -68), 16, skin, 2.2, 0.3)
-			Art.push(ci, Vector2(5, -66), 0.0, Vector2(0.62, 0.62))
-			_diver_face(ci, emotion, blink, skin)
-			Art.pop(ci)
 			Art.flat(ci, _CRYSTAL_DOME, Color(c, 0.25))
 			for k in 3:
 				Art.line_c(ci, PackedVector2Array([_CRYSTAL_DOME[k * 2], Vector2(2, -70)]), Color(c2, 0.35), 1.2)
@@ -1168,6 +1266,15 @@ static var _MASK_GLASS := Art.rrect_pts(Rect2(-1, -71.5, 13, 6), 2.5)
 static var _HOSE := PackedVector2Array([Vector2(8, -55), Vector2(4, -50), Vector2(-4, -50)])
 ## Diver drawn small (in the world, not the big hero): simpler face.
 static var _small := false
+## Depth of the diver being drawn (its ore colors shape some parts).
+static var _depth := 0
+
+
+## Part cache key of a diver's part: which part, the site (its look), the
+## suit and two small numbers (mood, pulse, flags). Plain integer maths,
+## because every part of every diver asks for one on every redraw.
+static func _dk(part: int, suit: Color, a: int = 0, b: int = 0) -> int:
+	return (part << 56) | (_depth << 50) | ((a & 0xFFF) << 38) | ((b & 0x3F) << 32) | suit.to_rgba32()
 static var _FULL_MASK := Art.smooth_pts(PackedVector2Array([Vector2(-8, -80), Vector2(5, -86), Vector2(17, -80), Vector2(20, -66),
 		Vector2(15, -53), Vector2(5, -50), Vector2(-5, -54), Vector2(-10, -66)]), 3)
 static var _FULL_GLASS := Art.smooth_pts(PackedVector2Array([Vector2(-5, -78), Vector2(5, -82), Vector2(15, -78), Vector2(17, -67),
@@ -1194,6 +1301,14 @@ static var _CRYSTAL_DOME := PackedVector2Array([Vector2(-19, -62), Vector2(-20, 
 ## The face inside a diver's mask: the full face when drawn big, a cheaper
 ## one (dark eyes, a mouth, cheeks) at world size where details are ~1 px.
 static func _diver_face(ci: CanvasItem, emotion: String, blink: bool, skin: Color) -> void:
+	var key := hash([25, emotion, blink, skin, _small, Art.fringe_min])
+	if Art.cache_begin(ci, key):
+		return
+	_face_draw(ci, emotion, blink, skin)
+	Art.cache_end(ci, key)
+
+
+static func _face_draw(ci: CanvasItem, emotion: String, blink: bool, skin: Color) -> void:
 	if not _small:
 		face(ci, emotion, blink, skin)
 		return
@@ -1240,19 +1355,28 @@ static var _MINI_GRIN := PackedVector2Array([Vector2(-4.7, 10.4), Vector2(5.7, 1
 static var _MINI_O := Art.ellipse_pts(Vector2(0.5, 12.5), Vector2(2.4, 3.0), 8)
 
 
-static func _porthole(ci: CanvasItem, c: Vector2, rim: float, glass: float, rim_color: Color, skin: Color, emotion: String, blink: bool, fs: float) -> void:
+static func _porthole_pre(ci: CanvasItem, c: Vector2, rim: float, glass: float, rim_color: Color) -> void:
 	Art.t_circle(ci, c, rim, rim_color, 2.2, 0.0)
 	Art.t_circle(ci, c, glass, Color("dff8ff"), 0.0, 0.0)
-	Art.flat(ci, Art.circle_pts(c + Vector2(0.5, 1.5), glass - 1.0, 24), skin)
-	Art.push(ci, c, 0.0, Vector2(fs, fs))
-	_diver_face(ci, emotion, blink, skin)
-	Art.pop(ci)
+	Art.flat(ci, Art.circle_pts(c + Vector2(0.5, 1.5), glass - 1.0, 24), FACE_SKIN)
+
+
+static func _porthole_post(ci: CanvasItem, c: Vector2, glass: float) -> void:
 	Art.flat(ci, Art.clipped(Art.circle_pts(c + Vector2(-6, -6), 7, 14), Art.circle_pts(c, glass, 24)), Color(1, 1, 1, 0.5))
 
 
 static func _diver_arm(ci: CanvasItem, shoulder: Vector2, angle: float, suit: Color, front: bool, tier: int, st: Dictionary) -> void:
-	var c := suit if front else Art.shade_of(suit, 0.35)
+	# A stiff piece: sleeve and glove are drawn once and turned at the shoulder.
 	Art.push(ci, shoulder, -angle)
+	var key := _dk(5, suit, int(front))
+	if not Art.cache_begin(ci, key):
+		_arm_shape(ci, suit, front, tier, st)
+		Art.cache_end(ci, key)
+	Art.pop(ci)
+
+
+static func _arm_shape(ci: CanvasItem, suit: Color, front: bool, tier: int, st: Dictionary) -> void:
+	var c := suit if front else Art.shade_of(suit, 0.35)
 	match tier:
 		3:
 			Art.t_rect(ci, Rect2(-5.5, -3, 11, 19), 5.5, c, 2.2, 0.0)
@@ -1278,8 +1402,7 @@ static func _diver_arm(ci: CanvasItem, shoulder: Vector2, angle: float, suit: Co
 	if tier == 2 and front:
 		Art.t_rect(ci, Rect2(-4.5, 9, 9, 5), 1.5, Color("2a2f45"), 1.4, 0.0)
 		Art.flat(ci, Art.rrect_pts(Rect2(-2.8, 10, 5.6, 3), 1), Color("7df9a0"))
-	Art.pop(ci)
-	_glove(ci, shoulder + Vector2(sin(angle), cos(angle)) * ARM_LEN, tier, st, front)
+	_glove(ci, Vector2(0, ARM_LEN), tier, st, front)
 
 
 static func _glove(ci: CanvasItem, at: Vector2, tier: int, st: Dictionary, front: bool = true) -> void:
@@ -1316,10 +1439,13 @@ static func _tool(ci: CanvasItem, tool: String, tier: int, angle: float, wrist: 
 	match tool:
 		"pick", "hammer":
 			Art.push(ci, hand, -angle + wrist)
-			if tool == "pick":
-				_pick(ci, tier)
-			else:
-				_hammer(ci, st)
+			var key := _dk(6, Color.BLACK)
+			if not Art.cache_begin(ci, key):
+				if tool == "pick":
+					_pick(ci, tier)
+				else:
+					_hammer(ci, st)
+				Art.cache_end(ci, key)
 			Art.pop(ci)
 		"drill", "laser", "plasma", "trident":
 			# Held level, pointing forward; it works while pressed in.
@@ -1367,18 +1493,24 @@ static func _drill(ci: CanvasItem, tier: int, t: float, on: bool) -> void:
 	var big := 1.0 if tier == 3 else 1.15
 	var shake := Vector2(sin(t * 57.0), cos(t * 43.0)) * 0.8 if on else Vector2.ZERO
 	Art.push(ci, shake, 0.0, Vector2(big, big))
+	var spinq := int(fposmod(t * (14.0 if on else 1.0), 1.0) * 8.0) % 8
+	var key := _dk(7, Color.BLACK, spinq)
+	if Art.cache_begin(ci, key):
+		Art.pop(ci)
+		return
 	# Grip under the fist, motor body on top, chuck and a spiral bit.
 	Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, Color("3a3f5c"), 1.8, 0.0)
 	Art.t_rect(ci, Rect2(-8, -14, 30, 11), 5, body, 2.2, 0.5)
 	Art.t_rect(ci, Rect2(-5, -12, 4, 7), 1.5, Art.shade_of(body, 0.35), 0.0, 0.0)
 	Art.t_rect(ci, Rect2(21, -12.5, 6, 8), 2, Color("5a5f7a"), 1.8, 0.0)
 	Art.toon(ci, _DRILL_BIT, Color("cbd5e1"), 1.8, 0.0)
-	var spin := fposmod(t * (14.0 if on else 1.0), 1.0)
+	var spin := spinq / 8.0
 	for k in 3:
 		var x := 28.0 + (k + spin) * 4.5
 		if x < 40.0:
 			var hw := 3.8 * (1.0 - (x - 27.0) / 16.0)
 			Art.line(ci, Vector2(x - 1.2, -8.5 - hw), Vector2(x + 1.2, -8.5 + hw), Color("7c8aa5"), 1.4)
+	Art.cache_end(ci, key)
 	Art.pop(ci)
 
 
@@ -1388,12 +1520,15 @@ static var _DRILL_BIT := PackedVector2Array([Vector2(27, -12.5), Vector2(38, -10
 static func _laser(ci: CanvasItem, tier: int, t: float, on: bool, st: Dictionary) -> void:
 	var glow: Color = NEON if tier == 5 else (st["ore"] as Color)
 	var body := Color("e9eef6") if tier == 5 else (st["ore2"] as Color).lerp(Color.WHITE, 0.4)
-	Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, Color("2a2f45"), 1.8, 0.0)
-	Art.toon(ci, _LASER_BODY, body, 2.2, 0.5)
-	Art.t_rect(ci, Rect2(2, -12.5, 16, 2.6), 1, Color(glow, 0.9), 0.0, 0.0)
-	Art.t_rect(ci, Rect2(26, -13.5, 5, 9), 2, Color("2a2f45"), 1.8, 0.0)
+	var key := _dk(8, Color.BLACK, int(on))
+	if not Art.cache_begin(ci, key):
+		Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, Color("2a2f45"), 1.8, 0.0)
+		Art.toon(ci, _LASER_BODY, body, 2.2, 0.5)
+		Art.t_rect(ci, Rect2(2, -12.5, 16, 2.6), 1, Color(glow, 0.9), 0.0, 0.0)
+		Art.t_rect(ci, Rect2(26, -13.5, 5, 9), 2, Color("2a2f45"), 1.8, 0.0)
+		Art.disc(ci, Vector2(31.5, -9), 3.2, Color(glow, 1.0 if on else 0.6))
+		Art.cache_end(ci, key)
 	var pulse := 0.5 + 0.5 * sin(t * 30.0)
-	Art.disc(ci, Vector2(31.5, -9), 3.2, Color(glow, 1.0 if on else 0.6))
 	if on:
 		# The cutting beam, reaching the deposit.
 		var len := 22.0
@@ -1411,17 +1546,21 @@ static var _LASER_BODY := Art.smooth_pts(PackedVector2Array([Vector2(-7, -15), V
 static func _plasma(ci: CanvasItem, t: float, on: bool) -> void:
 	var shake := Vector2(sin(t * 53.0), cos(t * 41.0)) * 0.7 if on else Vector2.ZERO
 	Art.push(ci, shake, 0.0, Vector2(1.1, 1.1))
-	Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, MECH_CORE, 1.8, 0.0)
-	Art.t_rect(ci, Rect2(-9, -16, 30, 13), 5, MECH, 2.2, 0.0)
-	Art.flat(ci, _PLASMA_STRIPE, PLASMA)
-	Art.t_rect(ci, Rect2(20, -17, 6, 16), 2, MECH_LIGHT, 1.8, 0.0)
-	Art.toon(ci, _PLASMA_CONE, Color("ffc2f2"), 1.8, 0.0)
-	var spin := fposmod(t * (12.0 if on else 1.0), 1.0)
-	for k in 3:
-		var x := 27.0 + (k + spin) * 5.5
-		if x < 44.0:
-			var hw := 6.3 * (1.0 - (x - 26.0) / 20.0)
-			Art.line(ci, Vector2(x - 1.2, -9 - hw), Vector2(x + 1.2, -9 + hw), PLASMA, 1.6)
+	var spinq := int(fposmod(t * (12.0 if on else 1.0), 1.0) * 8.0) % 8
+	var key := _dk(9, Color.BLACK, spinq)
+	if not Art.cache_begin(ci, key):
+		Art.t_rect(ci, Rect2(-3.5, -6, 7, 12), 3, MECH_CORE, 1.8, 0.0)
+		Art.t_rect(ci, Rect2(-9, -16, 30, 13), 5, MECH, 2.2, 0.0)
+		Art.flat(ci, _PLASMA_STRIPE, PLASMA)
+		Art.t_rect(ci, Rect2(20, -17, 6, 16), 2, MECH_LIGHT, 1.8, 0.0)
+		Art.toon(ci, _PLASMA_CONE, Color("ffc2f2"), 1.8, 0.0)
+		var spin := spinq / 8.0
+		for k in 3:
+			var x := 27.0 + (k + spin) * 5.5
+			if x < 44.0:
+				var hw := 6.3 * (1.0 - (x - 26.0) / 20.0)
+				Art.line(ci, Vector2(x - 1.2, -9 - hw), Vector2(x + 1.2, -9 + hw), PLASMA, 1.6)
+		Art.cache_end(ci, key)
 	if on:
 		var pulse := 0.5 + 0.5 * sin(t * 30.0)
 		Art.dot(ci, Vector2(46, -9), 6.0 + pulse * 3.0, Color(PLASMA, 0.45))
@@ -1434,10 +1573,12 @@ static var _PLASMA_CONE := PackedVector2Array([Vector2(26, -15.5), Vector2(46, -
 
 ## Tier 8: a golden trident, thrust into the vein.
 static func _trident(ci: CanvasItem, t: float, on: bool) -> void:
-	Art.t_rect(ci, Rect2(-16, -11.2, 58, 4.4), 2, MYTH_DARK, 1.8, 0.0)
-	Art.flat(ci, _TRIDENT_GRIP, MYTH_GOLD)
-	Art.toon(ci, _TRIDENT, MYTH_GOLD, 2.0, 0.0)
-	Art.flat(ci, _TRIDENT_GEM, AQUA)
+	if not Art.cache_begin(ci, _dk(10, Color.BLACK)):
+		Art.t_rect(ci, Rect2(-16, -11.2, 58, 4.4), 2, MYTH_DARK, 1.8, 0.0)
+		Art.flat(ci, _TRIDENT_GRIP, MYTH_GOLD)
+		Art.toon(ci, _TRIDENT, MYTH_GOLD, 2.0, 0.0)
+		Art.flat(ci, _TRIDENT_GEM, AQUA)
+		Art.cache_end(ci, _dk(10, Color.BLACK))
 	if on:
 		var pulse := 0.5 + 0.5 * sin(t * 24.0)
 		for p: Vector2 in [Vector2(57, -9), Vector2(53, -17.5), Vector2(53, -0.5)]:
@@ -1476,8 +1617,9 @@ static func _diver_fx(ci: CanvasItem, tier: int, t: float, swim: bool, st: Dicti
 		if f < 0.75:
 			var p := src + Vector2(sin(f * 9.0 + k) * 3.0 - f * 6.0, -f * 34.0)
 			var r := 1.6 + f * 2.2
-			Art.dot(ci, p, r + 1.0, Color(1, 1, 1, 0.55 * (1.0 - f / 0.75)))
-			Art.dot(ci, p, r, Color(0.8, 0.96, 1.0, 0.35 * (1.0 - f / 0.75)))
+			# One dot per bubble: a white rim over a blue tint looked the same
+			# at this size.
+			Art.dot(ci, p, r + 0.6, Color(0.9, 0.98, 1.0, 0.5 * (1.0 - f / 0.75)))
 	match tier:
 		2:
 			# Soft cone of light from the head lamp.

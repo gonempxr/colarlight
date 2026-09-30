@@ -36,7 +36,8 @@ func _flat(color: Color, r: float) -> StyleBoxFlat:
 	sb.bg_color = color
 	sb.set_corner_radius_all(int(r))
 	sb.anti_aliasing = true
-	sb.corner_detail = 10
+	# 4 px of corner per segment is smooth at any size the boxes come in.
+	sb.corner_detail = clampi(ceili(r / 4.0), 3, 8)
 	return sb
 
 

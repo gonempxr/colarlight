@@ -53,6 +53,8 @@ var _look_fx := -99.0
 var _idle_since := 0.0
 var _crank := 0.0
 var _sync_left := 0.0
+var _ratio: Array[float] = []
+var _ratio_at := -99.0
 
 
 func _ready() -> void:
@@ -380,6 +382,14 @@ func _draw() -> void:
 
 ## Visual scale of each crate: 1 = one lift trip's share (full crate).
 func _crate_scale() -> Array[float]:
+	# Shares only change with upgrades and hires: worked out twice a second.
+	if _ratio_at > _t or _t - _ratio_at > 0.5 or _ratio.size() != _crates.size():
+		_ratio_at = _t
+		_ratio = _work_out_scale()
+	return _ratio
+
+
+func _work_out_scale() -> Array[float]:
 	var shares := _shares()
 	var cap: float = maxf(GameState.cycle_capacity("lift"), 1e-9)
 	var out: Array[float] = []
@@ -404,17 +414,21 @@ func _draw_crate(i: int, at: Vector2, fill: float) -> void:
 	var st: Dictionary = Art.DEPTH_STYLE[i]
 	var f := snappedf(clampf(fill, 0.0, 1.5), 0.25)
 	Art.push(self, at)
-	if f > 1.0:
-		Art.crystals(self, Vector2(-24, 0), 12.0, st, 7, 2)
-		Art.crystals(self, Vector2(23, 0), 10.0, st, 9, 2)
-	if f > 0.0:
-		Art.crystals(self, Vector2(0, -22), 10.0 + minf(f, 1.0) * 14.0, st, 3 + i, 3 if f < 0.75 else 4)
-	Art.t_rect(self, Rect2(-19, -26, 38, 26), 3, Art.WOOD, 2.5, 0.5)
-	Art.line(self, Vector2(-17, -13), Vector2(17, -13), Art.WOOD_DARK, 2.0)
-	Art.line(self, Vector2(-8, -24), Vector2(-8, -2), Art.WOOD_DARK, 2.0)
-	Art.line(self, Vector2(8, -24), Vector2(8, -2), Art.WOOD_DARK, 2.0)
-	Art.t_rect(self, Rect2(-19, -26, 7, 7), 1.5, Art.BRASS, 1.5, 0.0)
-	Art.t_rect(self, Rect2(12, -26, 7, 7), 1.5, Art.BRASS, 1.5, 0.0)
+	# A crate only changes when its ore pile steps up or down (quarters).
+	var key := hash([50, i, f])
+	if not Art.cache_begin(self, key):
+		if f > 1.0:
+			Art.crystals(self, Vector2(-24, 0), 12.0, st, 7, 2)
+			Art.crystals(self, Vector2(23, 0), 10.0, st, 9, 2)
+		if f > 0.0:
+			Art.crystals(self, Vector2(0, -22), 10.0 + minf(f, 1.0) * 14.0, st, 3 + i, 3 if f < 0.75 else 4)
+		Art.t_rect(self, Rect2(-19, -26, 38, 26), 3, Art.WOOD, 2.5, 0.5)
+		Art.line(self, Vector2(-17, -13), Vector2(17, -13), Art.WOOD_DARK, 2.0)
+		Art.line(self, Vector2(-8, -24), Vector2(-8, -2), Art.WOOD_DARK, 2.0)
+		Art.line(self, Vector2(8, -24), Vector2(8, -2), Art.WOOD_DARK, 2.0)
+		Art.t_rect(self, Rect2(-19, -26, 7, 7), 1.5, Art.BRASS, 1.5, 0.0)
+		Art.t_rect(self, Rect2(12, -26, 7, 7), 1.5, Art.BRASS, 1.5, 0.0)
+		Art.cache_end(self, key)
 	Art.pop(self)
 
 
@@ -434,8 +448,18 @@ func _draw_chips(i: int, from: Vector2, cab: Vector2, f: float) -> void:
 ## with `fill` 0..1 of ore inside. Looks 1..6: rope bucket, wooden cage,
 ## iron cage, diving bell, bathyscaphe, golden bathyscaphe.
 static func draw_cabin(ci: CanvasItem, look: int, t: float, fill: float, busy: bool) -> void:
-	var ore := {"ore": Art.DEPTH_STYLE[0]["ore"], "ore2": Art.DEPTH_STYLE[0]["ore2"]}
 	var f := snappedf(clampf(fill, 0.0, 1.0), 0.25)
+	# Only the golden one twinkles (in quarter steps of alpha).
+	var tw := snappedf(0.5 + 0.5 * sin(t * 4.0), 0.25)
+	var key := hash([51, look, f, busy, tw if look >= 6 else 0.0])
+	if Art.cache_begin(ci, key):
+		return
+	_cabin_shape(ci, look, f, busy, tw)
+	Art.cache_end(ci, key)
+
+
+static func _cabin_shape(ci: CanvasItem, look: int, f: float, busy: bool, tw: float) -> void:
+	var ore := {"ore": Art.DEPTH_STYLE[0]["ore"], "ore2": Art.DEPTH_STYLE[0]["ore2"]}
 	match look:
 		1:
 			# Rope bucket: a handle up to the hook, ore heaped on top.
@@ -501,8 +525,7 @@ static func draw_cabin(ci: CanvasItem, look: int, t: float, fill: float, busy: b
 				# Fins, a second lamp and a twinkle.
 				Art.toon(ci, PackedVector2Array([Vector2(-26, -30), Vector2(-40, -22), Vector2(-40, -10), Vector2(-24, -18)]), Color("2bc8b4"), 2.2, 0.0)
 				Art.t_rect(ci, Rect2(24, -52, 8, 8), 3, Color("fff6c8"), 2.0, 0.0)
-				var tw := 0.5 + 0.5 * sin(t * 4.0)
-				Art.toon(ci, Art.star_pts(Vector2(-14, -50), 6.0, 2.5, 4), Color(1, 1, 1, snappedf(tw, 0.25)), 1.2, 0.0)
+				Art.toon(ci, Art.star_pts(Vector2(-14, -50), 6.0, 2.5, 4), Color(1, 1, 1, tw), 1.2, 0.0)
 				Art.toon(ci, Art.star_pts(Vector2(20, -64), 4.0, 1.8, 4), Color(1, 1, 1, snappedf(1.0 - tw, 0.25)), 1.0, 0.0)
 			_hook(ci, Vector2(0, -70), Color("b9c3d6"))
 
