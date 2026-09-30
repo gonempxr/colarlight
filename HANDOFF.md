@@ -1,0 +1,108 @@
+# Coralight: handoff for a new Claude session
+
+Read this first, then continue the work. Everything below was true on 2026-09-30.
+
+## The owner
+- Mark (GitHub `gonempxr`). Write to him **in Russian**. He is new to git, so explain git steps simply.
+- He wants you to do the work yourself, test it, and report briefly:
+  - what changed;
+  - how you checked it;
+  - the risks;
+  - what you need from him.
+- Ask him before anything irreversible, such as deleting data or changing accounts. Publishing the game to the gh-pages site is his standing request.
+- He often misspells the name: repo `colarlight`, itch page `corelight`. The game is **Coralight**.
+
+## The game
+Coralight: Dive Tycoon is an idle tycoon/clicker in the style of Idle Miner Tycoon, built with **Godot 4.7.2** for the web. It must work well on both PC and phone.
+
+**Core loop:**
+1. Divers mine ore at the depths.
+2. The ore goes up to the raft.
+3. The boat carries it to the shore.
+4. The plant turns it into coins.
+
+Income is min(dives, boat, plant). The boat and plant are manual until their manager is hired.
+
+**Content:**
+- 21 depths.
+- 15 visual stages each for the boat and the plant.
+- Prestige ("Dive Deeper"):
+  - needs coins, 1e7 × 6.4^n;
+  - needs depth index min(5 + 2n, 20) open;
+  - gives an income multiplier of 3^n.
+- Meta game: pearls, quests, daily gift, chests, match-3 puzzle → artifact pieces → museum, wardrobe (cosmetics), local player profiles.
+- Fishing: 18 fish in 5 rarities, a reel mini-game, a bucket, a fish book and a fisherman helper.
+- World: a 10-minute day/night cycle, and everything in it reacts to taps.
+- Hints: a lightbulb shows hints and an automation checklist.
+- Languages: RU, EN, ES and ZH.
+- Money: none. Mark chose **no ads and no IAP for now**. The Platform autoload hides every ad or purchase button. Background: portals such as Yandex Games were researched; Stripe and Paddle are unavailable for a RU developer.
+
+**Art direction:**
+- All art is drawn in code: a cartoon "toon" look with a thick INK outline (#241a3a), chibi characters with emotions and reactions.
+- Fonts: Rubik and Nunito for the UI, Noto Sans SC subset for Chinese, Seymour One for the logo only.
+
+**Where it lives:**
+- Repo: github.com/gonempxr/colarlight.
+  - `main` holds the source: game in `game/`, balance sim in `balance/`, tools in `tools/`.
+  - `gh-pages` holds only the web build files plus `.nojekyll`.
+- Site: https://gonempxr.github.io/colarlight/
+- itch.io: gonempxr.itch.io/corelight. Mark uploads the zip himself. Kind of project: HTML, with "played in browser" checked.
+
+## Setup (fresh cloud session)
+```
+bash tools/setup.sh   # installs Godot 4.7.2 if missing, fixes the export template path, imports
+```
+Chromium and Playwright are usually preinstalled in Claude Code on the web.
+
+## Commands (run from game/)
+- **Import after adding a class_name or assets:** `godot --headless --path . --import`
+- **Tests:** `godot --headless --path . -s res://tests/<name>.gd`
+  - `check_scripts` (0 broken), `test_economy` (108), `test_progress` (73), `test_match3` (116), `test_puzzle_ui` (57), `test_fishing` (109), `test_world_taps` (15), `test_diver_trip` ("0 jumps").
+  - `test_ui` (19) needs `--resolution 390x844`.
+- **Screenshots:** `xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 -s res://tests/screenshot.gd -- out.png ru mid 0 - 1.0`
+  - Arguments: out, lang, scenario (start / mid / late / deep), scroll, overlay (`-`, `toast`, `hint`, `daily`), ui_scale.
+  - Use 1920x1080 or 1440x900 for PC.
+- **Preview sheets:** `tests/stage_sheet.gd`, `daynight_shot.gd`, `diver_sheet.gd`, `fishing_shot.gd`, `depths_shot.gd`.
+- **Web export:** `godot --headless --path . --export-release Web build/web/index.html`
+  - It uses the slim single-thread template in `tools/web_template/`.
+  - The wasm is about 30 MB.
+- **Publish:**
+  1. Commit and push `main`.
+  2. Check out `gh-pages` and copy the build files **by name**: index.html, .js, .wasm, .pck, .png, the two worklet .js files, apple-touch-icon and icon. Never copy `*.import`, and keep `.nojekyll`.
+  3. Commit and push `gh-pages`.
+  4. Rebuild the itch zip from the same files.
+- **After adding strings:** run `python3 tools/subset_fonts.py` so Chinese and symbol glyphs (★ ♪ → ×) exist in the web build. On the web there are no system fallback fonts, and a missing glyph shows as a box.
+
+## Code map
+- **Autoloads, in order:** Profiles, Settings, Sfx, GameState, Progress, Platform, Fishing.
+- `scripts/data/balance.gd` holds all economy numbers and mirrors `balance/sim.py`. Change them together, and rerun `python3 balance/sim.py`.
+- `scripts/ui/main.gd` handles layout:
+  - PC ("wide") has the notch HUD at the top centre, cards in the right column and the dock bottom-right.
+  - Phone has the HUD on top and the dock at the bottom.
+- Other files:
+  - `hud.gd`: the PC notch, whose bar slides down when the mouse is at the top.
+  - `stage_card.gd`, `upgrade_panel.gd`, `scroller.gd` (smooth wheel and fling), `dock.gd`, `hints.gd`, `hint_button.gd`, `tutor.gd`.
+  - World drawing: `world.gd`, `surface_view.gd`, `props.gd` (the building stages), `day_night.gd`, `diver_layer.gd`, `depth_row.gd`, `chars.gd`, `ore_art.gd`, `pointer_art.gd`, `art.gd` (the toon kit).
+  - `scripts/puzzle/` holds the match-3; `scripts/fishing/` holds fishing.
+  - Strings live in `i18n/strings.csv`, `puzzle.csv` and `fishing.csv`.
+
+## Gotchas
+- Draw only through the `Art.*` helpers with push/pop, never `ci.draw_*` directly, because shapes are batched and cached. Cache animated values in steps, or the shape cache floods.
+- Give values from autoload calls explicit types (`var x: bool = Progress...`).
+- Autoloads must not reference UI classes.
+- In `-s` test scripts, load classes that touch autoloads with `load(...).new()`.
+- A class_name must not clash with a native class; `Sky` did, so it was renamed to DayNight.
+- `Resource.duplicate()` drops a script's plain variables, such as ToonBox colours. Copy them yourself.
+- Autowrapped labels:
+  - give them a minimum width;
+  - their cached minimum size is stale in the same frame, so set the width first or re-fit next frame.
+- In tweens, `set_parallel(true)` makes later steps parallel too. Use `.parallel()` per tweener.
+- Retina/HiDPI: the UI scale must account for pixel density, not just the viewport width.
+
+## Open items and known risks
+- **Balance** comes from the simulator (about 2–3.5 h per Dive run, about 24 h to the last depth). It is not tested with real players yet, so ask Mark for feedback.
+- **Phone speed:** the phone build is about 6–12% heavier than before the day/night and art update (measured with software GL). It has not been measured on a real phone.
+- **Narrow phones:**
+  - the boat and plant cards cover the sky, so the late tall plant stages are partly hidden;
+  - the sunset can happen behind the boat.
+- **Sound** has never been checked by ear.
