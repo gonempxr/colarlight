@@ -1112,9 +1112,10 @@ func _draw() -> void:
 	# Water surface over the hulls and floats: two waves on top of each other.
 	var amp := (1.8 + DayNight.wind * 2.0) * (0.5 if _calm else 1.0)
 	var wave := PackedVector2Array()
-	for i in 49:
-		var x := w * i / 48.0
-		wave.append(Vector2(x, sy + sin(_t * 1.6 + i * 0.62) * amp + sin(_t * 2.3 - i * 1.1) * amp * 0.45))
+	for i in 41:
+		var x := w * i / 40.0
+		var u := i * 1.2
+		wave.append(Vector2(x, sy + sin(_t * 1.6 + u * 0.62) * amp + sin(_t * 2.3 - u * 1.1) * amp * 0.45))
 	var front := wave.duplicate()
 	front.append(Vector2(w, sy + 16))
 	front.append(Vector2(0, sy + 16))
@@ -1343,7 +1344,7 @@ func _draw_back_water(bp: Vector2, bs: float) -> void:
 	var x1 := bp.x + maxf(e.x, e.y) + 10.0 * _k
 	var y := bp.y + 1.0
 	var sea := PackedVector2Array()
-	var n := 10
+	var n := 6
 	for i in n + 1:
 		var x := lerpf(x0, x1, float(i) / n)
 		sea.append(Vector2(x, y + sin(_t * 1.9 + x * 0.05) * 1.4))
