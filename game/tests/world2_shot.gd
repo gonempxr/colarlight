@@ -6,7 +6,9 @@ extends SceneTree
 ## phase: day phase 0..1 (-1 = running clock); boat/plant: level of the first ones;
 ## d2: 1 opens depth d2 (shows the for-sale markers); crop_h: keep that many
 ## window pixels from the top (0 = all); boat2_p / boat_p: freeze the boats at
-## that cycle progress (-1 = let them run).
+## that cycle progress (-1 = let them run); pet: equip that pet cosmetic id
+## (e.g. pet_crab, "-" = none); dock / hold: ore at the shore / on the raft
+## (-1 = the defaults; 0 lets the plant worker doze).
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -20,6 +22,9 @@ func _initialize() -> void:
 	var crop_h := int(args[7]) if args.size() > 7 else 0
 	var boat2_p := float(args[8]) if args.size() > 8 else -1.0
 	var boat_p := float(args[9]) if args.size() > 9 else -1.0
+	var pet := args[10] if args.size() > 10 else "-"
+	var dock := float(args[11]) if args.size() > 11 else -1.0
+	var hold := float(args[12]) if args.size() > 12 else -1.0
 	await process_frame
 	root.get_node("Settings").language = "en"
 	TranslationServer.set_locale("en")
@@ -39,8 +44,10 @@ func _initialize() -> void:
 	for k in ["d0", "d1", "boat", "plant", "boat2", "plant2"]:
 		gs.managers[k] = gs.levels[k] > 0
 	gs.coins = 480250.0
-	gs.hold = 1840.0
-	gs.dock = 620.0
+	gs.hold = 1840.0 if hold < 0.0 else hold
+	gs.dock = 620.0 if dock < 0.0 else dock
+	if pet != "-":
+		pr.equipped["pet"] = pet
 	var dn: GDScript = load("res://scripts/ui/day_night.gd")
 	dn.fixed_phase = phase
 	load("res://scripts/ui/main.gd").show_title = false

@@ -273,15 +273,16 @@ static func gull(ci: CanvasItem, flap: float, color: Color = Art.WHITE) -> void:
 
 ## Raft with a small crane over the dive rope; origin = rope at waterline.
 ## `pile` 0..5 draws an old-style heap of ore (the world uses ore_chest).
+## `deck_right` is where the deck ends right of the rope (room for the chest).
 ## `lamp_lit` lights the lantern under the crane arm (at RAFT_LAMP).
 const RAFT_LAMP := Vector2(-30, -100)
 
 
-static func raft(ci: CanvasItem, t: float, pile: int, ore: Color, lamp_lit: float = 0.0) -> void:
+static func raft(ci: CanvasItem, t: float, pile: int, ore: Color, lamp_lit: float = 0.0, deck_right: float = 66.0) -> void:
 	# Floats.
 	Art.t_ellipse(ci, Vector2(-38, 2), Vector2(20, 12), Art.CORAL, 2.5, 0.7)
-	Art.t_ellipse(ci, Vector2(40, 2), Vector2(20, 12), Art.CORAL, 2.5, 0.7)
-	Art.flat(ci, Art.rrect_pts(Rect2(-56, -1, 112, 5), 2), Color(1, 1, 1, 0.8))
+	Art.t_ellipse(ci, Vector2(deck_right - 26.0, 2), Vector2(20, 12), Art.CORAL, 2.5, 0.7)
+	Art.flat(ci, Art.rrect_pts(Rect2(-56, -1, deck_right + 46.0, 5), 2), Color(1, 1, 1, 0.8))
 	# Crane post and arm, the rope hangs from the pulley at x = 0.
 	Art.t_rect(ci, Rect2(-52, -118, 11, 106), 3, Art.WOOD_DARK, 2.5, 0.0)
 	Art.t_rect(ci, Rect2(-56, -124, 66, 10), 4, Art.WOOD, 2.5, 0.0)
@@ -301,8 +302,8 @@ static func raft(ci: CanvasItem, t: float, pile: int, ore: Color, lamp_lit: floa
 	flag(ci, Vector2(-47, -124), 30, Art.CORAL, t, 0.95)
 	downwind = d
 	# Deck planks.
-	Art.t_rect(ci, Rect2(-66, -16, 132, 15), 5, Art.WOOD, 3.0, 0.6)
-	for i in 5:
+	Art.t_rect(ci, Rect2(-66, -16, 66.0 + deck_right, 15), 5, Art.WOOD, 3.0, 0.6)
+	for i in int((deck_right + 40.0) / 22.0):
 		Art.line(ci, Vector2(-40 + i * 22, -14), Vector2(-40 + i * 22, -3), Art.WOOD_DARK, 2.0)
 	# Hole for the rope.
 	Art.flat(ci, Art.ellipse_pts(Vector2(0, -12), Vector2(9, 3), 12), Color("2b4a78"))
@@ -2228,8 +2229,9 @@ static func conveyor(ci: CanvasItem, a: Vector2, b: Vector2, t: float, running: 
 	var n := Vector2(-dir.y, dir.x)
 	# Legs.
 	var len := a.distance_to(b)
-	for i in 3:
-		var p := a.lerp(b, (i + 0.5) / 3.0)
+	var legs := clampi(int(len / 45.0), 1, 3)
+	for i in legs:
+		var p := a.lerp(b, (i + 0.5) / legs)
 		Art.stroke(ci, PackedVector2Array([p, Vector2(p.x, a.y + 26)]), Color("5a5f7a"), 4.0, 1.8)
 	Art.stroke(ci, PackedVector2Array([a, b]), Color("3a3f5c"), 12.0, 2.5)
 	var rollers := int(len / 18.0)
@@ -2251,11 +2253,44 @@ static func conveyor(ci: CanvasItem, a: Vector2, b: Vector2, t: float, running: 
 ## at its left foot on the waterline, top `h` above it, `w` wide on top.
 static func terrace(ci: CanvasItem, w: float, h: float) -> void:
 	var hill := Art.smooth_pts(PackedVector2Array([Vector2(-34, 12), Vector2(-26, -h * 0.55), Vector2(-12, -h + 2), Vector2(w * 0.5, -h - 3),
-			Vector2(w, -h), Vector2(w + 40, -h * 0.6), Vector2(w + 60, 12)]), 4)
+			Vector2(w, -h), Vector2(w + 40, -h * 0.6), Vector2(w + 60, 12)]), 3)
 	Art.toon(ci, hill, Art.SAND, 3.0, 0.5)
+	# A few stones, so the tall face is not bare.
+	for p: Vector3 in [Vector3(0.12, 0.72, 7), Vector3(0.55, 0.6, 6), Vector3(0.84, 0.34, 5)]:
+		Art.flat(ci, Art.ellipse_pts(Vector2(w * p.x, -h * p.y), Vector2(p.z, p.z * 0.6), 8), Art.SAND_DARK)
 	var grass := Art.smooth_pts(PackedVector2Array([Vector2(-18, -h + 6), Vector2(-10, -h - 1), Vector2(w * 0.5, -h - 5), Vector2(w + 4, -h - 2),
 			Vector2(w + 22, -h + 8), Vector2(w * 0.5, -h + 9), Vector2(0, -h + 10)]), 3)
 	Art.toon(ci, grass, Art.GRASS, 2.6, 0.4)
+
+
+## Wooden pier where the boats unload; origin at its tip on the waterline,
+## the deck (top at -h) runs to x = w and its posts stand in the water.
+## `bollard` adds a mooring post at the tip.
+static func pier(ci: CanvasItem, w: float, h: float, bollard: bool = true) -> void:
+	var post := Color("7a4a26")
+	var xs: Array[float] = [7.0, w * 0.36, w * 0.68, w - 9.0]
+	# Cross braces between the posts, behind them.
+	for i in xs.size() - 1:
+		var a := xs[i]
+		var b := xs[i + 1]
+		if i % 2 == 0:
+			Art.line(ci, Vector2(a, -h + 12), Vector2(b, -6), Color("6a3c1e"), 3.5)
+		else:
+			Art.line(ci, Vector2(a, -6), Vector2(b, -h + 12), Color("6a3c1e"), 3.5)
+	# Posts and deck in one outline (cheaper to draw), the deck painted over.
+	var parts: Array = [Art.rrect_pts(Rect2(-4, -h, w + 8.0, 13), 2)]
+	for x in xs:
+		parts.append(Art.rrect_pts(Rect2(x - 5.0, -h + 4.0, 10, h + 12.0), 1))
+	Art.toon(ci, Art.union(parts), post, 2.6, 0.0)
+	Art.flat(ci, Art.rrect_pts(Rect2(-2.5, -h + 1.5, w + 5.0, 10), 1.5), Art.WOOD)
+	Art.line(ci, Vector2(-3, -h + 12.5), Vector2(w + 3.0, -h + 12.5), Art.INK, 2.4)
+	var n := int(w / 45.0)
+	for i in n:
+		var x := 9.0 + i * (w - 10.0) / n
+		Art.line(ci, Vector2(x, -h + 5), Vector2(x, -h + 11), Art.WOOD_DARK, 1.8)
+	if bollard:
+		Art.t_rect(ci, Rect2(0, -h - 11, 11, 12), 3, Color("5a5f7a"), 2.2, 0.3)
+		Art.t_rect(ci, Rect2(-2, -h - 14, 15, 5), 2, Color("7c8aa5"), 2.0, 0.0)
 
 
 ## Wooden sign on a post saying the price (a coin and the number) with the
