@@ -51,6 +51,11 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		tooltip_text = tr("HINT_TITLE")
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	_press = move_toward(_press, 1.0 if _down else 0.0, delta * 10.0)

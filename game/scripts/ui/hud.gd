@@ -282,6 +282,11 @@ func _draw_avatar() -> void:
 	Art.pop(_avatar)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _avatar:
+		_avatar.tooltip_text = tr("PROFILE")
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	if _notch:
