@@ -31,6 +31,9 @@ const WARM_TINT := Color(1.0, 0.86, 0.80)
 ## Underwater modulate at night: gentle, the game must stay readable.
 const DEEP_NIGHT_TINT := Color(0.76, 0.80, 0.94)
 
+## Day and night sky stops [top, middle, horizon]; OceanLook sets them per ocean.
+static var day_cols := PackedColorArray([DAY_TOP, DAY_MID, DAY_BOTTOM])
+static var night_cols := PackedColorArray([NIGHT_TOP, NIGHT_MID, NIGHT_BOTTOM])
 static var clock := START_PHASE * CYCLE
 ## Tests and preview sheets pin the time of day here (0..1, -1 = running).
 static var fixed_phase := -1.0
@@ -86,9 +89,9 @@ static func sky_colors(p: float = -1.0) -> PackedColorArray:
 	var d := daylight(p)
 	var w := warmth(p)
 	var morning := is_morning(p)
-	var top := NIGHT_TOP.lerp(DAY_TOP, d).lerp(DUSK_TOP, w * 0.55)
-	var mid := NIGHT_MID.lerp(DAY_MID, d).lerp(DAWN_MID if morning else DUSK_MID, w * 0.75)
-	var bottom := NIGHT_BOTTOM.lerp(DAY_BOTTOM, d).lerp(DAWN_BOTTOM if morning else DUSK_BOTTOM, w * 0.92)
+	var top := night_cols[0].lerp(day_cols[0], d).lerp(DUSK_TOP, w * 0.55)
+	var mid := night_cols[1].lerp(day_cols[1], d).lerp(DAWN_MID if morning else DUSK_MID, w * 0.75)
+	var bottom := night_cols[2].lerp(day_cols[2], d).lerp(DAWN_BOTTOM if morning else DUSK_BOTTOM, w * 0.92)
 	return PackedColorArray([top, mid, bottom])
 
 

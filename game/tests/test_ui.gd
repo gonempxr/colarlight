@@ -42,6 +42,8 @@ func _initialize() -> void:
 	await test_wheel_scroll()
 	await test_dock_appears()
 	await test_language_switch()
+	await test_new_ocean()
+	await test_art_fits()
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute("user://test_ui_save.json")
 	quit(1 if _failures > 0 else 0)
@@ -228,3 +230,58 @@ func test_language_switch() -> void:
 	check(main._world.surface.boat_card._name.text.begins_with("运输船"), "card text follows the language")
 	root.get_node("Settings").set_language(original)
 	main._modal.close()
+
+
+## A Dive Deeper takes the player to a new ocean: other water, sky and
+## sand colors, the dive sites tinted, and the ocean's name shown.
+func test_new_ocean() -> void:
+	var ocean_look := load("res://scripts/ui/ocean_look.gd")
+	var art := load("res://scripts/ui/art.gd")
+	var day_night := load("res://scripts/ui/day_night.gd")
+	check(ocean_look.ocean == 0, "the first ocean is ocean 0")
+	var sea0: Color = art.water_color(0.0)
+	var sky0: Color = day_night.sky_colors(0.25)[0]
+	var row0: Color = main._world.rows[0].style()["water"]
+	gs.prestige_count = 1
+	await _frames(3)
+	check(ocean_look.ocean == 1, "the world follows the ocean count")
+	check(not art.water_color(0.0).is_equal_approx(sea0), "new ocean: other water")
+	check(not day_night.sky_colors(0.25)[0].is_equal_approx(sky0), "new ocean: other sky")
+	check(not main._world.rows[0].style()["water"].is_equal_approx(row0), "new ocean: dive sites tinted")
+	var banner_found := false
+	for c in main._world.get_children():
+		if c.get_class() == "Control" and c.get("name_text") != null:
+			banner_found = c.name_text == ocean_look.name_of(1) and c.name_text != ""
+	check(banner_found, "the new ocean's name is shown")
+	check(ocean_look.name_of(6).ends_with(" II"), "later oceans repeat the looks with a numeral")
+	gs.prestige_count = 0
+	await _frames(3)
+	check(art.water_color(0.0).is_equal_approx(sea0), "back home: the original water")
+
+
+## Wardrobe items and portraits stay inside their frames.
+func test_art_fits() -> void:
+	var art := load("res://scripts/ui/art.gd")
+	var chars := load("res://scripts/ui/chars.gd")
+	var hats := load("res://scripts/ui/hats_art.gd")
+	var wardrobe := load("res://scripts/ui/wardrobe.gd")
+	var worst := 0.0
+	for h in hats.IDS:
+		var l: Dictionary = chars.look(0, "short", 0, h, "none", 0, "shirt")
+		art.measure_begin()
+		chars.portrait(null, Vector2.ZERO, 50.0, l, "happy", false, Color.WHITE)
+		var b: Rect2 = art.measure_end()
+		worst = maxf(worst, maxf(-b.position.y, b.end.y))
+	check(worst <= 50.5, "every hat stays inside the portrait ring (%.1f px of 50)" % worst)
+	var s := Vector2(110, 130)
+	var outside := 0
+	for c in Content.COSMETICS:
+		if not c["slot"] in ["pet", "boat", "suit"]:
+			continue
+		art.measure_begin()
+		wardrobe._draw_item(null, c, s, 0.0)
+		var b: Rect2 = art.measure_end()
+		if b.position.x < -1.0 or b.position.y < -1.0 or b.end.x > s.x + 1.0 or b.end.y > s.y + 1.0:
+			outside += 1
+			print("  outside its card: ", c["id"], " ", b)
+	check(outside == 0, "wardrobe pets, boats and suits fit inside their cards")

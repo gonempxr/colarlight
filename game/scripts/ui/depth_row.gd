@@ -34,7 +34,7 @@ func key() -> String:
 
 
 func style() -> Dictionary:
-	return Art.DEPTH_STYLE[index]
+	return OceanLook.room_style(index)
 
 
 func _ready() -> void:
@@ -167,7 +167,7 @@ func _process(delta: float) -> void:
 	if not _check_now and (Engine.get_process_frames() + index) % 6 != 0:
 		return
 	_check_now = false
-	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale()]
+	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale(), OceanLook.ocean]
 	if sig != _bg_sig:
 		_bg_sig = sig
 		_bg.queue_redraw()

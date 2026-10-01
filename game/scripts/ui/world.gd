@@ -58,6 +58,7 @@ var _view_frame := -1
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	OceanLook.apply(GameState.prestige_count)
 	_rng.seed = 7
 	_sky = PaintLayer.new(_paint_sky)
 	add_child(_sky)
@@ -355,6 +356,17 @@ func _notification(what: int) -> void:
 func _process(delta: float) -> void:
 	t += delta
 	DayNight.advance(delta)
+	# A Dive Deeper (or a loaded save) moved us to another ocean: new colors
+	# everywhere and its name shown for a moment.
+	var ocean: int = GameState.prestige_count
+	if OceanLook.apply(ocean):
+		_painted_light = -1.0
+		_painted_tint = -1.0
+		repaint_still()
+		for row in rows:
+			row._check_now = true
+		if ocean > 0:
+			show_ocean_name(ocean)
 	_apply_night_tint()
 	for i in range(_shooting.size() - 1, -1, -1):
 		var s: Dictionary = _shooting[i]
@@ -437,7 +449,7 @@ func _draw() -> void:
 	if is_visible_band(h - BOTTOM_H, h):
 		var floor_y := h - BOTTOM_H + 60.0
 		for i in 6:
-			Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, Color("2b8f78"), t, i)
+			Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, OceanLook.color("weed").darkened(0.3), t, i)
 
 
 ## Sky gradient, sunset glow and stars (a still layer).
@@ -537,9 +549,33 @@ func _draw_top_water(w: float) -> void:
 		if absf(face) < 0.15:
 			face = 0.15 * signf(face) if face != 0.0 else 0.15
 		Art.fish(self, _fish_pos(f, w), f["size"], Color(f["color"]) * tint, face, t * (1.0 + dart * 2.0) + f["y"])
+	var weed: Color = OceanLook.color("weed")
+	var kelp := OceanLook.has("kelp")
 	for i in 5:
 		var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
-		Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 16, Color("47c47a") * tint, t, i)
+		Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 16, weed * tint, t, i)
+	# The kelp sea: tall kelp between them, reaching up to the waves.
+	if kelp:
+		for i in 4:
+			var x := SHAFT_R + 60.0 + (i + 0.5) * (w - SHAFT_R - 120.0) / 4.0
+			Art.seaweed(self, Vector2(x, TOP_H - 18), 92 + (i % 2) * 26, weed.darkened(0.15) * tint, t * 0.8, i + 7, 11.0)
+	if OceanLook.has("ice"):
+		_draw_ice(w)
+
+
+static var _FLOE := Art.smooth_pts(PackedVector2Array([Vector2(-30, 0), Vector2(-24, -9), Vector2(-6, -12), Vector2(14, -10),
+		Vector2(28, -6), Vector2(32, 2), Vector2(18, 9), Vector2(-16, 8)]), 3)
+
+
+## Ice floes bobbing on the cold sea (half under the front wave).
+func _draw_ice(w: float) -> void:
+	var tint := DayNight.scene_tint(DayNight.stepped_phase())
+	for f: Vector3 in [Vector3(0.04, 0.6, 0.0), Vector3(0.21, 0.75, 1.7), Vector3(0.39, 0.55, 3.1), Vector3(0.53, 0.8, 4.4), Vector3(0.7, 0.6, 5.2), Vector3(0.93, 0.85, 2.3)]:
+		var p := Vector2(w * f.x, SURFACE_Y + 6.0 + sin(t * 1.3 + f.z) * 1.5)
+		Art.push(self, p, sin(t * 0.9 + f.z) * 0.04, Vector2(f.y, f.y))
+		Art.toon(self, _FLOE, Color("f4fbff") * tint, 2.5, 0.6)
+		Art.flat(self, Art.clipped(Art.moved(_FLOE, Vector2(0, 8)), _FLOE), Color("cfe8f7") * tint)
+		Art.pop(self)
 
 
 ## Sandy slope above the first dive site, with shells (a still layer over
@@ -552,9 +588,9 @@ func _paint_ground(ci: CanvasItem) -> void:
 		var x := lerpf(SHAFT_R, w + 10.0, i / 12.0)
 		top.append(Vector2(x, TOP_H - 22.0 - sin(i * 1.3) * 5.0 - (7.0 if i % 3 == 0 else 0.0)))
 	top.append(Vector2(w + 10, TOP_H + 4))
-	Art.toon(ci, top, Art.SAND * tint, 3.0, 0.6)
+	Art.toon(ci, top, OceanLook.color("sand") * tint, 3.0, 0.6)
 	var left := PackedVector2Array([Vector2(-10, TOP_H + 4), Vector2(-10, TOP_H - 26), Vector2(20, TOP_H - 30), Vector2(SHAFT_L, TOP_H - 18), Vector2(SHAFT_L, TOP_H + 4)])
-	Art.toon(ci, left, Art.SAND * tint, 3.0, 0.6)
+	Art.toon(ci, left, OceanLook.color("sand") * tint, 3.0, 0.6)
 	for p: Vector2 in [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26)]:
 		Art.push(ci, p, 0.2)
 		Props.shell(ci, Color("ffb3c7") * tint)
@@ -570,7 +606,7 @@ func _paint_floor(ci: CanvasItem) -> void:
 	for i in 13:
 		pts.append(Vector2(w * i / 12.0, floor_y + sin(i * 1.7) * 14.0))
 	pts.append(Vector2(w + 10, h + 10))
-	Art.toon(ci, pts, Color("2a2f5e"), 3.0, 0.4)
+	Art.toon(ci, pts, OceanLook.color("seabed"), 3.0, 0.4)
 	Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
 	Props.anchor(ci)
 	Art.pop(ci)
@@ -581,7 +617,7 @@ func _paint_floor(ci: CanvasItem) -> void:
 ## the dive shaft closed by a rounded stone bottom (the rows cover the top).
 func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	var last := Balance.DEPTHS.size() - 1
-	var rock: Color = Art.calm(Art.DEPTH_STYLE[last]["rock"])
+	var rock: Color = Art.calm(OceanLook.room_style(last)["rock"])
 	var edge := PackedVector2Array([Vector2(-10, top - 12)])
 	edge.append(Vector2(w + 10, top - 12))
 	for i in 15:
@@ -612,3 +648,46 @@ func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	# Pebbles on the shaft floor.
 	for p: Vector3 in [Vector3(SHAFT_L + 16, floor_y - 6, 6), Vector3(SHAFT_L + 31, floor_y - 5, 4.5), Vector3(SHAFT_R - 18, floor_y - 6, 5.5)]:
 		Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(p.z * 1.3, p.z), rock.lightened(0.1), 2.0, 0.4)
+
+
+# --- New ocean banner --------------------------------------------------------------------
+
+## Shows "Ocean N" and the ocean's name over the sea for a few seconds.
+func show_ocean_name(n: int) -> void:
+	var b := OceanBanner.new()
+	b.title = tr("OCEAN") % (n + 1)
+	b.name_text = OceanLook.name_of(n)
+	b.position = Vector2(scene_right() / 2.0 if size.x > 900.0 else size.x / 2.0, SURFACE_Y - 130.0)
+	add_child(b)
+
+
+class OceanBanner extends Control:
+	const LIFE := 4.2
+	var title := ""
+	var name_text := ""
+	var age := 0.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		z_index = 5
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age > LIFE:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var font := UiTheme.heavy_font()
+		var w := maxf(font.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 46).x, font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x) + 70.0
+		var pop := clampf(age / 0.35, 0.0, 1.0)
+		var s := 0.6 + 0.4 * (1.0 - pow(1.0 - pop, 3.0)) + sin(pop * PI) * 0.08
+		var fade := clampf((LIFE - age) / 0.6, 0.0, 1.0)
+		modulate.a = fade
+		Art.push(self, Vector2.ZERO, 0.0, Vector2(s, s))
+		Art.t_rect(self, Rect2(-w / 2.0, -52, w, 104), 24, Art.CREAM, 4.0, 0.4)
+		Art.t_rect(self, Rect2(-w / 2.0 + 14, -40, w - 28, 26), 13, Color("bfe8ff"), 0.0, 0.0)
+		Art.text(self, Vector2(0, -19), title, 26, Color("1c7fb8"), 0)
+		Art.text(self, Vector2(0, 34), name_text, 46, Art.INK, 0)
+		Art.pop(self)

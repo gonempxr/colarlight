@@ -71,13 +71,17 @@ const DEPTH_STYLE: Array[Dictionary] = [
 ]
 
 
+## The world's water from the surface down (OceanLook sets it per ocean).
+static var sea_cols := PackedColorArray([SEA_TOP, SEA_MID, SEA_DEEP, SEA_ABYSS])
+
+
 static func water_color(t: float) -> Color:
 	## t: 0 at the surface, 1 at the bottom of the world.
 	if t < 0.25:
-		return SEA_TOP.lerp(SEA_MID, t / 0.25)
+		return sea_cols[0].lerp(sea_cols[1], t / 0.25)
 	if t < 0.6:
-		return SEA_MID.lerp(SEA_DEEP, (t - 0.25) / 0.35)
-	return SEA_DEEP.lerp(SEA_ABYSS, clampf((t - 0.6) / 0.4, 0.0, 1.0))
+		return sea_cols[1].lerp(sea_cols[2], (t - 0.25) / 0.35)
+	return sea_cols[2].lerp(sea_cols[3], clampf((t - 0.6) / 0.4, 0.0, 1.0))
 
 
 ## Backdrop colors (sky, water, rock) a little less saturated, so cards,

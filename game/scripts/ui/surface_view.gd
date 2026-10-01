@@ -1119,7 +1119,7 @@ func _draw() -> void:
 	var front := wave.duplicate()
 	front.append(Vector2(w, sy + 16))
 	front.append(Vector2(0, sy + 16))
-	Art.flat_now(self, front, Color(Art.calm(Art.SEA_TOP), 0.6))
+	Art.flat_now(self, front, Color(Art.calm(Art.sea_cols[0]), 0.6))
 	Art.polyline(self, wave, Art.WHITE, 4.0)
 	# Little glints riding the crests.
 	var glint := DayNight.glint()
@@ -1351,7 +1351,7 @@ func _draw_back_water(bp: Vector2, bs: float) -> void:
 	var line := sea.duplicate()
 	sea.append(Vector2(x1, World.SURFACE_Y + 2.0))
 	sea.append(Vector2(x0, World.SURFACE_Y + 2.0))
-	Art.flat_now(self, sea, Color(Art.calm(Art.SEA_TOP), 0.85))
+	Art.flat_now(self, sea, Color(Art.calm(Art.sea_cols[0]), 0.85))
 	Art.polyline(self, line, Color(1, 1, 1, 0.75), 2.5)
 
 
