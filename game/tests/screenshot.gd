@@ -5,7 +5,7 @@ extends SceneTree
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
 ## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial |
-## sheet:<stage> (e.g. sheet:lift) | second (a new second boat and plant
+## sheet:<stage> (e.g. sheet:lift) | relang:<lang> (switch language live) | second (a new second boat and plant
 ## without managers: the red tab dots).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -127,6 +127,21 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+			elif overlay.begins_with("relang:"):
+				# Switch the language with the settings and the upgrade
+				# sheet open, and shoot two frames later (nothing may lag).
+				main._on_stage_selected("d0")
+				for i in 20:
+					await process_frame
+				main._open_settings()
+				await create_timer(0.5).timeout
+				root.get_node("Settings").set_language(overlay.split(":")[1])
+				await process_frame
+				await process_frame
+				await RenderingServer.frame_post_draw
+				root.get_texture().get_image().save_png(out)
+				quit()
+				return
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
 				main._started = true
