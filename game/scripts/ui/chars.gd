@@ -344,12 +344,31 @@ static func portrait(ci: CanvasItem, center: Vector2, r: float, l: Dictionary, e
 	Art.flat(ci, Art.clipped(Art.circle_pts(Vector2(-10, -18), 30.0, 28), disc), Color(1, 1, 1, 0.18))
 	var shoulders := Art.clipped(Art.rrect_pts(Rect2(-36, 24, 72, 50), 22), disc)
 	_torso_colors(ci, shoulders, l, 1.0)
+	var mark := Art.rec_mark()
 	Art.push(ci, Vector2(0, 0), 0.0, Vector2(1.3, 1.3))
 	head(ci, l, emotion, blink)
 	Art.pop(ci)
+	# Tall or wide hats: shrink the head a little about the chin so the hat
+	# fits, and clip what is still outside the ring.
+	Art.fit_recorded(mark, Vector2.ZERO, 44.0, Vector2(0, 30), 0.8)
 	Art.arc_c(ci, Vector2.ZERO, 46.0, 0, TAU, 32, Art.INK, 4.0)
 	Art.cache_end(ci, key)
 	Art.pop(ci)
+
+
+static var _fit := {}
+
+
+## Scale for drawing `l` with Chars.person so that the whole figure,
+## hat included, is at most `max_h` px tall (never above `want`).
+static func fit_scale(l: Dictionary, want: float, max_h: float) -> float:
+	var k := hash(l)
+	if not _fit.has(k):
+		Art.measure_begin()
+		person(null, Vector2.ZERO, 1.0, 1.0, l, {"emotion": "happy", "arm_r": 0.3, "arm_l": -0.2, "hold": ""})
+		_fit[k] = Art.measure_end().size.y
+	var h: float = _fit[k]
+	return minf(want, max_h / maxf(h, 1.0))
 
 
 static func _torso_colors(ci: CanvasItem, shape: PackedVector2Array, l: Dictionary, s: float) -> void:

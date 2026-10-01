@@ -20,7 +20,7 @@ static func build(m: Modal, main: Node) -> void:
 	var preview := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		var c := Vector2(s.x / 2.0 - 30.0, s.y - 12.0)
 		Art.t_ellipse(ci, c + Vector2(30, 0), Vector2(150, 18), Art.CREAM_DARK, 3.0, 0.0)
-		Chars.person(ci, c + Vector2(0, -4 - absf(sin(tt * 2.2)) * 3.0), 1.9, 1.0, Settings.avatar,
+		Chars.person(ci, c + Vector2(0, -4 - absf(sin(tt * 2.2)) * 3.0), Chars.fit_scale(Settings.avatar, 1.9, s.y - 22.0), 1.0, Settings.avatar,
 				{"emotion": "happy", "blink": Chars.blinking(tt, 2.0), "arm_r": 0.3 + sin(tt * 2.0) * 0.1, "arm_l": -0.2, "hold": ""})
 		var pet: String = Progress.equipped_art("pet")
 		if pet != "":

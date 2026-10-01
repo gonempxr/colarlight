@@ -23,7 +23,9 @@ func _draw() -> void:
 	var since := _t - _cheer_at
 	var hop := absf(sin(since * PI / 0.35)) * 22.0 * maxf(0.0, 1.0 - since / 0.7) if since < 0.7 else 0.0
 	var cheering := since < 0.9
-	Chars.person(self, c + Vector2(0, -4 - hop), 2.1, 1.0, Settings.avatar,
+	# Tall hats shrink the figure a little so it stays under the title.
+	var sc := Chars.fit_scale(Settings.avatar, 2.1, size.y - 22.0)
+	Chars.person(self, c + Vector2(0, -4 - hop), sc, 1.0, Settings.avatar,
 			{"emotion": "joy" if cheering else "happy", "blink": Chars.blinking(_t, 2.0),
 			"arm_r": 2.7 if cheering else 0.3 + sin(_t * 2.0) * 0.1, "arm_l": -2.7 if cheering else -0.2,
 			"hold": "" if cheering else "briefcase"})

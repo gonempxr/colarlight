@@ -516,6 +516,120 @@ static func cache_end(ci: CanvasItem, key: int) -> void:
 	_rc = PackedColorArray()
 
 
+static var _ms: Array = []
+
+
+## Measuring: everything drawn between measure_begin and measure_end is
+## only collected (not drawn) and measure_end returns its bounds in the
+## local space of the begin call.
+static func measure_begin() -> void:
+	_ms.append([_rec, _rv, _rc, _xf, _stack, _rec_key])
+	_rec = true
+	_rec_key = 0
+	_rv = PackedVector2Array()
+	_rc = PackedColorArray()
+	_xf = Transform2D.IDENTITY
+	_stack = []
+
+
+static func measure_end() -> Rect2:
+	var r := _bounds(_rv) if _rv.size() > 0 else Rect2()
+	var st: Array = _ms.pop_back()
+	_rec = st[0]
+	_rv = st[1]
+	_rc = st[2]
+	_xf = st[3]
+	_stack = st[4]
+	_rec_key = st[5]
+	return r
+
+
+## While recording a cached part: the number of vertices recorded so far,
+## to pass to fit_recorded as the start of a piece. -1 when not recording.
+static func rec_mark() -> int:
+	return _rv.size() if _rec else -1
+
+
+## Keeps the piece recorded since `start` (a hat on a portrait's head)
+## inside the circle (`center`, `radius`, current local space): first scales
+## it about `anchor` by the largest factor >= kmin that fits, then clips
+## whatever still sticks out. Only works while recording a cached part.
+static func fit_recorded(start: int, center: Vector2, radius: float, anchor: Vector2, kmin: float = 1.0) -> void:
+	if not _rec or start < 0 or start >= _rv.size():
+		return
+	var c := _xf * center
+	var r := radius * _xf.get_scale().x
+	var a := _xf * anchor
+	var n := _rv.size()
+	var far := 0.0
+	for i in range(start, n):
+		far = maxf(far, _rv[i].distance_squared_to(c))
+	if far <= r * r:
+		return
+	if kmin < 1.0:
+		var lo := kmin
+		var hi := 1.0
+		for it in 8:
+			var k := (lo + hi) / 2.0
+			var ok := true
+			for i in range(start, n):
+				if (a + (_rv[i] - a) * k).distance_squared_to(c) > r * r:
+					ok = false
+					break
+			if ok:
+				lo = k
+			else:
+				hi = k
+		if lo < 1.0:
+			for i in range(start, n):
+				_rv[i] = a + (_rv[i] - a) * lo
+	# Clip the triangles against the circle (as a 48-gon, inside it).
+	var ring := PackedVector2Array()
+	for i in 48:
+		var ang := TAU * i / 48.0
+		ring.append(c + Vector2(cos(ang), sin(ang)) * r)
+	var inner := r * cos(PI / 48.0)
+	var ov := _rv.slice(0, start)
+	var oc := _rc.slice(0, start)
+	for i in range(start, n - 2, 3):
+		var p0 := _rv[i]
+		var p1 := _rv[i + 1]
+		var p2 := _rv[i + 2]
+		if p0.distance_to(c) <= inner and p1.distance_to(c) <= inner and p2.distance_to(c) <= inner:
+			ov.append_array([p0, p1, p2])
+			oc.append_array([_rc[i], _rc[i + 1], _rc[i + 2]])
+			continue
+		var pv := PackedVector2Array([p0, p1, p2])
+		var pc := PackedColorArray([_rc[i], _rc[i + 1], _rc[i + 2]])
+		for e in 48:
+			if pv.is_empty():
+				break
+			var e0 := ring[e]
+			var e1 := ring[(e + 1) % 48]
+			var nv := PackedVector2Array()
+			var nc := PackedColorArray()
+			var m := pv.size()
+			for j in m:
+				var q0 := pv[j]
+				var q1 := pv[(j + 1) % m]
+				var d0 := (e1 - e0).cross(q0 - e0)
+				var d1 := (e1 - e0).cross(q1 - e0)
+				if d0 >= 0.0:
+					nv.append(q0)
+					nc.append(pc[j])
+				if (d0 >= 0.0) != (d1 >= 0.0):
+					var f := d0 / (d0 - d1)
+					nv.append(q0.lerp(q1, f))
+					nc.append(pc[j].lerp(pc[(j + 1) % m], f))
+			pv = nv
+			pc = nc
+		for j in range(1, pv.size() - 1):
+			ov.append_array([pv[0], pv[j], pv[j + 1]])
+			oc.append_array([pc[0], pc[j], pc[j + 1]])
+	_rv = ov
+	_rc = oc
+
+
 ## Sends the collected triangles as one draw call. Runs by itself when
 ## another canvas item starts drawing and right before the frame renders
 ## (a script's _draw runs after the `draw` signal, so that can't be used);
