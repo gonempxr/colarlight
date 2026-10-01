@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bbqm8obg6gv7i"
+
+[deps]
+
+files=["res://i18n/money.en.translation", "res://i18n/money.ru.translation", "res://i18n/money.es.translation", "res://i18n/money.zh.translation"]
+
+source_file="res://i18n/money.csv"
+dest_files=["res://i18n/money.en.translation", "res://i18n/money.ru.translation", "res://i18n/money.es.translation", "res://i18n/money.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

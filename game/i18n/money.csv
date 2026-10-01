@@ -1,0 +1,29 @@
+keys,en,ru,es,zh
+BOOST_BTN,×2 coins for an ad,×2 монет за рекламу,×2 monedas por un anuncio,看广告得双倍金币
+BOOST_TITLE,Double coins,Двойные монеты,Monedas dobles,双倍金币
+BOOST_OFFER,Watch a short ad and every coin you make counts twice for %d minutes. It's up to you!,"Посмотри короткую рекламу, и %d минут все монеты будут считаться вдвойне. Только если хочешь!",Mira un anuncio corto y cada moneda que ganes contará doble durante %d minutos. ¡Tú decides!,看一段短广告，接下来 %d 分钟你赚的每枚金币都翻倍。看不看由你决定！
+BOOST_LEFT,Your ×2 boost: %s left (up to %d h),Твой ×2: осталось %s (не больше %d ч),Tu ×2: quedan %s (hasta %d h),你的 ×2 加成：剩余 %s（最多 %d 小时）
+BOOST_FULL,Your ×2 boost is full! Come back when it runs lower.,"Твой ×2 уже полный! Загляни, когда он станет меньше.",¡Tu ×2 ya está lleno! Vuelve cuando baje.,你的 ×2 加成已满！等它变少了再来吧。
+BOOST_WATCH,Watch ad,Смотреть,Ver anuncio,看广告
+BOOST_NO,No thanks,Не надо,"No, gracias",不用了
+BOOST_GOT,×2 coins for %d minutes!,×2 монет на %d минут!,¡×2 monedas durante %d minutos!,%d 分钟内金币 ×2！
+AD_FAIL,No ad right now. Try again a bit later!,Сейчас рекламы нет. Попробуй чуть позже!,Ahora no hay anuncio. ¡Prueba un poco más tarde!,现在没有广告，稍后再试试吧！
+AD_BLOCKED,"The ad could not play. No problem, keep playing!","Реклама не запустилась. Ничего страшного, играем дальше!","El anuncio no se pudo ver. ¡No pasa nada, sigue jugando!",广告没能播放。没关系，继续玩吧！
+AD_SKIPPED,"The ad was skipped, so no boost this time.","Реклама пропущена, поэтому бонуса нет.","Saltaste el anuncio, así que esta vez no hay bonus.",广告被跳过了，这次没有加成。
+AD_TEST,Test ad,Тестовая реклама,Anuncio de prueba,测试广告
+AD_TEST_NOTE,A pretend ad for trying the boost. No real ad is shown.,"Пробная реклама, чтобы проверить бонус. Настоящей рекламы нет.",Un anuncio de mentira para probar el bonus. No se muestra ningún anuncio real.,用来试用加成的模拟广告，不会播放真实广告。
+AD_SKIP,Skip (no boost),Пропустить (без бонуса),Saltar (sin bonus),跳过（没有加成）
+RIVALS,Rivals League,Лига соперников,Liga de rivales,对手联赛
+RIVALS_SUB,"Friendly sea rivals: game characters, not real players","Морские соперники — это персонажи игры, а не настоящие игроки","Rivales del mar: personajes del juego, no jugadores reales",海洋对手：都是游戏角色，不是真实玩家
+RIVALS_HOW,"Earn ★ by upgrading, hiring, opening depths, quests, puzzles and fishing. A new league starts every Monday.","Получай ★ за улучшения, управляющих, новые глубины, задания, пазлы и рыбалку. Новая лига — каждый понедельник.","Gana ★ mejorando, contratando, abriendo profundidades, con misiones, puzles y pesca. Cada lunes empieza una liga nueva.",升级、雇用经理、开启新深度、完成任务、拼图和钓鱼都能获得 ★。每周一开始新的联赛。
+RIVALS_YOU,You,Ты,Tú,你
+RIVALS_REWARDS,Weekly pearls: 1st +%d · 2nd +%d · 3rd +%d,Жемчуг за неделю: 1-е +%d · 2-е +%d · 3-е +%d,Perlas semanales: 1.º +%d · 2.º +%d · 3.º +%d,每周珍珠：第1名 +%d · 第2名 +%d · 第3名 +%d
+RIVALS_LAST,Last week you were #%d!,На прошлой неделе ты был №%d!,¡La semana pasada quedaste #%d!,上周你是第 %d 名！
+RIVALS_CLAIM,Collect,Забрать,Recoger,领取
+RIVAL_OCTO,Admiral Octo,Адмирал Осьминог,Almirante Pulpo,章鱼上将
+RIVAL_CRAB,Captain Crab,Капитан Краб,Capitán Cangrejo,螃蟹船长
+RIVAL_WALRUS,Old Walrus,Старый Морж,Viejo Morsa,老海象
+RIVAL_SHARK,Sailor Shark,Матрос Акула,Marinero Tiburón,鲨鱼水手
+RIVAL_SEAHORSE,Lady Seahorse,Леди Конёк,Dama Caballito,海马夫人
+RIVAL_PUFFER,Professor Puffer,Профессор Фугу,Profesor Globo,河豚教授
+RIVAL_TURTLE,Granny Turtle,Бабушка Черепаха,Abuela Tortuga,海龟奶奶

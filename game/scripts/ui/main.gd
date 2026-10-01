@@ -26,6 +26,11 @@ var _side_lift: StageCard
 var _side_boat: StageCard
 var _side_plant: StageCard
 var _hint_btn: HintButton
+## Under the lightbulb: x2 for an optional ad (only where ads exist) and
+## the Rivals League trophy.
+var _boost_btn: SideButton
+var _rivals_btn: SideButton
+var _ad_overlay: AdOverlay
 ## Frames left to re-fit the PC side column (wrapped text settles a frame late).
 var _side_fit_frames := 0
 var _modal: Modal
@@ -105,6 +110,12 @@ func _ready() -> void:
 	_hint_btn.main = self
 	_hint_btn.pressed.connect(open_hint)
 	add_child(_hint_btn)
+	_boost_btn = SideButton.make("boost")
+	_boost_btn.pressed.connect(open_boost)
+	add_child(_boost_btn)
+	_rivals_btn = SideButton.make("rivals")
+	_rivals_btn.pressed.connect(open_rivals)
+	add_child(_rivals_btn)
 
 	_tutor = Tutor.new()
 	_tutor.main = self
@@ -133,6 +144,8 @@ func _ready() -> void:
 	_fx = FxLayer.new()
 	add_child(_fx)
 	_fx.arrived.connect(func(kind): _hud.bump(kind))
+	_ad_overlay = AdOverlay.new()
+	add_child(_ad_overlay)
 
 	GameState.changed.connect(_refresh)
 	GameState.milestone_reached.connect(_on_milestone)
@@ -178,6 +191,7 @@ func _announce_ready() -> void:
 func _after_title() -> void:
 	_title = null
 	_started = true
+	Platform.gameplay_start()
 	var report := GameState.take_offline_report()
 	if not report.is_empty():
 		_open_offline(report)
@@ -189,6 +203,7 @@ func _process(delta: float) -> void:
 	if _wide:
 		# The lightbulb rides below the top bar while it slides down on PC.
 		_hint_btn.position.y = 24.0 + _hud.bar_bottom()
+	_place_side_buttons()
 	_refresh_left -= delta
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
@@ -292,6 +307,7 @@ func _layout() -> void:
 		_dock.position = Vector2(0, view.y - dock_h)
 	# Lightbulb: top-left over the sky, clear of the bar and the cards.
 	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, HUD_H + 16.0)
+	_place_side_buttons()
 	_world.surface.boat_card.visible = not _wide
 	_world.surface.plant_card.visible = not _wide
 	_world.lift.wide = _wide
@@ -489,6 +505,28 @@ func celebrate(r: Dictionary, from: Vector2) -> void:
 	Sfx.play("coins")
 	Sfx.voice("yay", 1.1)
 	Settings.buzz(30)
+
+
+# --- Side buttons: x2 for an ad, Rivals League ---------------------------------------
+
+## Stacks the shown side buttons under the lightbulb.
+func _place_side_buttons() -> void:
+	var x := _hint_btn.position.x + (HintButton.SIZE - SideButton.SIZE) / 2.0
+	var y := _hint_btn.position.y + HintButton.SIZE + 10.0
+	_boost_btn.visible = _started and Platform.ads_available()
+	_rivals_btn.visible = _started and Progress.has_feature("quests")
+	for b in [_boost_btn, _rivals_btn]:
+		if b.visible:
+			b.position = Vector2(x, y)
+			y += SideButton.SIZE + 10.0
+
+
+func open_boost() -> void:
+	_modal.open(func(m): AdBoost.offer(m, self))
+
+
+func open_rivals() -> void:
+	_modal.open(func(m): RivalsView.build(m, self))
 
 
 # --- Features ------------------------------------------------------------------------

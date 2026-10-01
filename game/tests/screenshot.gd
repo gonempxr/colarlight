@@ -6,7 +6,10 @@ extends SceneTree
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
 ## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial |
 ## sheet:<stage> (e.g. sheet:lift) | second (a new second boat and plant
-## without managers: the red tab dots).
+## without managers: the red tab dots) | ads (test ad provider: the x2
+## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
+## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
+## week's pearls waiting).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -80,6 +83,21 @@ func _initialize() -> void:
 		gs.levels.merge({"boat2": 3, "plant2": 2}, true)
 		gs.managers["boat2"] = false
 		gs.managers["plant2"] = false
+	if overlay in ["ads", "boost", "adtest", "boosted"]:
+		root.get_node("Platform").set_provider("test")
+	if overlay == "boosted":
+		gs.add_ad_boost()
+		gs.add_ad_boost()
+	var rivals := root.get_node("Rivals")
+	rivals.autosave_enabled = false
+	rivals.reset()
+	rivals.pace = 900.0
+	# Thursday evening of a week, the player a bit above their usual pace.
+	rivals.time_offset = (rivals.week * 7 + 3.8) * 86400.0 + rivals.MONDAY_OFFSET - rivals._local(Time.get_unix_time_from_system()) + 0.0
+	rivals.week = rivals.current_week()
+	rivals.points = 610
+	if overlay == "rivals_reward":
+		rivals.last = {"week": rivals.week - 1, "place": 2, "pearls": 15, "claimed": false}
 	load("res://scripts/ui/main.gd").show_title = overlay == "title"
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 5:
@@ -118,6 +136,13 @@ func _initialize() -> void:
 			main._open_settings()
 		"prestige":
 			main._open_prestige()
+		"boost":
+			main.open_boost()
+		"adtest":
+			main._modal.close()
+			root.get_node("Platform").show_rewarded(func(_ok): pass)
+		"rivals", "rivals_reward":
+			main.open_rivals()
 		_:
 			if overlay.begins_with("sheet:"):
 				main._on_stage_selected(overlay.split(":")[1])
