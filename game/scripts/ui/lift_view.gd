@@ -359,6 +359,10 @@ func _place_card() -> void:
 		return
 	var at := Vector2(CARD_LEFT, boat.position.y)
 	var w := minf(World.CARD_W, room)
+	# Its name may not hold the card wider than the room (no unit tabs here).
+	card._name.custom_minimum_size.x = 40.0
+	card._bar.custom_minimum_size.x = 40.0
+	card._rate.add_theme_font_size_override("font_size", 16)
 	if card.position != at:
 		card.position = at
 	if card.custom_minimum_size.x != w:

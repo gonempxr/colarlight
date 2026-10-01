@@ -173,8 +173,15 @@ func _automation(main, gs: Node) -> void:
 			main.scroll_to_screen_point(r.get_center())
 			await create_timer(0.8).timeout
 		# A feature can unlock mid-test and pop its news over the cards.
-		if main._modal.visible:
-			main._modal.close()
+		# Queued news can follow one another: close them all.
+		for i in 6:
+			var open := false
+			for m in [main._modal, main._top]:
+				if m.visible:
+					open = true
+					m.close()
+			if not open:
+				break
 			await create_timer(0.5).timeout
 		await _click(card._manager)
 		check(gs.has_manager(unit), "tapping the empty portrait hires the %s manager" % unit)

@@ -90,6 +90,10 @@ func _initialize() -> void:
 
 
 	taps.clear()
+	# The sun moves along its arc and can pass behind the stage cards in the
+	# sky; tap it at a time of day when it is in the open.
+	_open_sky_phase(dn, 0.2, false)
+	await _frames(2)
 	var sun: Vector2 = dn.sun_pos(surface.size.x)
 	await _click(sun)
 	check(taps.is_empty(), "the sun does not tap a stage")
@@ -144,9 +148,10 @@ func _initialize() -> void:
 	check(not world.pokes.has("sun"), "a drag does not poke the sun")
 
 	# Night: tapping the moon.
-	dn.fixed_phase = 0.72
 	main._scroller.scroll_to(0.0)
 	await _frames(4)
+	_open_sky_phase(dn, 0.72, true)
+	await _frames(2)
 	await _click(dn.moon_pos(surface.size.x))
 	check(world.pokes.has("moon"), "the moon reacts")
 
@@ -207,6 +212,25 @@ func _initialize() -> void:
 	DirAccess.remove_absolute("user://test_taps_save.json")
 	DirAccess.remove_absolute("user://test_taps_progress.json")
 	quit(1 if _failures > 0 else 0)
+
+
+## Sets the day phase nearest to [param start] at which the sun (or the
+## moon) is not behind a card in the sky.
+func _open_sky_phase(dn: GDScript, start: float, night: bool) -> void:
+	var cards: Array = [surface.boat_card, surface.plant_card, world.lift.phone_card()]
+	for i in 40:
+		for sgn in [1.0, -1.0]:
+			var ph := fposmod(start + sgn * i * 0.005, 1.0)
+			dn.fixed_phase = ph
+			var p: Vector2 = dn.moon_pos(surface.size.x) if night else dn.sun_pos(surface.size.x)
+			var g: Vector2 = world.get_global_transform_with_canvas() * p
+			var covered := false
+			for c in cards:
+				if is_instance_valid(c) and c.is_visible_in_tree() and c.get_global_rect().grow(40.0).has_point(g):
+					covered = true
+			if not covered and (dn.sun_up() != night):
+				return
+	dn.fixed_phase = start
 
 
 func _frames(n: int) -> void:
