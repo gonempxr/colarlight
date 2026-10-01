@@ -309,8 +309,56 @@ static func _simplify(ring: PackedVector2Array, tol: float) -> PackedVector2Arra
 	return out if out.size() >= 3 else ring
 
 
+# --- Outline width -------------------------------------------------------------------
+#
+# Outline widths are given in the shape's local units, so a sprite drawn
+# shrunk (the phone shore, small divers) got hairlines and one drawn big (a
+# wardrobe preview) got heavy ones. The ink follows the drawing scale only
+# part of the way (canvas width = w * scale^INK_FOLLOW), in coarse steps so cached
+# shapes stay few; parts in the part cache are keyed by the same step.
+
+## 1 = outlines scale with the drawing; 0 = the same width at any scale.
+## Shrunk sprites keep more of their ink (no hairlines on phones); big
+## previews thin it a little less, so lines drawn as outlines (glasses,
+## brows) stay readable.
+const INK_FOLLOW := 0.4
+const INK_FOLLOW_UP := 0.7
+const _INK_STEPS := 4.0           # steps per doubling of the scale
+static var _ink_det := -1.0
+static var _ink_step := 0
+
+
+## Scale step of the current transform (0 = scale 1; +4 = twice as big).
+static func _scale_step(xf: Transform2D) -> int:
+	var det := absf(xf.determinant())
+	if det == _ink_det:
+		return _ink_step
+	_ink_det = det
+	_ink_step = 0 if det <= 0.0 else roundi(log(det) / log(2.0) / 2.0 * _INK_STEPS)
+	return _ink_step
+
+
+## Outline width in local units for the current transform.
+## Also notes the scale step for _aa (the soft edge) and the shape keys.
+static func _ink(w: float) -> float:
+	_st = _scale_step(_rec_xf * _xf if _rec else _xf)
+	if w <= 0.0 or _st == 0:
+		return w
+	return snappedf(w * pow(2.0, _st / _INK_STEPS * ((INK_FOLLOW if _st < 0 else INK_FOLLOW_UP) - 1.0)), 0.05)
+
+
+static var _st := 0
+
+
+## Soft edge width in local units: about one canvas pixel at any scale
+## (a fixed local width blurred big previews and vanished on small sprites).
+static func _aa() -> float:
+	return AA if _st == 0 else AA * pow(2.0, -_st / _INK_STEPS)
+
+
 static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
-	var k := hash([pts, w, shade, fringe_min])
+	w = _ink(w)
+	var k := hash([pts, w, shade, fringe_min, _st])
 	var g = _geo.get(k)
 	if g != null:
 		return g
@@ -343,7 +391,7 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 		# Small shapes (eyes, gloves, rivets, icons) go without the soft edge:
 		# at that size it can't be seen, and it is half of their triangles.
 		if not outer.is_empty() and not low_power and maxf(_bounds(pts).size.x, _bounds(pts).size.y) >= fringe_min:
-			fringe = _fringe(best, AA)
+			fringe = _fringe(best, _aa())
 	var fill := _tris(pts)
 	var shadow := PackedVector2Array()
 	var hi := PackedVector2Array()
@@ -468,6 +516,8 @@ static var _rec_stack: Array[Transform2D] = []
 ## True when the part for `key` was already cached and has been drawn. False
 ## means: draw it now, then call cache_end with the same key.
 static func cache_begin(ci: CanvasItem, key: int) -> bool:
+	# Parts drawn at another scale step have other outline widths.
+	key = hash([key, _scale_step(_rec_xf * _xf if _rec else _xf)])
 	var e = _pc.get(key)
 	if e != null:
 		e[2] = _pc_tick
@@ -502,6 +552,7 @@ static func _evict() -> void:
 
 
 static func cache_end(ci: CanvasItem, key: int) -> void:
+	key = hash([key, _scale_step(_rec_xf)])
 	if not _rec or _rec_key != key:
 		return
 	_rec = false
@@ -523,9 +574,10 @@ static var _ms: Array = []
 ## only collected (not drawn) and measure_end returns its bounds in the
 ## local space of the begin call.
 static func measure_begin() -> void:
-	_ms.append([_rec, _rv, _rc, _xf, _stack, _rec_key])
+	_ms.append([_rec, _rv, _rc, _xf, _stack, _rec_key, _rec_xf])
 	_rec = true
 	_rec_key = 0
+	_rec_xf = Transform2D.IDENTITY
 	_rv = PackedVector2Array()
 	_rc = PackedColorArray()
 	_xf = Transform2D.IDENTITY
@@ -551,6 +603,7 @@ static func measure_end() -> Rect2:
 	_xf = st[3]
 	_stack = st[4]
 	_rec_key = st[5]
+	_rec_xf = st[6]
 	return r
 
 
@@ -686,7 +739,8 @@ static func grad(ci: CanvasItem, p: PackedVector2Array, c: PackedColorArray) -> 
 
 
 static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
-	var k := hash(["c", c, r, w, shade, fringe_min])
+	w = _ink(w)
+	var k := hash(["c", c, r, w, shade, fringe_min, _st])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(circle_pts(c, r), w, shade)
@@ -695,7 +749,8 @@ static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float
 
 
 static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
-	var k := hash(["r", r, radius, w, shade, fringe_min])
+	w = _ink(w)
+	var k := hash(["r", r, radius, w, shade, fringe_min, _st])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(rrect_pts(r, radius), w, shade)
@@ -704,7 +759,8 @@ static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: floa
 
 
 static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w: float = 3.0, shade: float = 1.0, rot: float = 0.0) -> void:
-	var k := hash(["e", c, radii, w, shade, rot, fringe_min])
+	w = _ink(w)
+	var k := hash(["e", c, radii, w, shade, rot, fringe_min, _st])
 	var g = _geo.get(k)
 	if g == null:
 		g = _build(ellipse_pts(c, radii, 0, rot), w, shade)
@@ -714,11 +770,12 @@ static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w
 
 ## Filled disc with a soft edge (bubbles, dots, rivets).
 static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
-	var k := hash(["d", r])
+	_ink(0.0)
+	var k := hash(["d", r, _st])
 	var g = _geo.get(k)
 	if g == null:
 		var ring := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
-		var fr := _fringe(ring, AA)
+		var fr := _fringe(ring, _aa())
 		var v := _tris(ring)
 		g = [v, fr]
 		_geo[k] = g
@@ -736,13 +793,15 @@ static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 static func polyline(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float, closed: bool = false) -> void:
 	if pts.size() < 2:
 		return
+	_ink(0.0)
 	var g := _poly_geo(pts, color, width, closed)
 	_put(ci, g[0], g[1])
 
 
 ## Closed outline that never changes shape (cached).
 static func ring(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float) -> void:
-	var k := hash(["ring", pts, color, width])
+	_ink(0.0)
+	var k := hash(["ring", pts, color, width, _st])
 	var g = _geo.get(k)
 	if g == null:
 		g = _poly_geo(pts, color, width, true)
@@ -754,8 +813,9 @@ static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, close
 	var n := pts.size()
 	# Low power: no soft edges, the core covers about as much instead.
 	var soft := not low_power
-	var hw := width / 2.0 if soft else (width + AA) / 2.0
-	var edge := hw + AA
+	var aa := _aa()
+	var hw := width / 2.0 if soft else (width + aa) / 2.0
+	var edge := hw + aa
 	var left := PackedVector2Array()
 	var dirs := PackedVector2Array()
 	left.resize(n)
@@ -815,6 +875,7 @@ static func arc(ci: CanvasItem, c: Vector2, r: float, a0: float, a1: float, n: i
 
 ## Outlined thick stroke (ropes, stems, handles).
 static func stroke(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float, w: float = 2.5) -> void:
+	w = _ink(w)
 	if w > 0.0:
 		polyline(ci, pts, INK, width + w * 2.0)
 		disc(ci, pts[0], (width + w * 2.0) / 2.0, INK)
