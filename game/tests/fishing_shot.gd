@@ -3,7 +3,7 @@ extends SceneTree
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
 ##     -s res://tests/fishing_shot.gd -- out.png [lang] [mode]
 ## modes: sheet (every fish + silhouettes), idle, wait, bite, reel,
-##   catch:<fish id>, full, escaped, helper, land, bucket, book, shop.
+##   catch:<fish id>, reel:<fish id>:<rod level>, full, escaped, helper, land, bucket, book, shop.
 ## Uses its own save files, never the player's.
 
 func _initialize() -> void:
@@ -104,7 +104,7 @@ func _screen(mode: String, fishing: Node) -> void:
 		"land":
 			screen.debug_state("reel")
 			screen._speed = 0.0
-			screen._hits = FishData.REEL_HITS - 1
+			screen._hits = screen._need_hits - 1
 			screen._marker = screen._zone
 			screen._reel_tap()
 			var t1 := Time.get_ticks_msec()
@@ -129,6 +129,17 @@ func _screen(mode: String, fishing: Node) -> void:
 		_:
 			if mode.begins_with("catch:"):
 				screen.debug_state(mode)
+			elif mode.begins_with("reel:"):
+				# reel:<fish id>:<rod level>
+				var parts := mode.split(":")
+				fishing.rod = int(parts[2]) if parts.size() > 2 else 0
+				screen.debug_state("reel")
+				screen._fish = fishing.make_fish(FishData.rarity_of(parts[1])).merged({"id": parts[1]}, true)
+				screen._start_reel()
+				screen._hits = 2
+				screen._misses = 1
+				screen._speed = 0.0
+				screen._marker = 0.1
 	if mode == "land":
 		return
 	var t0 := Time.get_ticks_msec()

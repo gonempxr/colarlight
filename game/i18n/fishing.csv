@@ -69,3 +69,5 @@ FISH_KOI,Koi,Карп кои,Carpa koi,锦鲤
 FISH_RAINBOW,Rainbow fish,Радужная рыбка,Pez arcoíris,彩虹鱼
 FISH_GOLDEN,Golden fish,Золотая рыбка,Pez dorado,金鱼王
 FISH_STAR_WHALE,Star whale,Звёздный кит,Ballena estelar,星星鲸
+FISHING_PRESS_CAST,Press Cast!,Нажми «Закинуть»!,¡Pulsa Lanzar!,按“抛竿”！
+FISHING_ROD_STATS,"Green zone +%d%%, fish %d%% slower, %d tries","Зелёная зона +%d%%, рыбы медленнее на %d%%, попыток: %d","Zona verde +%d%%, peces %d%% más lentos, %d intentos","绿色区域 +%d%%，鱼慢 %d%%，%d 次机会"

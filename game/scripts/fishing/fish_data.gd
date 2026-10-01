@@ -28,15 +28,26 @@ const SIZE_MULT := Vector2(0.8, 1.5)
 const MIN_RATE := 1.5
 
 ## Reel mini-game: zone width (share of the bar) and marker speed (bar
-## widths per second, it bounces between the ends) per rarity.
-const REEL_ZONE: Array[float] = [0.36, 0.31, 0.26, 0.22, 0.19]
-const REEL_SPEED: Array[float] = [0.6, 0.7, 0.82, 0.95, 1.08]
+## widths per second, it bounces between the ends) per rarity. Common fish
+## are easy with any rod; rare ones want a better rod (see reel_zone(),
+## reel_speed(), reel_tries()).
+const REEL_ZONE: Array[float] = [0.30, 0.24, 0.18, 0.14, 0.12]
+const REEL_SPEED: Array[float] = [0.6, 0.8, 1.0, 1.2, 1.35]
+## Hits needed to land a fish of each rarity.
+const REEL_HITS_BY: Array[int] = [3, 3, 4, 4, 5]
 ## Extra forgiveness on each side of the zone (kids tap a little late).
-const REEL_MARGIN := 0.04
+const REEL_MARGIN := 0.03
 ## Every miss makes the zone this much wider for the same fish.
 const REEL_MERCY := 0.04
-const REEL_HITS := 3
+## Misses allowed with a new rod; a stronger line adds one every
+## ROD_TRY_EVERY rod levels.
 const REEL_MISSES := 3
+const ROD_TRY_EVERY := 3
+## What each rod level does: a wider green zone (share of the bar), a slower
+## fish (share of its speed, down to ROD_SLOW_MIN).
+const ROD_ZONE := 0.015
+const ROD_SLOW := 0.04
+const ROD_SLOW_MIN := 0.6
 ## Seconds to tap after the float dips.
 const BITE_WINDOW := 1.8
 ## Seconds the float waits before a bite.
@@ -165,11 +176,31 @@ static func size_from_roll(id: String, roll: float) -> float:
 
 
 static func reel_zone(rarity: int, rod_level: int, misses: int = 0) -> float:
-	return clampf(REEL_ZONE[clampi(rarity, 0, 4)] + 0.012 * rod_level + REEL_MERCY * misses, 0.1, 0.7)
+	return clampf(REEL_ZONE[clampi(rarity, 0, 4)] + ROD_ZONE * rod_level + REEL_MERCY * misses, 0.1, 0.7)
 
 
 static func reel_speed(rarity: int, rod_level: int) -> float:
-	return REEL_SPEED[clampi(rarity, 0, 4)] * maxf(0.6, 1.0 - 0.025 * rod_level)
+	return REEL_SPEED[clampi(rarity, 0, 4)] * rod_slow(rod_level)
+
+
+## The rod's slow-down factor for the fish (1 = none).
+static func rod_slow(rod_level: int) -> float:
+	return maxf(ROD_SLOW_MIN, 1.0 - ROD_SLOW * rod_level)
+
+
+static func reel_hits(rarity: int) -> int:
+	return REEL_HITS_BY[clampi(rarity, 0, 4)]
+
+
+## Misses allowed before the fish gets away (the hearts).
+static func reel_tries(rod_level: int) -> int:
+	return REEL_MISSES + int(maxi(0, rod_level) / float(ROD_TRY_EVERY))
+
+
+## Seconds the marker spends inside the zone (with margins) on one pass:
+## the main measure of how hard a fish is to reel.
+static func reel_window(rarity: int, rod_level: int, misses: int = 0) -> float:
+	return (reel_zone(rarity, rod_level, misses) + 2.0 * REEL_MARGIN) / reel_speed(rarity, rod_level)
 
 
 static func capacity(bucket_level: int) -> int:

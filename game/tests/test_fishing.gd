@@ -178,7 +178,20 @@ func test_upgrades() -> void:
 	check(FishData.reel_zone(4, 1) > FishData.reel_zone(4, 0) and FishData.reel_speed(4, 1) < FishData.reel_speed(4, 0), "a better rod makes reeling easier")
 	check(FishData.reel_zone(0, 0) > FishData.reel_zone(4, 0) and FishData.reel_speed(0, 0) < FishData.reel_speed(4, 0), "rarer fish are harder to reel")
 	check(FishData.reel_zone(2, 0, 2) > FishData.reel_zone(2, 0, 0), "misses widen the zone")
-	check(FishData.reel_zone(4, 0) >= 0.15, "even a legendary has a fair zone")
+	# Difficulty: a new rod is fine for common fish, rare ones want a better
+	# rod, and every rod level shows (wider zone, slower fish, more tries).
+	var top: int = FishData.max_level("rod")
+	check(FishData.reel_window(0, 0) >= 0.5, "a new rod reels common fish easily (%.2f s in the zone)" % FishData.reel_window(0, 0))
+	check(FishData.reel_window(4, 0) <= 0.2 and FishData.reel_window(4, 0) >= 0.1, "a legendary on a new rod is hard but fair (%.2f s)" % FishData.reel_window(4, 0))
+	check(FishData.reel_window(4, top) >= FishData.reel_window(4, 0) * 2.0, "the best rod makes a legendary over twice as easy (%.2f s)" % FishData.reel_window(4, top))
+	var easier := true
+	for r in 5:
+		for lv in top:
+			easier = easier and FishData.reel_window(r, lv + 1) > FishData.reel_window(r, lv)
+	check(easier, "every rod level helps with every fish")
+	check(FishData.reel_window(4, 0, 2) >= 0.18, "misses make even a legendary catchable (%.2f s)" % FishData.reel_window(4, 0, 2))
+	check(FishData.reel_tries(top) > FishData.reel_tries(0) and FishData.reel_tries(0) >= 3, "a stronger line gives more tries")
+	check(FishData.reel_hits(4) > FishData.reel_hits(0) and FishData.reel_hits(0) == 3, "big fish need more pulls")
 	while fi.buy("rod"):
 		pass
 	check(fi.is_maxed("rod") and fi.upgrade_cost("rod") < 0.0 and not fi.buy("rod"), "rod stops at max")
@@ -268,7 +281,7 @@ func test_corrupted_save() -> void:
 
 
 func test_translations() -> void:
-	var keys := ["FISHING_CAST", "FISHING_KEEP", "FISH_R_LEGENDARY", "DOCK_FISHING", "FEATURE_FISHING_DESC"]
+	var keys := ["FISHING_CAST", "FISHING_PRESS_CAST", "FISHING_ROD_STATS", "FISHING_KEEP", "FISH_R_LEGENDARY", "DOCK_FISHING", "FEATURE_FISHING_DESC"]
 	for id in FishData.ids():
 		keys.append(FishData.name_key(id))
 	for lang in ["en", "ru", "es", "zh"]:
@@ -292,22 +305,27 @@ func test_screen() -> void:
 	screen.finished.connect(func(r): done[0] = r)
 	await _frames(3)
 	check(screen.state() == "idle", "starts ready to cast")
-	screen._on_action()
+	screen._on_screen_tap()
+	await _frames(30)
+	check(screen.state() == "idle", "a tap on the water does not cast by itself")
+	var act := _find(screen, "Action") as Button
+	act.pressed.emit()
 	await _frames(2)
-	check(screen.state() == "cast", "tap casts")
+	check(screen.state() == "cast", "the Cast button casts")
 	screen._on_action()
 	check(screen.state() == "cast", "early taps do nothing bad")
 	screen._wait_len = 0.0
 	await _wait_for(screen, "bite", 3.0)
 	check(screen.state() == "bite", "the float dips")
-	screen._on_action()
-	check(screen.state() == "reel", "tap in time starts reeling")
+	screen._on_screen_tap()
+	check(screen.state() == "reel", "a tap anywhere in time starts reeling")
 	# A miss, then hits right in the zone.
 	screen._marker = fposmod(screen._zone + 0.5, 1.0)
 	screen._last_tap = -1.0
 	screen._reel_tap()
 	check(screen._misses == 1 and screen.state() == "reel", "a miss doesn't end it")
-	for i in FishData.REEL_HITS:
+	check(screen._tries == FishData.reel_tries(fi.rod) and screen._need_hits == FishData.reel_hits(FishData.rarity_of(str(screen._fish["id"]))), "the reel uses the rod's tries and the fish's pulls")
+	for i in screen._need_hits:
 		screen._marker = screen._zone
 		screen._reel_tap()
 	check(screen.state() == "land", "enough hits land the fish")

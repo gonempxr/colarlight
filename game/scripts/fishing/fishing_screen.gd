@@ -61,6 +61,8 @@ var _fish := {}
 var _wait_len := 3.0
 var _hits := 0
 var _misses := 0
+var _need_hits := 3
+var _tries := 3
 var _marker := 0.0
 var _dir := 1.0
 var _zone := 0.5
@@ -83,6 +85,8 @@ var _visit := {"coins": 0.0, "caught": 0, "sold": 0}
 var _done := false
 var _touch_input := false
 var _acc := 0.0
+## Pulses the Cast button after a tap on the water (1 -> 0).
+var _cast_nudge := 0.0
 
 var _drops: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
@@ -315,11 +319,22 @@ func _update_action() -> void:
 
 func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
-		_on_action()
+		_on_screen_tap()
 		accept_event()
 	elif _touch_input and e is InputEventScreenTouch and e.index == 0 and e.pressed:
-		_on_action()
+		_on_screen_tap()
 		accept_event()
+
+
+## A tap on the scene (not the button) pulls and reels, but only the Cast
+## button (or Space / Enter) casts: the line never flies out by accident.
+func _on_screen_tap() -> void:
+	if _state in ["idle", "away"]:
+		if not _done and not _modal.visible and _card_layer.get_child_count() == 0:
+			_say(tr("FISHING_PRESS_CAST"), Art.WHITE, 2.5)
+			_cast_nudge = 1.0
+		return
+	_on_action()
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -368,7 +383,7 @@ func _set_state(s: String) -> void:
 	_update_action()
 	match s:
 		"idle":
-			_say(tr("FISHING_TAP_CAST"), Art.WHITE, 99.0)
+			_say(tr("FISHING_PRESS_CAST"), Art.WHITE, 99.0)
 			if Fishing.is_full():
 				_say(tr("FISHING_BUCKET_FULL"), Color("ffd0d0"), 99.0)
 
@@ -391,6 +406,8 @@ func _start_reel() -> void:
 	_dir = 1.0
 	_speed = FishData.reel_speed(r, Fishing.rod)
 	_zone_w = FishData.reel_zone(r, Fishing.rod)
+	_need_hits = FishData.reel_hits(r)
+	_tries = FishData.reel_tries(Fishing.rod)
 	_new_zone()
 	_set_state("reel")
 	_say(tr("FISHING_HINT_REEL"), Color("b6f36a"), 99.0)
@@ -413,13 +430,13 @@ func _reel_tap() -> void:
 	if inside:
 		_hits += 1
 		_jerk = 1.0
-		_line_pull = float(_hits) / FishData.REEL_HITS
+		_line_pull = float(_hits) / _need_hits
 		_float_text(tr("FISHING_HIT"), p + Vector2(0, -70), Color("b6f36a"), 46)
 		_sparkle(p, 8)
 		_splash(_line_end(), 12, 1.3)
 		Sfx.play("pop", 1.0 + 0.15 * _hits)
 		Settings.buzz(25)
-		if _hits >= FishData.REEL_HITS:
+		if _hits >= _need_hits:
 			_land()
 		else:
 			_new_zone()
@@ -428,7 +445,7 @@ func _reel_tap() -> void:
 		_shake = 1.0
 		_float_text(tr("FISHING_MISS"), p + Vector2(0, -70), Color("ffb0b0"), 42)
 		Sfx.play("deny", 1.1)
-		if _misses >= FishData.REEL_MISSES:
+		if _misses >= _tries:
 			_escape(tr("FISHING_ESCAPED"))
 		else:
 			_zone_w = FishData.reel_zone(FishData.rarity_of(str(_fish["id"])), Fishing.rod, _misses)
@@ -518,7 +535,8 @@ func _process(delta: float) -> void:
 	if _acc >= (1.0 / 20.0 if Art.low_power else 1.0 / 30.0):
 		_acc = 0.0
 		_bg.queue_redraw()
-	_action.scale = Vector2.ONE * (1.0 + (0.05 * absf(sin(_t * 8.0)) if _state == "bite" else (0.025 * sin(_t * 3.0) if _state in ["idle", "away"] else 0.0)))
+	_cast_nudge = maxf(0.0, _cast_nudge - delta * 1.2)
+	_action.scale = Vector2.ONE * (1.0 + (0.05 * absf(sin(_t * 8.0)) if _state == "bite" else (0.025 * sin(_t * 3.0) + 0.08 * _cast_nudge * absf(sin(_t * 12.0)) if _state in ["idle", "away"] else 0.0)))
 
 
 func _say(text: String, col: Color, sec: float) -> void:
@@ -962,6 +980,10 @@ func _build_shop(m: Modal) -> void:
 			_:
 				desc = tr("FISHING_HELPER_HIRE_DESC") if lv == 0 else tr("FISHING_HELPER_DESC") % roundi(Fishing.helper_interval())
 		v.add_child(Views.label(desc, 18, Art.INK_SOFT))
+		if kind == "rod":
+			# What the rod does right now, so an upgrade shows its effect.
+			var stats := tr("FISHING_ROD_STATS") % [roundi(FishData.ROD_ZONE * lv * 100.0), roundi((1.0 - FishData.rod_slow(lv)) * 100.0), FishData.reel_tries(lv)]
+			v.add_child(Views.label(stats, 18, Color("2f8f3a"), true))
 		var b := Button.new()
 		b.name = "Buy" + kind.capitalize()
 		b.focus_mode = Control.FOCUS_NONE
@@ -1026,7 +1048,7 @@ func debug_state(s: String) -> void:
 		"reel":
 			_start_reel()
 			_hits = 1
-			_line_pull = 1.0 / FishData.REEL_HITS
+			_line_pull = 1.0 / _need_hits
 			_marker = clampf(_zone - _zone_w * 0.9, 0.05, 0.95)
 			_speed = 0.0
 		"escaped":
@@ -1409,15 +1431,23 @@ func _draw_reel(ci: CanvasItem) -> void:
 	FishArt.draw(ci, "sardine" if _fish.is_empty() else str(_fish["id"]), _t * 2.0, _dir, inside, true)
 	Art.pop(ci)
 	# Hits so far.
-	for i in FishData.REEL_HITS:
-		var p := Vector2(bar.get_center().x + (i - (FishData.REEL_HITS - 1) / 2.0) * 44.0, box.position.y - 4.0)
+	# Centred, but moved left (and closer) to keep clear of the hearts.
+	var step := 44.0
+	var hearts_l := box.end.x - 34.0 - (_tries - 1) * 32.0 - 20.0
+	if (_need_hits - 1) * step + 40.0 > hearts_l - box.position.x - 24.0:
+		step = 38.0
+	var sx := bar.get_center().x - (_need_hits - 1) / 2.0 * step
+	sx -= maxf(0.0, sx + (_need_hits - 1) * step + 20.0 - hearts_l)
+	sx = maxf(sx, box.position.x + 24.0)
+	for i in _need_hits:
+		var p := Vector2(sx + i * step, box.position.y - 4.0)
 		Art.t_circle(ci, p, 16.0, Art.GOLD if i < _hits else Color("c9c3d9"), 3.0, 0.4)
 		if i < _hits:
 			Art.flat(ci, Art.star_pts(p, 10.0, 4.5, 5), Color("fff3b0"))
 	# Tries left: small hearts on the frame, top right.
-	for i in FishData.REEL_MISSES:
+	for i in _tries:
 		var hp := Vector2(box.end.x - 34.0 - i * 32.0, box.position.y - 2.0)
-		var on := i < FishData.REEL_MISSES - _misses
+		var on := i < _tries - _misses
 		_heart(ci, hp, on)
 
 
