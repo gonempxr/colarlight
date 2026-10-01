@@ -298,13 +298,7 @@ func _fish_pos(f: Dictionary, w: float) -> Vector2:
 
 ## A tap in the water: the nearest fish darts away and blows bubbles.
 func poke_fish(p: Vector2) -> bool:
-	var best := -1
-	var best_d := 46.0
-	for i in _fish.size():
-		var d := _fish_pos(_fish[i], size.x).distance_to(p)
-		if d < best_d:
-			best_d = d
-			best = i
+	var best := _fish_at(p)
 	if best < 0:
 		return false
 	var f: Dictionary = _fish[best]
@@ -317,6 +311,22 @@ func poke_fish(p: Vector2) -> bool:
 	Sfx.play("dive", 1.8)
 	hurry()
 	return true
+
+
+## True when a tap at `p` would poke a fish.
+func is_fish_at(p: Vector2) -> bool:
+	return _fish_at(p) >= 0
+
+
+func _fish_at(p: Vector2) -> int:
+	var best := -1
+	var best_d := 46.0
+	for i in _fish.size():
+		var d := _fish_pos(_fish[i], size.x).distance_to(p)
+		if d < best_d:
+			best_d = d
+			best = i
+	return best
 
 
 ## At night the dive sites dim a little (their cards stay bright).

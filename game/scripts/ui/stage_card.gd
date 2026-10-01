@@ -21,7 +21,7 @@ var _name_fs := 0
 var _level: Label
 var _rate: Label
 var _bar: ProgressBar
-var _upgrade: Button
+var _upgrade: PriceButton
 var _manager: ManagerBadge
 var _tag: Label
 var _head: PanelContainer
@@ -158,11 +158,9 @@ func _ready() -> void:
 	else:
 		lv.add_child(_rate)
 
-	_upgrade = Button.new()
+	_upgrade = PriceButton.new()
 	_upgrade.custom_minimum_size = Vector2(0, 62)
 	_upgrade.add_theme_font_size_override("font_size", 22 if narrow else 24)
-	_upgrade.icon = Icons.get_icon("arrow", 26 if narrow else 30)
-	_upgrade.expand_icon = false
 	_upgrade.pressed.connect(_on_upgrade)
 	box.add_child(_upgrade)
 
@@ -315,7 +313,7 @@ func refresh() -> void:
 		_level.text = tr("BUY_%s" % key.to_upper())
 		_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(Balance.output(data["value"], 1) * gs.income_mult())
 		var price: float = gs.unlock_cost(key)
-		_upgrade.text = tr("BUY_FOR") % NumFormat.short(price)
+		_upgrade.set_price_fmt(tr("BUY_FOR"), NumFormat.short(price))
 		_upgrade.theme_type_variation = _btn(&"GoldButton" if gs.coins >= price else &"DarkButton")
 		_show_tag(false)
 		return
@@ -332,7 +330,7 @@ func refresh() -> void:
 	_bar.value = float(level - prev) / float(maxi(1, next - prev))
 	_rate.text = "+" + tr("PER_SEC") % NumFormat.rate(gs.rate(key))
 	var cost: float = gs.upgrade_cost(key)
-	_upgrade.text = NumFormat.short(cost)
+	_upgrade.set_price("", NumFormat.short(cost), "coin", "arrow")
 	_upgrade.theme_type_variation = _btn(&"" if gs.coins >= cost else &"DarkButton")
 	var group := base if base in ["boat", "plant", "lift"] else "dives"
 	_show_tag(bottleneck_cached() == group and next_depth_cached() != "d1")

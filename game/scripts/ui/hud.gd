@@ -1,6 +1,6 @@
 class_name Hud
 extends Control
-## Top bar: the player's avatar (opens the look editor), coins and income
+## Top bar: the player's avatar (opens the profile), coins and income
 ## in a pill with the rush meter, Dive Deeper (prestige) and settings.
 ## Phone: one bar across the top with the pill in the middle.
 ## PC ("notch"): only the coin pill stays, hanging from the top edge in the
@@ -64,7 +64,7 @@ func _ready() -> void:
 	_avatar = Control.new()
 	_avatar.custom_minimum_size = Vector2(80, 80)
 	_avatar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_avatar.tooltip_text = tr("AVATAR")
+	_avatar.tooltip_text = tr("PROFILE")
 	_avatar.draw.connect(_draw_avatar)
 	_avatar.gui_input.connect(func(e):
 		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed:
@@ -280,6 +280,11 @@ func _draw_avatar() -> void:
 	Art.flat(_avatar, Art.rrect_pts(Rect2(-7, -2.5, 12, 5), 1), Art.WHITE)
 	Art.flat(_avatar, PackedVector2Array([Vector2(5, -2.5), Vector2(9, 0), Vector2(5, 2.5)]), Art.WHITE)
 	Art.pop(_avatar)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _avatar:
+		_avatar.tooltip_text = tr("PROFILE")
 
 
 func _process(delta: float) -> void:

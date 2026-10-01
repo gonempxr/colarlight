@@ -23,6 +23,42 @@ const ARTIFACTS: Array[Dictionary] = [
 	{"id": "sun_medallion", "bonus": "all", "per_level": 0.06},
 ]
 const ARTIFACT_MAX := 5
+
+# --- Puzzle rewards -------------------------------------------------------------
+## Puzzle coins are minutes of the player's income (so a win is worth the
+## same at any stage of the economy) times a factor that grows with the
+## puzzle level being played: the first puzzle levels pay a little (even late
+## in the game), new deeper levels pay more. Factor: PUZZLE_FACTOR_FIRST at
+## level 1, +PUZZLE_FACTOR_STEP per level, at most PUZZLE_FACTOR_MAX.
+const PUZZLE_FACTOR_FIRST := 0.4
+const PUZZLE_FACTOR_STEP := 0.06
+const PUZZLE_FACTOR_MAX := 2.0
+## A win: (PUZZLE_WIN_MIN + PUZZLE_STAR_MIN x stars) minutes x factor.
+const PUZZLE_WIN_MIN := 1.5
+const PUZZLE_STAR_MIN := 0.5
+## "Collect what you got": (PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN x pieces) x factor.
+const PUZZLE_LOSS_MIN := 0.5
+const PUZZLE_PIECE_MIN := 0.25
+## A win gives 2 + stars pearls, plus one more every PUZZLE_PEARL_EVERY
+## puzzle levels (at most PUZZLE_PEARL_MAX_EXTRA more).
+const PUZZLE_PEARL_EVERY := 10
+const PUZZLE_PEARL_MAX_EXTRA := 3
+
+
+static func puzzle_factor(level: int) -> float:
+	return minf(PUZZLE_FACTOR_MAX, PUZZLE_FACTOR_FIRST + PUZZLE_FACTOR_STEP * maxi(0, level - 1))
+
+
+## Minutes of income a finished puzzle level pays.
+static func puzzle_minutes(level: int, won: bool, stars: int, pieces: int) -> float:
+	var base := PUZZLE_WIN_MIN + PUZZLE_STAR_MIN * stars if won else PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN * pieces
+	return base * puzzle_factor(level)
+
+
+static func puzzle_pearls(level: int, won: bool, stars: int, pieces: int) -> int:
+	if not won:
+		return 1 if pieces > 0 else 0
+	return 2 + stars + mini(PUZZLE_PEARL_MAX_EXTRA, maxi(0, level - 1) / PUZZLE_PEARL_EVERY)
 ## Pieces needed to reach level 1, 2, ... 5.
 const PIECES := [3, 4, 5, 6, 8]
 
@@ -75,11 +111,13 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "boat_pirate", "slot": "boat", "art": "pirate", "unlock": "pearls", "price": 200, "rarity": 2},
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
 	# Diver suits
-	{"id": "suit_classic", "slot": "suit", "art": "classic", "unlock": "free", "rarity": 0},
-	{"id": "suit_mint", "slot": "suit", "art": "mint", "unlock": "pearls", "price": 50, "rarity": 0},
-	{"id": "suit_bubblegum", "slot": "suit", "art": "bubblegum", "unlock": "pearls", "price": 80, "rarity": 1},
-	{"id": "suit_sunset", "slot": "suit", "art": "sunset", "unlock": "pearls", "price": 120, "rarity": 1},
-	{"id": "suit_galaxy", "slot": "suit", "art": "galaxy", "unlock": "goal", "goal": "puzzle_10", "rarity": 2},
+	# dives: the worn suit makes every diver bring up this much more ore
+	# (a share, on top of artifacts). Pearls or goals only, never real money.
+	{"id": "suit_classic", "slot": "suit", "art": "classic", "unlock": "free", "rarity": 0, "dives": 0.0},
+	{"id": "suit_mint", "slot": "suit", "art": "mint", "unlock": "pearls", "price": 50, "rarity": 0, "dives": 0.03},
+	{"id": "suit_bubblegum", "slot": "suit", "art": "bubblegum", "unlock": "pearls", "price": 80, "rarity": 1, "dives": 0.05},
+	{"id": "suit_sunset", "slot": "suit", "art": "sunset", "unlock": "pearls", "price": 120, "rarity": 1, "dives": 0.08},
+	{"id": "suit_galaxy", "slot": "suit", "art": "galaxy", "unlock": "goal", "goal": "puzzle_10", "rarity": 2, "dives": 0.12},
 ]
 const SLOTS: Array[String] = ["pet", "hat", "boat", "suit"]
 const RARITY_COLORS: Array[Color] = [Color("7fc8f8"), Color("5cd05f"), Color("b07cff"), Color("ffbf2e")]
@@ -100,6 +138,11 @@ const SUIT_PAINTS := {
 	"sunset": [Color("ff9a3c"), Color("ff6f61")],
 	"galaxy": [Color("5a3fd6"), Color("8f6cff")],
 }
+
+
+## Extra ore share a suit gives every diver (0 for none).
+static func suit_bonus(id: String) -> float:
+	return float(cosmetic(id).get("dives", 0.0))
 
 
 static func cosmetic(id: String) -> Dictionary:

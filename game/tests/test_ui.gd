@@ -44,6 +44,9 @@ func _initialize() -> void:
 	await test_language_switch()
 	await test_new_ocean()
 	await test_art_fits()
+	await test_volume_slider_drag()
+	await test_language_everywhere()
+	await test_profile_vs_wardrobe()
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute("user://test_ui_save.json")
 	quit(1 if _failures > 0 else 0)
@@ -196,6 +199,11 @@ func test_wheel_scroll() -> void:
 	ev.position = _win(_center(main._scroller))
 	ev.global_position = ev.position
 	root.push_input(ev)
+	# A real wheel notch is a press and a release (a press left alone keeps
+	# the viewport's mouse focus, and later clicks went nowhere).
+	var rel := ev.duplicate()
+	rel.pressed = false
+	root.push_input(rel)
 	await _frames(2)
 	check(main._scroller.scroll > 0.0, "mouse wheel scrolls the ocean")
 
@@ -285,3 +293,219 @@ func test_art_fits() -> void:
 			outside += 1
 			print("  outside its card: ", c["id"], " ", b)
 	check(outside == 0, "wardrobe pets, boats and suits fit inside their cards")
+
+
+func _find_all(n: Node, cls: String, out: Array) -> Array:
+	for c in n.get_children(true):
+		if c.is_class(cls):
+			out.append(c)
+		_find_all(c, cls, out)
+	return out
+
+
+## Closes every dialog, feature news on the top layer too.
+func _close_dialogs() -> void:
+	main._news.clear()
+	main._top.close()
+	main._modal.close()
+	await create_timer(0.3).timeout
+	await _frames(2)
+
+
+func _wait_modal() -> void:
+	# The dialog pops in (a short scale tween) before its rects are final.
+	await create_timer(0.5).timeout
+	await _frames(2)
+
+
+## Drags the slider's knob with real mouse events (press, ten moves, release)
+## from where it is to `to` (0..1 along the track).
+func _drag_slider(s: HSlider, to: float) -> void:
+	var r := s.get_global_rect()
+	var a := _win(Vector2(r.position.x + r.size.x * float(s.ratio), r.get_center().y))
+	var b := _win(Vector2(r.position.x + r.size.x * to, r.get_center().y))
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.button_mask = MOUSE_BUTTON_MASK_LEFT
+	down.position = a
+	down.global_position = a
+	root.push_input(down)
+	await _frames(1)
+	for i in 10:
+		var m := InputEventMouseMotion.new()
+		m.position = a.lerp(b, (i + 1) / 10.0)
+		m.global_position = m.position
+		m.relative = (b - a) / 10.0
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		root.push_input(m)
+		await _frames(1)
+	var up := down.duplicate()
+	up.pressed = false
+	up.button_mask = 0
+	up.position = b
+	up.global_position = b
+	root.push_input(up)
+	await _frames(2)
+
+
+## Tester report: the music and sound sliders could not be dragged with the
+## mouse (every step rebuilt the dialog and dropped the drag).
+func test_volume_slider_drag() -> void:
+	var st := root.get_node("Settings")
+	var music_was: float = st.music_volume
+	var sfx_was: float = st.sfx_volume
+	st.set_value("music_volume", 0.8)
+	st.set_value("sfx_volume", 0.8)
+	await _close_dialogs()
+	main._open_settings()
+	await _wait_modal()
+	var sliders := _find_all(main._modal, "HSlider", [])
+	check(sliders.size() >= 2, "settings has the music and sound sliders")
+	if sliders.size() < 2:
+		return
+	var music: HSlider = sliders[0]
+	await _drag_slider(music, 0.2)
+	check(is_instance_valid(music) and music.is_inside_tree(), "the music slider survives a drag")
+	check(absf(float(st.music_volume) - 0.2) < 0.08, "mouse drag sets the music volume (%.2f)" % st.music_volume)
+	sliders = _find_all(main._modal, "HSlider", [])
+	var sound: HSlider = sliders[1]
+	await _drag_slider(sound, 0.45)
+	check(is_instance_valid(sound) and absf(float(st.sfx_volume) - 0.45) < 0.08, "mouse drag sets the sound volume (%.2f)" % st.sfx_volume)
+	# A finger: touch events (the engine turns them into mouse ones).
+	sliders = _find_all(main._modal, "HSlider", [])
+	var r: Rect2 = sliders[0].get_global_rect()
+	var a := _win(Vector2(r.position.x + r.size.x * float(sliders[0].ratio), r.get_center().y))
+	var b := _win(Vector2(r.position.x + r.size.x * 0.7, r.get_center().y))
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	touch.position = a
+	Input.parse_input_event(touch)
+	await _frames(1)
+	for i in 8:
+		var d := InputEventScreenDrag.new()
+		d.position = a.lerp(b, (i + 1) / 8.0)
+		d.relative = (b - a) / 8.0
+		Input.parse_input_event(d)
+		await _frames(1)
+	touch = touch.duplicate()
+	touch.pressed = false
+	touch.position = b
+	Input.parse_input_event(touch)
+	await _frames(2)
+	check(absf(float(st.music_volume) - 0.7) < 0.08, "touch drag sets the music volume (%.2f)" % st.music_volume)
+	# A toggle still redraws the dialog (On/Off follows at once).
+	main._modal.close()
+	await create_timer(0.3).timeout
+	st.set_value("music_volume", music_was)
+	st.set_value("sfx_volume", sfx_was)
+
+
+## Every English text a translation table has (and that differs in Russian),
+## as whole-text patterns ("Lv. %d" matches "Lv. 12").
+func _english_patterns() -> Array:
+	var out := []
+	for f in ["strings", "puzzle", "fishing", "expansion", "lift"]:
+		var file := FileAccess.open("res://i18n/%s.csv" % f, FileAccess.READ)
+		if file == null:
+			continue
+		var head := file.get_csv_line()
+		var en := head.find("en")
+		var ru := head.find("ru")
+		while not file.eof_reached():
+			var row := file.get_csv_line()
+			if row.size() <= maxi(en, ru) or row[en] == row[ru]:
+				continue
+			var letters := 0
+			var bare: String = row[en].replace("%s", "").replace("%d", "")
+			for ch in bare:
+				if ch.to_lower() != ch.to_upper():
+					letters += 1
+			if letters < 3:
+				continue
+			var esc := ""
+			for ch: String in row[en]:
+				esc += ("\\" + ch) if ch in "\\.^$|?*+()[]{}" else ch
+			var re := RegEx.create_from_string("^" + esc.replace("%s", ".*").replace("%d", "-?\\d+").replace("%%", "%") + "$")
+			if re:
+				out.append(re)
+	return out
+
+
+func _visible_texts(n: Node, out: Array) -> Array:
+	for c in n.get_children(true):
+		if c is CanvasItem and not c.visible:
+			continue
+		if c is Label and c.text != "":
+			out.append(c.text)
+		elif c is Button and c.text != "":
+			out.append(c.text)
+		_visible_texts(c, out)
+	return out
+
+
+## Tester report: after a language change the dock kept its English labels
+## for a while. Dock, cards, panel, top bar and the open dialog follow at once.
+func test_language_everywhere() -> void:
+	var st := root.get_node("Settings")
+	var progress := root.get_node("Progress")
+	var original: String = st.language
+	for f in ["daily", "quests", "puzzle", "museum", "shop", "fishing"]:
+		progress.features[f] = true
+	progress.changed.emit()
+	main._refresh()
+	await _close_dialogs()
+	main._toast.visible = false
+	main._on_stage_selected("d0")
+	main._open_settings()
+	st.set_language("en")
+	await _wait_modal()
+	var dock_ids := ["daily", "quests", "puzzle", "museum", "shop", "fishing"]
+	check(main._dock.button("shop").text == "Wardrobe", "dock in English first")
+	st.set_language("ru")
+	# Same frame: the dock already says it in Russian.
+	var same := true
+	for it in main._dock.ITEMS:
+		same = same and main._dock.button(it[0]).text == TranslationServer.translate(it[2])
+	check(same and main._dock.button("shop").text == "Гардероб", "dock labels change in the same frame (%s)" % main._dock.button("shop").text)
+	await _frames(1)
+	var english := _english_patterns()
+	var stale := []
+	for t in _visible_texts(main, []):
+		for re: RegEx in english:
+			if re.search(t):
+				stale.append(t)
+				break
+	check(stale.is_empty(), "no English left on screen after switching to Russian: %s" % [stale])
+	check(main._panel._title.text.begins_with("Ракушечная отмель"), "the upgrade panel follows (%s)" % main._panel._title.text)
+	var settings_title: Label = _find_all(main._modal, "Label", [])[0]
+	check(settings_title.text == "Настройки", "the open settings dialog follows (%s)" % settings_title.text)
+	check(main._panel._buy.full_text.begins_with("Улучшить"), "the upgrade button follows (%s)" % main._panel._buy.full_text)
+	main._modal.close()
+	main._close_sheet()
+	await create_timer(0.4).timeout
+	st.set_language(original)
+	await _frames(2)
+
+
+## Tester report: the top-left portrait and the Wardrobe button opened the
+## same screen. Now the portrait opens the profile, the button the wardrobe.
+func test_profile_vs_wardrobe() -> void:
+	await _close_dialogs()
+	var titles := func() -> Array:
+		var out := []
+		for l in _find_all(main._modal, "Label", []):
+			out.append(l.text)
+		return out
+	await _click(_center(main._hud._avatar))
+	await _wait_modal()
+	var a: Array = titles.call()
+	check(main._modal.visible and TranslationServer.translate("PROFILE") in a, "the portrait opens the profile")
+	check(not TranslationServer.translate("TAB_PETS") in _visible_texts(main._modal, []), "the profile is not the wardrobe")
+	await _close_dialogs()
+	await _click(_center(main._dock.button("shop")))
+	await _wait_modal()
+	var b: Array = titles.call()
+	check(main._modal.visible and TranslationServer.translate("WARDROBE") in b and not TranslationServer.translate("PROFILE") in b, "the dock button opens the wardrobe")
+	main._modal.close()
+	await create_timer(0.3).timeout

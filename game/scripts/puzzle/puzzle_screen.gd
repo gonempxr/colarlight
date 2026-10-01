@@ -76,6 +76,9 @@ var _touch_input := false
 var _idle := 0.0
 var _hint: Array = []
 var _intro := 3.5
+## Seconds the "bring the pieces down" tip still shows at the level start.
+var _tip := 0.0
+const TIP_SEC := 6.0
 var _shake := 0.0
 var _shown_moves := 0
 var _shown_frags := 0
@@ -155,6 +158,7 @@ func setup(lv: Dictionary, rewards: Callable = Callable()) -> void:
 	_ended = false
 	_warned_few = false
 	_intro = 3.5
+	_tip = TIP_SEC
 	_queue.clear()
 	_step = {}
 	_anim = ""
@@ -526,6 +530,9 @@ func _process(delta: float) -> void:
 	_moves_bump = maxf(0.0, _moves_bump - delta * 3.0)
 	_goal_bump = maxf(0.0, _goal_bump - delta * 2.5)
 	_intro = maxf(0.0, _intro - delta)
+	if _tip > 0.0:
+		_tip = maxf(0.0, _tip - delta)
+		_fx.set_meta("dirty", true)
 	_flash = maxf(0.0, _flash - delta * 2.2)
 	if not is_busy() and not _ended and model.state == Match3.PLAYING and _panel == null:
 		_idle += delta
@@ -755,7 +762,19 @@ func _draw_frame() -> void:
 	# Bottom row glows gold: that's where the pieces go.
 	var goal_row := Rect2(r.position + Vector2(0, (model.height - 1) * tile), Vector2(r.size.x, tile))
 	Art.grad(_frame, PackedVector2Array([goal_row.position, Vector2(goal_row.end.x, goal_row.position.y), goal_row.end, Vector2(goal_row.position.x, goal_row.end.y)]),
-			PackedColorArray([Color(1, 0.85, 0.3, 0.0), Color(1, 0.85, 0.3, 0.0), Color(1, 0.85, 0.3, 0.35), Color(1, 0.85, 0.3, 0.35)]))
+			PackedColorArray([Color(1, 0.85, 0.3, 0.05), Color(1, 0.85, 0.3, 0.05), Color(1, 0.85, 0.3, 0.5), Color(1, 0.85, 0.3, 0.5)]))
+	# The goal line: a gold bar along the bottom of the board and a gold tag
+	# with arrows hanging under it, so it is clear the pieces go down there.
+	var gl := Rect2(r.position.x + 4.0, r.end.y - 5.0, r.size.x - 8.0, 6.0)
+	Art.t_rect(_frame, gl, 3.0, Art.GOLD, 2.5, 0.0)
+	var tag_w := minf(r.size.x * 0.42, tile * 2.6)
+	var tag := Rect2(r.get_center().x - tag_w / 2.0, outer.end.y - pad * 0.6, tag_w, pad * 0.6 + tile * 0.42)
+	Art.t_rect(_frame, Rect2(tag.position + Vector2(0, 5), tag.size), tag.size.y * 0.4, Art.shade_of(Art.GOLD, 0.35), 3.0, 0.0)
+	Art.t_rect(_frame, tag, tag.size.y * 0.4, Art.GOLD, 3.0, 0.5)
+	for k in 3:
+		Art.push(_frame, Vector2(tag.get_center().x + (k - 1) * tag_w * 0.3, tag.get_center().y + tag.size.y * 0.06), PI, Vector2.ONE * (tag.size.y / 44.0))
+		Art.toon(_frame, Art.arrow_pts(13.0), Art.WHITE, 2.5, 0.0)
+		Art.pop(_frame)
 	# Corner decorations.
 	Art.push(_frame, outer.position + Vector2(pad * 0.2, pad * 1.4), -0.4, Vector2.ONE * (tile / 70.0))
 	Props.coral(_frame, Color("ff6f7f"), 2, 0.0)
@@ -917,6 +936,8 @@ func _draw_top() -> void:
 func _draw_fx() -> void:
 	var ci := _fx
 	var br := Rect2(_board.position, _board_rect.size)
+	if _tip > 0.0 and not _ended:
+		_draw_tip(ci)
 	if _flash > 0.0:
 		Art.flat_now(ci, Art.rrect_pts(br.grow(8.0), 18.0), Color(1, 1, 0.9, _flash * 0.6))
 	for b in _beams:
@@ -1021,6 +1042,32 @@ func _draw_fx() -> void:
 		Art.push(ci, tx["p"] + Vector2(0, -40.0 * f), sin(f * 7.0) * 0.04, Vector2.ONE * maxf(sc, 0.01))
 		Art.text(ci, Vector2(0, tx["size"] * 0.35), tx["s"], tx["size"], tx["c"], 12)
 		Art.pop(ci)
+
+
+## The level-start tip above the board: bring the pieces down to the gold
+## line. Fades in and out (alpha in steps, so the shape cache stays small).
+func _draw_tip(ci: CanvasItem) -> void:
+	var a := snappedf(clampf(minf(_tip, TIP_SEC - _tip) * 3.0, 0.0, 1.0), 0.1)
+	if a <= 0.0:
+		return
+	var v := _fx.size
+	var text := tr("PZ_GOAL_HINT")
+	var font := UiTheme.heavy_font()
+	var fs := 30
+	var max_w := minf(v.x - 40.0, 760.0) - 90.0
+	while fs > 16 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_w:
+		fs -= 2
+	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var top := _top_rect.end.y + 34.0
+	var bottom := _board_rect.position.y - maxf(10.0, tile * 0.2) - 6.0
+	var y := maxf(top, (top + bottom) / 2.0)
+	var pill := Rect2(v.x / 2.0 - (tw + 80.0) / 2.0, y - 26.0, tw + 80.0, 52.0)
+	Art.t_rect(ci, Rect2(pill.position + Vector2(0, 5), pill.size), 26.0, Color(Art.shade_of(Art.CREAM_DARK, 0.3), a), 3.5, 0.0)
+	Art.t_rect(ci, pill, 26.0, Color(Art.CREAM, a), 3.5, 0.0)
+	Art.push(ci, Vector2(pill.position.x + 34.0, y + 1.0), PI, Vector2.ONE * 0.9)
+	Art.toon(ci, Art.arrow_pts(14.0), Color(Art.GOLD, a), 2.5, 0.0)
+	Art.pop(ci)
+	Art.text(ci, Vector2(pill.position.x + 56.0 + tw / 2.0, y + fs * 0.36), text, fs, Color(Art.INK, a), 0)
 
 
 func _band(ci: CanvasItem, a: Vector2, b: Vector2, width: float, col: Color) -> void:

@@ -133,6 +133,25 @@ func test_artifacts_and_puzzle() -> void:
 	check(int(pr.stats.get("puzzles_won", 0)) == need, "wins are counted")
 	var bad: Dictionary = pr.puzzle_reward({"won": true, "stars": 1, "artifact": "nonsense"})
 	check(bad["piece"] == Content.ARTIFACTS[1]["id"], "unknown artifact falls back to the target")
+	# Coins follow the puzzle level too: late in the game the first puzzle
+	# level pays a little, new deeper levels pay more; every win still pays
+	# at least half a minute of income, more stars pay more.
+	_fresh()
+	gs.levels.merge({"d0": 300, "d1": 300, "d2": 300, "lift": 400, "boat": 400, "plant": 400}, true)
+	for k in ["d0", "d1", "d2", "lift", "boat", "plant"]:
+		gs.managers[k] = true
+	var inc: float = gs.income_rate() * 60.0
+	pr.puzzle_level = 1
+	var low: float = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})["coins"]
+	pr.puzzle_level = 30
+	var high: Dictionary = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})
+	pr.puzzle_level = 30
+	var high1: float = pr.puzzle_reward({"won": true, "stars": 1, "artifact": first})["coins"]
+	check(low <= inc * 1.25 and low >= inc * 0.5, "late game, puzzle level 1 pays about a minute of income (%.2f min)" % (low / inc))
+	check(float(high["coins"]) >= low * 4.0, "a deep puzzle level pays much more than level 1 (%.1fx)" % (float(high["coins"]) / low))
+	check(float(high["coins"]) > high1, "more stars pay more")
+	check(int(high["pearls"]) > 5, "deep puzzle levels give extra pearls (%d)" % int(high["pearls"]))
+	check(Content.puzzle_factor(1000) <= Content.PUZZLE_FACTOR_MAX, "the level factor is capped")
 	# Max level stops at 5.
 	pr.artifacts[first]["level"] = Content.ARTIFACT_MAX
 	check(pr.add_piece(first) == 0 and pr.artifacts[first]["level"] == Content.ARTIFACT_MAX, "artifacts stop at the max level")
@@ -176,6 +195,23 @@ func test_wardrobe() -> void:
 	pr._check_goals()
 	check(pr.is_owned("pet_turtle"), "the first puzzle win unlocks the turtle")
 	check(pr.equipped_art("boat") == "classic", "equipped art name")
+	# Diver suits: a small real bonus for every diver while worn, bigger for
+	# the pricier and rarer suits; the free one has none.
+	var base: float = gs.rate("d0")
+	check(pr.suit_bonus() == 0.0, "the classic suit gives no bonus")
+	check(pr.buy_item("suit_sunset"), "a suit can be bought with pearls")
+	check(is_equal_approx(gs.rate("d0"), base * 1.08), "the sunset suit brings +8%% ore (%.3f)" % (gs.rate("d0") / base))
+	check(is_equal_approx(gs.rate("boat"), Balance.output(Balance.BOAT["value"], gs.get_level("boat")) * gs.income_mult()), "suits only help the divers")
+	pr.equip("suit_classic")
+	check(is_equal_approx(gs.rate("d0"), base), "taking it off removes the bonus")
+	var prev := -1.0
+	var grows := true
+	for c in Content.COSMETICS:
+		if c["slot"] == "suit":
+			var sb := Content.suit_bonus(c["id"])
+			grows = grows and sb >= prev and sb <= 0.15
+			prev = sb
+	check(grows, "suit bonuses grow with price and rarity and stay modest (<= 15%)")
 
 
 func test_features() -> void:
@@ -196,7 +232,8 @@ func test_save_roundtrip() -> void:
 	pr.owned["pet_seal"] = true
 	pr.equipped["pet"] = "pet_seal"
 	pr.features["quests"] = true
-	pr.quests = [{"kind": "tap", "key": "", "goal": 10.0, "count": 4.0, "pearls": 2}]
+	pr.quests = [{"kind": "tap", "key": "", "goal": 10.0, "count": 4.0, "pearls": 2},
+			{"kind": "upgrade_stage", "key": "d25", "goal": 3.0, "count": 1.0, "pearls": 2}]
 	pr.daily_day = 3
 	pr.daily_last = "2026-01-01"
 	pr.puzzle_level = 7
@@ -207,7 +244,7 @@ func test_save_roundtrip() -> void:
 	check(pr.pearls == 42 and pr.pearls_total == 50, "pearls survive")
 	check(pr.artifacts["amphora"]["level"] == 2 and pr.artifacts["amphora"]["pieces"] == 1, "artifacts survive")
 	check(pr.equipped["pet"] == "pet_seal" and pr.is_owned("pet_seal"), "wardrobe survives")
-	check(pr.quests.size() == 1 and pr.quests[0]["count"] == 4.0, "quests survive")
+	check(pr.quests.size() == 1 and pr.quests[0]["count"] == 4.0, "quests survive; one for a site of the 30-site version is dropped")
 	check(pr.daily_day == 3 and pr.daily_last == "2026-01-01" and pr.puzzle_level == 7, "counters survive")
 	check(float(gs.bonus.get("plant", 1.0)) > 1.0, "loaded artifacts apply their bonus")
 

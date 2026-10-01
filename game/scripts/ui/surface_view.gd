@@ -139,6 +139,9 @@ var _rain: Array[Vector3] = []            # x, y, speed
 var _feathers: Array[Dictionary] = []
 var _gusts: Array[Vector3] = []           # x, y, age
 var _lighthouse_poke := -99.0
+## Sky and shore pokes are only for fun: past Balance.TAP_CAP a second per
+## thing (an autoclicker) they stop sparkling and making sounds.
+var _poke_cap := TapLimiter.new(Balance.TAP_CAP, Balance.TAP_WINDOW)
 var _rng := RandomNumberGenerator.new()
 
 # Palm and its coconuts.
@@ -720,7 +723,13 @@ func _poke_ambient(p: Vector2) -> bool:
 	consider.call("lighthouse", _lighthouse_pos() + Props.LIGHTHOUSE_LAMP + Vector2(0, 30), 48.0)
 	var best: String = hit["name"]
 	var bi: int = hit["i"]
-	if best == "" and p.y > World.SURFACE_Y and world.poke_fish(p):
+	if best == "" and p.y > World.SURFACE_Y and world.is_fish_at(p):
+		if _poke_cap.allow("fish", _t):
+			world.poke_fish(p)
+		return true
+	if best == "" and p.y < World.SURFACE_Y - 60.0 and DayNight.night() > 0.5:
+		best = "sky"
+	if best != "" and not _poke_cap.allow(best, _t):
 		return true
 	match best:
 		"sun":
@@ -756,12 +765,12 @@ func _poke_ambient(p: Vector2) -> bool:
 		"lighthouse":
 			_lighthouse_poke = _t
 			Sfx.play("horn", 0.62)
-		_:
+		"sky":
 			# A tap on the empty night sky sends a shooting star.
-			if p.y < World.SURFACE_Y - 60.0 and DayNight.night() > 0.5:
-				world.shooting_star(p)
-				Sfx.play("upgrade", 1.7)
-				return true
+			world.shooting_star(p)
+			Sfx.play("upgrade", 1.7)
+			return true
+		_:
 			return false
 	Settings.buzz(12)
 	return true

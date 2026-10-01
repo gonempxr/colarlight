@@ -84,6 +84,12 @@ func _ready() -> void:
 	refresh()
 
 
+func _notification(what: int) -> void:
+	# A new language: the labels change at once, not at the next Progress change.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		refresh()
+
+
 ## duplicate() drops a script's plain vars (ToonBox colours), so copy them.
 static func _copy_box(src: StyleBox) -> StyleBox:
 	var dst: StyleBox = src.duplicate()

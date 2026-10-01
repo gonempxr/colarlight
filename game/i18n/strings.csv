@@ -297,3 +297,7 @@ OCEAN_NAME_SUNSET,Sunset Sea,Закатное море,Mar del Ocaso,落日之�
 OCEAN_NAME_VIOLET,Violet Deep,Фиолетовая бездна,Abismo Violeta,紫罗兰深海
 OCEAN_NAME_KELP,Kelp Forest Sea,Море ламинарий,Mar de Algas,海藻森林之海
 OCEAN_NAME_GLOW,Glowing Sea,Сияющее море,Mar Luminoso,荧光之海
+SUIT_BONUS,+%d%% ore,+%d%% руды,+%d%% mineral,矿石 +%d%%
+STAT_SUIT,Suit bonus: +%d%% ore,Бонус костюма: +%d%% руды,Bono del traje: +%d%% mineral,潜水服加成：矿石 +%d%%
+PROFILE,Profile,Профиль,Perfil,个人资料
+PROFILE_HINT,"Your name, your look and who is playing. Clothes, pets and boat paint are in the Wardrobe.","Твоё имя, образ и кто сейчас играет. Одежда, питомцы и краска для лодки — в Гардеробе.","Tu nombre, tu aspecto y quién juega. La ropa, las mascotas y la pintura del barco están en el Armario.",你的名字、形象和当前玩家。服装、宠物和船漆在衣橱里。
