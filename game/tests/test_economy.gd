@@ -28,6 +28,7 @@ func _initialize() -> void:
 	test_open_depth_in_order()
 	test_milestone_signal()
 	test_rush()
+	test_tap_cap()
 	test_offline_only_with_managers()
 	test_save_load_roundtrip()
 	test_corrupted_save()
@@ -234,6 +235,7 @@ func test_rush() -> void:
 	var started := [0]
 	gs.rush_started.connect(func(): started[0] += 1)
 	for i in 13:
+		gs.tap_clock += 0.12
 		gs.tap("d0")
 	check(started[0] == 1 and gs.is_rushing(), "13 quick taps start a rush")
 	gs.tap("plant")
@@ -246,6 +248,54 @@ func test_rush() -> void:
 	check(near(gs2.pit, gs2.cycle_capacity("d0")), "rush doubles speed")
 	gs.free()
 	gs2.free()
+
+
+## An autoclicker (100 taps in a second) gets no more than Balance.TAP_CAP
+## taps' worth per target, and no faster rush; a human pace keeps every tap.
+func test_tap_cap() -> void:
+	var gs := _fresh()
+	var counted := [0]
+	gs.tapped.connect(func(_k: String): counted[0] += 1)
+	gs.tap("d0")
+	var before: float = gs.cycle_progress("d0")
+	var effective := 1
+	for i in 99:
+		gs.advance(0.01)
+		if gs.tap("d0"):
+			effective += 1
+	var cap: int = Balance.TAP_CAP
+	check(effective <= cap and counted[0] <= cap, "100 taps in 1 s count as at most %d (%d)" % [cap, effective])
+	check(effective >= cap - 1, "the cap still lets %d taps count (%d)" % [cap, effective])
+	var pushed: float = gs.cycle_progress("d0") - before
+	check(pushed <= cap * Balance.TAP_BOOST + 0.01 / gs.cycle_time("d0") * 100.0 + 0.05, "100 taps push the dive no more than the cap allows (%.2f)" % pushed)
+	check(gs.rush_meter <= cap * gs.RUSH_PER_TAP + 0.001 and not gs.is_rushing(), "100 taps in 1 s fill the rush meter like %d (%.2f)" % [cap, gs.rush_meter])
+	# Many targets at once: the rush meter still fills at most at the cap.
+	var gs2 := _fresh()
+	gs2.levels["d1"] = 1
+	gs2.levels["d2"] = 1
+	for i in 30:
+		gs2.tap("d0")
+		gs2.tap("d1")
+		gs2.tap("d2")
+	check(gs2.rush_meter <= cap * gs2.RUSH_PER_TAP + 0.001, "taps on many targets share the rush cap (%.2f)" % gs2.rush_meter)
+	# A fast human (8 taps a second) is never capped.
+	var gs3 := _fresh()
+	var ok := 0
+	for i in 40:
+		gs3.advance(0.125)
+		if gs3.tap("d0"):
+			ok += 1
+	check(ok == 40, "8 taps a second all count (%d of 40)" % ok)
+	# The cap is per target: the lift and the boat still take their own taps.
+	var gs4 := _fresh()
+	gs4.pit = 100.0
+	for i in 20:
+		gs4.tap("d0")
+	check(gs4.tap("lift"), "capped dive taps do not block the lift")
+	gs.free()
+	gs2.free()
+	gs3.free()
+	gs4.free()
 
 
 func test_offline_only_with_managers() -> void:

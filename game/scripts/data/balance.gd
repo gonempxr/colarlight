@@ -76,6 +76,12 @@ const PLANT2 := {"value": 68.0, "cost0": 2.5e4, "manager": 5.0e5, "cycle": 3.6, 
 
 ## A tap on a working stage pushes its cycle forward by this share.
 const TAP_BOOST := 0.1
+## Taps that count per target (a dive site, the lift, a boat, a plant) in any
+## TAP_WINDOW seconds; faster taps (an autoclicker) give nothing extra. A fast
+## child taps about 6-8 times a second, so normal play never meets the cap.
+## The rush meter has the same cap across all targets together.
+const TAP_CAP := 10
+const TAP_WINDOW := 1.0
 
 ## Dive Deeper: needs the coins and a deeper depth open every time
 ## (PRESTIGE_GATE_FIRST, then PRESTIGE_GATE_STEP more per Dive).

@@ -58,6 +58,9 @@ var bonus: Dictionary = {}
 ## and the amount the cycle carries.
 var _timer: Dictionary = {}
 var _load: Dictionary = {}
+## Game seconds run so far (advance()), the clock for the tap cap.
+var tap_clock := 0.0
+var _taps := TapLimiter.new(Balance.TAP_CAP, Balance.TAP_WINDOW)
 var _autosave_left := Balance.AUTOSAVE_SEC
 var _offline_report: Dictionary = {}
 ## Deepest site the running lift trip goes to (-1 while the lift waits).
@@ -409,11 +412,15 @@ func add_boost(seconds: float) -> void:
 
 ## Player tapped a stage: starts the cycle if idle, otherwise pushes the
 ## running one forward a little. Also fills the rush meter.
-## Returns true when something happened.
+## Returns true when something happened. Taps over Balance.TAP_CAP per
+## second on one target do nothing (returns false).
 func tap(key: String) -> bool:
 	if not is_open(key):
 		return false
-	_add_rush()
+	if not _taps.allow(key, tap_clock):
+		return false
+	if _taps.allow("rush", tap_clock):
+		_add_rush()
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
 		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * cycle_time(key)
@@ -436,6 +443,7 @@ func prestige() -> bool:
 func advance(seconds: float) -> void:
 	if seconds <= 0.0:
 		return
+	tap_clock += seconds
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
