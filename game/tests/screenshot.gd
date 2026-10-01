@@ -16,6 +16,9 @@ func _initialize() -> void:
 	var scenario := args[2] if args.size() > 2 else "mid"
 	var scroll := float(args[3]) if args.size() > 3 else 0.0
 	var overlay: String = args[4] if args.size() > 4 else ""
+	# "<overlay>+suit": the sunset diver suit is worn (its ore bonus shows).
+	var with_suit := overlay.ends_with("+suit")
+	overlay = overlay.trim_suffix("+suit")
 	var ui_scale := float(args[5]) if args.size() > 5 else 1.0
 	await process_frame
 	root.get_node("Settings").language = lang
@@ -46,6 +49,9 @@ func _initialize() -> void:
 		pr.owned["hat_cat_ears"] = true
 		pr.equipped["pet"] = "pet_octopus"
 		pr.stats["puzzles_won"] = 4
+		if with_suit:
+			pr.owned["suit_sunset"] = true
+			pr.equip("suit_sunset")
 		pr.chest_ready = overlay == "chest"
 		if overlay != "daily":
 			pr.daily_last = pr.today()

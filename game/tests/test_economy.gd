@@ -28,8 +28,11 @@ func _initialize() -> void:
 	test_open_depth_in_order()
 	test_milestone_signal()
 	test_rush()
+	test_tap_cap()
+	test_lift_speed()
 	test_offline_only_with_managers()
 	test_save_load_roundtrip()
+	test_old_30_site_save()
 	test_corrupted_save()
 	test_prestige()
 	test_num_format()
@@ -234,6 +237,7 @@ func test_rush() -> void:
 	var started := [0]
 	gs.rush_started.connect(func(): started[0] += 1)
 	for i in 13:
+		gs.tap_clock += 0.12
 		gs.tap("d0")
 	check(started[0] == 1 and gs.is_rushing(), "13 quick taps start a rush")
 	gs.tap("plant")
@@ -246,6 +250,83 @@ func test_rush() -> void:
 	check(near(gs2.pit, gs2.cycle_capacity("d0")), "rush doubles speed")
 	gs.free()
 	gs2.free()
+
+
+## An autoclicker (100 taps in a second) gets no more than Balance.TAP_CAP
+## taps' worth per target, and no faster rush; a human pace keeps every tap.
+func test_tap_cap() -> void:
+	var gs := _fresh()
+	var counted := [0]
+	gs.tapped.connect(func(_k: String): counted[0] += 1)
+	gs.tap("d0")
+	var before: float = gs.cycle_progress("d0")
+	var effective := 1
+	for i in 99:
+		gs.advance(0.01)
+		if gs.tap("d0"):
+			effective += 1
+	var cap: int = Balance.TAP_CAP
+	check(effective <= cap and counted[0] <= cap, "100 taps in 1 s count as at most %d (%d)" % [cap, effective])
+	check(effective >= cap - 1, "the cap still lets %d taps count (%d)" % [cap, effective])
+	var pushed: float = gs.cycle_progress("d0") - before
+	check(pushed <= cap * Balance.TAP_BOOST + 0.01 / gs.cycle_time("d0") * 100.0 + 0.05, "100 taps push the dive no more than the cap allows (%.2f)" % pushed)
+	check(gs.rush_meter <= cap * gs.RUSH_PER_TAP + 0.001 and not gs.is_rushing(), "100 taps in 1 s fill the rush meter like %d (%.2f)" % [cap, gs.rush_meter])
+	# Many targets at once: the rush meter still fills at most at the cap.
+	var gs2 := _fresh()
+	gs2.levels["d1"] = 1
+	gs2.levels["d2"] = 1
+	for i in 30:
+		gs2.tap("d0")
+		gs2.tap("d1")
+		gs2.tap("d2")
+	check(gs2.rush_meter <= cap * gs2.RUSH_PER_TAP + 0.001, "taps on many targets share the rush cap (%.2f)" % gs2.rush_meter)
+	# A fast human (8 taps a second) is never capped.
+	var gs3 := _fresh()
+	var ok := 0
+	for i in 40:
+		gs3.advance(0.125)
+		if gs3.tap("d0"):
+			ok += 1
+	check(ok == 40, "8 taps a second all count (%d of 40)" % ok)
+	# The cap is per target: the lift and the boat still take their own taps.
+	var gs4 := _fresh()
+	gs4.pit = 100.0
+	for i in 20:
+		gs4.tap("d0")
+	check(gs4.tap("lift"), "capped dive taps do not block the lift")
+	gs.free()
+	gs2.free()
+	gs3.free()
+	gs4.free()
+
+
+## The lift's trips get shorter with levels and looks; its rate does not
+## change (a trip carries rate x time), and an upgrade mid-trip never jumps.
+func test_lift_speed() -> void:
+	check(is_equal_approx(Balance.lift_speed(1), 1.0), "a new lift has its base speed")
+	var faster := true
+	for lv in range(1, 500):
+		faster = faster and Balance.lift_speed(lv + 1) >= Balance.lift_speed(lv)
+	check(faster, "the lift never gets slower with levels")
+	for i in range(1, Balance.LIFT_LOOKS.size()):
+		var at: int = Balance.LIFT_LOOKS[i]
+		check(Balance.lift_speed(at) > Balance.lift_speed(at - 1) * 1.1, "a new lift look at level %d is clearly faster" % at)
+	check(Balance.lift_trip(100, 10) <= Balance.lift_trip(1, 10) * 0.55, "at level 100 a trip takes about half as long (%.1f s)" % Balance.lift_trip(100, 10))
+	check(Balance.lift_trip(250, 20) <= Balance.lift_trip(1, 20) * 0.35, "at level 250 a deep trip is about 3x faster (%.1f s)" % Balance.lift_trip(250, 20))
+	check(Balance.lift_trip(400, 29) >= Balance.LIFT_MIN_TRIP, "trips never get too short to see")
+	var gs := _fresh()
+	gs.levels["lift"] = 120
+	var r: float = gs.rate("lift")
+	check(is_equal_approx(gs.cycle_capacity("lift") / gs.cycle_time("lift"), r), "a faster lift moves the same ore per second")
+	check(is_equal_approx(gs.cycle_time("lift"), Balance.lift_trip(120, 0)), "the trip time follows the lift's level")
+	gs.pit = 1.0e9
+	gs.coins = 1.0e30
+	gs.tap("lift")
+	gs.advance(gs.cycle_time("lift") * 0.4)
+	var p: float = gs.cycle_progress("lift")
+	gs.upgrade("lift", 200)
+	check(absf(gs.cycle_progress("lift") - p) < 0.001, "upgrading mid-trip keeps the cabin where it is (%.2f -> %.2f)" % [p, gs.cycle_progress("lift")])
+	gs.free()
 
 
 func test_offline_only_with_managers() -> void:
@@ -298,6 +379,45 @@ func test_save_load_roundtrip() -> void:
 	DirAccess.remove_absolute(TEST_SAVE)
 
 
+## A save from the 30-site version: deep sites fold into the 15 (best level
+## of each group, foremen kept), nothing past the last site, no crash.
+func test_old_30_site_save() -> void:
+	var lv := {"lift": 300, "boat": 280, "plant": 270}
+	var mg := {"lift": true, "boat": true, "plant": true}
+	for i in 30:
+		lv["d%d" % i] = 120 - i * 2 if i <= 23 else 0
+		mg["d%d" % i] = i <= 20
+	lv["d8"] = 5
+	lv["d7"] = 90
+	var data := {"version": 2, "saved_at": Time.get_unix_time_from_system(), "coins": 5.0e12, "total_earned": 9.0e13,
+			"prestige_count": 6, "levels": lv, "managers": mg, "pit": 10.0, "hold": 0.0, "dock": 0.0}
+	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(data))
+	f.close()
+	var gs: Node = _script.new()
+	gs.save_path = TEST_SAVE
+	gs.autosave_enabled = false
+	gs.reset()
+	check(gs.load_game(), "an old 30-site save loads")
+	check(gs.get_level("d6") == 108 and gs.get_level("d0") == 120, "the first seven sites keep their levels")
+	check(gs.get_level("d7") == 90, "a folded site takes the best of its group (%d)" % gs.get_level("d7"))
+	check(gs.get_level("d14") == 78 and gs.is_open("d14"), "the last site takes the deepest old ones (%d)" % gs.get_level("d14"))
+	check(gs.has_manager("d13") and not gs.has_manager("d14"), "foremen fold too")
+	check(not gs.levels.has("d15") and gs.stage_keys().size() == 15 + 5, "no sites past the 15th")
+	check(gs.prestige_count == 6 and gs.coins >= 5.0e12, "coins and Dives are kept")
+	check(gs.income_rate() > 0.0 and gs.prestige_gate_depth() == Balance.DEPTHS[11]["id"], "the economy runs and the gate is a real site")
+	gs.save_game()
+	var again: Node = _script.new()
+	again.save_path = TEST_SAVE
+	again.autosave_enabled = false
+	again.reset()
+	again.load_game()
+	check(again.get_level("d7") == 90 and again.get_level("d14") == 78, "a new save does not fold twice")
+	gs.free()
+	again.free()
+	DirAccess.remove_absolute(TEST_SAVE)
+
+
 func test_corrupted_save() -> void:
 	var gs := _fresh()
 	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
@@ -334,7 +454,8 @@ func test_prestige() -> void:
 	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0), "income x3 after first prestige")
 	check(before > 0.0, "sanity")
 	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * Balance.PRESTIGE_COST_GROWTH), "next prestige costs more")
-	check(gs.prestige_gate_depth() == Balance.DEPTHS[7]["id"], "each Dive needs two depths deeper")
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[6]["id"], "each Dive needs one depth deeper")
+	check(Balance.DEPTHS.size() == 15, "15 dive sites")
 	gs.prestige_count = 50
 	check(gs.prestige_gate_depth() == Balance.DEPTHS[Balance.DEPTHS.size() - 1]["id"], "gate stops at the last depth")
 	gs.free()

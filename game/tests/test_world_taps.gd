@@ -154,6 +154,24 @@ func _initialize() -> void:
 	await _frames(2)
 	await _click(dn.moon_pos(surface.size.x))
 	check(world.pokes.has("moon"), "the moon reacts")
+	# An autoclicker on the moon: 100 pokes in one go send no more shooting
+	# stars than the tap cap allows.
+	var stars_before: int = world._shooting.size()
+	var moon: Vector2 = dn.moon_pos(surface.size.x)
+	for i in 100:
+		surface._poke_ambient(moon)
+	var stars: int = world._shooting.size() - stars_before
+	check(stars <= Balance.TAP_CAP, "100 moon pokes at once send at most %d shooting stars (%d)" % [Balance.TAP_CAP, stars])
+	# Same for the sun's sparkles.
+	_open_sky_phase(dn, 0.2, false)
+	await _frames(2)
+	var parts_before: int = world.divers._parts.size()
+	for i in 100:
+		surface._poke_ambient(dn.sun_pos(surface.size.x))
+	var sparks: int = world.divers._parts.size() - parts_before
+	check(sparks <= Balance.TAP_CAP * 8, "100 sun pokes at once sparkle at most %d times (%d sparks)" % [Balance.TAP_CAP, sparks])
+	_open_sky_phase(dn, 0.72, true)
+	await _frames(2)
 
 	# The second boat and plant: for sale once the third dive site is open;
 	# a tap on their sign selects them (the upgrade panel sells them).

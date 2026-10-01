@@ -274,6 +274,8 @@ func apply_bonus() -> void:
 	var b := {}
 	for a in Content.ARTIFACTS:
 		b[a["bonus"]] = bonus(a["bonus"])
+	# The worn diver suit: more ore from every dive.
+	b["dives"] = float(b.get("dives", 1.0)) * (1.0 + suit_bonus())
 	GameState.bonus = b
 	GameState.changed.emit()
 
@@ -285,9 +287,14 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 	var stars := clampi(int(result.get("stars", 0)), 0, 3)
 	var mult := bonus("puzzle")
 	var out := {"coins": 0.0, "pearls": 0, "piece": "", "level": 0}
+	# Coins follow both the economy (minutes of income) and the puzzle level
+	# played (see Content.puzzle_factor): replaying the game's early puzzle
+	# levels late in the game pays less than reaching new ones.
+	var got := int(result.get("fragments", 0))
+	var lv := puzzle_level
+	out["coins"] = coins_for_minutes(Content.puzzle_minutes(lv, won, stars, got)) * mult
+	out["pearls"] = Content.puzzle_pearls(lv, won, stars, got)
 	if won:
-		out["coins"] = coins_for_minutes(1.5 + stars * 0.5) * mult
-		out["pearls"] = 2 + stars
 		var id := str(result.get("artifact", ""))
 		if not artifacts.has(id):
 			id = target_artifact()
@@ -297,10 +304,6 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 		stats["puzzles_won"] = int(stats.get("puzzles_won", 0)) + 1
 		puzzle_level += 1
 		_count("puzzle", 1)
-	else:
-		var got := int(result.get("fragments", 0))
-		out["coins"] = coins_for_minutes(0.5 + 0.25 * got) * mult
-		out["pearls"] = 1 if got > 0 else 0
 	GameState.add_coins(out["coins"])
 	add_pearls(out["pearls"])
 	_check_goals()
@@ -509,6 +512,11 @@ func grant_item(id: String) -> void:
 	changed.emit()
 
 
+## Extra ore share from the worn suit (0.05 = +5%).
+func suit_bonus() -> float:
+	return Content.suit_bonus(str(equipped.get("suit", "")))
+
+
 func equip(id: String) -> void:
 	var c := Content.cosmetic(id)
 	if c.is_empty() or not is_owned(id):
@@ -519,6 +527,8 @@ func equip(id: String) -> void:
 		equipped[slot] = ""
 	else:
 		equipped[slot] = id
+	if slot == "suit":
+		apply_bonus()
 	changed.emit()
 
 
@@ -565,6 +575,11 @@ func load_game() -> bool:
 				artifacts[id] = {"level": clampi(_int(a.get("level")), 0, Content.ARTIFACT_MAX), "pieces": maxi(0, _int(a.get("pieces")))}
 	if d.get("quests") is Array:
 		for q in d["quests"]:
+			# A quest for a dive site that no longer exists (saves from the
+			# 30-site version) is dropped; a new one fills its slot.
+			var qkey := str(q.get("key", "")) if q is Dictionary else ""
+			if qkey != "" and not qkey in GameState.stage_keys():
+				continue
 			if q is Dictionary and str(q.get("kind", "")) in Content.QUEST_KINDS and quests.size() < Content.QUEST_SLOTS:
 				quests.append({"kind": str(q["kind"]), "key": str(q.get("key", "")), "goal": maxf(1.0, _f(q.get("goal"))),
 						"count": maxf(0.0, _f(q.get("count"))), "pearls": clampi(_int(q.get("pearls")), 1, 10)})

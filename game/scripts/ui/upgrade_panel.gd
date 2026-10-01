@@ -203,6 +203,9 @@ func refresh() -> void:
 	lines.append("%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(gs.rate(key))])
 	if GameState.depth_index(key) >= 0:
 		lines.append("%s: %d" % [tr("STAT_DIVERS"), gs.divers(key)])
+		var suit: float = Progress.suit_bonus()
+		if suit > 0.0:
+			lines.append(tr("STAT_SUIT") % roundi(suit * 100.0))
 	if key == "lift":
 		lines.append(tr("STAT_TRIP") % [NumFormat.short(gs.cycle_capacity(key)), "%.1f" % gs.cycle_time(key)])
 		lines.append(tr("STAT_WAITING") % NumFormat.short(gs.pit))
