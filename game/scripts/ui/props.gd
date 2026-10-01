@@ -126,7 +126,7 @@ static func flag(ci: CanvasItem, base: Vector2, h: float, color: Color, t: float
 	var bottom_edge := PackedVector2Array()
 	for i in 6:
 		var f := i / 5.0
-		var wave := sin(t * (4.0 + wind * 5.0) - f * 3.4) * f * (1.5 + wind * 3.0) * size
+		var wave := sin(t * 6.0 - f * 3.4) * f * (1.5 + wind * 3.0) * size
 		var droop := f * f * (1.0 - wind) * 7.0 * size
 		top_edge.append(top + Vector2(d * (1.5 + f * len), 1.0 + wave + droop))
 		bottom_edge.append(top + Vector2(d * (1.5 + f * len), hh * (1.0 - f * 0.3) + wave + droop))
@@ -1351,7 +1351,10 @@ const PALM_TOP := Vector2(-11, -96)
 
 
 static func palm(ci: CanvasItem, t: float, wind_amount: float = 0.5, shake: float = 0.0, coconuts: int = 2) -> void:
-	var sway := sin(t * (0.9 + wind_amount * 0.8)) * (0.02 + wind_amount * 0.035) + wind_amount * 0.04
+	# Fixed frequencies: the wind only changes how far it bends. (A wind-
+	# scaled frequency times a growing clock made the phase race whenever
+	# the wind changed: the palm twitched more the longer the game ran.)
+	var sway := sin(t * 1.25) * (0.02 + wind_amount * 0.035) + wind_amount * 0.04
 	sway += sin(t * 14.0) * shake * 0.12
 	var trunk := PackedVector2Array()
 	for i in 7:
@@ -1363,7 +1366,7 @@ static func palm(ci: CanvasItem, t: float, wind_amount: float = 0.5, shake: floa
 		Art.pop(ci)
 	var top := trunk[6]
 	for i in 6:
-		var a := -PI + i * PI / 5.0 + sin(t * (1.2 + wind_amount) + i) * (0.04 + wind_amount * 0.05) + sway * 1.4 \
+		var a := -PI + i * PI / 5.0 + sin(t * 1.6 + i) * (0.04 + wind_amount * 0.05) + sway * 1.4 \
 				+ sin(t * 16.0 + i) * shake * 0.2
 		Art.push(ci, top, a)
 		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, -4), Vector2(26, -10), Vector2(50, 2), Vector2(26, 6), Vector2(0, 4)]), 3), Color("3fb35a"), 2.3, 0.5)
