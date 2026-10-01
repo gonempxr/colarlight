@@ -274,6 +274,8 @@ func apply_bonus() -> void:
 	var b := {}
 	for a in Content.ARTIFACTS:
 		b[a["bonus"]] = bonus(a["bonus"])
+	# The worn diver suit: more ore from every dive.
+	b["dives"] = float(b.get("dives", 1.0)) * (1.0 + suit_bonus())
 	GameState.bonus = b
 	GameState.changed.emit()
 
@@ -510,6 +512,11 @@ func grant_item(id: String) -> void:
 	changed.emit()
 
 
+## Extra ore share from the worn suit (0.05 = +5%).
+func suit_bonus() -> float:
+	return Content.suit_bonus(str(equipped.get("suit", "")))
+
+
 func equip(id: String) -> void:
 	var c := Content.cosmetic(id)
 	if c.is_empty() or not is_owned(id):
@@ -520,6 +527,8 @@ func equip(id: String) -> void:
 		equipped[slot] = ""
 	else:
 		equipped[slot] = id
+	if slot == "suit":
+		apply_bonus()
 	changed.emit()
 
 

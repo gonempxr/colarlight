@@ -113,6 +113,10 @@ static func _cell(c: Dictionary, m: Modal) -> Control:
 	var name := Views.label(t("ITEM_" + id.to_upper()), 18, Art.INK, true)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(name)
+	if Content.suit_bonus(id) > 0.0:
+		var perk := Views.label(t("SUIT_BONUS") % roundi(Content.suit_bonus(id) * 100.0), 16, Color("2f8f3a"), true)
+		perk.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(perk)
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, 58)
 	b.add_theme_font_size_override("font_size", 21)
