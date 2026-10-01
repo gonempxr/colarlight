@@ -98,7 +98,7 @@ func _ready() -> void:
 	_hud = Hud.new()
 	_hud.prestige_pressed.connect(_open_prestige)
 	_hud.settings_pressed.connect(_open_settings)
-	_hud.avatar_pressed.connect(_open_wardrobe)
+	_hud.avatar_pressed.connect(open_profile)
 	add_child(_hud)
 
 	_hint_btn = HintButton.new()
@@ -530,9 +530,17 @@ func _open_wardrobe() -> void:
 	_modal.open(func(m): Wardrobe.build(m, self), {"wide": true})
 
 
-func open_avatar_editor() -> void:
+## The portrait in the top bar: name, look and players (the wardrobe has
+## its own dock button).
+func open_profile() -> void:
+	_modal.open(func(m): SettingsView.profile(m, self))
+
+
+## back: where "Done" returns (the wardrobe unless given).
+func open_avatar_editor(back: Callable = Callable()) -> void:
+	var done := back if back.is_valid() else _open_wardrobe
 	_modal.open(func(m: Modal):
-		AvatarEditor.build(m, func(): _open_wardrobe()))
+		AvatarEditor.build(m, func(): done.call()))
 
 
 # --- Fishing -----------------------------------------------------------------------------

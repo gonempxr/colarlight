@@ -4,7 +4,7 @@ extends SceneTree
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
-## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial |
+## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial |
 ## sheet:<stage> (e.g. sheet:lift) | second (a new second boat and plant
 ## without managers: the red tab dots).
 ## Scenarios mid and late also open every meta feature and give pearls.
@@ -103,6 +103,8 @@ func _initialize() -> void:
 			main.open_feature(overlay)
 		"players":
 			main.open_players()
+		"profile":
+			main.open_profile()
 		"tutorial":
 			pr.tutorial_step = 0
 		"bar":

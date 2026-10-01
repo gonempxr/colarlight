@@ -291,3 +291,6 @@ HINT_PUZZLE,Play the puzzle to find artifact pieces. Artifacts give bonuses fore
 HINT_PRESTIGE,"You can Dive Deeper! You start again, but everything earns much more.","Можно «Нырнуть глубже»! Начнёшь сначала, но всё будет приносить гораздо больше.","¡Puedes Bucear más hondo! Empiezas de nuevo, pero todo gana mucho más.",可以“深潜”了！重新开始，但一切收益都会大大提高。
 HINT_TAP_DIVERS,"Divers work by themselves. Tap them to hurry them up, and save coins for upgrades.","Водолазы работают сами. Нажимай на них, чтобы ускорить, и копи монеты на улучшения.",Los buzos trabajan solos. Tócalos para que vayan más rápido y ahorra para mejoras.,潜水员会自己工作。点击他们加快速度，攒金币来升级。
 STAGE_UP,%s grew: %s!,%s: новая стадия «%s»!,¡%s creció: %s!,%s升级为：%s！
+PROFILE,Profile,Профиль,Perfil,个人资料
+PROFILE_HINT,"Your name, your look and who is playing. Clothes, pets and boat paint are in the Wardrobe.","Твоё имя, образ и кто сейчас играет. Одежда, питомцы и краска для лодки — в Гардеробе.","Tu nombre, tu aspecto y quién juega. La ropa, las mascotas y la pintura del barco están en el Armario.",你的名字、形象和当前玩家。服装、宠物和船漆在衣橱里。
+SWITCH_PLAYER,Change player,Сменить игрока,Cambiar de jugador,切换玩家
