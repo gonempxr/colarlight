@@ -45,6 +45,9 @@ var _refresh_left := 0.0
 var _news: Array[String] = []
 var _started := false
 var _sheet_tween: Tween
+## Settings that change what dialogs show (not the volumes: rebuilding the
+## settings dialog while a volume slider is dragged would drop the drag).
+var _settings_sig := []
 ## Tests and screenshots skip the title screen.
 static var show_title := true
 
@@ -148,6 +151,7 @@ func _ready() -> void:
 	Progress.quest_done.connect(func(_i):
 		_show_toast(tr("QUEST_DONE"))
 		Sfx.play("milestone"))
+	_settings_sig = _settings_signature()
 	Settings.changed.connect(_on_settings_changed)
 	get_viewport().size_changed.connect(_layout)
 	Wardrobe.apply_looks()
@@ -394,12 +398,29 @@ func _refresh() -> void:
 			create_tween().tween_property(_dock, "position:y", y, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
+func _settings_signature() -> Array:
+	var s := Settings
+	return [s.language, s.voices, s.vibration, s.quality, s.reduce_motion, s.ui_scale, s.number_style, s.avatar.hash()]
+
+
 func _on_settings_changed() -> void:
 	if not is_equal_approx(get_tree().root.content_scale_factor, Settings.ui_scale) or Art.low_power != Settings.low_quality():
 		_apply_ui_scale()
+	var sig := _settings_signature()
+	var shown_changed := sig != _settings_sig
+	_settings_sig = sig
+	if not shown_changed:
+		# A volume: nothing on screen shows it but the slider being dragged.
+		return
 	_refresh()
+	# The dock's labels only follow Progress otherwise (a new language
+	# showed up there late).
+	_dock.refresh()
+	_hud.queue_redraw()
 	if _modal.visible:
 		_modal.rebuild()
+	if _top.visible:
+		_top.rebuild()
 
 
 func _on_milestone(key: String, level: int) -> void:
