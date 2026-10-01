@@ -368,6 +368,103 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 	nativeFrame(probe);
 }());
 
+// Rewarded ads: the CrazyGames HTML5 SDK v3, only on CrazyGames (or when
+// testing with ?ads=crazygames on localhost). Elsewhere (GitHub Pages,
+// itch.io) nothing is loaded and the game shows no ad buttons. The game
+// (Platform autoload) talks to window.coralightAds:
+//   state: 'loading' | 'ready' | 'disabled' | 'failed'
+//   rewarded(onStarted, onDone): onDone('ok') or onDone('error:<code>')
+//   gameplayStart(), muteAudio (the site's mute setting)
+(function () {
+	let want = '';
+	try {
+		want = new URLSearchParams(window.location.search).get('ads') || '';
+	} catch (e) { /* old browser: no query */ }
+	const onCrazy = /(^|\.)crazygames\.[a-z.]+$/i.test(window.location.hostname);
+	if (!onCrazy && want !== 'crazygames') {
+		return;
+	}
+	const bridge = { state: 'loading', muteAudio: false, gameReady: false };
+	window.coralightAds = bridge;
+	let sdk = null;
+	const safe = function (fn) {
+		try {
+			fn();
+		} catch (e) {
+			console.warn('CrazyGames SDK:', e);
+		}
+	};
+	bridge.gameplayStart = function () {
+		if (sdk) {
+			safe(() => sdk.game.gameplayStart());
+		}
+	};
+	bridge.loadingStop = function () {
+		bridge.gameReady = true;
+		if (sdk) {
+			safe(() => sdk.game.loadingStop());
+		}
+	};
+	bridge.rewarded = function (onStarted, onDone) {
+		if (!sdk) {
+			onDone('error:unavailable');
+			return;
+		}
+		let ended = false;
+		const end = function (result) {
+			if (ended) {
+				return;
+			}
+			ended = true;
+			safe(() => sdk.game.gameplayStart());
+			onDone(result);
+		};
+		safe(() => sdk.game.gameplayStop());
+		try {
+			sdk.ad.requestAd('rewarded', {
+				adStarted: function () { onStarted(); },
+				adFinished: function () { end('ok'); },
+				adError: function (error) { end('error:' + ((error && error.code) || 'other')); },
+			});
+		} catch (e) {
+			end('error:other');
+		}
+	};
+	const script = document.createElement('script');
+	script.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
+	script.onerror = function () { bridge.state = 'failed'; };
+	script.onload = function () {
+		const SDK = window.CrazyGames && window.CrazyGames.SDK;
+		if (!SDK) {
+			bridge.state = 'failed';
+			return;
+		}
+		SDK.init().then(function () {
+			// Outside CrazyGames and localhost every SDK call throws.
+			if (SDK.environment === 'disabled') {
+				bridge.state = 'disabled';
+				return;
+			}
+			sdk = SDK;
+			const readSettings = function () {
+				bridge.muteAudio = !!(SDK.game.settings && SDK.game.settings.muteAudio);
+			};
+			safe(readSettings);
+			safe(() => SDK.game.addSettingsChangeListener(readSettings));
+			if (bridge.gameReady) {
+				safe(() => SDK.game.loadingStop());
+			} else {
+				safe(() => SDK.game.loadingStart());
+			}
+			bridge.state = 'ready';
+		}).catch(function (e) {
+			console.warn('CrazyGames SDK init failed:', e);
+			bridge.state = 'failed';
+		});
+	};
+	document.head.appendChild(script);
+}());
+
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
@@ -548,6 +645,9 @@ const engine = new Engine(GODOT_CONFIG);
 				console.log(...args);
 				if (args.join(' ').indexOf('CORALIGHT_READY') !== -1) {
 					hide();
+					if (window.coralightAds) {
+						window.coralightAds.loadingStop();
+					}
 				}
 			},
 		}).then(() => {

@@ -33,6 +33,11 @@ const RUSH_SEC := 5.0
 const RUSH_SPEED := 2.0
 ## Offline progress is simulated in steps of this many seconds.
 const OFFLINE_STEP := 1.0
+## The x2 boost never runs longer than this (pearls and rewards).
+const BOOST_CAP_SEC := 24.0 * 3600.0
+## A watched rewarded ad: x2 for this long, stacking up to AD_BOOST_CAP_SEC.
+const AD_BOOST_SEC := 30.0 * 60.0
+const AD_BOOST_CAP_SEC := 4.0 * 3600.0
 
 var save_path := "user://coralight2.json"
 var autosave_enabled := true
@@ -48,8 +53,19 @@ var hold := 0.0
 var dock := 0.0
 var rush_meter := 0.0
 var rush_left := 0.0
-## Income x2 boost (from pearls, rewards) and its seconds left.
-var boost_left := 0.0
+## Income x2 boost (from pearls, rewards, a watched ad) and its seconds left.
+## It runs on real time: the end is kept as a Unix time (also in the save),
+## so it ends on time while the game is closed or the tab sleeps.
+var boost_left: float:
+	get:
+		return maxf(0.0, boost_end - now())
+	set(value):
+		boost_end = now() + clampf(value, 0.0, BOOST_CAP_SEC)
+		_boosted = boost_end > now()
+## Unix time when the x2 boost ends (0 = none).
+var boost_end := 0.0
+## Cached "boost is on" for the hot income math; refreshed every frame.
+var _boosted := false
 ## Extra multipliers per stage key from artifacts and the like ("all" = every
 ## stage). Filled by Progress; not saved here.
 var bonus: Dictionary = {}
@@ -103,7 +119,8 @@ func reset() -> void:
 	coins = 0.0
 	total_earned = 0.0
 	prestige_count = 0
-	boost_left = 0.0
+	boost_end = 0.0
+	_boosted = false
 	managers = {}
 	_reset_run()
 
@@ -198,7 +215,29 @@ func is_open(key: String) -> bool:
 
 
 func income_mult() -> float:
-	return Balance.prestige_mult(prestige_count) * (2.0 if boost_left > 0.0 else 1.0) * float(bonus.get("all", 1.0))
+	return Balance.prestige_mult(prestige_count) * (2.0 if _boosted else 1.0) * float(bonus.get("all", 1.0))
+
+
+## Real time (Unix seconds); the boost runs on it.
+func now() -> float:
+	return Time.get_unix_time_from_system()
+
+
+## Can a watched ad add its full 30 minutes without passing the cap?
+func can_ad_boost() -> bool:
+	return boost_left <= AD_BOOST_CAP_SEC - AD_BOOST_SEC + 1.0
+
+
+## Reward for a rewarded ad watched to the end: +30 min of x2, at most 4 h
+## in total. False (nothing given) when the boost is already near the cap.
+func add_ad_boost() -> bool:
+	if not can_ad_boost():
+		return false
+	boost_end = maxf(now(), boost_end) + AD_BOOST_SEC
+	boost_end = minf(boost_end, now() + AD_BOOST_CAP_SEC)
+	_boosted = true
+	changed.emit()
+	return true
 
 
 ## Does this stage start its next cycle by itself?
@@ -403,7 +442,7 @@ func add_coins(amount: float) -> void:
 
 
 func add_boost(seconds: float) -> void:
-	boost_left = minf(24.0 * 3600.0, boost_left + maxf(0.0, seconds))
+	boost_left = minf(BOOST_CAP_SEC, boost_left + maxf(0.0, seconds))
 	changed.emit()
 
 
@@ -439,7 +478,7 @@ func advance(seconds: float) -> void:
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
-	boost_left = maxf(0.0, boost_left - seconds)
+	_boosted = boost_end > now()
 	for key in stage_keys():
 		if not is_open(key):
 			continue
@@ -562,6 +601,8 @@ func save_game() -> bool:
 		"pit": pit,
 		"hold": hold,
 		"dock": dock,
+		"boost_end": boost_end,
+		# Older builds read this one.
 		"boost_left": boost_left,
 	}
 	# Write to a temp file and swap, so a crash mid-write can't corrupt the save.
@@ -588,14 +629,20 @@ func load_game() -> bool:
 		push_warning("Save file is corrupted, starting fresh")
 		return false
 	_apply_save(data)
-	var now := Time.get_unix_time_from_system()
-	var away := clampf(now - _num(data.get("saved_at"), now), 0.0, Balance.OFFLINE_CAP_SEC)
-	var earned := simulate_offline(away)
+	var t_now := now()
+	var saved_at := _num(data.get("saved_at"), t_now)
+	var away := clampf(t_now - saved_at, 0.0, Balance.OFFLINE_CAP_SEC)
+	# The x2 boost counts only for the part of the time away it lasted.
+	var boosted := clampf(boost_end - (t_now - away), 0.0, away)
+	_boosted = true
+	var earned := simulate_offline(boosted)
+	_boosted = false
+	earned += simulate_offline(away - boosted)
+	_boosted = boost_end > t_now
 	if earned > 0.0 and float(bonus.get("offline", 1.0)) > 1.0:
 		var extra := earned * (float(bonus["offline"]) - 1.0)
 		_earn(extra)
 		earned += extra
-	boost_left = maxf(0.0, boost_left - away)
 	if away >= Balance.OFFLINE_MIN_REPORT_SEC and earned >= 1.0:
 		_offline_report = {"seconds": away, "coins": earned}
 	changed.emit()
@@ -642,7 +689,15 @@ func _apply_save(data: Dictionary) -> void:
 	pit = maxf(0.0, _num(data.get("pit"), 0.0))
 	hold = maxf(0.0, _num(data.get("hold"), 0.0))
 	dock = maxf(0.0, _num(data.get("dock"), 0.0))
-	boost_left = clampf(_num(data.get("boost_left"), 0.0), 0.0, 24.0 * 3600.0)
+	var saved_at := _num(data.get("saved_at"), now())
+	if data.has("boost_end"):
+		boost_end = _num(data.get("boost_end"), 0.0)
+	else:
+		# Saves from before the real-time boost kept the seconds left.
+		boost_end = saved_at + clampf(_num(data.get("boost_left"), 0.0), 0.0, BOOST_CAP_SEC)
+	# A clock moved back must not stretch the boost past its cap.
+	boost_end = clampf(boost_end, 0.0, maxf(saved_at, now()) + BOOST_CAP_SEC)
+	_boosted = boost_end > now()
 	if old_save:
 		_migrate_lift()
 
