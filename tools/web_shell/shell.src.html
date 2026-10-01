@@ -103,9 +103,10 @@ body {
 	animation: rise linear infinite;
 }
 .fish { position: absolute; animation: swim linear infinite; }
-.fish svg { display: block; width: 100%; animation: bob 1.6s ease-in-out infinite alternate; }
+/* The fish art faces left: flip the ones swimming to the right. */
+.fish svg { display: block; width: 100%; transform: scaleX(-1); animation: bob-flip 1.6s ease-in-out infinite alternate; }
 .fish.left { animation-name: swim-left; }
-.fish.left svg { transform: scaleX(-1); animation-name: bob-flip; }
+.fish.left svg { transform: none; animation-name: bob; }
 
 .floor {
 	position: absolute;
