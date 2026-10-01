@@ -69,6 +69,17 @@ const PLANT := {"value": 1.7, "cost0": 10.0, "manager": 45.0, "cycle": 3.0}
 const LIFT := {"value": 3.0, "cost0": 4.0, "manager": 10.0, "cycle": 4.0, "cycle_step": 0.4, "unlock": 0.0}
 ## Levels where the lift gets a new look (rope and bucket ... bathyscaphe).
 const LIFT_LOOKS: Array[int] = [1, 10, 25, 75, 150, 250]
+## The lift gets faster with every look and a little with every level: the
+## trip time is divided by lift_speed(). Its rate (coins/s) does not change,
+## a faster trip just carries a smaller load, so the economy (and sim.py)
+## stays the same; the lift only looks and feels quicker.
+const LIFT_LOOK_SPEED: Array[float] = [1.0, 1.2, 1.45, 1.75, 2.1, 2.5]
+const LIFT_SPEED_PER_LEVEL := 0.0015
+const LIFT_SPEED_MAX := 4.0
+## Shortest trip: this many seconds plus this many per depth below the first
+## (so the cabin can still be seen stopping at every crate).
+const LIFT_MIN_TRIP := 1.2
+const LIFT_MIN_TRIP_STEP := 0.12
 ## The second boat and plant: bought in each run once the ocean is busy,
 ## bigger per level than the first ones. Provisional numbers (see sim.py).
 const BOAT2 := {"value": 60.0, "cost0": 2.0e4, "manager": 4.0e5, "cycle": 6.0, "unlock": 2.0e5}
@@ -141,6 +152,18 @@ static func lift_look(level: int) -> int:
 		if level >= LIFT_LOOKS[i]:
 			look = i + 1
 	return look
+
+
+## How much faster than at level 1 the lift makes its trips.
+static func lift_speed(level: int) -> float:
+	var look_speed: float = LIFT_LOOK_SPEED[clampi(lift_look(level), 1, LIFT_LOOK_SPEED.size()) - 1]
+	return minf(LIFT_SPEED_MAX, look_speed * (1.0 + LIFT_SPEED_PER_LEVEL * maxi(0, level - 1)))
+
+
+## Seconds of one lift trip down to depth index `deep` and back.
+static func lift_trip(level: int, deep: int) -> float:
+	var base: float = LIFT["cycle"] + LIFT["cycle_step"] * deep
+	return maxf(base / lift_speed(level), minf(base, LIFT_MIN_TRIP + LIFT_MIN_TRIP_STEP * deep))
 
 
 static func divers_at(level: int) -> int:

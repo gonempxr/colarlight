@@ -46,7 +46,25 @@ for k, u in enumerate(UNLOCKS):
 BOAT = {"value": 1.5, "cost0": 8}
 PLANT = {"value": 1.7, "cost0": 10}
 # Lift: carries ore from the dive sites up the shaft to the raft (balance.gd LIFT).
-LIFT = {"value": 3.0, "cost0": 4}
+LIFT = {"value": 3.0, "cost0": 4, "cycle": 4.0, "cycle_step": 0.4}
+# Lift speed (balance.gd lift_speed/lift_trip): trips get shorter with looks
+# and levels, but a trip carries rate x trip time, so the rate (and this
+# sim's economy) does not change. Only used for the printed trip times.
+LIFT_LOOKS = [1, 10, 25, 75, 150, 250]
+LIFT_LOOK_SPEED = [1.0, 1.2, 1.45, 1.75, 2.1, 2.5]
+LIFT_SPEED_PER_LEVEL = 0.0015
+LIFT_SPEED_MAX = 4.0
+LIFT_MIN_TRIP = (1.2, 0.12)
+
+
+def lift_speed(level: int) -> float:
+    look = max(i for i, lv in enumerate(LIFT_LOOKS) if level >= lv)
+    return min(LIFT_SPEED_MAX, LIFT_LOOK_SPEED[look] * (1.0 + LIFT_SPEED_PER_LEVEL * max(0, level - 1)))
+
+
+def lift_trip(level: int, deep: int) -> float:
+    base = LIFT["cycle"] + LIFT["cycle_step"] * deep
+    return max(base / lift_speed(level), min(base, LIFT_MIN_TRIP[0] + LIFT_MIN_TRIP[1] * deep))
 # Second boat and plant: bought once per run, bigger per level (balance.gd BOAT2/PLANT2).
 BOAT2 = {"value": 60.0, "cost0": 2.0e4, "unlock": 2.0e5}
 PLANT2 = {"value": 68.0, "cost0": 2.5e4, "unlock": 2.5e5}
@@ -267,7 +285,9 @@ def main():
             break
         total += t
         deepest = max(k for k, lv in enumerate(g.depth_lv) if lv > 0)
-        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, lift {g.lift_lv}, boat {g.boat_lv}+{g.boat2_lv}, plant {g.plant_lv}+{g.plant2_lv}, income {g.income():.3g}/s")
+        trip = lift_trip(g.lift_lv, deepest)
+        base = LIFT["cycle"] + LIFT["cycle_step"] * deepest
+        print(f"  end {fmt(t)} (total {fmt(total)}): deepest {IDS[deepest]}, lift {g.lift_lv} (trip {trip:.1f} s, was {base:.1f} s), boat {g.boat_lv}+{g.boat2_lv}, plant {g.plant_lv}+{g.plant2_lv}, income {g.income():.3g}/s")
 
 
 if __name__ == "__main__":

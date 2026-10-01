@@ -273,7 +273,7 @@ func cycle_time(key: String) -> float:
 		# Deeper shafts make longer trips (each trip carries more). A trip
 		# keeps the depth it started with, so opening a depth never jumps it.
 		var deep := lift_trip_depth if lift_trip_depth >= 0 else deepest_open()
-		return Balance.LIFT["cycle"] + Balance.LIFT["cycle_step"] * deep
+		return Balance.lift_trip(get_level("lift"), deep)
 	return stage_data(key)["cycle"]
 
 
@@ -359,7 +359,11 @@ func upgrade(key: String, count: int = 1) -> bool:
 	coins -= cost
 	upgraded_from[key] = get_level(key)
 	var before := Balance.milestones(get_level(key))
+	# A faster lift: the running trip keeps its progress (no jump).
+	var progress := cycle_progress(key)
 	levels[key] = get_level(key) + count
+	if progress >= 0.0:
+		_timer[key] = progress * cycle_time(key)
 	if Balance.milestones(levels[key]) > before:
 		milestone_reached.emit(key, levels[key])
 	upgraded.emit(key, count)
