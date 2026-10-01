@@ -680,7 +680,7 @@ func _open_prestige() -> void:
 		if not GameState.prestige_gate_open():
 			var gate := GameState.prestige_gate_depth()
 			m.text(tr("PRESTIGE_NEED_DEPTHS") % tr("DEPTH_" + gate.to_upper()), 24, Color("d8363c"))
-		var go := m.button(tr("PRESTIGE_GO") % NumFormat.short(GameState.prestige_cost()), func():
+		var go := m.price_button(tr("PRESTIGE_GO"), NumFormat.short(GameState.prestige_cost()), func():
 			if GameState.prestige():
 				Sfx.play("prestige")
 				Progress.add_pearls(25)

@@ -71,12 +71,10 @@ func _ready() -> void:
 	_tag.visible = false
 	mid.add_child(_tag)
 
-	_upgrade = Button.new()
+	_upgrade = PriceButton.new()
 	_upgrade.custom_minimum_size = Vector2(112, 62)
 	_upgrade.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_upgrade.add_theme_font_size_override("font_size", 22)
-	_upgrade.icon = Icons.get_icon("arrow", 26)
-	_upgrade.expand_icon = false
 	_upgrade.pressed.connect(_on_upgrade)
 	row.add_child(_upgrade)
 	refresh()
@@ -107,7 +105,7 @@ func refresh() -> void:
 	var next := Balance.MILESTONE_FIRST if ms == 0 else ms * Balance.MILESTONE_STEP
 	_bar.value = float(level - prev) / float(maxi(1, next - prev))
 	var cost: float = gs.upgrade_cost("lift")
-	_upgrade.text = NumFormat.short(cost)
+	_upgrade.set_price("", NumFormat.short(cost), "coin", "arrow")
 	_upgrade.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
 	var neck: bool = StageCard.bottleneck_cached() == "lift" and StageCard.next_depth_cached() != "d1"
 	_tag.visible = neck
