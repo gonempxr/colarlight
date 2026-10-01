@@ -1,7 +1,7 @@
 keys,en,ru,es,zh
 PZ_LEVEL,Level %d,Уровень %d,Nivel %d,第%d关
 PZ_MOVES,Moves,Ходы,Movs.,步数
-PZ_GOAL_HINT,Bring the pieces down!,Опусти кусочки вниз!,¡Baja las piezas!,把碎片带到底部！
+PZ_GOAL_HINT,Bring the pieces down to the gold line!,Опусти кусочки до золотой линии!,¡Baja las piezas hasta la línea dorada!,把碎片移到底部的金线！
 PZ_LEAVE_Q,Leave level?,Выйти из уровня?,¿Salir del nivel?,离开关卡？
 PZ_LEAVE,Leave,Выйти,Salir,离开
 PZ_STAY,Stay,Остаться,Seguir,继续

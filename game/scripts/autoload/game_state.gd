@@ -26,7 +26,13 @@ signal manager_hired(key: String)
 signal depth_opened(key: String)
 signal tapped(key: String)
 
-const SAVE_VERSION := 2
+## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
+const SAVE_VERSION := 3
+## Saves from the 30-site version (save version 2 or older): which old
+## sites each site from d7 on takes its level and foreman from (the best of
+## them). Sites d0..d6 keep their own. The old sites' prices and outputs
+## follow the same curve, so a folded site works like the one it replaces.
+const OLD_DEPTH_FOLD: Array = [[7, 8], [9, 10], [11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22, 23, 24, 25, 26, 27, 28, 29]]
 const RUSH_PER_TAP := 0.08
 const RUSH_DECAY := 0.15
 const RUSH_SEC := 5.0
@@ -74,6 +80,9 @@ var bonus: Dictionary = {}
 ## and the amount the cycle carries.
 var _timer: Dictionary = {}
 var _load: Dictionary = {}
+## Game seconds run so far (advance()), the clock for the tap cap.
+var tap_clock := 0.0
+var _taps := TapLimiter.new(Balance.TAP_CAP, Balance.TAP_WINDOW)
 var _autosave_left := Balance.AUTOSAVE_SEC
 var _offline_report: Dictionary = {}
 ## Deepest site the running lift trip goes to (-1 while the lift waits).
@@ -309,7 +318,7 @@ func cycle_time(key: String) -> float:
 		# Deeper shafts make longer trips (each trip carries more). A trip
 		# keeps the depth it started with, so opening a depth never jumps it.
 		var deep := lift_trip_depth if lift_trip_depth >= 0 else deepest_open()
-		return Balance.LIFT["cycle"] + Balance.LIFT["cycle_step"] * deep
+		return Balance.lift_trip(get_level("lift"), deep)
 	return stage_data(key)["cycle"]
 
 
@@ -395,7 +404,11 @@ func upgrade(key: String, count: int = 1) -> bool:
 	coins -= cost
 	upgraded_from[key] = get_level(key)
 	var before := Balance.milestones(get_level(key))
+	# A faster lift: the running trip keeps its progress (no jump).
+	var progress := cycle_progress(key)
 	levels[key] = get_level(key) + count
+	if progress >= 0.0:
+		_timer[key] = progress * cycle_time(key)
 	if Balance.milestones(levels[key]) > before:
 		milestone_reached.emit(key, levels[key])
 	upgraded.emit(key, count)
@@ -448,11 +461,15 @@ func add_boost(seconds: float) -> void:
 
 ## Player tapped a stage: starts the cycle if idle, otherwise pushes the
 ## running one forward a little. Also fills the rush meter.
-## Returns true when something happened.
+## Returns true when something happened. Taps over Balance.TAP_CAP per
+## second on one target do nothing (returns false).
 func tap(key: String) -> bool:
 	if not is_open(key):
 		return false
-	_add_rush()
+	if not _taps.allow(key, tap_clock):
+		return false
+	if _taps.allow("rush", tap_clock):
+		_add_rush()
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
 		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * cycle_time(key)
@@ -475,6 +492,7 @@ func prestige() -> bool:
 func advance(seconds: float) -> void:
 	if seconds <= 0.0:
 		return
+	tap_clock += seconds
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
@@ -668,6 +686,10 @@ func _apply_save(data: Dictionary) -> void:
 	prestige_count = maxi(0, int(_num(data.get("prestige_count"), 0.0)))
 	var saved_levels = data.get("levels", {})
 	var saved_managers = data.get("managers", {})
+	if int(_num(data.get("version"), 0.0)) < 3 and saved_levels is Dictionary:
+		var folded := _fold_old_depths(saved_levels, saved_managers if saved_managers is Dictionary else {})
+		saved_levels = folded[0]
+		saved_managers = folded[1]
 	# Saves from before the lift: it gets set up below, after the rest.
 	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
 	for key in stage_keys():
@@ -700,6 +722,28 @@ func _apply_save(data: Dictionary) -> void:
 	_boosted = boost_end > now()
 	if old_save:
 		_migrate_lift()
+
+
+## Levels and managers of a 30-site save mapped onto the 15 sites: d0..d6
+## stay, the deeper ones take the best level of their OLD_DEPTH_FOLD group
+## (a foreman if any had one). Never lowers what the player had reached.
+static func _fold_old_depths(old_levels: Dictionary, old_managers: Dictionary) -> Array:
+	var lv := old_levels.duplicate()
+	var mg := old_managers.duplicate()
+	for i in OLD_DEPTH_FOLD.size():
+		var key := "d%d" % (7 + i)
+		var best := 0
+		var hired := false
+		for k: int in OLD_DEPTH_FOLD[i]:
+			var old_key := "d%d" % k
+			best = maxi(best, int(_num(old_levels.get(old_key), 0.0)))
+			hired = hired or old_managers.get(old_key) == true
+		lv[key] = best
+		mg[key] = hired
+	for k in range(7 + OLD_DEPTH_FOLD.size(), 30):
+		lv.erase("d%d" % k)
+		mg.erase("d%d" % k)
+	return [lv, mg]
 
 
 ## A save from before the lift: open the lift at a level that keeps up with

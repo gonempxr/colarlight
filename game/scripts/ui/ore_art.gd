@@ -8,9 +8,10 @@ extends RefCounted
 ## Pieces are drawn in a unit space where one piece is ~40 px tall and
 ## stands on (0, 0), then placed with Art.push, so their geometry is cached.
 
-const KINDS: Array[String] = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "amber", "sapphire", "gold",
-		"ruby", "ice", "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star",
-		"vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart"]
+## One per dive site, in Balance.DEPTHS order (the art for the other kinds,
+## from the 30-site version, is still here unused).
+const KINDS: Array[String] = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "ice", "lava",
+		"glow", "atlantis", "kraken", "whale", "dragon", "heart"]
 ## Kinds that give off light (a soft pulsing glow behind them).
 const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
 		"vent", "storm", "dragon", "void", "time", "heart"]

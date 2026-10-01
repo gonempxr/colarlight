@@ -84,13 +84,13 @@ func _initialize() -> void:
 	var card = main.stage_card("boat")
 	check(card._unit_btns[1].visible, "the boat card shows 1 | 2 once the second boat is for sale")
 	card._select_unit(1)
-	check(card.key == "boat2" and card._upgrade.text.find("Buy") >= 0, "tab 2 shows the price")
+	check(card.key == "boat2" and card._upgrade.full_text.find("Buy") >= 0, "tab 2 shows the price")
 	card._on_upgrade()
 	check(gs.is_open("boat2"), "the card's button buys the second boat")
 	check(card._level.text.find("1") >= 0, "then the card shows its level")
 	main._on_stage_selected("plant2")
 	await process_frame
-	check(main._panel.key == "plant2" and main._panel._buy.text.find("Buy") >= 0, "panel offers to buy the second plant")
+	check(main._panel.key == "plant2" and main._panel._buy.full_text.find("Buy") >= 0, "panel offers to buy the second plant")
 	main._panel._on_buy()
 	check(gs.is_open("plant2"), "panel buys it")
 	check(main.stage_card("plant").key == "plant2", "the plant card follows the panel")
@@ -159,7 +159,7 @@ func _automation(main, gs: Node) -> void:
 	# The panel says it plainly too.
 	main._on_stage_selected("plant2")
 	await process_frame
-	check(main._panel._hire.visible and main._panel._hire.text.find("Hire") >= 0, "the panel has a clear hire button (%s)" % main._panel._hire.text)
+	check(main._panel._hire.visible and main._panel._hire.full_text.find("Hire") >= 0, "the panel has a clear hire button (%s)" % main._panel._hire.full_text)
 	main._close_sheet()
 	await create_timer(0.4).timeout
 	# Hire both by tapping their portraits on the cards.

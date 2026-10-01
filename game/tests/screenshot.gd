@@ -4,8 +4,8 @@ extends SceneTree
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
-## daily | museum | wardrobe[:tab] | players | feature:<id> | chest | tutorial |
-## sheet:<stage> (e.g. sheet:lift) | second (a new second boat and plant
+## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial |
+## sheet:<stage> (e.g. sheet:lift) | relang:<lang> (switch language live) | second (a new second boat and plant
 ## without managers: the red tab dots) | ads (test ad provider: the x2
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
@@ -19,6 +19,9 @@ func _initialize() -> void:
 	var scenario := args[2] if args.size() > 2 else "mid"
 	var scroll := float(args[3]) if args.size() > 3 else 0.0
 	var overlay: String = args[4] if args.size() > 4 else ""
+	# "<overlay>+suit": the sunset diver suit is worn (its ore bonus shows).
+	var with_suit := overlay.ends_with("+suit")
+	overlay = overlay.trim_suffix("+suit")
 	var ui_scale := float(args[5]) if args.size() > 5 else 1.0
 	await process_frame
 	root.get_node("Settings").language = lang
@@ -49,6 +52,9 @@ func _initialize() -> void:
 		pr.owned["hat_cat_ears"] = true
 		pr.equipped["pet"] = "pet_octopus"
 		pr.stats["puzzles_won"] = 4
+		if with_suit:
+			pr.owned["suit_sunset"] = true
+			pr.equip("suit_sunset")
 		pr.chest_ready = overlay == "chest"
 		if overlay != "daily":
 			pr.daily_last = pr.today()
@@ -121,6 +127,8 @@ func _initialize() -> void:
 			main.open_feature(overlay)
 		"players":
 			main.open_players()
+		"profile":
+			main.open_profile()
 		"tutorial":
 			pr.tutorial_step = 0
 		"bar":
@@ -150,6 +158,21 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+			elif overlay.begins_with("relang:"):
+				# Switch the language with the settings and the upgrade
+				# sheet open, and shoot two frames later (nothing may lag).
+				main._on_stage_selected("d0")
+				for i in 20:
+					await process_frame
+				main._open_settings()
+				await create_timer(0.5).timeout
+				root.get_node("Settings").set_language(overlay.split(":")[1])
+				await process_frame
+				await process_frame
+				await RenderingServer.frame_post_draw
+				root.get_texture().get_image().save_png(out)
+				quit()
+				return
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
 				main._started = true

@@ -14,7 +14,7 @@ var world: World
 var index := 0
 
 var card: StageCard
-var _open_btn: Button
+var _open_btn: PriceButton
 var _lock_label: Label
 var _t := 0.0
 var _flash := 0.0
@@ -54,7 +54,7 @@ func _ready() -> void:
 	_lock_label.add_theme_font_override("font", UiTheme.heavy_font())
 	_lock_label.add_theme_font_size_override("font_size", 28)
 	add_child(_lock_label)
-	_open_btn = Button.new()
+	_open_btn = PriceButton.new()
 	_open_btn.theme_type_variation = &"GoldButton"
 	_open_btn.custom_minimum_size = Vector2(270, 74)
 	_open_btn.pressed.connect(_on_open)
@@ -106,7 +106,7 @@ func refresh() -> void:
 	var name := tr("DEPTH_%s" % String(Balance.DEPTHS[index]["id"]).to_upper())
 	if not open:
 		_lock_label.text = name if is_next else "???"
-		_open_btn.text = "%s  %s" % [tr("OPEN"), NumFormat.short(GameState.unlock_cost(key()))]
+		_open_btn.set_price(tr("OPEN"), NumFormat.short(GameState.unlock_cost(key())))
 		_open_btn.theme_type_variation = &"GoldButton" if GameState.coins >= GameState.unlock_cost(key()) else &"DarkButton"
 	else:
 		card.refresh()

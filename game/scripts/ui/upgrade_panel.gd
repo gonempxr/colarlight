@@ -17,8 +17,8 @@ var _desc: Label
 var _stats: Label
 var _gain: Label
 var _modes: Array[Button] = []
-var _buy: Button
-var _hire: Button
+var _buy: PriceButton
+var _hire: PriceButton
 var _close: Button
 var _mode := 0
 var _hero: Control
@@ -62,12 +62,10 @@ func _ready() -> void:
 	_stats.theme_type_variation = &"InkLabel"
 	_stats.add_theme_font_size_override("font_size", 24)
 	box.add_child(_stats)
-	_hire = Button.new()
+	_hire = PriceButton.new()
 	_hire.theme_type_variation = &"GoldButton"
 	_hire.custom_minimum_size.y = 64
-	_hire.icon = Icons.get_icon("people", 30)
 	_hire.add_theme_font_size_override("font_size", 23)
-	_hire.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hire.pressed.connect(_on_hire)
 	box.add_child(_hire)
 	_gain = Label.new()
@@ -86,9 +84,8 @@ func _ready() -> void:
 		b.pressed.connect(_set_mode.bind(i))
 		modes.add_child(b)
 		_modes.append(b)
-	_buy = Button.new()
+	_buy = PriceButton.new()
 	_buy.custom_minimum_size.y = 88
-	_buy.icon = Icons.get_icon("arrow", 34)
 	_buy.add_theme_font_size_override("font_size", 30)
 	_buy.pressed.connect(_on_buy)
 	box.add_child(_buy)
@@ -180,7 +177,7 @@ func refresh() -> void:
 		_gain.text = ""
 		for b in _modes:
 			b.visible = false
-		_buy.text = tr("BUY_FOR") % NumFormat.short(price)
+		_buy.set_price_fmt(tr("BUY_FOR"), NumFormat.short(price))
 		_buy.theme_type_variation = &"GoldButton" if gs.coins >= price else &"DarkButton"
 		_hire.visible = false
 		_close.visible = not docked
@@ -194,7 +191,7 @@ func refresh() -> void:
 	_hire.visible = not hired
 	if not hired:
 		var mc: float = gs.manager_cost(key)
-		_hire.text = (tr("PANEL_HIRE_FOREMAN") if foreman else tr("PANEL_HIRE")) % NumFormat.short(mc)
+		_hire.set_price_fmt(tr("PANEL_HIRE_FOREMAN") if foreman else tr("PANEL_HIRE"), NumFormat.short(mc), "coin", "people")
 		_hire.theme_type_variation = &"GoldButton" if gs.coins >= mc else &"DarkButton"
 		if not foreman:
 			desc += " " + tr("PANEL_MANUAL")
@@ -206,6 +203,9 @@ func refresh() -> void:
 	lines.append("%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(gs.rate(key))])
 	if GameState.depth_index(key) >= 0:
 		lines.append("%s: %d" % [tr("STAT_DIVERS"), gs.divers(key)])
+		var suit: float = Progress.suit_bonus()
+		if suit > 0.0:
+			lines.append(tr("STAT_SUIT") % roundi(suit * 100.0))
 	if key == "lift":
 		lines.append(tr("STAT_TRIP") % [NumFormat.short(gs.cycle_capacity(key)), "%.1f" % gs.cycle_time(key)])
 		lines.append(tr("STAT_WAITING") % NumFormat.short(gs.pit))
@@ -221,7 +221,7 @@ func refresh() -> void:
 		_modes[i].text = tr("BUY_MAX") if m == -1 else "×%d" % m
 		_modes[i].theme_type_variation = &"BlueButton" if i == _mode else &"CreamButton"
 	var cost: float = gs.upgrade_cost(key, n)
-	_buy.text = "%s  %s" % [tr("UPGRADE"), NumFormat.short(cost)]
+	_buy.set_price(tr("UPGRADE"), NumFormat.short(cost), "coin", "arrow")
 	_buy.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
 	_close.visible = not docked
 

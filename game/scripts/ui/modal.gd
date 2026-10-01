@@ -175,3 +175,15 @@ func button(label: String, action: Callable, variation: StringName = &"") -> But
 	b.pressed.connect(action)
 	_box.add_child(b)
 	return b
+
+
+## A button with a price and its currency icon: fmt is a translated string
+## with %s where the price goes ("Dive for %s").
+func price_button(fmt: String, amount: String, action: Callable, variation: StringName = &"", currency: String = "coin") -> PriceButton:
+	var b := PriceButton.new()
+	b.theme_type_variation = variation
+	b.custom_minimum_size.y = 76
+	b.pressed.connect(action)
+	_box.add_child(b)
+	b.set_price_fmt(fmt, amount, currency)
+	return b
