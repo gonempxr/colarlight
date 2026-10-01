@@ -4,7 +4,7 @@ extends SceneTree
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
-## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial |
+## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial | ocean:N[:night][:banner] |
 ## sheet:<stage> (e.g. sheet:lift) | relang:<lang> (switch language live) | second (a new second boat and plant
 ## without managers: the red tab dots) | ads (test ad provider: the x2
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
@@ -85,6 +85,13 @@ func _initialize() -> void:
 			gs.dock = 9.1e11
 		_:
 			gs.coins = 12.0
+	# ocean:N[:night][:banner] - the world after N Dives (its own colors),
+	# at night and/or with the arrival banner.
+	if overlay.begins_with("ocean:"):
+		var parts := overlay.split(":")
+		gs.prestige_count = int(parts[1])
+		if "night" in parts:
+			load("res://scripts/ui/day_night.gd").fixed_phase = 0.75
 	if overlay == "second":
 		gs.levels.merge({"boat2": 3, "plant2": 2}, true)
 		gs.managers["boat2"] = false
@@ -158,6 +165,8 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+			elif overlay.begins_with("ocean:") and overlay.ends_with(":banner"):
+				main._world.show_ocean_name(gs.prestige_count)
 			elif overlay.begins_with("relang:"):
 				# Switch the language with the settings and the upgrade
 				# sheet open, and shoot two frames later (nothing may lag).

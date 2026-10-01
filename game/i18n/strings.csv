@@ -291,6 +291,12 @@ HINT_PUZZLE,Play the puzzle to find artifact pieces. Artifacts give bonuses fore
 HINT_PRESTIGE,"You can Dive Deeper! You start again, but everything earns much more.","Можно «Нырнуть глубже»! Начнёшь сначала, но всё будет приносить гораздо больше.","¡Puedes Bucear más hondo! Empiezas de nuevo, pero todo gana mucho más.",可以“深潜”了！重新开始，但一切收益都会大大提高。
 HINT_TAP_DIVERS,"Divers work by themselves. Tap them to hurry them up, and save coins for upgrades.","Водолазы работают сами. Нажимай на них, чтобы ускорить, и копи монеты на улучшения.",Los buzos trabajan solos. Tócalos para que vayan más rápido y ahorra para mejoras.,潜水员会自己工作。点击他们加快速度，攒金币来升级。
 STAGE_UP,%s grew: %s!,%s: новая стадия «%s»!,¡%s creció: %s!,%s升级为：%s！
+OCEAN_NAME_LAGOON,Coral Lagoon,Коралловая лагуна,Laguna de Coral,珊瑚泻湖
+OCEAN_NAME_FROST,Frost Sea,Ледяное море,Mar Helado,冰霜之海
+OCEAN_NAME_SUNSET,Sunset Sea,Закатное море,Mar del Ocaso,落日之海
+OCEAN_NAME_VIOLET,Violet Deep,Фиолетовая бездна,Abismo Violeta,紫罗兰深海
+OCEAN_NAME_KELP,Kelp Forest Sea,Море ламинарий,Mar de Algas,海藻森林之海
+OCEAN_NAME_GLOW,Glowing Sea,Сияющее море,Mar Luminoso,荧光之海
 SUIT_BONUS,+%d%% ore,+%d%% руды,+%d%% mineral,矿石 +%d%%
 STAT_SUIT,Suit bonus: +%d%% ore,Бонус костюма: +%d%% руды,Bono del traje: +%d%% mineral,潜水服加成：矿石 +%d%%
 PROFILE,Profile,Профиль,Perfil,个人资料

@@ -126,7 +126,7 @@ static func flag(ci: CanvasItem, base: Vector2, h: float, color: Color, t: float
 	var bottom_edge := PackedVector2Array()
 	for i in 6:
 		var f := i / 5.0
-		var wave := sin(t * (4.0 + wind * 5.0) - f * 3.4) * f * (1.5 + wind * 3.0) * size
+		var wave := sin(t * 6.0 - f * 3.4) * f * (1.5 + wind * 3.0) * size
 		var droop := f * f * (1.0 - wind) * 7.0 * size
 		top_edge.append(top + Vector2(d * (1.5 + f * len), 1.0 + wave + droop))
 		bottom_edge.append(top + Vector2(d * (1.5 + f * len), hh * (1.0 - f * 0.3) + wave + droop))
@@ -1331,7 +1331,7 @@ static func _boat_throne(ci: CanvasItem, o: Dictionary) -> void:
 static func island(ci: CanvasItem, width: float) -> void:
 	var sand := Art.smooth_pts(PackedVector2Array([Vector2(-6, 30), Vector2(6, -8), Vector2(30, -34), Vector2(70, -60),
 			Vector2(width * 0.5, -66), Vector2(width + 40, -64), Vector2(width + 40, 30)]), 4)
-	Art.toon(ci, sand, Art.SAND, 3.2, 0.8)
+	Art.toon(ci, sand, OceanLook.color("sand"), 3.2, 0.8)
 	var grass_ctrl := PackedVector2Array()
 	grass_ctrl.append(Vector2(56, -58))
 	grass_ctrl.append(Vector2(width * 0.5, -72))
@@ -1340,9 +1340,9 @@ static func island(ci: CanvasItem, width: float) -> void:
 	for i in 8:
 		var x := width + 30.0 - (width - 40.0) * (i + 0.5) / 8.0
 		grass_ctrl.append(Vector2(x, -54.0 + (5.0 if i % 2 == 0 else 0.0)))
-	Art.toon(ci, Art.smooth_pts(grass_ctrl, 3), Art.GRASS, 3.0, 0.6)
+	Art.toon(ci, Art.smooth_pts(grass_ctrl, 3), OceanLook.color("grass"), 3.0, 0.6)
 	for p: Vector2 in [Vector2(40, -20), Vector2(90, -34), Vector2(150, -30)]:
-		Art.t_ellipse(ci, p, Vector2(7, 4), Art.SAND_DARK, 1.8, 0.0)
+		Art.t_ellipse(ci, p, Vector2(7, 4), OceanLook.color("sand_dark"), 1.8, 0.0)
 
 
 ## Palm tree swaying in the wind; `shake` 0..1 (a tap) makes it wobble hard.
@@ -1351,7 +1351,10 @@ const PALM_TOP := Vector2(-11, -96)
 
 
 static func palm(ci: CanvasItem, t: float, wind_amount: float = 0.5, shake: float = 0.0, coconuts: int = 2) -> void:
-	var sway := sin(t * (0.9 + wind_amount * 0.8)) * (0.02 + wind_amount * 0.035) + wind_amount * 0.04
+	# Fixed frequencies: the wind only changes how far it bends. (A wind-
+	# scaled frequency times a growing clock made the phase race whenever
+	# the wind changed: the palm twitched more the longer the game ran.)
+	var sway := sin(t * 1.25) * (0.02 + wind_amount * 0.035) + wind_amount * 0.04
 	sway += sin(t * 14.0) * shake * 0.12
 	var trunk := PackedVector2Array()
 	for i in 7:
@@ -1363,7 +1366,7 @@ static func palm(ci: CanvasItem, t: float, wind_amount: float = 0.5, shake: floa
 		Art.pop(ci)
 	var top := trunk[6]
 	for i in 6:
-		var a := -PI + i * PI / 5.0 + sin(t * (1.2 + wind_amount) + i) * (0.04 + wind_amount * 0.05) + sway * 1.4 \
+		var a := -PI + i * PI / 5.0 + sin(t * 1.6 + i) * (0.04 + wind_amount * 0.05) + sway * 1.4 \
 				+ sin(t * 16.0 + i) * shake * 0.2
 		Art.push(ci, top, a)
 		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, -4), Vector2(26, -10), Vector2(50, 2), Vector2(26, 6), Vector2(0, 4)]), 3), Color("3fb35a"), 2.3, 0.5)
@@ -2254,13 +2257,13 @@ static func conveyor(ci: CanvasItem, a: Vector2, b: Vector2, t: float, running: 
 static func terrace(ci: CanvasItem, w: float, h: float) -> void:
 	var hill := Art.smooth_pts(PackedVector2Array([Vector2(-34, 12), Vector2(-26, -h * 0.55), Vector2(-12, -h + 2), Vector2(w * 0.5, -h - 3),
 			Vector2(w, -h), Vector2(w + 40, -h * 0.6), Vector2(w + 60, 12)]), 3)
-	Art.toon(ci, hill, Art.SAND, 3.0, 0.5)
+	Art.toon(ci, hill, OceanLook.color("sand"), 3.0, 0.5)
 	# A few stones, so the tall face is not bare.
 	for p: Vector3 in [Vector3(0.12, 0.72, 7), Vector3(0.55, 0.6, 6), Vector3(0.84, 0.34, 5)]:
-		Art.flat(ci, Art.ellipse_pts(Vector2(w * p.x, -h * p.y), Vector2(p.z, p.z * 0.6), 8), Art.SAND_DARK)
+		Art.flat(ci, Art.ellipse_pts(Vector2(w * p.x, -h * p.y), Vector2(p.z, p.z * 0.6), 8), OceanLook.color("sand_dark"))
 	var grass := Art.smooth_pts(PackedVector2Array([Vector2(-18, -h + 6), Vector2(-10, -h - 1), Vector2(w * 0.5, -h - 5), Vector2(w + 4, -h - 2),
 			Vector2(w + 22, -h + 8), Vector2(w * 0.5, -h + 9), Vector2(0, -h + 10)]), 3)
-	Art.toon(ci, grass, Art.GRASS, 2.6, 0.4)
+	Art.toon(ci, grass, OceanLook.color("grass"), 2.6, 0.4)
 
 
 ## Wooden pier where the boats unload; origin at its tip on the waterline,

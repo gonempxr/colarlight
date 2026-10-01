@@ -66,36 +66,57 @@ static func draw(ci: CanvasItem, pos: Vector2, t: float, press: bool = true, ang
 
 
 ## The hand alone, fingertip at `pos`, rotated and scaled (no animation).
+## Back of a right hand: the index finger points up, the three other fingers
+## curl into stacked knuckle rolls on the right, the thumb lies across them.
 static func hand(ci: CanvasItem, pos: Vector2, angle: float = -0.5, scale: Vector2 = Vector2.ONE) -> void:
 	Art.push(ci, pos, angle, scale)
-	# Sleeve and cuff sit under the wrist.
-	Art.toon(ci, PackedVector2Array([Vector2(-7, 82), Vector2(29, 80), Vector2(31, 104), Vector2(-9, 106)]), SLEEVE, 3.2, 0.6)
-	Art.line_c(ci, PackedVector2Array([Vector2(-3, 96), Vector2(27, 94)]), Color(1, 1, 1, 0.35), 3.0)
-	# Fist: the three curled fingers make the bumps on its right side.
-	Art.toon(ci, _fist(), SKIN, 3.2, 0.45)
-	for y: float in [44.0, 55.0]:
-		Art.line_c(ci, PackedVector2Array([Vector2(25.5, y), Vector2(14, y + 0.5)]), Color(Art.INK, 0.5), 1.8)
-	for y: float in [38.0, 49.0, 60.0]:
-		Art.flat(ci, Art.ellipse_pts(Vector2(24, y), Vector2(2.2, 1.4), 8), Color(1, 1, 1, 0.55))
-	# Index finger.
-	Art.t_rect(ci, Rect2(-8, 0, 16, 48), 8, SKIN, 3.2, 0.3)
-	Art.t_rect(ci, Rect2(-4.5, 3.5, 9, 9), 4, NAIL, 0.0, 0.0)
-	Art.flat(ci, Art.rrect_pts(Rect2(-3, 4.5, 3, 5), 1.5, 2), Color(1, 1, 1, 0.8))
-	Art.flat(ci, Art.ellipse_pts(Vector2(-4, 18), Vector2(1.6, 7), 10), Color(1, 1, 1, 0.45))
-	# Thumb folded across the curled fingers.
-	Art.push(ci, Vector2(-2, 61), -0.42)
-	Art.t_rect(ci, Rect2(-13, -6.5, 27, 13), 6.5, SKIN, 3.0, 0.4)
-	Art.flat(ci, Art.ellipse_pts(Vector2(4, -2.5), Vector2(5, 1.5), 10), Color(1, 1, 1, 0.45))
+	# Sleeve under the wrist.
+	Art.toon(ci, PackedVector2Array([Vector2(-10, 84), Vector2(30, 82), Vector2(32, 106), Vector2(-12, 108)]), SLEEVE, 3.0, 0.6)
+	Art.line_c(ci, PackedVector2Array([Vector2(-6, 98), Vector2(27, 96.5)]), Color(1, 1, 1, 0.35), 3.0)
+	# Index finger (its base hides behind the hand).
+	Art.toon(ci, _finger(), SKIN, 3.0, 0.3)
+	Art.flat(ci, Art.rrect_pts(Rect2(-5, 2.5, 10, 11), 4.5), NAIL)
+	Art.flat(ci, Art.rrect_pts(Rect2(-3.2, 4.6, 2.6, 4.6), 1.3, 2), Color(1, 1, 1, 0.85))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-4.2, 22), Vector2(1.5, 6), 10), Color(1, 1, 1, 0.45))
+	Art.line_c(ci, PackedVector2Array([Vector2(-3, 30), Vector2(3, 30)]), Color(Art.INK, 0.35), 1.4)
+	# Back of the hand.
+	Art.toon(ci, _palm(), SKIN, 3.0, 0.45)
+	# Curled fingers: three knuckle rolls, the lower ones in front.
+	for i in 3:
+		var y := 33.0 + i * 11.0
+		Art.t_rect(ci, Rect2(7 - i * 0.5, y, 22.5 - i, 12.5), 6.2, SKIN, 2.6, 0.35)
+		Art.flat(ci, Art.ellipse_pts(Vector2(24 - i * 0.6, y + 3.6), Vector2(2.4, 1.3), 8), Color(1, 1, 1, 0.6))
+	# Thumb across the front.
+	Art.push(ci, Vector2(3, 66), -0.38)
+	Art.t_rect(ci, Rect2(-15, -7, 30, 14), 7, SKIN, 2.8, 0.4)
+	Art.flat(ci, Art.rrect_pts(Rect2(7, -4.6, 6, 7.6), 3.0), NAIL)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -3.4), Vector2(6, 1.4), 10), Color(1, 1, 1, 0.45))
 	Art.pop(ci)
 	# Cuff over the wrist.
-	Art.t_rect(ci, Rect2(-10, 74, 42, 13), 5, CUFF, 3.2, 0.5)
+	Art.t_rect(ci, Rect2(-13, 76, 46, 14), 6, CUFF, 3.0, 0.5)
 	Art.pop(ci)
 
 
-static func _fist() -> PackedVector2Array:
-	return Art.smooth_pts(PackedVector2Array([Vector2(-9, 34), Vector2(6, 31), Vector2(21, 31), Vector2(28.5, 37),
-			Vector2(26, 44), Vector2(29.5, 49), Vector2(27, 55), Vector2(29, 61), Vector2(25, 70), Vector2(14, 78),
-			Vector2(-2, 78), Vector2(-11, 70), Vector2(-12, 50)]), 3)
+static var _finger_pts := PackedVector2Array()
+static var _palm_pts := PackedVector2Array()
+
+
+static func _finger() -> PackedVector2Array:
+	if _finger_pts.is_empty():
+		var pts := PackedVector2Array()
+		for i in 13:
+			var a := PI + PI * i / 12.0
+			pts.append(Vector2(cos(a) * 8.0, 8.0 + sin(a) * 8.0))
+		pts.append_array([Vector2(9.0, 30), Vector2(9.5, 44), Vector2(-9.5, 44), Vector2(-9.0, 30)])
+		_finger_pts = pts
+	return _finger_pts
+
+
+static func _palm() -> PackedVector2Array:
+	if _palm_pts.is_empty():
+		_palm_pts = Art.smooth_pts(PackedVector2Array([Vector2(-11, 42), Vector2(-7, 34), Vector2(4, 31), Vector2(16, 32),
+				Vector2(22, 40), Vector2(23, 62), Vector2(19, 75), Vector2(6, 81), Vector2(-6, 79), Vector2(-12, 68)]), 3)
+	return _palm_pts
 
 
 ## Two rings pulsing out from the fingertip every time it presses.
