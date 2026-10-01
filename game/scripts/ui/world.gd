@@ -574,3 +574,41 @@ func _paint_floor(ci: CanvasItem) -> void:
 	Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
 	Props.anchor(ci)
 	Art.pop(ci)
+	_paint_rock_end(ci, w, h - BOTTOM_H)
+
+
+## The underside of the last site's rock: an outlined, uneven rock edge and
+## the dive shaft closed by a rounded stone bottom (the rows cover the top).
+func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
+	var last := Balance.DEPTHS.size() - 1
+	var rock: Color = Art.calm(Art.DEPTH_STYLE[last]["rock"])
+	var edge := PackedVector2Array([Vector2(-10, top - 12)])
+	edge.append(Vector2(w + 10, top - 12))
+	for i in 15:
+		var x := lerpf(w + 10.0, -10.0, i / 14.0)
+		var y := top + 16.0 + sin(i * 2.3 + 1.0) * 5.0 + (6.0 if i % 4 == 1 else 0.0)
+		# Deeper under the shaft, so the shaft's bottom sits in rock.
+		var near := clampf(1.0 - absf(x - (SHAFT_L + SHAFT_R) / 2.0) / 90.0, 0.0, 1.0)
+		edge.append(Vector2(x, y + near * 26.0))
+	Art.toon(ci, edge, rock, 4.0, 0.0)
+	Art.flat(ci, Art.clipped(Art.moved(edge, Vector2(0, -9)), edge), Art.shade_of(rock, 0.18))
+	# The shaft's end: water down to a rounded stone floor, walls outlined
+	# like the shaft above.
+	var water: Color = Art.calm(Art.water_color(1.0)).darkened(0.1)
+	var r := 16.0
+	var floor_y := top + 30.0
+	var sump := PackedVector2Array([Vector2(SHAFT_L, top - 12), Vector2(SHAFT_R, top - 12)])
+	for i in 9:
+		var a := lerpf(0.0, PI / 2.0, i / 8.0)
+		sump.append(Vector2(SHAFT_R - r + cos(a) * r, floor_y - r + sin(a) * r))
+	for i in 9:
+		var a := lerpf(PI / 2.0, PI, i / 8.0)
+		sump.append(Vector2(SHAFT_L + r + cos(a) * r, floor_y - r + sin(a) * r))
+	Art.flat(ci, sump, water)
+	var wall := sump.slice(2)
+	wall.insert(0, Vector2(SHAFT_R, top - 12))
+	wall.append(Vector2(SHAFT_L, top - 12))
+	Art.polyline(ci, wall, Art.INK, 5.0)
+	# Pebbles on the shaft floor.
+	for p: Vector3 in [Vector3(SHAFT_L + 16, floor_y - 6, 6), Vector3(SHAFT_L + 31, floor_y - 5, 4.5), Vector3(SHAFT_R - 18, floor_y - 6, 5.5)]:
+		Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(p.z * 1.3, p.z), rock.lightened(0.1), 2.0, 0.4)

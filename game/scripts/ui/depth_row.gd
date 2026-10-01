@@ -237,8 +237,45 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.pop(ci)
 
 
+## The cave plus the doorway to the shaft. The doorway's floor runs on
+## level with the cave floor (past the cave's rounded corner, so there is no
+## bump next to the lift crate) and its side towards the shaft is open.
 func _cave_poly() -> PackedVector2Array:
-	return Art.union([Art.rrect_pts(cave_rect(), 38, 6), Art.rrect_pts(Rect2(World.SHAFT_R - 6, 118, 40, CAVE_BOTTOM - 118), 12, 3)])
+	var door := PackedVector2Array([Vector2(World.SHAFT_R - 2.5, 118), Vector2(World.CAVE_L + 44, 118),
+			Vector2(World.CAVE_L + 44, CAVE_BOTTOM), Vector2(World.SHAFT_R - 2.5, CAVE_BOTTOM)])
+	return Art.union([Art.rrect_pts(cave_rect(), 38, 6), door])
+
+
+static var _edges := {}
+
+
+## The cave's outline without the doorway side: an open line that starts
+## and ends inside the shaft walls (a closed ring drew a stray line between
+## the shaft and the crate).
+func _edge_pts(poly: PackedVector2Array) -> PackedVector2Array:
+	var k := hash(poly)
+	if _edges.has(k):
+		return _edges[k]
+	var n := poly.size()
+	var out := poly
+	for i in n:
+		var a := poly[i]
+		var b := poly[(i + 1) % n]
+		if a.x < World.SHAFT_R and b.x < World.SHAFT_R:
+			out = PackedVector2Array()
+			for j in n:
+				out.append(poly[(i + 1 + j) % n])
+			break
+	_edges[k] = out
+	return out
+
+
+func _cave_edge(ci: CanvasItem, poly: PackedVector2Array) -> void:
+	var pts := _edge_pts(poly)
+	if pts == poly:
+		Art.ring(ci, poly, Art.INK, 5.0)
+	else:
+		Art.polyline(ci, pts, Art.INK, 5.0)
 
 
 ## The moving parts: lantern, decor, the glowing ore vein.
@@ -264,7 +301,7 @@ func _draw() -> void:
 ## Edge of the cave, drawn again over the vein so the glow stays inside.
 func _draw_edge(ci: CanvasItem) -> void:
 	if GameState.is_open(key()):
-		Art.ring(ci, _cave_poly(), Art.INK, 5.0)
+		_cave_edge(ci, _cave_poly())
 
 
 func _draw_decor(st: Dictionary, cave: Rect2) -> void:
@@ -517,8 +554,9 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		# The card column rock is empty on closed rows: a lock there.
 		Art.lock(ci, Vector2(world.card_x() + World.CARD_W / 2.0, World.ROW_H / 2.0), 30)
 	else:
-		Art.lock(ci, Vector2(size.x / 2.0, 36), 20)
-	Art.ring(ci, cave_poly, Art.INK, 5.0)
+		# Inside the cave, between its top edge and the "???" label.
+		Art.lock(ci, Vector2(size.x / 2.0, CAVE_TOP + 22.0), 16)
+	_cave_edge(ci, cave_poly)
 
 
 
