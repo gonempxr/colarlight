@@ -32,6 +32,7 @@ func _initialize() -> void:
 	test_lift_speed()
 	test_offline_only_with_managers()
 	test_save_load_roundtrip()
+	test_old_30_site_save()
 	test_corrupted_save()
 	test_prestige()
 	test_num_format()
@@ -378,6 +379,45 @@ func test_save_load_roundtrip() -> void:
 	DirAccess.remove_absolute(TEST_SAVE)
 
 
+## A save from the 30-site version: deep sites fold into the 15 (best level
+## of each group, foremen kept), nothing past the last site, no crash.
+func test_old_30_site_save() -> void:
+	var lv := {"lift": 300, "boat": 280, "plant": 270}
+	var mg := {"lift": true, "boat": true, "plant": true}
+	for i in 30:
+		lv["d%d" % i] = 120 - i * 2 if i <= 23 else 0
+		mg["d%d" % i] = i <= 20
+	lv["d8"] = 5
+	lv["d7"] = 90
+	var data := {"version": 2, "saved_at": Time.get_unix_time_from_system(), "coins": 5.0e12, "total_earned": 9.0e13,
+			"prestige_count": 6, "levels": lv, "managers": mg, "pit": 10.0, "hold": 0.0, "dock": 0.0}
+	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(data))
+	f.close()
+	var gs: Node = _script.new()
+	gs.save_path = TEST_SAVE
+	gs.autosave_enabled = false
+	gs.reset()
+	check(gs.load_game(), "an old 30-site save loads")
+	check(gs.get_level("d6") == 108 and gs.get_level("d0") == 120, "the first seven sites keep their levels")
+	check(gs.get_level("d7") == 90, "a folded site takes the best of its group (%d)" % gs.get_level("d7"))
+	check(gs.get_level("d14") == 78 and gs.is_open("d14"), "the last site takes the deepest old ones (%d)" % gs.get_level("d14"))
+	check(gs.has_manager("d13") and not gs.has_manager("d14"), "foremen fold too")
+	check(not gs.levels.has("d15") and gs.stage_keys().size() == 15 + 5, "no sites past the 15th")
+	check(gs.prestige_count == 6 and gs.coins >= 5.0e12, "coins and Dives are kept")
+	check(gs.income_rate() > 0.0 and gs.prestige_gate_depth() == Balance.DEPTHS[11]["id"], "the economy runs and the gate is a real site")
+	gs.save_game()
+	var again: Node = _script.new()
+	again.save_path = TEST_SAVE
+	again.autosave_enabled = false
+	again.reset()
+	again.load_game()
+	check(again.get_level("d7") == 90 and again.get_level("d14") == 78, "a new save does not fold twice")
+	gs.free()
+	again.free()
+	DirAccess.remove_absolute(TEST_SAVE)
+
+
 func test_corrupted_save() -> void:
 	var gs := _fresh()
 	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
@@ -414,7 +454,8 @@ func test_prestige() -> void:
 	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0), "income x3 after first prestige")
 	check(before > 0.0, "sanity")
 	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * Balance.PRESTIGE_COST_GROWTH), "next prestige costs more")
-	check(gs.prestige_gate_depth() == Balance.DEPTHS[7]["id"], "each Dive needs two depths deeper")
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[6]["id"], "each Dive needs one depth deeper")
+	check(Balance.DEPTHS.size() == 15, "15 dive sites")
 	gs.prestige_count = 50
 	check(gs.prestige_gate_depth() == Balance.DEPTHS[Balance.DEPTHS.size() - 1]["id"], "gate stops at the last depth")
 	gs.free()

@@ -566,6 +566,11 @@ func load_game() -> bool:
 				artifacts[id] = {"level": clampi(_int(a.get("level")), 0, Content.ARTIFACT_MAX), "pieces": maxi(0, _int(a.get("pieces")))}
 	if d.get("quests") is Array:
 		for q in d["quests"]:
+			# A quest for a dive site that no longer exists (saves from the
+			# 30-site version) is dropped; a new one fills its slot.
+			var qkey := str(q.get("key", "")) if q is Dictionary else ""
+			if qkey != "" and not qkey in GameState.stage_keys():
+				continue
 			if q is Dictionary and str(q.get("kind", "")) in Content.QUEST_KINDS and quests.size() < Content.QUEST_SLOTS:
 				quests.append({"kind": str(q["kind"]), "key": str(q.get("key", "")), "goal": maxf(1.0, _f(q.get("goal"))),
 						"count": maxf(0.0, _f(q.get("count"))), "pearls": clampi(_int(q.get("pearls")), 1, 10)})

@@ -26,7 +26,13 @@ signal manager_hired(key: String)
 signal depth_opened(key: String)
 signal tapped(key: String)
 
-const SAVE_VERSION := 2
+## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
+const SAVE_VERSION := 3
+## Saves from the 30-site version (save version 2 or older): which old
+## sites each site from d7 on takes its level and foreman from (the best of
+## them). Sites d0..d6 keep their own. The old sites' prices and outputs
+## follow the same curve, so a folded site works like the one it replaces.
+const OLD_DEPTH_FOLD: Array = [[7, 8], [9, 10], [11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22, 23, 24, 25, 26, 27, 28, 29]]
 const RUSH_PER_TAP := 0.08
 const RUSH_DECAY := 0.15
 const RUSH_SEC := 5.0
@@ -633,6 +639,10 @@ func _apply_save(data: Dictionary) -> void:
 	prestige_count = maxi(0, int(_num(data.get("prestige_count"), 0.0)))
 	var saved_levels = data.get("levels", {})
 	var saved_managers = data.get("managers", {})
+	if int(_num(data.get("version"), 0.0)) < 3 and saved_levels is Dictionary:
+		var folded := _fold_old_depths(saved_levels, saved_managers if saved_managers is Dictionary else {})
+		saved_levels = folded[0]
+		saved_managers = folded[1]
 	# Saves from before the lift: it gets set up below, after the rest.
 	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
 	for key in stage_keys():
@@ -657,6 +667,28 @@ func _apply_save(data: Dictionary) -> void:
 	boost_left = clampf(_num(data.get("boost_left"), 0.0), 0.0, 24.0 * 3600.0)
 	if old_save:
 		_migrate_lift()
+
+
+## Levels and managers of a 30-site save mapped onto the 15 sites: d0..d6
+## stay, the deeper ones take the best level of their OLD_DEPTH_FOLD group
+## (a foreman if any had one). Never lowers what the player had reached.
+static func _fold_old_depths(old_levels: Dictionary, old_managers: Dictionary) -> Array:
+	var lv := old_levels.duplicate()
+	var mg := old_managers.duplicate()
+	for i in OLD_DEPTH_FOLD.size():
+		var key := "d%d" % (7 + i)
+		var best := 0
+		var hired := false
+		for k: int in OLD_DEPTH_FOLD[i]:
+			var old_key := "d%d" % k
+			best = maxi(best, int(_num(old_levels.get(old_key), 0.0)))
+			hired = hired or old_managers.get(old_key) == true
+		lv[key] = best
+		mg[key] = hired
+	for k in range(7 + OLD_DEPTH_FOLD.size(), 30):
+		lv.erase("d%d" % k)
+		mg.erase("d%d" % k)
+	return [lv, mg]
 
 
 ## A save from before the lift: open the lift at a level that keeps up with

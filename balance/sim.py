@@ -13,11 +13,12 @@ import sys
 # --- Parameters: the game must use exactly these (balance.gd mirrors them) ---
 GROWTH = 1.08                     # upgrade cost growth per level
 MILESTONE_FIRST = 10              # x2 output at level 10, then every 25 levels (25, 50, 75...)
-IDS = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "amber", "sapphire", "gold", "ruby", "ice",
-       "lava", "jade", "moon", "fossil", "obsidian", "glow", "atlantis", "meteor", "kraken", "star",
-       "vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart"]
+IDS = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "ice", "lava", "glow",
+       "atlantis", "kraken", "whale", "dragon", "heart"]
 # value: coins/s per level at depth; cost0: level 1->2 upgrade cost; unlock: cost to open.
-# Depths after the sixth follow a fixed pattern (value x7, cost0 x10, unlock x UNLOCK_STEP).
+# 15 sites (the 30-site version had two per run; now about one new site per
+# run after the first). The first seven are unchanged; after that each site
+# is x49 value and x7.5 price (tuned so runs stay ~1:45-2:40 long).
 FIRST = [
     {"value": 0.8,    "cost0": 6,       "unlock": 0},
     {"value": 6,      "cost0": 60,      "unlock": 120},
@@ -25,22 +26,19 @@ FIRST = [
     {"value": 320,    "cost0": 6e3,     "unlock": 4.5e5},
     {"value": 2.3e3,  "cost0": 6e4,     "unlock": 6e6},
     {"value": 1.6e4,  "cost0": 6e5,     "unlock": 6e7},
+    {"value": 1.12e5, "cost0": 6e6,     "unlock": 6.8e6},
 ]
-# Unlock prices: the first six from calibrate2.py (run 1), the rest follow the
-# run pattern (depth before the gate ~ P/40, the gate depth ~ P/9 of that run's
-# Dive Deeper price), so every run opens about two new depths.
-UNLOCKS = [0, 90, 1300, 1.2e5, 1.0e6, 2.3e6,
-           6.8e6, 3.0e7, 4.5e7, 2.0e8, 3.0e8, 1.3e9, 1.9e9, 8.4e9,
-           1.2e10, 5.3e10, 7.8e10, 3.4e11, 5.0e11, 2.2e12, 1.4e13,
-           2.1e13, 9.0e13, 1.3e14, 5.8e14, 8.6e14, 3.8e15, 5.5e15, 2.4e16, 3.5e16]
+UNLOCKS = [0, 90, 1300, 1.2e5, 1.0e6, 2.3e6, 6.8e6,
+           5.1e7, 3.8e8, 2.9e9, 2.2e10, 1.6e11, 1.2e12, 9.1e12, 6.8e13]
+VALUE_STEP = 49.0
 DEPTHS = [dict(d) for d in FIRST]
 while len(DEPTHS) < len(IDS):
     prev = DEPTHS[-1]
-    DEPTHS.append({"value": prev["value"] * 7, "cost0": prev["cost0"] * 10, "unlock": 0})
+    DEPTHS.append({"value": prev["value"] * VALUE_STEP, "cost0": 0, "unlock": 0})
 for k, u in enumerate(UNLOCKS):
     DEPTHS[k]["unlock"] = u
     # Deep sites: first level-up costs about the opening price, so their
-    # upgrade buttons stay within reach (x10 per depth outran income).
+    # upgrade buttons stay within reach.
     if k >= 7:
         DEPTHS[k]["cost0"] = u
 BOAT = {"value": 1.5, "cost0": 8}
@@ -78,7 +76,7 @@ for k in range(2, len(DEPTHS)):
     MANAGER_COST[f"d{k}"] = float(f"{DEPTHS[k]['unlock'] * 2.0:.2g}")
 # Diving Deeper needs this depth open (deeper every time) and the coins.
 PRESTIGE_GATE_FIRST = 5
-PRESTIGE_GATE_STEP = 2
+PRESTIGE_GATE_STEP = 1
 PRESTIGE_COST0 = 1.2e7
 PRESTIGE_COST_GROWTH = 6.5
 RUNS = 13
