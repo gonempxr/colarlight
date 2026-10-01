@@ -4,8 +4,9 @@ extends Control
 ## - "boost": a gold "×2" coin with a little play badge: watch an optional
 ##   ad for x2 coins. Shown only where ads exist (Platform.ads_available()).
 ##   Dimmed while the boost is full (4 h).
-## - "rivals": a trophy that opens the Rivals League; a red "!" when last
-##   week's pearls wait to be collected.
+## - "rivals": a trophy that opens the Rivals League, shown while last
+##   week's pearls wait to be collected (red "!"). The league is also in
+##   the Profile.
 
 signal pressed
 

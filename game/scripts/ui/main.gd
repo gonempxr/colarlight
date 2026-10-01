@@ -27,7 +27,7 @@ var _side_boat: StageCard
 var _side_plant: StageCard
 var _hint_btn: HintButton
 ## Under the lightbulb: x2 for an optional ad (only where ads exist) and
-## the Rivals League trophy.
+## the Rivals League trophy (only while a weekly reward waits).
 var _boost_btn: SideButton
 var _rivals_btn: SideButton
 var _ad_overlay: AdOverlay
@@ -537,7 +537,9 @@ func _place_side_buttons() -> void:
 	# Not in the first minutes: the game comes first, then the extras.
 	var settled := _started and Progress.has_feature("quests")
 	_boost_btn.visible = settled and Platform.ads_available()
-	_rivals_btn.visible = settled
+	# The league lives in the Profile; the trophy shows up only while last
+	# week's pearls wait there.
+	_rivals_btn.visible = settled and Rivals.reward_pending()
 	for b in [_boost_btn, _rivals_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)

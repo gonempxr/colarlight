@@ -143,6 +143,10 @@ static func profile(m: Modal, main: Node) -> void:
 	m.text(t("PROFILE_HINT"), 20, Art.INK_SOFT)
 	var look := m.button(t("EDIT_LOOK"), func(): Sfx.play("click"); main.open_avatar_editor(main.open_profile), &"BlueButton")
 	look.icon = Icons.get_icon("pencil", 34)
+	if Progress.has_feature("quests"):
+		# The Rivals League (made-up sea characters), with this week's place.
+		var league := m.button("%s  ·  #%d" % [t("RIVALS"), Rivals.place()], func(): Sfx.play("click"); main.open_rivals(), &"GoldButton")
+		league.icon = Icons.get_icon("star", 36)
 	if Progress.has_feature("shop"):
 		var ward := m.button(t("WARDROBE"), func(): Sfx.play("click"); main.open_feature("shop"))
 		ward.icon = Icons.get_icon("wardrobe", 38)

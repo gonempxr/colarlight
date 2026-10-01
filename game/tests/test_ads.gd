@@ -222,11 +222,29 @@ func test_main_buttons() -> void:
 	main = current_scene
 	await _frames(2)
 	check(not main._boost_btn.visible, "provider none: the x2 button is hidden")
-	check(main._rivals_btn.visible, "the Rivals trophy shows")
+	check(not main._rivals_btn.visible, "no weekly reward: no trophy button")
 	pf.set_provider("test")
 	await _frames(2)
 	check(main._boost_btn.visible, "provider test: the x2 button shows")
+	rv.last = {"week": rv.week - 1, "place": 2, "pearls": 15, "claimed": false}
+	await _frames(2)
+	check(main._rivals_btn.visible, "a waiting weekly reward shows the trophy")
 	check(main._rivals_btn.position.y > main._boost_btn.position.y, "the trophy sits under the x2 button")
+	rv.last = {}
+	# The Profile has the league button.
+	main.open_profile()
+	await _frames(3)
+	var league: Button = null
+	for b in main._modal.find_children("*", "Button", true, false):
+		if b.text.begins_with(TranslationServer.translate("RIVALS")):
+			league = b
+	check(league != null, "the Profile has a Rivals League button")
+	if league:
+		league.pressed.emit()
+		await _frames(3)
+		check(main._modal.visible and main._modal.find_children("*", "ArtView", true, false).size() >= 16, "it opens the league board")
+	main._modal.close()
+	await _frames(12)
 	# The whole flow through the real UI: button -> offer -> watch -> overlay.
 	main._boost_btn.pressed.emit()
 	await _frames(3)
