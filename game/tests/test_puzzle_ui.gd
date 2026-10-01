@@ -32,6 +32,11 @@ func _initialize() -> void:
 		var tr_res := load("res://i18n/puzzle.%s.translation" % l)
 		if tr_res:
 			TranslationServer.add_translation(tr_res)
+	var tip_ok := true
+	for l in ["en", "ru", "es", "zh"]:
+		TranslationServer.set_locale(l)
+		tip_ok = tip_ok and TranslationServer.translate("PZ_GOAL_HINT") != "PZ_GOAL_HINT"
+	check(tip_ok, "the goal tip is translated in all 4 languages")
 	TranslationServer.set_locale("en")
 	root.size = Vector2i(390, 844)
 	await _frames(4)
@@ -66,6 +71,7 @@ func _open(n: int) -> void:
 	screen.finished.connect(func(r: Dictionary): results.append(r))
 	await _frames(3)
 	check(screen.model != null and screen.is_inside_tree(), "puzzle screen opens (level %d)" % n)
+	check(screen._tip > 0.0, "the level starts with the 'bring the pieces down' tip (level %d)" % n)
 
 
 func _win(canvas_pos: Vector2) -> Vector2:
