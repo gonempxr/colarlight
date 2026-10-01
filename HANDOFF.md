@@ -36,7 +36,7 @@ Saves from before the lift (no `"lift"` level) get a lift strong enough for thei
 - World: a 10-minute day/night cycle, and everything in it reacts to taps.
 - Hints: a lightbulb shows hints and an automation checklist.
 - Languages: RU, EN, ES and ZH.
-- Money: none. Mark chose **no ads and no IAP for now**. The Platform autoload hides every ad or purchase button. Background: portals such as Yandex Games were researched; Stripe and Paddle are unavailable for a RU developer.
+- Money (2026-10-01, branch expansion): optional rewarded ad "x2 coins for 30 min" (stacks to 4 h). Platform providers: `none` (GitHub Pages/itch, button hidden), `crazygames` (SDK v3 via the `window.coralightAds` bridge in the web shell; loads on `*.crazygames.*` or `?ads=crazygames`; real SDK not yet run), `test` (`?ads=test`, 3 s fake ad). No IAP. Rivals League (autoload Rivals): weekly board of clearly fictional sea characters, pearl rewards; Mark asked for bots shown as real players and that was declined.
 
 **Art direction:**
 - All art is drawn in code: a cartoon "toon" look with a thick INK outline (#241a3a), chibi characters with emotions and reactions.
@@ -102,7 +102,7 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
 - Retina/HiDPI: the UI scale must account for pixel density, not just the viewport width.
 
 ## State on 2026-09-30 (expansion)
-- Branch `expansion` adds a second boat and plant (for sale once depth 3 opens), 30 depths, 20 building stages and prestige gate min(5 + 2n, 29), cost 1.2e7 × 6.6^n. The numbers above describe v2.1.
+- Branch `expansion` adds a second boat and plant (for sale once depth 3 opens), 20 building stages, a lift, 15 dive sites (cut from 30 on 2026-10-01; save version 3 folds older saves via OLD_DEPTH_FOLD), prestige gate min(5 + n, 14), per-ocean looks (ocean_look.gd), tap caps (TapLimiter, 10/s per target), suit bonuses. balance/sim.py matches. The numbers above describe v2.1.
 - v2.1 is saved as branches `save/v2.1` (source) and `save/site-v2.1` (site).
 - The expansion is published only as a test page at /colarlight/beta/. Mark decides whether to keep it.
 - **Beta saves:** every page on gonempxr.github.io shares one browser save. So the beta is exported with a temporary edit to project.godot:
