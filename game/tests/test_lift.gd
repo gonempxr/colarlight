@@ -307,7 +307,7 @@ func test_ui() -> void:
 	var boat_r: Rect2 = world.surface.boat_card.get_rect()
 	var plant_r: Rect2 = world.surface.plant_card.get_rect()
 	check(lift.card.visible and is_equal_approx(lift_r.position.y, boat_r.position.y), "the lift card is in the card row (%s vs %s)" % [lift_r, boat_r])
-	check(lift_r.end.x <= boat_r.position.x - 8.0 and not lift_r.intersects(plant_r), "it sits left of the boat card, overlapping none")
+	check(lift_r.end.x <= boat_r.position.x - 8.0 and not lift_r.intersects(plant_r), "it sits left of the boat card, overlapping none (%s %s)" % [lift_r, boat_r])
 	check(lift_r.size.x >= lift.CARD_MIN_W, "it is wide enough (%.0f)" % lift_r.size.x)
 	var bulb: Rect2 = main._hint_btn.get_global_rect()
 	check(not lift.card.get_global_rect().intersects(bulb), "it leaves the hint bulb clear")
