@@ -133,6 +133,25 @@ func test_artifacts_and_puzzle() -> void:
 	check(int(pr.stats.get("puzzles_won", 0)) == need, "wins are counted")
 	var bad: Dictionary = pr.puzzle_reward({"won": true, "stars": 1, "artifact": "nonsense"})
 	check(bad["piece"] == Content.ARTIFACTS[1]["id"], "unknown artifact falls back to the target")
+	# Coins follow the puzzle level too: late in the game the first puzzle
+	# level pays a little, new deeper levels pay more; every win still pays
+	# at least half a minute of income, more stars pay more.
+	_fresh()
+	gs.levels.merge({"d0": 300, "d1": 300, "d2": 300, "lift": 400, "boat": 400, "plant": 400}, true)
+	for k in ["d0", "d1", "d2", "lift", "boat", "plant"]:
+		gs.managers[k] = true
+	var inc: float = gs.income_rate() * 60.0
+	pr.puzzle_level = 1
+	var low: float = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})["coins"]
+	pr.puzzle_level = 30
+	var high: Dictionary = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})
+	pr.puzzle_level = 30
+	var high1: float = pr.puzzle_reward({"won": true, "stars": 1, "artifact": first})["coins"]
+	check(low <= inc * 1.25 and low >= inc * 0.5, "late game, puzzle level 1 pays about a minute of income (%.2f min)" % (low / inc))
+	check(float(high["coins"]) >= low * 4.0, "a deep puzzle level pays much more than level 1 (%.1fx)" % (float(high["coins"]) / low))
+	check(float(high["coins"]) > high1, "more stars pay more")
+	check(int(high["pearls"]) > 5, "deep puzzle levels give extra pearls (%d)" % int(high["pearls"]))
+	check(Content.puzzle_factor(1000) <= Content.PUZZLE_FACTOR_MAX, "the level factor is capped")
 	# Max level stops at 5.
 	pr.artifacts[first]["level"] = Content.ARTIFACT_MAX
 	check(pr.add_piece(first) == 0 and pr.artifacts[first]["level"] == Content.ARTIFACT_MAX, "artifacts stop at the max level")

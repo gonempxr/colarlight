@@ -23,6 +23,42 @@ const ARTIFACTS: Array[Dictionary] = [
 	{"id": "sun_medallion", "bonus": "all", "per_level": 0.06},
 ]
 const ARTIFACT_MAX := 5
+
+# --- Puzzle rewards -------------------------------------------------------------
+## Puzzle coins are minutes of the player's income (so a win is worth the
+## same at any stage of the economy) times a factor that grows with the
+## puzzle level being played: the first puzzle levels pay a little (even late
+## in the game), new deeper levels pay more. Factor: PUZZLE_FACTOR_FIRST at
+## level 1, +PUZZLE_FACTOR_STEP per level, at most PUZZLE_FACTOR_MAX.
+const PUZZLE_FACTOR_FIRST := 0.4
+const PUZZLE_FACTOR_STEP := 0.06
+const PUZZLE_FACTOR_MAX := 2.0
+## A win: (PUZZLE_WIN_MIN + PUZZLE_STAR_MIN x stars) minutes x factor.
+const PUZZLE_WIN_MIN := 1.5
+const PUZZLE_STAR_MIN := 0.5
+## "Collect what you got": (PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN x pieces) x factor.
+const PUZZLE_LOSS_MIN := 0.5
+const PUZZLE_PIECE_MIN := 0.25
+## A win gives 2 + stars pearls, plus one more every PUZZLE_PEARL_EVERY
+## puzzle levels (at most PUZZLE_PEARL_MAX_EXTRA more).
+const PUZZLE_PEARL_EVERY := 10
+const PUZZLE_PEARL_MAX_EXTRA := 3
+
+
+static func puzzle_factor(level: int) -> float:
+	return minf(PUZZLE_FACTOR_MAX, PUZZLE_FACTOR_FIRST + PUZZLE_FACTOR_STEP * maxi(0, level - 1))
+
+
+## Minutes of income a finished puzzle level pays.
+static func puzzle_minutes(level: int, won: bool, stars: int, pieces: int) -> float:
+	var base := PUZZLE_WIN_MIN + PUZZLE_STAR_MIN * stars if won else PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN * pieces
+	return base * puzzle_factor(level)
+
+
+static func puzzle_pearls(level: int, won: bool, stars: int, pieces: int) -> int:
+	if not won:
+		return 1 if pieces > 0 else 0
+	return 2 + stars + mini(PUZZLE_PEARL_MAX_EXTRA, maxi(0, level - 1) / PUZZLE_PEARL_EVERY)
 ## Pieces needed to reach level 1, 2, ... 5.
 const PIECES := [3, 4, 5, 6, 8]
 
