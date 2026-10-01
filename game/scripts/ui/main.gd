@@ -513,8 +513,10 @@ func celebrate(r: Dictionary, from: Vector2) -> void:
 func _place_side_buttons() -> void:
 	var x := _hint_btn.position.x + (HintButton.SIZE - SideButton.SIZE) / 2.0
 	var y := _hint_btn.position.y + HintButton.SIZE + 10.0
-	_boost_btn.visible = _started and Platform.ads_available()
-	_rivals_btn.visible = _started and Progress.has_feature("quests")
+	# Not in the first minutes: the game comes first, then the extras.
+	var settled := _started and Progress.has_feature("quests")
+	_boost_btn.visible = settled and Platform.ads_available()
+	_rivals_btn.visible = settled
 	for b in [_boost_btn, _rivals_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)
