@@ -518,7 +518,8 @@ func _place_side_buttons() -> void:
 	for b in [_boost_btn, _rivals_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)
-			y += SideButton.SIZE + 10.0
+			# The boost's time tag hangs below it.
+			y += SideButton.SIZE + (22.0 if b == _boost_btn and GameState.boost_left > 0.0 else 10.0)
 
 
 func open_boost() -> void:

@@ -18,6 +18,8 @@ var _press := 0.0
 var _check_left := 0.0
 var _dim := false
 var _badge := false
+## Boost: time left shown on a gold tag under the coin ("" = no boost).
+var _tag := ""
 var _mouse_seen := false
 
 
@@ -71,13 +73,18 @@ func _process(delta: float) -> void:
 	_check_left = 0.25
 	var dim := false
 	var badge := false
+	var tag := ""
 	if kind == "boost":
 		dim = not GameState.can_ad_boost()
+		var left: float = GameState.boost_left
+		if left > 0.0:
+			tag = NumFormat.duration(left)
 	else:
 		badge = bool(Rivals.reward_pending())
-	if dim != _dim or badge != _badge:
+	if dim != _dim or badge != _badge or tag != _tag:
 		_dim = dim
 		_badge = badge
+		_tag = tag
 		queue_redraw()
 
 
@@ -87,6 +94,13 @@ func _draw() -> void:
 	if kind == "boost":
 		Art.t_circle(self, c, r, Color("fff4d6") if not _dim else Color("e3e6ef"), 4.0, 0.6)
 		draw_boost(self, c, r * 0.78, _dim)
+		if _tag != "":
+			# Gold tag with the time left, hanging over the bottom edge.
+			var font := UiTheme.heavy_font()
+			var w := font.get_string_size(_tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 16.0
+			var tag := Rect2(c.x - w / 2.0, SIZE - 16.0, w, 24.0)
+			Art.t_rect(self, tag, 9.0, Art.GOLD, 3.0, 0.4)
+			Art.text(self, Vector2(c.x, SIZE + 1.5), _tag, 17, Art.INK, 0)
 	else:
 		Art.t_circle(self, c, r, Color("e9f3ff"), 4.0, 0.6)
 		draw_trophy(self, c + Vector2(0, 1), r * 0.62)
@@ -106,7 +120,7 @@ static func draw_boost(ci: CanvasItem, c: Vector2, r: float, dim: bool = false) 
 	var fs := int(round(r * 1.1))
 	Art.text(ci, c + Vector2(-r * 0.1, r * 0.38), "×2", fs, Art.WHITE, maxi(5, int(r * 0.3)))
 	# Play badge, bottom right.
-	var b := c + Vector2(r * 0.78, r * 0.72)
+	var b := c + Vector2(r * 0.84, r * 0.42)
 	var br := r * 0.42
 	Art.t_circle(ci, b, br, Art.CORAL if not dim else Color("9aa3bd"), maxf(2.5, r * 0.1), 0.3)
 	var tri := PackedVector2Array([b + Vector2(-br * 0.32, -br * 0.48), b + Vector2(br * 0.55, 0), b + Vector2(-br * 0.32, br * 0.48)])
