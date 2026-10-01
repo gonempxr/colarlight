@@ -533,7 +533,17 @@ static func measure_begin() -> void:
 
 
 static func measure_end() -> Rect2:
-	var r := _bounds(_rv) if _rv.size() > 0 else Rect2()
+	# Only what can be seen: invisible helpers (alpha ~0) don't count.
+	var r := Rect2()
+	var any := false
+	for i in _rv.size():
+		if _rc[i].a < 0.05:
+			continue
+		if any:
+			r = r.expand(_rv[i])
+		else:
+			r = Rect2(_rv[i], Vector2.ZERO)
+			any = true
 	var st: Array = _ms.pop_back()
 	_rec = st[0]
 	_rv = st[1]

@@ -69,28 +69,49 @@ static func build(m: Modal, main: Node) -> void:
 	m.add(grid)
 
 
+static var _item_bounds := {}
+
+
 static func _draw_item(ci: CanvasItem, c: Dictionary, s: Vector2, tt: float) -> void:
 	var mid := s / 2.0
 	var art: String = c["art"]
 	match str(c["slot"]):
-		"pet":
-			Art.push(ci, mid + Vector2(0, 6 + sin(tt * 2.4) * 4.0), 0.0, Vector2(2.3, 2.3))
-			PetArt.draw(ci, art, tt, 1.0, false)
-			Art.pop(ci)
 		"hat":
 			var look := Settings.avatar.duplicate()
 			look["hat"] = art
-			Chars.portrait(ci, mid + Vector2(0, 8), minf(s.x, s.y) * 0.4, look, "happy", Chars.blinking(tt, 4.0), Color("bfe8ff"))
+			Chars.portrait(ci, mid + Vector2(0, 4), minf(s.x, s.y) * 0.4, look, "happy", Chars.blinking(tt, 4.0), Color("bfe8ff"))
+		_:
+			# Pets, boats and divers: scaled to fit inside the card's picture
+			# (bounds measured once at rest, with room for the idle motion).
+			var id: String = c["id"]
+			if not _item_bounds.has(id):
+				Art.measure_begin()
+				_draw_art(null, c, 0.0)
+				_item_bounds[id] = Art.measure_end()
+			var b: Rect2 = _item_bounds[id]
+			var most: float = {"pet": 2.3, "boat": 0.62, "suit": 1.25}.get(str(c["slot"]), 1.0)
+			var sc := minf(most, minf((s.x - 16.0) / maxf(b.size.x, 1.0), (s.y - 10.0) / maxf(b.size.y, 1.0)))
+			Art.push(ci, mid - b.get_center() * sc, 0.0, Vector2(sc, sc))
+			_draw_art(ci, c, tt)
+			Art.pop(ci)
+
+
+## One wardrobe item drawn around the origin at scale 1.
+static func _draw_art(ci: CanvasItem, c: Dictionary, tt: float) -> void:
+	var art: String = c["art"]
+	match str(c["slot"]):
+		"pet":
+			Art.push(ci, Vector2(0, sin(tt * 2.4) * 1.7))
+			PetArt.draw(ci, art, tt, 1.0, false)
+			Art.pop(ci)
 		"boat":
-			Art.push(ci, mid + Vector2(8, 36), 0.0, Vector2(0.62, 0.62))
 			Props.boat_paint = Content.BOAT_PAINTS.get(art, Content.BOAT_PAINTS["classic"])
 			Props.boat(ci, tt, 2, Art.GOLD, false, "happy", false)
 			Props.boat_paint = current_boat_paint()
-			Art.pop(ci)
 		"suit":
 			var paint = Content.SUIT_PAINTS.get(art)
 			var col: Color = paint[0] if paint != null else Art.DEPTH_STYLE[0]["suit"]
-			Chars.diver(ci, mid + Vector2(0, 14), 1.25, col, 1.0, 0.0, tt * 0.8, "idle", 0.0, false, Art.GOLD, "happy", Chars.blinking(tt, 5.0), tt)
+			Chars.diver(ci, Vector2.ZERO, 1.0, col, 1.0, 0.0, tt * 0.8, "idle", 0.0, false, Art.GOLD, "happy", Chars.blinking(tt, 5.0), tt)
 
 
 static func _cell(c: Dictionary, m: Modal) -> Control:
