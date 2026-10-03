@@ -14,6 +14,7 @@ boot_splash/bg_color=Color(0.054902, 0.14902, 0.329412, 1)
 
 [autoload]
 
+CloudSave="*res://scripts/autoload/cloud_save.gd"
 Profiles="*res://scripts/autoload/profiles.gd"
 Settings="*res://scripts/autoload/settings.gd"
 Sfx="*res://scripts/autoload/sfx.gd"

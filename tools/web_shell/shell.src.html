@@ -406,6 +406,12 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			safe(() => sdk.game.loadingStop());
 		}
 	};
+	bridge.cloudBlob = '';
+	bridge.cloudSave = function (text) {
+		if (sdk) {
+			safe(() => sdk.data.setItem('coralight_save', text));
+		}
+	};
 	bridge.rewarded = function (onStarted, onDone) {
 		if (!sdk) {
 			onDone('error:unavailable');
@@ -457,6 +463,7 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			} else {
 				safe(() => SDK.game.loadingStart());
 			}
+			safe(() => { bridge.cloudBlob = SDK.data.getItem('coralight_save') || ''; });
 			bridge.state = 'ready';
 		}).catch(function (e) {
 			console.warn('CrazyGames SDK init failed:', e);
@@ -639,7 +646,20 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 	} else {
 		setProgress(0, 0);
-		engine.startGame({
+		// On CrazyGames the saved progress must be read before the game starts.
+		const sdkWait = new Promise(function (resolve) {
+			const t0 = Date.now();
+			const look = function () {
+				const a = window.coralightAds;
+				if (!a || a.state !== 'loading' || Date.now() - t0 > 5000) {
+					resolve();
+				} else {
+					setTimeout(look, 50);
+				}
+			};
+			look();
+		});
+		sdkWait.then(() => engine.startGame({
 			'onProgress': setProgress,
 			// The game prints CORALIGHT_READY once its first screen is drawn.
 			'onPrint': function (...args) {
@@ -658,7 +678,7 @@ const engine = new Engine(GODOT_CONFIG);
 			statusText.textContent = T.starting;
 			// Safety net in case the ready line never arrives.
 			setTimeout(hide, 15000);
-		}, displayFailureNotice);
+		}, displayFailureNotice));
 	}
 }());
 		</script>
