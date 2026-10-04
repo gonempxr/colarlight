@@ -498,7 +498,13 @@ func upgrade_cost(key: String, count: int = 1) -> float:
 
 func max_affordable(key: String) -> int:
 	var data := stage_data(key)
-	return Balance.affordable_levels(data["cost0"], get_level(key), coins / _scale, Balance.growth_of(data))
+	var n := Balance.affordable_levels(data["cost0"], get_level(key), coins / _scale, Balance.growth_of(data))
+	# The scale can round either way: settle on what upgrade() accepts.
+	while upgrade_cost(key, n + 1) <= coins:
+		n += 1
+	while n > 0 and upgrade_cost(key, n) > coins:
+		n -= 1
+	return n
 
 
 ## Sites cost the gate scale to open (they are part of the location goal),
@@ -887,7 +893,9 @@ func _apply_save(data: Dictionary) -> void:
 			var minimum := 0 if depth_index(key) > 0 or is_second(key) else 1
 			levels[key] = maxi(minimum, int(_num(saved_levels.get(key), minimum)))
 		if saved_managers is Dictionary:
-			managers[key] = saved_managers.get(key) == true and is_open(key)
+			# Automation stays hired while its building is closed (the second
+			# boat and plant reopen in every location).
+			managers[key] = saved_managers.get(key) == true and (is_open(key) or key in AUTOMATED)
 	# A deeper site can't be open while a shallower one is closed.
 	var closed := false
 	for key in stage_keys():

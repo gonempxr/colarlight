@@ -195,23 +195,20 @@ func test_wardrobe() -> void:
 	pr._check_goals()
 	check(pr.is_owned("pet_turtle"), "the first puzzle win unlocks the turtle")
 	check(pr.equipped_art("boat") == "classic", "equipped art name")
-	# Diver suits: a small real bonus for every diver while worn, bigger for
-	# the pricier and rarer suits; the free one has none.
-	var base: float = gs.rate("d0")
-	check(pr.suit_bonus() == 0.0, "the classic suit gives no bonus")
-	check(pr.buy_item("suit_sunset"), "a suit can be bought with pearls")
-	check(is_equal_approx(gs.rate("d0"), base * 1.08), "the sunset suit brings +8%% ore (%.3f)" % (gs.rate("d0") / base))
-	check(is_equal_approx(gs.rate("boat"), Balance.output(Balance.BOAT["value"], gs.get_level("boat")) * gs.income_mult()), "suits only help the divers")
-	pr.equip("suit_classic")
-	check(is_equal_approx(gs.rate("d0"), base), "taking it off removes the bonus")
-	var prev := -1.0
-	var grows := true
+	# Outfits for the player's own character: the casual one is free and
+	# worn from the start; the others cost pearls or come from goals.
+	check(pr.is_owned("outfit_casual") and pr.equipped["outfit"] == "outfit_casual", "the casual outfit is free and worn")
+	check(pr.buy_item("outfit_pirate") and pr.equipped["outfit"] == "outfit_pirate", "an outfit can be bought and is put on")
+	pr.equip("outfit_pirate")
+	check(pr.equipped["outfit"] == "outfit_pirate", "tapping the worn outfit keeps it on")
+	var outfits := 0
 	for c in Content.COSMETICS:
-		if c["slot"] == "suit":
-			var sb := Content.suit_bonus(c["id"])
-			grows = grows and sb >= prev and sb <= 0.15
-			prev = sb
-	check(grows, "suit bonuses grow with price and rarity and stay modest (<= 15%)")
+		check(c["slot"] != "suit", "no diver suits any more (%s)" % c["id"])
+		check(c["unlock"] != "shop" or c["slot"] != "outfit", "outfits are never sold for money")
+		if c["slot"] == "outfit":
+			outfits += 1
+	check(outfits >= 10, "at least 10 outfits (%d)" % outfits)
+	check(pr.suit_bonus() == 0.0 and Content.suit_bonus("suit_sunset") == 0.0, "suits give no bonus")
 
 
 func test_features() -> void:

@@ -119,15 +119,18 @@ func test_foreman_and_kept_automation() -> void:
 	check(gs.is_auto("boat") and gs.is_auto("plant"), "boat and plant automated")
 	for key in gs.stage_keys():
 		gs.levels[key] = maxi(1, gs.levels[key])
-	gs.coins = 1e12
-	check(gs.prestige(), "dive")
-	check(gs.is_auto("boat") and gs.is_auto("plant"), "automation survives the dive")
+		gs.managers[key] = true
+	gs.coins = 1e30
+	check(gs.prestige(), "the old prestige() opens the next location")
+	check(gs.location == 1, "location up")
+	check(gs.is_auto("boat") and gs.is_auto("plant"), "automation survives the move")
 	check(not gs.has_manager("d0"), "foremen are hired again")
+	var s1 := Balance.loc_scale(1)
 	gs.boost_left = 10.0
-	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0 * 2.0), "boost doubles income")
+	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * s1 * 2.0), "boost doubles income")
 	gs.bonus = {"plant": 1.5}
 	gs.boost_left = 0.0
-	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0 * 1.5), "stage bonus applies")
+	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * s1 * 1.5), "stage bonus applies")
 	gs.free()
 	DirAccess.remove_absolute(TEST_SAVE)
 
@@ -145,8 +148,10 @@ func test_chain_moves_ore_to_coins() -> void:
 	check(gs.dock > 0.0, "boat unloads on shore")
 	check(gs.tap("plant"), "plant starts with ore on dock")
 	gs.advance(gs.cycle_time("plant"))
-	check(gs.coins > 0.0, "plant turns ore into coins")
-	check(near(gs.coins, gs.total_earned), "earned tracked")
+	check(gs.vault > 0.0 and gs.coins == 0.0, "plant turns ore into coins in the vault")
+	check(near(gs.vault, gs.total_earned), "earned tracked when made")
+	var v: float = gs.vault
+	check(near(gs.collect_vault(), v) and near(gs.coins, v) and gs.vault == 0.0, "collecting moves the vault to the wallet")
 	gs.free()
 
 
@@ -195,10 +200,10 @@ func test_bottleneck() -> void:
 	# Warm up: the first ore needs a dive, a boat trip and a plant cycle to become coins.
 	for i in 300:
 		gs.advance(0.1)
-	var start: float = gs.coins
+	var start: float = gs.coins + gs.vault
 	for i in 600:
 		gs.advance(0.1)
-	var per_sec: float = (gs.coins - start) / 60.0
+	var per_sec: float = (gs.coins + gs.vault - start) / 60.0
 	check(absf(per_sec - gs.income_rate()) < gs.income_rate() * 0.15, "live chain earns ~income_rate (%.2f vs %.2f)" % [per_sec, gs.income_rate()])
 	gs.free()
 
@@ -354,7 +359,10 @@ func test_save_load_roundtrip() -> void:
 	gs.levels["d1"] = 3
 	gs.levels["boat"] = 9
 	gs.managers["d0"] = true
-	gs.prestige_count = 2
+	gs.location = 2
+	gs.evo = 3
+	gs.vault = 50.0
+	gs.legacy_mult = 9.0
 	gs.hold = 5.0
 	check(gs.save_game(), "save ok")
 	# Pretend the save is 2 minutes old: without boat/plant managers nothing is earned.
@@ -372,7 +380,8 @@ func test_save_load_roundtrip() -> void:
 	check(near(loaded.coins, 1234.5), "coins restored")
 	check(loaded.get_level("d0") == 17 and loaded.get_level("d1") == 3 and loaded.get_level("boat") == 9, "levels restored")
 	check(loaded.has_manager("d0") and not loaded.has_manager("boat"), "managers restored")
-	check(loaded.prestige_count == 2, "prestige restored")
+	check(loaded.location == 2 and loaded.prestige_count == 2, "location restored")
+	check(loaded.evo == 3 and near(loaded.vault, 50.0) and near(loaded.legacy_mult, 9.0), "forms, vault and legacy restored")
 	check(loaded.pit > 0.0 and near(loaded.hold, 5.0), "diver manager kept diving offline into the crates")
 	check(loaded.take_offline_report().is_empty(), "no coins, no report")
 	loaded.free()
@@ -400,19 +409,21 @@ func test_old_30_site_save() -> void:
 	gs.reset()
 	check(gs.load_game(), "an old 30-site save loads")
 	check(gs.get_level("d6") == 108 and gs.get_level("d0") == 120, "the first seven sites keep their levels")
-	check(gs.get_level("d7") == 90, "a folded site takes the best of its group (%d)" % gs.get_level("d7"))
-	check(gs.get_level("d14") == 78 and gs.is_open("d14"), "the last site takes the deepest old ones (%d)" % gs.get_level("d14"))
-	check(gs.has_manager("d13") and not gs.has_manager("d14"), "foremen fold too")
-	check(not gs.levels.has("d15") and gs.stage_keys().size() == 15 + 5, "no sites past the 15th")
-	check(gs.prestige_count == 6 and gs.coins >= 5.0e12, "coins and Dives are kept")
-	check(gs.income_rate() > 0.0 and gs.prestige_gate_depth() == Balance.DEPTHS[11]["id"], "the economy runs and the gate is a real site")
+	# 30 -> 15 (v2 -> v3), then 15 -> 10 (v3 -> v4): glow takes old 7..9
+	# (90, 102, 98), atlantis old 10, 11 (94, 90), heart old 12..14 (86, 82, 78).
+	check(gs.get_level("d7") == 102, "a folded site takes the best of its groups (%d)" % gs.get_level("d7"))
+	check(gs.get_level("d8") == 94 and gs.get_level("d9") == 86, "the last sites take the deepest old ones (%d, %d)" % [gs.get_level("d8"), gs.get_level("d9")])
+	check(gs.has_manager("d9") and gs.has_manager("d7"), "foremen fold too")
+	check(not gs.levels.has("d10") and gs.stage_keys().size() == 10 + 5, "no sites past the 10th")
+	check(gs.location == 0 and near(gs.legacy_mult, Balance.prestige_mult(6)) and gs.coins >= 5.0e12, "coins kept, Dives become the legacy bonus")
+	check(gs.income_rate() > 0.0, "the economy runs")
 	gs.save_game()
 	var again: Node = _script.new()
 	again.save_path = TEST_SAVE
 	again.autosave_enabled = false
 	again.reset()
 	again.load_game()
-	check(again.get_level("d7") == 90 and again.get_level("d14") == 78, "a new save does not fold twice")
+	check(again.get_level("d7") == 102 and again.get_level("d9") == 86 and near(again.legacy_mult, gs.legacy_mult), "a new save does not fold twice")
 	gs.free()
 	again.free()
 	DirAccess.remove_absolute(TEST_SAVE)
@@ -436,28 +447,21 @@ func test_corrupted_save() -> void:
 	DirAccess.remove_absolute(TEST_SAVE)
 
 
+## The old Dive Deeper calls still work, mapped onto the location gate
+## (until the UI moves to the new API). Details in test_worlds.gd.
 func test_prestige() -> void:
 	var gs := _fresh()
-	gs.coins = 1e12
-	check(not gs.can_prestige(), "prestige needs the gate depth open")
-	check(gs.prestige_gate_depth() == Balance.DEPTHS[5]["id"], "first gate is the sixth depth")
-	for i in 5:
-		gs.levels["d%d" % i] = maxi(1, gs.levels["d%d" % i])
-	check(not gs.can_prestige(), "one short of the gate")
-	gs.levels["d5"] = 1
-	check(gs.can_prestige(), "gate open and enough coins")
-	check(gs.next_depth() != "", "deeper depths may stay closed")
-	var before: float = gs.rate("plant")
-	check(gs.prestige(), "prestige works")
-	check(gs.prestige_count == 1 and gs.coins == 0.0, "counter up, coins reset")
+	gs.coins = 1e30
+	check(Balance.DEPTHS.size() == 10, "10 work sites")
+	check(not gs.can_prestige() and not gs.prestige_gate_open(), "the gate needs the whole location")
+	check(gs.prestige_gate_depth() == Balance.DEPTHS[1]["id"], "the gate names the next closed site")
+	check(near(gs.prestige_cost(), gs.next_location_cost()), "the price is the location price")
+	for key in gs.stage_keys():
+		gs.levels[key] = maxi(1, gs.levels[key])
+		gs.managers[key] = true
+	check(gs.can_prestige() and gs.prestige(), "a complete location can be left")
+	check(gs.prestige_count == 1 and gs.location == 1 and gs.coins == 0.0, "counter up, coins reset")
 	check(gs.get_level("d1") == 0 and gs.get_level("plant") == 1, "levels reset")
-	check(near(gs.rate("plant"), Balance.output(Balance.PLANT["value"], 1) * 3.0), "income x3 after first prestige")
-	check(before > 0.0, "sanity")
-	check(near(gs.prestige_cost(), Balance.PRESTIGE_COST * Balance.PRESTIGE_COST_GROWTH), "next prestige costs more")
-	check(gs.prestige_gate_depth() == Balance.DEPTHS[6]["id"], "each Dive needs one depth deeper")
-	check(Balance.DEPTHS.size() == 15, "15 dive sites")
-	gs.prestige_count = 50
-	check(gs.prestige_gate_depth() == Balance.DEPTHS[Balance.DEPTHS.size() - 1]["id"], "gate stops at the last depth")
 	gs.free()
 	DirAccess.remove_absolute(TEST_SAVE)
 
