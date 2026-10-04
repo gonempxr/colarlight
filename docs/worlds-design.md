@@ -50,8 +50,9 @@ climb instead of swimming.
   complete in about 70-100 min of play, then each next one +10-20%.
 - Location gate (Mark: "complete the location, buy everything, then pay a big
   sum"): all 10 sites open, all 10 foremen hired, managers of lift, both
-  boats and both plants hired (boat2/plant2 open), all diver forms of this
-  location bought, then a big coin price opens the next location.
+  boats and both plants hired (boat2/plant2 open), then a big coin price
+  opens the next location. Diver forms are NOT required (Mark, 2026-10-04):
+  they are an optional income booster.
 - Diver evolution: 12 forms per location (form 0 = the base look, forms
   1..12 bought with coins, in order). Each bought form multiplies all income
   of this location by 1.10 (so the whole chain speeds up, not only the dives).
@@ -95,7 +96,7 @@ func evo_cost(form: int) -> float      # price of form 1..12 in this location
 func can_buy_evo() -> bool
 func buy_evo() -> bool                 # buys form evo + 1
 func collect_vault() -> float          # moves vault -> coins, returns amount
-func location_goals() -> Array         # [{"id": "sites"|"foremen"|"managers"|"evo", "have": int, "need": int}]
+func location_goals() -> Array         # [{"id": "sites"|"foremen"|"managers", "have": int, "need": int}]
 func location_ready() -> bool          # every goal met
 func next_location_cost() -> float
 func can_advance_location() -> bool    # ready and coins >= cost
