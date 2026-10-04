@@ -541,10 +541,9 @@ func _on_cycle_started(key: String, _amount: float) -> void:
 		_pending_throws.append([_t + 0.25, "sack", from, to])
 		_pop_chest("raft", 0.7)
 		world.react("raft", "joy", 0.8, true)
-		Sfx.play("horn")
 	elif key == "boat2":
 		# It sails off from the shore; the loading happens at the raft (see _process).
-		Sfx.play("horn", 0.8)
+		pass
 	elif key == "plant":
 		_pop_chest("dock", 0.5)
 		world.react("worker", "focus", 1.0)
@@ -636,7 +635,7 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			key = "plant" if p.x > _tip else "boat"
 		if GameState.tap(key):
-			Sfx.play("horn" if GameState.is_boat(key) else "machine")
+			Sfx.play("tap" if GameState.is_boat(key) else "machine")
 		else:
 			Sfx.play("tap")
 		world.divers.tap_ripple(p)
@@ -764,7 +763,7 @@ func _poke_ambient(p: Vector2) -> bool:
 				_coconut = {"pos": top, "vel": Vector2(_rng.randf_range(-40, -10), -60), "age": 0.0, "rot": 0.0, "bounces": 0}
 		"lighthouse":
 			_lighthouse_poke = _t
-			Sfx.play("horn", 0.62)
+			Sfx.play("pop", 0.8)
 		"sky":
 			# A tap on the empty night sky sends a shooting star.
 			world.shooting_star(p)
