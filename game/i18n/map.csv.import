@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b3a3imxk7ucim"
+
+[deps]
+
+files=["res://i18n/map.en.translation", "res://i18n/map.ru.translation", "res://i18n/map.es.translation", "res://i18n/map.zh.translation"]
+
+source_file="res://i18n/map.csv"
+dest_files=["res://i18n/map.en.translation", "res://i18n/map.ru.translation", "res://i18n/map.es.translation", "res://i18n/map.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
