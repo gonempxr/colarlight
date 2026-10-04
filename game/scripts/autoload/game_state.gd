@@ -12,7 +12,16 @@ extends Node
 ## automation is kept through a Dive (prestige).
 ## Divers put ore into the crates at their depth (`pit`, one pool), the
 ## lift brings it up to the raft (`hold`), the boat moves it to `dock`
-## (on shore), the plant turns dock ore into coins.
+## (on shore), the plant turns dock ore into coins. Finished coins land in
+## the `vault` (room 3) until the player collects them, or by themselves
+## once the accountant (manager "vault") is hired.
+##
+## Worlds: the player goes through locations L = 0, 1, 2... (world L % 4,
+## tier L / 4). Every location scales values and prices (Balance.loc_scale).
+## A location is done when all 10 sites are open with their foremen and the
+## lift, boats and plants have managers; then a big price opens the next one
+## (advance_location: the run resets, automation is kept). Worker evolution
+## forms (12 per location) each give x1.10 income in this location.
 
 signal changed
 signal cycle_started(key: String, amount: float)
@@ -25,9 +34,17 @@ signal upgraded(key: String, count: int)
 signal manager_hired(key: String)
 signal depth_opened(key: String)
 signal tapped(key: String)
+signal location_changed(L: int)
+signal evo_bought(form: int)
+signal vault_changed
 
 ## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
-const SAVE_VERSION := 3
+## 4: worlds and locations, 10 sites (v3 saves fold with V3_SITE_FOLD into
+## location 0; their Dive count becomes legacy_mult).
+const SAVE_VERSION := 4
+## Save version 3 -> 4: which old sites (of 15) each of the 10 sites takes
+## its level and foreman from (the best of them).
+const V3_SITE_FOLD: Array = [[0], [1], [2], [3], [4], [5], [6], [7, 8, 9], [10, 11], [12, 13, 14]]
 ## Saves from the 30-site version (save version 2 or older): which old
 ## sites each site from d7 on takes its level and foreman from (the best of
 ## them). Sites d0..d6 keep their own. The old sites' prices and outputs
@@ -50,7 +67,27 @@ var autosave_enabled := true
 
 var coins := 0.0
 var total_earned := 0.0
-var prestige_count := 0
+## Location index L (world L % 4, tier L / 4).
+var location := 0:
+	set(value):
+		location = maxi(0, value)
+		_scale = Balance.loc_scale(location)
+		_gate_scale = Balance.loc_gate_scale(location)
+## Evolution forms bought in this location (0..Balance.EVO_FORMS).
+var evo := 0
+## Finished coins waiting in room 3 to be collected.
+var vault := 0.0
+## Permanent income multiplier from the old Dive Deeper count (v3 saves).
+var legacy_mult := 1.0
+## Old name of the location counter (the Dive count), kept for older code.
+var prestige_count: int:
+	get:
+		return location
+	set(value):
+		location = value
+## Cached Balance.loc_scale / loc_gate_scale of the location.
+var _scale := 1.0
+var _gate_scale := 1.0
 var levels: Dictionary = {}
 var managers: Dictionary = {}
 ## Ore the divers left in the crates at the depths, waiting for the lift.
@@ -127,7 +164,8 @@ func _notification(what: int) -> void:
 func reset() -> void:
 	coins = 0.0
 	total_earned = 0.0
-	prestige_count = 0
+	location = 0
+	legacy_mult = 1.0
 	boost_end = 0.0
 	_boosted = false
 	managers = {}
@@ -139,6 +177,7 @@ func _reset_run(keep_automation: bool = false) -> void:
 	if keep_automation:
 		for k in AUTOMATED:
 			kept[k] = managers.get(k, false)
+		kept[VAULT] = managers.get(VAULT, false)
 	levels = {}
 	managers = {}
 	for key in stage_keys():
@@ -146,6 +185,9 @@ func _reset_run(keep_automation: bool = false) -> void:
 		managers[key] = kept.get(key, false)
 		_timer[key] = -1.0
 		_load[key] = 0.0
+	managers[VAULT] = kept.get(VAULT, false)
+	evo = 0
+	vault = 0.0
 	levels["d0"] = 1
 	levels["lift"] = 1
 	levels["boat"] = 1
@@ -173,6 +215,8 @@ static func stage_keys() -> Array[String]:
 const BUILDINGS: Array[String] = ["boat", "plant", "boat2", "plant2"]
 ## Stages that stand still until their manager is hired (kept through a Dive).
 const AUTOMATED: Array[String] = ["lift", "boat", "plant", "boat2", "plant2"]
+## Manager key of the vault (the accountant); not a stage. Kept like AUTOMATED.
+const VAULT := "vault"
 
 
 static func is_boat(key: String) -> bool:
@@ -219,12 +263,121 @@ func has_manager(key: String) -> bool:
 	return managers.get(key, false)
 
 
+## The vault is always there (it has no level).
 func is_open(key: String) -> bool:
-	return get_level(key) > 0
+	return key == VAULT or get_level(key) > 0
 
 
+## Everything that multiplies every stage: the location's scale, evolution
+## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
-	return Balance.prestige_mult(prestige_count) * (2.0 if _boosted else 1.0) * float(bonus.get("all", 1.0))
+	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * legacy_mult \
+			* (2.0 if _boosted else 1.0) * float(bonus.get("all", 1.0))
+
+
+# --- Worlds and locations --------------------------------------------------------
+
+func world_index() -> int:
+	return posmod(location, Balance.WORLDS.size())
+
+
+func world_id() -> String:
+	return Balance.WORLDS[world_index()]["id"]
+
+
+func tier() -> int:
+	return Balance.tier_of(location)
+
+
+## Id of site i (0..9) in the current world ("shells", "ash", ...).
+func site_id(i: int) -> String:
+	var sites: Array = Balance.WORLDS[world_index()]["sites"]
+	return sites[clampi(i, 0, sites.size() - 1)]
+
+
+## Price of evolution form 1..12 in this location.
+func evo_cost(form: int) -> float:
+	return Balance.evo_cost(location, form)
+
+
+func can_buy_evo() -> bool:
+	return evo < Balance.EVO_FORMS and coins >= evo_cost(evo + 1)
+
+
+## Buys the next form (evo + 1): x1.10 income for the rest of the location.
+func buy_evo() -> bool:
+	if not can_buy_evo():
+		return false
+	coins -= evo_cost(evo + 1)
+	evo += 1
+	evo_bought.emit(evo)
+	changed.emit()
+	return true
+
+
+## Moves the vault into the wallet; returns how much.
+func collect_vault() -> float:
+	var amount := vault
+	if amount <= 0.0:
+		return 0.0
+	vault = 0.0
+	coins += amount
+	vault_changed.emit()
+	changed.emit()
+	return amount
+
+
+## The checklist that opens the next location:
+## [{"id": "sites"|"foremen"|"managers", "have": int, "need": int}].
+func location_goals() -> Array:
+	var sites := 0
+	var foremen := 0
+	for i in Balance.DEPTHS.size():
+		var key := "d%d" % i
+		if is_open(key):
+			sites += 1
+			if has_manager(key):
+				foremen += 1
+	var mgrs := 0
+	for k in AUTOMATED:
+		if is_open(k) and has_manager(k):
+			mgrs += 1
+	return [
+		{"id": "sites", "have": sites, "need": Balance.DEPTHS.size()},
+		{"id": "foremen", "have": foremen, "need": Balance.DEPTHS.size()},
+		{"id": "managers", "have": mgrs, "need": AUTOMATED.size()},
+	]
+
+
+func location_ready() -> bool:
+	for g in location_goals():
+		if g["have"] < g["need"]:
+			return false
+	return true
+
+
+func next_location_cost() -> float:
+	return Balance.location_cost(location)
+
+
+## Ready, and the wallet (with the vault) holds the price.
+func can_advance_location() -> bool:
+	return location_ready() and coins + vault >= next_location_cost()
+
+
+## Opens the next location: L + 1, the run starts over (coins, levels,
+## foremen, forms); the lift, boat, plant and vault managers stay.
+func advance_location() -> bool:
+	if not can_advance_location():
+		return false
+	collect_vault()
+	coins = 0.0
+	location += 1
+	_reset_run(true)
+	location_changed.emit(location)
+	changed.emit()
+	save_game()
+	return true
 
 
 ## Real time (Unix seconds); the boost runs on it.
@@ -337,20 +490,29 @@ func cycle_load(key: String) -> float:
 	return _load.get(key, 0.0)
 
 
+## Level prices follow the location's scale.
 func upgrade_cost(key: String, count: int = 1) -> float:
-	return Balance.bulk_cost(stage_data(key)["cost0"], get_level(key), count)
+	var data := stage_data(key)
+	return Balance.bulk_cost(data["cost0"], get_level(key), count, Balance.growth_of(data)) * _scale
 
 
 func max_affordable(key: String) -> int:
-	return Balance.affordable_levels(stage_data(key)["cost0"], get_level(key), coins)
+	var data := stage_data(key)
+	return Balance.affordable_levels(data["cost0"], get_level(key), coins / _scale, Balance.growth_of(data))
 
 
+## Sites cost the gate scale to open (they are part of the location goal),
+## the second boat and plant the plain scale.
 func unlock_cost(key: String) -> float:
-	return stage_data(key)["unlock"]
+	if key == VAULT:
+		return 0.0
+	return float(stage_data(key).get("unlock", 0.0)) * (_gate_scale if depth_index(key) >= 0 else _scale)
 
 
 func manager_cost(key: String) -> float:
-	return stage_data(key)["manager"]
+	if key == VAULT:
+		return float(Balance.VAULT["manager"]) * _scale
+	return float(stage_data(key)["manager"]) * (_gate_scale if depth_index(key) >= 0 else _scale)
 
 
 ## The next closed dive site, or "" when all are open.
@@ -365,21 +527,25 @@ func divers(key: String) -> int:
 	return Balance.divers_at(get_level(key))
 
 
+# Old Dive Deeper names, mapped onto the location gate until the UI moves
+# to the new API.
+
 func prestige_cost() -> float:
-	return Balance.prestige_cost(prestige_count)
+	return next_location_cost()
 
 
-## Id of the depth that must be open before the next Dive Deeper.
+## Ladder id of the first closed site (the last one when all are open).
 func prestige_gate_depth() -> String:
-	return Balance.DEPTHS[Balance.prestige_gate(prestige_count)]["id"]
+	var next := next_depth()
+	return Balance.DEPTHS[depth_index(next) if next != "" else Balance.DEPTHS.size() - 1]["id"]
 
 
 func prestige_gate_open() -> bool:
-	return is_open("d%d" % Balance.prestige_gate(prestige_count))
+	return location_ready()
 
 
 func can_prestige() -> bool:
-	return prestige_gate_open() and coins >= prestige_cost()
+	return can_advance_location()
 
 
 func is_rushing() -> bool:
@@ -443,6 +609,8 @@ func hire_manager(key: String) -> bool:
 	coins -= manager_cost(key)
 	managers[key] = true
 	manager_hired.emit(key)
+	if key == VAULT:
+		collect_vault()
 	changed.emit()
 	return true
 
@@ -477,15 +645,9 @@ func tap(key: String) -> bool:
 	return _start_cycle(key)
 
 
+## Old name of advance_location().
 func prestige() -> bool:
-	if not can_prestige():
-		return false
-	prestige_count += 1
-	coins = 0.0
-	_reset_run(true)
-	changed.emit()
-	save_game()
-	return true
+	return advance_location()
 
 
 ## Runs the economy forward. Live play uses cycles; `seconds` may be large.
@@ -547,15 +709,22 @@ func _finish_cycle(key: String) -> void:
 	elif is_boat(key):
 		dock += amount
 	elif is_plant(key):
-		_earn(amount)
+		_earn(amount, true)
 	else:
 		pit += amount
 	cycle_finished.emit(key, amount)
 
 
-func _earn(amount: float) -> void:
-	coins += amount
+## Counts earned coins (quests, stats). Plant output (`to_vault`) waits in
+## the vault until collected unless the accountant is hired; rewards and
+## offline earnings go straight to the wallet.
+func _earn(amount: float, to_vault: bool = false) -> void:
 	total_earned += amount
+	if to_vault and not has_manager(VAULT):
+		vault += amount
+		vault_changed.emit()
+	else:
+		coins += amount
 	coins_earned.emit(amount)
 
 
@@ -613,7 +782,10 @@ func save_game() -> bool:
 		"saved_at": Time.get_unix_time_from_system(),
 		"coins": coins,
 		"total_earned": total_earned,
-		"prestige_count": prestige_count,
+		"location": location,
+		"evo": evo,
+		"vault": vault,
+		"legacy_mult": legacy_mult,
 		"levels": levels,
 		"managers": managers,
 		"pit": pit,
@@ -683,13 +855,31 @@ func _apply_save(data: Dictionary) -> void:
 	reset()
 	coins = maxf(0.0, _num(data.get("coins"), 0.0))
 	total_earned = maxf(coins, _num(data.get("total_earned"), 0.0))
-	prestige_count = maxi(0, int(_num(data.get("prestige_count"), 0.0)))
+	var version := int(_num(data.get("version"), 0.0))
 	var saved_levels = data.get("levels", {})
 	var saved_managers = data.get("managers", {})
-	if int(_num(data.get("version"), 0.0)) < 3 and saved_levels is Dictionary:
-		var folded := _fold_old_depths(saved_levels, saved_managers if saved_managers is Dictionary else {})
+	if not saved_managers is Dictionary:
+		saved_managers = {}
+	if version < 3 and saved_levels is Dictionary:
+		var folded := _fold_old_depths(saved_levels, saved_managers)
 		saved_levels = folded[0]
 		saved_managers = folded[1]
+	if version < 4:
+		# Before the worlds: everything moves into location 0 (the ocean) and
+		# the Dive count becomes a permanent income multiplier.
+		var dives := clampi(int(_num(data.get("prestige_count"), 0.0)), 0, 200)
+		legacy_mult = Balance.prestige_mult(dives)
+		location = 0
+		if saved_levels is Dictionary:
+			var folded := _fold_v3_sites(saved_levels, saved_managers)
+			saved_levels = folded[0]
+			saved_managers = folded[1]
+	else:
+		location = clampi(int(_num(data.get("location"), 0.0)), 0, 10000)
+		legacy_mult = maxf(1.0, _num(data.get("legacy_mult"), 1.0))
+		evo = clampi(int(_num(data.get("evo"), 0.0)), 0, Balance.EVO_FORMS)
+		vault = maxf(0.0, _num(data.get("vault"), 0.0))
+	managers[VAULT] = saved_managers.get(VAULT) == true
 	# Saves from before the lift: it gets set up below, after the rest.
 	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
 	for key in stage_keys():
@@ -722,6 +912,9 @@ func _apply_save(data: Dictionary) -> void:
 	_boosted = boost_end > now()
 	if old_save:
 		_migrate_lift()
+	if has_manager(VAULT) and vault > 0.0:
+		coins += vault
+		vault = 0.0
 
 
 ## Levels and managers of a 30-site save mapped onto the 15 sites: d0..d6
@@ -743,6 +936,27 @@ static func _fold_old_depths(old_levels: Dictionary, old_managers: Dictionary) -
 	for k in range(7 + OLD_DEPTH_FOLD.size(), 30):
 		lv.erase("d%d" % k)
 		mg.erase("d%d" % k)
+	return [lv, mg]
+
+
+## Levels and managers of a 15-site save (v3) mapped onto the 10 sites with
+## V3_SITE_FOLD: the best level of each group (any open -> open), a foreman
+## if any had one. The second boat/plant and the lift keep theirs.
+static func _fold_v3_sites(old_levels: Dictionary, old_managers: Dictionary) -> Array:
+	var lv := old_levels.duplicate()
+	var mg := old_managers.duplicate()
+	for k in 15:
+		lv.erase("d%d" % k)
+		mg.erase("d%d" % k)
+	for i in V3_SITE_FOLD.size():
+		var best := 0
+		var hired := false
+		for k: int in V3_SITE_FOLD[i]:
+			var old_key := "d%d" % k
+			best = maxi(best, int(_num(old_levels.get(old_key), 0.0)))
+			hired = hired or old_managers.get(old_key) == true
+		lv["d%d" % i] = best
+		mg["d%d" % i] = hired
 	return [lv, mg]
 
 

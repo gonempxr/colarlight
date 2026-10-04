@@ -13,6 +13,7 @@ signal pearls_earned(amount: int)
 signal item_unlocked(id: String)
 signal artifact_leveled(id: String, level: int)
 signal chest_spawned
+signal decor_changed
 
 const SAVE_VERSION := 2
 ## Version 2 added the lift to the tutorial (Tutor.STEPS): old step -> new.
@@ -33,6 +34,10 @@ var quests: Array = []
 var owned: Dictionary = {}
 ## slot -> cosmetic id ("" = none)
 var equipped: Dictionary = {}
+## Room 3 decor: slot (Content.DECOR_SLOTS) -> level 0..Content.DECOR_MAX.
+var decor: Dictionary = {}
+## World id -> highest evolution form ever owned there (for the codex).
+var looks_seen: Dictionary = {}
 var features: Dictionary = {}
 ## Features whose button still shows "NEW".
 var fresh: Dictionary = {}
@@ -65,6 +70,10 @@ func _ready() -> void:
 		_count("tap", 1))
 	GameState.coins_earned.connect(func(a): _count("earn", a))
 	GameState.manager_hired.connect(func(_k): _count("hire", 1))
+	GameState.evo_bought.connect(func(_f): _see_looks())
+	GameState.location_changed.connect(func(_l):
+		_see_looks()
+		_check_goals())
 	GameState.depth_opened.connect(func(k):
 		_count("open", 1)
 		stats["deepest"] = maxi(int(stats.get("deepest", 0)), GameState.depth_index(k))
@@ -83,7 +92,11 @@ func reset() -> void:
 	for c in Content.COSMETICS:
 		if c["unlock"] == "free":
 			owned[c["id"]] = true
-	equipped = {"pet": "", "hat": "", "boat": "boat_classic", "suit": "suit_classic"}
+	equipped = {"pet": "", "hat": "", "boat": "boat_classic", "outfit": "outfit_casual"}
+	decor = {}
+	for slot in Content.DECOR_SLOTS:
+		decor[slot] = 0
+	looks_seen = {}
 	features = {}
 	fresh = {}
 	tutorial_step = 0
@@ -274,10 +287,51 @@ func apply_bonus() -> void:
 	var b := {}
 	for a in Content.ARTIFACTS:
 		b[a["bonus"]] = bonus(a["bonus"])
-	# The worn diver suit: more ore from every dive.
-	b["dives"] = float(b.get("dives", 1.0)) * (1.0 + suit_bonus())
+	b["decor"] = decor_bonus()
 	GameState.bonus = b
 	GameState.changed.emit()
+
+
+# --- Room 3 decor ------------------------------------------------------------------
+
+func decor_level(slot: String) -> int:
+	return int(decor.get(slot, 0))
+
+
+## Pearl price of the slot's next level (0 when it is at the top level).
+func decor_cost(slot: String) -> int:
+	var lv := decor_level(slot)
+	if not slot in Content.DECOR_SLOTS or lv >= Content.DECOR_MAX:
+		return 0
+	return Content.DECOR_PRICES[lv]
+
+
+func buy_decor(slot: String) -> bool:
+	var price := decor_cost(slot)
+	if price <= 0 or not spend_pearls(price):
+		return false
+	decor[slot] = decor_level(slot) + 1
+	apply_bonus()
+	decor_changed.emit()
+	changed.emit()
+	save_game()
+	return true
+
+
+## Income multiplier from decor: +Balance.DECOR_BONUS per level of every slot.
+func decor_bonus() -> float:
+	var levels := 0
+	for slot in Content.DECOR_SLOTS:
+		levels += decor_level(slot)
+	return 1.0 + Balance.DECOR_BONUS * levels
+
+
+## Remembers the forms owned in the current world (the codex shows them).
+func _see_looks() -> void:
+	var w: String = GameState.world_id()
+	if GameState.evo > int(looks_seen.get(w, 0)):
+		looks_seen[w] = GameState.evo
+		changed.emit()
 
 
 ## Rewards for a finished puzzle. Returns what was given, for the win panel:
@@ -482,7 +536,7 @@ func goal_progress(goal: String) -> float:
 
 
 func _check_goals() -> void:
-	stats["prestiges"] = GameState.prestige_count
+	_sync_location_stats()
 	for c in Content.COSMETICS:
 		if c["unlock"] == "goal" and not is_owned(c["id"]) and goal_progress(c["goal"]) >= 1.0:
 			owned[c["id"]] = true
@@ -512,9 +566,16 @@ func grant_item(id: String) -> void:
 	changed.emit()
 
 
-## Extra ore share from the worn suit (0.05 = +5%).
+## Suits are gone; kept for older UI code.
 func suit_bonus() -> float:
-	return Content.suit_bonus(str(equipped.get("suit", "")))
+	return 0.0
+
+
+## "prestiges" (old Dives, now locations left) and "location" (the highest
+## reached) never go down: a migrated save starts at location 0.
+func _sync_location_stats() -> void:
+	stats["prestiges"] = maxi(int(stats.get("prestiges", 0)), GameState.location)
+	stats["location"] = maxi(int(stats.get("location", 0)), GameState.location)
 
 
 func equip(id: String) -> void:
@@ -527,8 +588,6 @@ func equip(id: String) -> void:
 		equipped[slot] = ""
 	else:
 		equipped[slot] = id
-	if slot == "suit":
-		apply_bonus()
 	changed.emit()
 
 
@@ -540,7 +599,7 @@ func equipped_art(slot: String) -> String:
 # --- Save --------------------------------------------------------------------------
 
 func save_game() -> bool:
-	stats["prestiges"] = GameState.prestige_count
+	_sync_location_stats()
 	var data := {
 		"version": SAVE_VERSION,
 		"pearls": pearls, "pearls_total": pearls_total,
@@ -548,6 +607,7 @@ func save_game() -> bool:
 		"features": features, "fresh": fresh, "tutorial_step": tutorial_step,
 		"daily_day": daily_day, "daily_last": daily_last, "puzzle_level": puzzle_level,
 		"stats": stats, "chest_ready": chest_ready, "chest_timer": chest_timer,
+		"decor": decor, "looks_seen": looks_seen,
 	}
 	var tmp := save_path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -583,12 +643,26 @@ func load_game() -> bool:
 			if q is Dictionary and str(q.get("kind", "")) in Content.QUEST_KINDS and quests.size() < Content.QUEST_SLOTS:
 				quests.append({"kind": str(q["kind"]), "key": str(q.get("key", "")), "goal": maxf(1.0, _f(q.get("goal"))),
 						"count": maxf(0.0, _f(q.get("count"))), "pearls": clampi(_int(q.get("pearls")), 1, 10)})
+	# The diver suits are gone: pearls spent on them come back (once: the
+	# suits are not kept in `owned`, so the next save has none).
+	var refund := 0
+	if d.get("owned") is Dictionary:
+		for id in Content.OLD_SUIT_PRICES:
+			if d["owned"].get(id) == true:
+				refund += int(Content.OLD_SUIT_PRICES[id])
 	for dict_key in ["owned", "features", "fresh"]:
 		if d.get(dict_key) is Dictionary:
 			var target: Dictionary = get(dict_key)
 			for k in d[dict_key]:
 				if d[dict_key][k] == true:
 					target[str(k)] = true
+	for id in owned.keys():
+		if str(id).begins_with("suit_"):
+			owned.erase(id)
+	if refund > 0:
+		pearls += refund
+		pearls_total += refund
+		stats["suit_refund"] = int(stats.get("suit_refund", 0)) + refund
 	if d.get("equipped") is Dictionary:
 		for slot in Content.SLOTS:
 			var id := str(d["equipped"].get(slot, equipped.get(slot, "")))
@@ -606,6 +680,13 @@ func load_game() -> bool:
 				stats[str(k)] = d["stats"][k]
 	chest_ready = d.get("chest_ready") == true
 	chest_timer = clampf(_f(d.get("chest_timer")), 1.0, CHEST_GAP_SEC.y)
+	if d.get("decor") is Dictionary:
+		for slot in Content.DECOR_SLOTS:
+			decor[slot] = clampi(_int(d["decor"].get(slot)), 0, Content.DECOR_MAX)
+	if d.get("looks_seen") is Dictionary:
+		for w in d["looks_seen"]:
+			looks_seen[str(w)] = clampi(_int(d["looks_seen"][w]), 0, Balance.EVO_FORMS)
+	_see_looks()
 	apply_bonus()
 	_check_goals()
 	return true
