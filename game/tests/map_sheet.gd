@@ -1,7 +1,7 @@
 extends SceneTree
 ## World map preview:
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
-##     -s res://tests/map_sheet.gd -- out.png <location> <ready 0|1> [map|confirm|mini] [lang]
+##     -s res://tests/map_sheet.gd -- out.png <location> <ready 0|1> [map|confirm|hint|mini|islands] [lang]
 ## "mini" draws the mini-map for all four worlds, small and big;
 ## "islands" the four islands lit and as silhouettes (run at 1800x1200).
 
@@ -67,6 +67,10 @@ func _initialize() -> void:
 	else:
 		var v: Control = mv.new()
 		host.add_child(v)
+		if mode == "hint":
+			await process_frame
+			v.set("_hint_loc", loc + 1)
+			v.set("_hint_left", 99.0)
 		if mode == "confirm":
 			await process_frame
 			v.set("_confirm", true)

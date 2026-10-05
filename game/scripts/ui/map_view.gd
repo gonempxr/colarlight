@@ -715,7 +715,7 @@ func _paint(ci: CanvasItem) -> void:
 		var p: Vector2 = _pos[l]
 		MapArt.cloud(ci, p + Vector2(-150, 300 if _wide else 230), 1.2, 3 + i)
 		MapArt.cloud(ci, p + Vector2(160, -230 if _wide else 120), 0.9, 7 + i)
-		if world_of(l) == "moon" and _state(l, cur) != MapArt.LOCKED:
+		if world_of(l) == "moon" and _state(l, cur) <= MapArt.CURRENT:
 			MapArt.space(ci, p + Vector2(0, -10), 300.0, tm)
 		i += 1
 	# Bridges first: the island tops cover their ends.
