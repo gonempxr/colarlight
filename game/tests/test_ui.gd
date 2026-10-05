@@ -97,6 +97,10 @@ func test_title() -> void:
 		return
 	var row: Control = main._world.rows[0]
 	var p: Vector2 = _world_to_screen(row.position + Vector2(row.deposit_pos().x - 40, 150))
+	# Keep the probe off the title's own buttons (the room tabs push the rows down).
+	for b in [title._switch, title._play, title._name]:
+		if b.get_global_rect().grow(8).has_point(p):
+			p.x = 120.0
 	var taps := [0]
 	var count := func(_k: String) -> void: taps[0] += 1
 	gs.tapped.connect(count)
