@@ -1,0 +1,10 @@
+{"version": 2, "pearls": 37, "pearls_total": 410,
+ "artifacts": {"compass": {"level": 2, "pieces": 1}},
+ "quests": [{"kind": "upgrade_stage", "key": "d13", "goal": 3.0, "count": 1.0, "pearls": 2},
+            {"kind": "tap", "key": "", "goal": 20.0, "count": 5.0, "pearls": 2}],
+ "owned": {"boat_classic": true, "suit_classic": true, "suit_mint": true, "suit_sunset": true, "suit_galaxy": true, "pet_crab": true},
+ "equipped": {"pet": "pet_crab", "hat": "", "boat": "boat_classic", "suit": "suit_sunset"},
+ "features": {"daily": true, "quests": true}, "fresh": {}, "tutorial_step": 9,
+ "daily_day": 4, "daily_last": "2026-09-30", "puzzle_level": 12,
+ "stats": {"taps": 5000, "prestiges": 3, "puzzles_won": 11, "deepest": 11},
+ "chest_ready": false, "chest_timer": 100.0}

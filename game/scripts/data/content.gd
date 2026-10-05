@@ -72,7 +72,7 @@ static func artifact(id: String) -> Dictionary:
 
 # --- Cosmetics ------------------------------------------------------------------
 ## slot: hat (the player's hat), pet (swims next to the player), boat (boat
-## paint), suit (every diver's suit). Unlock: "free", "pearls" (price),
+## paint), outfit (the player's own clothes in room 3). Unlock: "free", "pearls" (price),
 ## "goal" (an achievement, see GOALS) or "shop" (real money, only when the
 ## platform sells things). rarity: 0 common, 1 rare, 2 epic, 3 legendary.
 const COSMETICS: Array[Dictionary] = [
@@ -110,16 +110,19 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "boat_candy", "slot": "boat", "art": "candy", "unlock": "pearls", "price": 120, "rarity": 1},
 	{"id": "boat_pirate", "slot": "boat", "art": "pirate", "unlock": "pearls", "price": 200, "rarity": 2},
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
-	# Diver suits
-	# dives: the worn suit makes every diver bring up this much more ore
-	# (a share, on top of artifacts). Pearls or goals only, never real money.
-	{"id": "suit_classic", "slot": "suit", "art": "classic", "unlock": "free", "rarity": 0, "dives": 0.0},
-	{"id": "suit_mint", "slot": "suit", "art": "mint", "unlock": "pearls", "price": 50, "rarity": 0, "dives": 0.03},
-	{"id": "suit_bubblegum", "slot": "suit", "art": "bubblegum", "unlock": "pearls", "price": 80, "rarity": 1, "dives": 0.05},
-	{"id": "suit_sunset", "slot": "suit", "art": "sunset", "unlock": "pearls", "price": 120, "rarity": 1, "dives": 0.08},
-	{"id": "suit_galaxy", "slot": "suit", "art": "galaxy", "unlock": "goal", "goal": "puzzle_10", "rarity": 2, "dives": 0.12},
+	# Player outfits (room 3). Pearls or goals only, never real money.
+	{"id": "outfit_casual", "slot": "outfit", "art": "casual", "unlock": "free", "rarity": 0},
+	{"id": "outfit_captain", "slot": "outfit", "art": "captain", "unlock": "pearls", "price": 60, "rarity": 0},
+	{"id": "outfit_chef", "slot": "outfit", "art": "chef", "unlock": "pearls", "price": 80, "rarity": 0},
+	{"id": "outfit_pirate", "slot": "outfit", "art": "pirate", "unlock": "pearls", "price": 120, "rarity": 1},
+	{"id": "outfit_scientist", "slot": "outfit", "art": "scientist", "unlock": "pearls", "price": 150, "rarity": 1},
+	{"id": "outfit_knight", "slot": "outfit", "art": "knight", "unlock": "pearls", "price": 220, "rarity": 2},
+	{"id": "outfit_wizard", "slot": "outfit", "art": "wizard", "unlock": "pearls", "price": 260, "rarity": 2},
+	{"id": "outfit_astronaut", "slot": "outfit", "art": "astronaut", "unlock": "goal", "goal": "location_3", "rarity": 2},
+	{"id": "outfit_superhero", "slot": "outfit", "art": "superhero", "unlock": "goal", "goal": "puzzle_30", "rarity": 3},
+	{"id": "outfit_king", "slot": "outfit", "art": "king", "unlock": "goal", "goal": "location_4", "rarity": 3},
 ]
-const SLOTS: Array[String] = ["pet", "hat", "boat", "suit"]
+const SLOTS: Array[String] = ["pet", "hat", "boat", "outfit"]
 const RARITY_COLORS: Array[Color] = [Color("7fc8f8"), Color("5cd05f"), Color("b07cff"), Color("ffbf2e")]
 
 ## Boat paint: hull, stripe, cabin roof, chimney, flag.
@@ -130,19 +133,16 @@ const BOAT_PAINTS := {
 	"pirate": [Color("3a3350"), Color("e8c48a"), Color("7a2e3a"), Color("5c5470"), Color("1a1a24")],
 	"royal": [Color("2a4fb8"), Color("ffd84a"), Color("ffd84a"), Color("ffd84a"), Color("d8363c")],
 }
-## Diver suits: null = each depth's own color.
-const SUIT_PAINTS := {
-	"classic": null,
-	"mint": [Color("3fd6a4"), Color("2bb58a")],
-	"bubblegum": [Color("ff7bc0"), Color("ff9fd0")],
-	"sunset": [Color("ff9a3c"), Color("ff6f61")],
-	"galaxy": [Color("5a3fd6"), Color("8f6cff")],
-}
+## The diver suits are gone (worker evolution replaced them). Pearls spent
+## on them are refunded once on load (Progress). Old id -> pearl price.
+const OLD_SUIT_PRICES := {"suit_mint": 50, "suit_bubblegum": 80, "suit_sunset": 120}
+## Kept for older UI code: no suit paints any more.
+const SUIT_PAINTS := {"classic": null}
 
 
-## Extra ore share a suit gives every diver (0 for none).
-static func suit_bonus(id: String) -> float:
-	return float(cosmetic(id).get("dives", 0.0))
+## Suits give no bonus any more (kept for older UI code).
+static func suit_bonus(_id: String) -> float:
+	return 0.0
 
 
 static func cosmetic(id: String) -> Dictionary:
@@ -160,9 +160,21 @@ const GOALS := {
 	"daily_3": ["daily_claimed", 3],
 	"daily_7": ["daily_claimed", 7],
 	"museum_6": ["artifacts_owned", 6],
+	"puzzle_30": ["puzzles_won", 30],
+	"location_3": ["location", 3],
+	"location_4": ["location", 4],
 	"depth_5": ["deepest", 5],
 	"prestige_1": ["prestiges", 1],
 }
+
+# --- Room 3 decor -----------------------------------------------------------------
+## Eight slots in the office, each with levels 0..DECOR_MAX bought with
+## pearls (persistent across locations). Every level gives
+## Balance.DECOR_BONUS more income. Names: DECOR_<SLOT>.
+const DECOR_SLOTS: Array[String] = ["wallpaper", "floor", "desk", "sofa", "aquarium", "lamp", "trophy", "plant"]
+const DECOR_MAX := 5
+## Pearl price of level 1, 2, ... 5 of any slot.
+const DECOR_PRICES: Array[int] = [15, 30, 50, 80, 120]
 
 # --- Quests ---------------------------------------------------------------------
 ## kind -> which event counts. Amounts scale with how far the player is.

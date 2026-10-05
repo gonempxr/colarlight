@@ -1,0 +1,8 @@
+{"version": 3, "saved_at": 1790000000.0, "coins": 3.4e9, "total_earned": 8.1e11, "prestige_count": 3,
+ "levels": {"d0": 162, "d1": 151, "d2": 140, "d3": 122, "d4": 104, "d5": 88, "d6": 61, "d7": 33, "d8": 47, "d9": 12,
+            "d10": 6, "d11": 21, "d12": 0, "d13": 0, "d14": 0,
+            "lift": 310, "boat": 284, "plant": 271, "boat2": 120, "plant2": 113},
+ "managers": {"d0": true, "d1": true, "d2": true, "d3": true, "d4": true, "d5": true, "d6": true, "d7": false, "d8": false,
+              "d9": true, "d10": false, "d11": true, "d12": false, "d13": false, "d14": false,
+              "lift": true, "boat": true, "plant": true, "boat2": true, "plant2": false},
+ "pit": 1520.5, "hold": 330.0, "dock": 12.0, "boost_end": 0.0, "boost_left": 0.0}

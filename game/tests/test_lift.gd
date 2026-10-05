@@ -173,10 +173,11 @@ func test_prestige() -> void:
 	gs.coins = 1e12
 	gs.levels["lift"] = 120
 	check(gs.hire_manager("lift"), "operator hired")
-	for i in 6:
-		gs.levels["d%d" % i] = maxi(1, gs.levels["d%d" % i])
+	for key in gs.stage_keys():
+		gs.levels[key] = maxi(1, gs.levels[key])
+		gs.managers[key] = true
 	gs.pit = 500.0
-	check(gs.prestige(), "dive deeper")
+	check(gs.advance_location(), "next location")
 	check(gs.get_level("lift") == 1, "the lift starts again at level 1")
 	check(gs.has_manager("lift"), "and keeps its operator")
 	check(gs.pit == 0.0, "the crates are emptied")
@@ -242,6 +243,7 @@ func test_old_save_migration() -> void:
 				gs.managers[k] = true
 		if gs.has_manager("lift"):
 			gs.managers["plant"] = true
+			gs.managers["vault"] = true
 			var before: float = gs.coins
 			for i in 900:
 				gs.advance(0.1)

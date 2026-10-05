@@ -1,0 +1,35 @@
+keys,en,ru,es,zh
+WORLD_OCEAN,Ocean,Океан,Océano,海洋
+WORLD_VOLCANO,Volcano,Вулкан,Volcán,火山
+WORLD_ACID,Acid Swamp,Кислотное болото,Pantano Ácido,酸液沼泽
+WORLD_MOON,Moon,Луна,Luna,月球
+GOAL_SITES,Open all work sites,Открой все участки,Abre todas las zonas de trabajo,开启所有矿点
+GOAL_FOREMEN,Hire every foreman,Найми всех бригадиров,Contrata a todos los capataces,雇齐所有工头
+GOAL_MANAGERS,"Hire managers for the lift, boats and plants","Найми управляющих для лифта, лодок и заводов","Contrata gerentes para el ascensor, los barcos y las fábricas",为升降机、船和工厂雇用经理
+GOAL_EVO,Buy all evolution forms,Открой все формы эволюции,Compra todas las formas de evolución,购买全部进化形态
+VAULT,Vault,Сейф,Caja fuerte,金库
+VAULT_COLLECT,Collect,Забрать,Recoger,收取
+ACCOUNTANT,Accountant,Бухгалтер,Contable,会计
+ACCOUNTANT_DESC,Collects the coins from the vault by himself.,Сам забирает монеты из сейфа.,Recoge solo las monedas de la caja fuerte.,自动收取金库里的金币。
+DECOR_WALLPAPER,Wallpaper,Обои,Papel pintado,墙纸
+DECOR_FLOOR,Floor,Пол,Suelo,地板
+DECOR_DESK,Desk,Стол,Escritorio,书桌
+DECOR_SOFA,Sofa,Диван,Sofá,沙发
+DECOR_AQUARIUM,Aquarium,Аквариум,Acuario,水族箱
+DECOR_LAMP,Lamp,Лампа,Lámpara,台灯
+DECOR_TROPHY,Trophy shelf,Полка с кубками,Estante de trofeos,奖杯架
+DECOR_PLANT,Plant,Цветок в горшке,Planta,盆栽
+TAB_OUTFITS,Outfits,Наряды,Atuendos,服装
+ITEM_OUTFIT_CASUAL,Casual,Повседневный,Informal,休闲装
+ITEM_OUTFIT_CAPTAIN,Captain,Капитан,Capitán,船长
+ITEM_OUTFIT_CHEF,Chef,Повар,Chef,厨师
+ITEM_OUTFIT_PIRATE,Pirate,Пират,Pirata,海盗
+ITEM_OUTFIT_SCIENTIST,Scientist,Учёный,Científico,科学家
+ITEM_OUTFIT_KNIGHT,Knight,Рыцарь,Caballero,骑士
+ITEM_OUTFIT_WIZARD,Wizard,Волшебник,Mago,巫师
+ITEM_OUTFIT_ASTRONAUT,Astronaut,Космонавт,Astronauta,宇航员
+ITEM_OUTFIT_SUPERHERO,Superhero,Супергерой,Superhéroe,超级英雄
+ITEM_OUTFIT_KING,King,Король,Rey,国王
+GOAL_PUZZLE_30,Win 30 puzzles,Пройди 30 пазлов,Gana 30 puzles,完成 30 关拼图
+GOAL_LOCATION_3,Reach the Moon,Доберись до Луны,Llega a la Luna,抵达月球
+GOAL_LOCATION_4,Pass all four worlds,Пройди все четыре мира,Supera los cuatro mundos,通关全部四个世界
