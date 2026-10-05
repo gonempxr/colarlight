@@ -185,9 +185,8 @@ func _outfit() -> String:
 	var pr := _pr()
 	if pr:
 		var eq = pr.get("equipped")
-		if eq is Dictionary and str(eq.get("outfit", "")) != "":
-			var art := str(pr.call("equipped_art", "outfit")) if pr.has_method("equipped_art") else ""
-			return art if art != "" else str(eq["outfit"])
+		if eq is Dictionary:
+			return str(eq.get("outfit", "outfit_casual"))
 	return "outfit_casual"
 
 
