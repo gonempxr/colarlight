@@ -52,6 +52,7 @@ func _initialize() -> void:
 	await test_map()
 	await test_location_advance()
 	await test_tutorial()
+	await test_plant2_offer()
 	await test_cursor_setting()
 	await test_wide()
 	print("%d checks, %d failed" % [_checks, _failures])
@@ -94,13 +95,15 @@ func _settle() -> void:
 
 
 func _close_dialogs() -> void:
-	main._news.clear()
-	main._top.close()
-	main._modal.close()
-	if main._map.visible:
-		main._map.close()
-	await create_timer(0.3).timeout
-	await _frames(2)
+	# Twice: news queued by a reset can pop up right after the first pass.
+	for i in 2:
+		main._news.clear()
+		main._top.close()
+		main._modal.close()
+		if main._map.visible:
+			main._map.close()
+		await create_timer(0.3).timeout
+		await _frames(2)
 
 
 func _tab(i: int) -> Vector2:
@@ -442,6 +445,37 @@ func test_tutorial() -> void:
 	check(tutor.key == "TUT_UPGRADE", "and the upgrade (%s)" % tutor.key)
 	pr.tutorial_step = 12
 	await _frames(2)
+
+
+## The second plant is sold from the factory's closed line: tapping it
+## (FactoryRoom.stage_selected("plant2")) shows the offer in the panel.
+func test_plant2_offer() -> void:
+	await _close_dialogs()
+	gs.reset()
+	gs.coins = 1e9
+	gs.levels["d1"] = 1
+	gs.levels["d2"] = 1
+	await _frames(2)
+	await _close_dialogs()
+	main.show_room(1, false)
+	await _frames(4)
+	check(not gs.is_open("plant2"), "the second plant starts closed")
+	var fac: Control = main._factory
+	var r: Rect2 = fac.line_rect("plant2")
+	check(r.size.x > 0.0, "the factory has a closed second line")
+	var cp: Vector2 = fac.get_global_transform_with_canvas() * r.get_center()
+	await _click(cp)
+	await _frames(3)
+	check(main._panel.visible and main._panel.key == "plant2", "tapping the closed line shows the second plant (%s)" % main._panel.key)
+	check(main._panel._buy.visible and main._panel._buy.full_text.find("Buy") >= 0, "with a Buy offer")
+	# Let the sheet finish sliding up.
+	await create_timer(0.5).timeout
+	await _click(_center(main._panel._buy))
+	check(gs.is_open("plant2"), "the offer buys the second plant")
+	check(main.stage_card("plant").key == "plant2", "the factory card follows it")
+	main._close_sheet()
+	main.show_room(0, false)
+	await _frames(4)
 
 
 ## Waits (up to 3 s) for the tutorial to show `key`.

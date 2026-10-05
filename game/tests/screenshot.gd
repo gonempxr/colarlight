@@ -192,6 +192,8 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+			elif overlay.begins_with("world:") and overlay.ends_with(":sheet"):
+				main._on_stage_selected("d0")
 			elif (overlay.begins_with("ocean:") or overlay.begins_with("world:")) and overlay.ends_with(":banner"):
 				main._world.show_ocean_name(gs.prestige_count)
 			elif overlay.begins_with("relang:"):

@@ -249,7 +249,8 @@ func _draw_hero() -> void:
 		Art.flat(_hero, Art.circle_pts(Vector2(s.x - 110, s.y - 70), 80, 32), Color(st["ore"], 0.15))
 		OreArt.deposit(_hero, Vector2(s.x - 100, s.y - 36), 90, i, i * 31 + 3, _t, 5)
 		Chars.diver(_hero, Vector2(s.x - 210, s.y - 30), 1.3, st["suit"], 1.0, 0.0, 0.0, "dig",
-				fposmod(_t * 0.7, 1.0), false, st["ore"], "focus", Chars.blinking(_t, 3.0), _t, i)
+				fposmod(_t * 0.7, 1.0), false, st["ore"], "focus", Chars.blinking(_t, 3.0), _t, i,
+				{"world": WorldLook.world, "form": GameState.evo})
 	else:
 		Art.t_rect(_hero, ground, 14, Art.SEA_TOP, 0.0, 0.0)
 		# Later stages are taller: shrink them to fit the box.
