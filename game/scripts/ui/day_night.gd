@@ -34,6 +34,14 @@ const DEEP_NIGHT_TINT := Color(0.76, 0.80, 0.94)
 ## Day and night sky stops [top, middle, horizon]; OceanLook sets them per ocean.
 static var day_cols := PackedColorArray([DAY_TOP, DAY_MID, DAY_BOTTOM])
 static var night_cols := PackedColorArray([NIGHT_TOP, NIGHT_MID, NIGHT_BOTTOM])
+## How much sunrise/sunset color the sky takes (0 on the airless moon).
+static var dusk_amount := 1.0
+## Scene modulate at night (warmer by the volcano).
+static var night_tint := NIGHT_TINT
+## Stars stay out by day (the moon's black sky).
+static var stars_by_day := false
+## Faraway hills by day (WorldLook sets it per world).
+static var far_day := Color("9fd4ee")
 static var clock := START_PHASE * CYCLE
 ## Tests and preview sheets pin the time of day here (0..1, -1 = running).
 static var fixed_phase := -1.0
@@ -73,6 +81,11 @@ static func night(p: float = -1.0) -> float:
 	return 1.0 - daylight(p)
 
 
+## How bright the stars are: at night, and always in an airless sky.
+static func starlight(p: float = -1.0) -> float:
+	return maxf(night(p), 0.75) if stars_by_day else night(p)
+
+
 ## Sunrise/sunset glow: 1 when the sun touches the horizon.
 static func warmth(p: float = -1.0) -> float:
 	var e := elevation(p) / 0.2
@@ -87,7 +100,7 @@ static func is_morning(p: float = -1.0) -> bool:
 ## Sky gradient stops: [top, middle, horizon].
 static func sky_colors(p: float = -1.0) -> PackedColorArray:
 	var d := daylight(p)
-	var w := warmth(p)
+	var w := warmth(p) * dusk_amount
 	var morning := is_morning(p)
 	var top := night_cols[0].lerp(day_cols[0], d).lerp(DUSK_TOP, w * 0.55)
 	var mid := night_cols[1].lerp(day_cols[1], d).lerp(DAWN_MID if morning else DUSK_MID, w * 0.75)
@@ -97,8 +110,8 @@ static func sky_colors(p: float = -1.0) -> PackedColorArray:
 
 ## Modulate for everything standing on the surface (boat, plant, people).
 static func scene_tint(p: float = -1.0) -> Color:
-	var base := NIGHT_TINT.lerp(Color.WHITE, daylight(p))
-	return base.lerp(base * WARM_TINT, warmth(p) * 0.7)
+	var base := night_tint.lerp(Color.WHITE, daylight(p))
+	return base.lerp(base * WARM_TINT, warmth(p) * 0.7 * dusk_amount)
 
 
 ## Modulate for the underwater world.
@@ -134,9 +147,9 @@ static func cloud_line(p: float = -1.0) -> Color:
 static func far_color(depth: float, p: float = -1.0) -> Color:
 	var pp := stepped_phase() if p < 0.0 else p
 	var sky := sky_colors(pp)
-	var day := Color("9fd4ee").lerp(Color("78b8dc"), depth)
-	var c := Color("26325f").lerp(day, daylight(pp))
-	return c.lerp(sky[2].darkened(0.25), warmth(pp) * 0.55)
+	var day := far_day.lerp(far_day.darkened(0.15), depth)
+	var c := night_cols[1].lerp(Color("26325f"), 0.5).lerp(day, daylight(pp))
+	return c.lerp(sky[2].darkened(0.25), warmth(pp) * 0.55 * dusk_amount)
 
 
 # --- Sun and moon path ----------------------------------------------------------------
