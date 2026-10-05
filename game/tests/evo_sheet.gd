@@ -80,7 +80,7 @@ class Sheet extends Control:
 		var arms := ["idle", "dig", "pick", "swim", "walk", "rope", "cheer", "show"]
 		var emos := Chars.EMOTIONS.keys()
 		for i in arms.size():
-			_w(Vector2(80 + i * 150, 200), 1.4, form, arms[i], fposmod(t * 0.7, 1.0), i == 3, "happy")
+			_w(Vector2(90 + i * 190, 200), 1.4, form, arms[i], fposmod(t * 0.7, 1.0), i == 3, "happy")
 		for i in emos.size():
 			_w(Vector2(80 + i * 130, 450), 1.4, form, "idle", 0.0, false, emos[i])
 			Art.text(self, Vector2(80 + i * 130, 480), emos[i], 16)

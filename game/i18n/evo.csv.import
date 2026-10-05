@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://r3emo25018i8"
+
+[deps]
+
+files=["res://i18n/evo.en.translation", "res://i18n/evo.ru.translation", "res://i18n/evo.es.translation", "res://i18n/evo.zh.translation"]
+
+source_file="res://i18n/evo.csv"
+dest_files=["res://i18n/evo.en.translation", "res://i18n/evo.ru.translation", "res://i18n/evo.es.translation", "res://i18n/evo.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

@@ -69,14 +69,16 @@ static func swings(world: String, form: int) -> bool:
 
 ## Where the tool meets the deposit in the worker's own space (as Chars.dig_tip).
 static func dig_tip(world: String, form: int) -> Vector2:
-	match _spec(world_index(world), form).get("tool", "pick"):
+	var sp := _spec(world_index(world), form)
+	var big: float = sp.get("size", 1.0)
+	match sp.get("tool", "pick"):
 		"drill":
-			return Chars.dig_tip(3)
+			return Chars.dig_tip(3) * big
 		"trident":
-			return Chars.dig_tip(8)
+			return Chars.dig_tip(8) * big
 		"sprayer", "laser":
-			return Vector2(80, -44)
-	return Chars.dig_tip(0)
+			return Vector2(80, -44) * big
+	return Chars.dig_tip(0) * big
 
 
 # --- Recipes ---------------------------------------------------------------------
@@ -192,7 +194,7 @@ const FORMS_VOLCANO: Array[Dictionary] = [
 	"plate": Color("4a4070"), "emblem": "gem", "ec": Color("ff8a1a"), "arms": "spiky", "arm_c": Color("3a3258"), "glove": Color("2e2848"),
 	"legs": "boots", "leg_c": Color("3a3258"), "boot": Color("2e2848"), "tc": Color("b58cff"), "th": Color("2e2848")},
 	# 6 magma golem
-	{"head": "creature", "cs": "rock", "hc": Color("6a4436"), "face": "glow", "eye": Color("ffd23f"), "torso": "rock", "suit": Color("6a4436"),
+	{"head": "creature", "cs": "rock", "size": 1.06, "hc": Color("6a4436"), "face": "glow", "eye": Color("ffd23f"), "torso": "rock", "suit": Color("6a4436"),
 	"pc": Color("ff7a1a"), "arms": "rock", "arm_c": Color("6a4436"), "legs": "rock", "leg_c": Color("6a4436"), "tool": "hammer",
 	"tc": Color("8a6a5a"), "th": Color("4a3028"), "fx": ["embers"]},
 	# 7 fire fox
@@ -214,7 +216,7 @@ const FORMS_VOLCANO: Array[Dictionary] = [
 	"boot": Color("2a2230"), "back": ["wings_bat", "dragon_tail"], "bc": Color("c0302a"), "bc2": Color("ff8a1a"), "tc": Color("2a2230"),
 	"fx": ["embers"]},
 	# 11 volcano titan
-	{"head": "creature", "cs": "volcano", "hc": Color("5a3a34"), "face": "glow", "eye": Color("ffd23f"), "torso": "rock",
+	{"head": "creature", "cs": "volcano", "size": 1.12, "hc": Color("5a3a34"), "face": "glow", "eye": Color("ffd23f"), "torso": "rock",
 	"suit": Color("5a3a34"), "pc": Color("ff5a1a"), "arms": "rock", "arm_c": Color("5a3a34"), "legs": "rock", "leg_c": Color("5a3a34"),
 	"tool": "hammer", "tc": Color("2a2230"), "th": Color("4a3028"), "fx": ["embers", "glow"], "glow": Color("ff5a1a")},
 	# 12 fire lord
@@ -325,7 +327,7 @@ const FORMS_MOON: Array[Dictionary] = [
 	"leg_c": Color("c8b8ff"), "boot": Color("f4f7ff"), "back": ["cat_tail"], "bc": Color("c8b8ff"), "bc2": Color("f4f7ff"), "tc": Color("ffd23f"),
 	"th": Color("8a7ab8")},
 	# 10 meteor golem
-	{"head": "creature", "cs": "moonrock", "hc": Color("6a7090"), "face": "glow", "eye": Color("5af0ff"), "torso": "rock",
+	{"head": "creature", "cs": "moonrock", "size": 1.06, "hc": Color("6a7090"), "face": "glow", "eye": Color("5af0ff"), "torso": "rock",
 	"suit": Color("6a7090"), "pc": Color("5af0ff"), "arms": "rock", "arm_c": Color("6a7090"), "legs": "rock", "leg_c": Color("6a7090"),
 	"tool": "hammer", "tc": Color("8a90b0"), "th": Color("3a3a5a"), "fx": ["orbit"], "glow": Color("5af0ff")},
 	# 11 cosmic dragon
@@ -445,7 +447,8 @@ static func draw(ci: CanvasItem, pos: Vector2, scale: float, world: String, form
 		bob = -absf(sin(kick * TAU)) * 2.2 * kick_amp
 	if legs == "wisp":
 		bob = -4.0 + sin(t * 2.0) * 2.0
-	Art.push(ci, pos, tilt * facing, Vector2(scale * sx, scale * (1.0 + breathe)))
+	var big: float = _sp.get("size", 1.0)
+	Art.push(ci, pos, tilt * facing, Vector2(scale * sx, scale * (1.0 + breathe)) * big)
 	Art.push(ci, Vector2(lunge, bob), lean)
 	var moving := (arm in ["swim", "rope", "walk"]) and kick_amp > 0.3
 	_back(ci, t, moving, false)
@@ -594,7 +597,7 @@ static func _back_front(ci: CanvasItem, p: String) -> void:
 			# Straps over the shoulder.
 			Art.t_rect(ci, Rect2(-13, -48, 5, 24), 2, Art.shade_of(_c("suit"), 0.45), 1.6, 0.0)
 		"parrot":
-			Art.push(ci, Vector2(-21, -46))
+			Art.push(ci, Vector2(-28, -44))
 			Art.toon(ci, _PARROT_TAIL, Color("3aa6f0"), 1.8, 0.0)
 			Art.t_ellipse(ci, Vector2(0, -6), Vector2(6.5, 8.5), Art.RED, 2.0, 0.5)
 			Art.t_circle(ci, Vector2(1, -15), 5.5, Art.RED, 2.0, 0.3)
@@ -784,7 +787,7 @@ static func _wings(ci: CanvasItem, kind: String, dyn: int, c1: Color, c2: Color)
 		_:
 			shape = _WING_BAT
 	for near in [false, true]:
-		Art.push(ci, Vector2(-6, -48) if not near else Vector2(-11, -45), (0.85 - flap) if not near else (-0.2 + flap), Vector2(0.85, 0.9) if not near else Vector2.ONE)
+		Art.push(ci, Vector2(-2, -52) if not near else Vector2(-11, -46), (0.75 - flap) if not near else (0.3 + flap), Vector2(0.85, 0.9) if not near else Vector2.ONE)
 		var col := Art.shade_of(c1, 0.3) if not near else c1
 		Art.toon(ci, shape, col, 2.4, 0.0)
 		match kind:
@@ -1017,7 +1020,7 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 			Art.dot(ci, Vector2(0, -36), 4.0 + pulse, Color(_c("pc"), 0.35))
 			if _sp["cs"] == "volcano":
 				for sx: float in [-1.0, 1.0]:
-					var b := Vector2(sx * 16 - 1, -50)
+					var b := Vector2(sx * 20 - 1, -42)
 					Art.toon(ci, Art.moved(_BOULDER, b), Art.shade_of(suit, 0.1 if sx > 0 else 0.3), 2.6, 0.6)
 					Art.flat(ci, Art.moved(_BOULDER_LAVA, b), Color(_c("pc"), 0.8 + 0.2 * pulse))
 			return
