@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bitu1nenrbsnv"
+
+[deps]
+
+files=["res://i18n/rooms.en.translation", "res://i18n/rooms.ru.translation", "res://i18n/rooms.es.translation", "res://i18n/rooms.zh.translation"]
+
+source_file="res://i18n/rooms.csv"
+dest_files=["res://i18n/rooms.en.translation", "res://i18n/rooms.ru.translation", "res://i18n/rooms.es.translation", "res://i18n/rooms.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
