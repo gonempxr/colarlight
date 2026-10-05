@@ -23,7 +23,7 @@ const FORMS := 13
 const RARITY_KEYS := ["RARITY_BASE", "RARITY_RARE", "RARITY_EPIC", "RARITY_LEGENDARY", "RARITY_MYTHIC"]
 const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b06cf0"), Color("ffc93c"), Color("ff5ab4")]
 ## Soft rim light of each world's silhouettes.
-const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("b8a8ff")]
+const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff")]
 
 const SHOULDER_F := Vector2(11, -39)
 const SHOULDER_B := Vector2(-11, -39)
@@ -2102,7 +2102,7 @@ static func _build_silhouette(world: String, form: int) -> Array:
 	var clear := Color(0, 0, 0, 0)
 	for i in c.size():
 		var col := c[i]
-		if col.a < 0.6:
+		if col.a < 0.5:
 			dark[i] = clear
 			rim1[i] = clear
 			rim2[i] = clear
