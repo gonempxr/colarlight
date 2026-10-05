@@ -2,12 +2,15 @@ class_name HandCursor
 extends RefCounted
 ## The cartoon glove cursor on PC (game/assets/cursor): the open hand, and
 ## the pressing one while a mouse button is held. Touch devices keep the
-## system's (no cursor at all). The fingertip is the hotspot (10, 1); on a
-## native HiDPI screen the picture is drawn twice as big.
+## system's (no cursor at all). The fingertip is the hotspot (10, 2). On the
+## web the cursor is a CSS image-set on the canvas, so Retina/HiDPI screens get
+## the sharp @2x picture; natively a HiDPI screen gets the @2x picture.
 
 const HAND := "res://assets/cursor/hand.png"
 const PRESS := "res://assets/cursor/hand_press.png"
-const HOTSPOT := Vector2(10, 1)
+const HAND2 := "res://assets/cursor/hand@2x.png"
+const PRESS2 := "res://assets/cursor/hand_press@2x.png"
+const HOTSPOT := Vector2(10, 2)
 
 static var _on := false
 static var _down := false
@@ -49,6 +52,9 @@ static func press(down: bool) -> void:
 
 
 static func _put(down: bool) -> void:
+	if OS.has_feature("web"):
+		_put_css(down)
+		return
 	for shape in [Input.CURSOR_ARROW, Input.CURSOR_POINTING_HAND]:
 		if not _on:
 			Input.set_custom_mouse_cursor(null, shape)
@@ -56,19 +62,37 @@ static func _put(down: bool) -> void:
 			Input.set_custom_mouse_cursor(_image(down), shape, HOTSPOT * _scale())
 
 
-## Native HiDPI screens (not the web: a CSS cursor is in CSS pixels).
+## Native HiDPI screens get the @2x picture.
 static func _scale() -> float:
-	if OS.has_feature("web"):
-		return 1.0
 	return 2.0 if DisplayServer.screen_get_scale() >= 1.75 else 1.0
 
 
 static func _image(down: bool) -> Resource:
 	var k := "%s%d" % ["p" if down else "h", int(_scale())]
 	if not _imgs.has(k):
-		var tex: Texture2D = load(PRESS if down else HAND)
-		var img := tex.get_image()
+		var path: String
 		if _scale() > 1.0:
-			img.resize(int(img.get_width() * _scale()), int(img.get_height() * _scale()), Image.INTERPOLATE_LANCZOS)
-		_imgs[k] = ImageTexture.create_from_image(img)
+			path = PRESS2 if down else HAND2
+		else:
+			path = PRESS if down else HAND
+		var tex: Texture2D = load(path)
+		_imgs[k] = tex
 	return _imgs[k]
+
+
+static var _css_ready := false
+
+
+## Web: a stylesheet rule beats the cursor style Godot puts on the canvas
+## (!important), and image-set picks the 1x or 2x picture by screen density.
+static func _put_css(down: bool) -> void:
+	if not _css_ready and _on:
+		var rule := func(a: String, b: String) -> String:
+			var u1 := "url(data:image/png;base64,%s)" % Marshalls.raw_to_base64((load(a) as Texture2D).get_image().save_png_to_buffer())
+			var u2 := "url(data:image/png;base64,%s)" % Marshalls.raw_to_base64((load(b) as Texture2D).get_image().save_png_to_buffer())
+			var hs := "%d %d" % [int(HOTSPOT.x), int(HOTSPOT.y)]
+			return "cursor: %s %s, pointer !important; cursor: -webkit-image-set(%s 1x, %s 2x) %s, pointer !important; cursor: image-set(%s 1x, %s 2x) %s, pointer !important;" % [u1, hs, u1, u2, hs, u1, u2, hs]
+		var css: String = "#canvas.hc{%s} #canvas.hc.hcp{%s}" % [rule.call(HAND, HAND2), rule.call(PRESS, PRESS2)]
+		JavaScriptBridge.eval("(function(){var s=document.getElementById('hc-style');if(!s){s=document.createElement('style');s.id='hc-style';document.head.appendChild(s);}s.textContent=%s;})()" % JSON.stringify(css), true)
+		_css_ready = true
+	JavaScriptBridge.eval("(function(){var c=document.getElementById('canvas');if(!c)return;c.classList.toggle('hc',%s);c.classList.toggle('hcp',%s);})()" % ["true" if _on else "false", "true" if (_on and down) else "false"], true)

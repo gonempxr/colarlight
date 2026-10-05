@@ -1,16 +1,13 @@
 class_name PointerArt
 extends RefCounted
-## Cartoon pointing hand for the tutorial and hints: a chubby hand with an
-## index finger, curled fingers, a thumb, a white cuff and a sleeve, drawn
-## with the toon kit. `draw` animates it tapping: the hand glides in, presses
+## Cartoon pointing hand (a white glove) for the tutorial, hints and the PC
+## mouse cursor, drawn with the toon kit. `draw` animates it tapping: the hand glides in, presses
 ## with a little squash, a ring pulses out from the fingertip, then it lifts.
 
 const PERIOD := 1.45            # seconds per tap loop
 const REACH := 26.0             # how far the hand pulls back between taps
-const SKIN := Color("ffd9b5")
-const NAIL := Color("fff0e6")
-const CUFF := Color("ffffff")
-const SLEEVE := Color("3aa6f0")
+const GLOVE := Color("fbfcff")
+const CUFF := Color("43b4f5")
 
 const _PRESS_AT := 0.40         # loop point where the fingertip touches
 const _LIFT_AT := 0.56          # ...and where it starts to lift again
@@ -66,57 +63,52 @@ static func draw(ci: CanvasItem, pos: Vector2, t: float, press: bool = true, ang
 
 
 ## The hand alone, fingertip at `pos`, rotated and scaled (no animation).
-## Back of a right hand: the index finger points up, the three other fingers
-## curl into stacked knuckle rolls on the right, the thumb lies across them.
+## A white cartoon glove like a classic pointer: the index finger points
+## up, the middle, ring and little fingers fold down in steps on the right,
+## the thumb sticks out on the left, a blue cuff at the wrist.
 static func hand(ci: CanvasItem, pos: Vector2, angle: float = -0.5, scale: Vector2 = Vector2.ONE) -> void:
 	Art.push(ci, pos, angle, scale)
-	# Sleeve under the wrist.
-	Art.toon(ci, PackedVector2Array([Vector2(-10, 84), Vector2(30, 82), Vector2(32, 106), Vector2(-12, 108)]), SLEEVE, 3.0, 0.6)
-	Art.line_c(ci, PackedVector2Array([Vector2(-6, 98), Vector2(27, 96.5)]), Color(1, 1, 1, 0.35), 3.0)
-	# Index finger (its base hides behind the hand).
-	Art.toon(ci, _finger(), SKIN, 3.0, 0.3)
-	Art.flat(ci, Art.rrect_pts(Rect2(-5, 2.5, 10, 11), 4.5), NAIL)
-	Art.flat(ci, Art.rrect_pts(Rect2(-3.2, 4.6, 2.6, 4.6), 1.3, 2), Color(1, 1, 1, 0.85))
-	Art.flat(ci, Art.ellipse_pts(Vector2(-4.2, 22), Vector2(1.5, 6), 10), Color(1, 1, 1, 0.45))
-	Art.line_c(ci, PackedVector2Array([Vector2(-3, 30), Vector2(3, 30)]), Color(Art.INK, 0.35), 1.4)
-	# Back of the hand.
-	Art.toon(ci, _palm(), SKIN, 3.0, 0.45)
-	# Curled fingers: three knuckle rolls, the lower ones in front.
-	for i in 3:
-		var y := 33.0 + i * 11.0
-		Art.t_rect(ci, Rect2(7 - i * 0.5, y, 22.5 - i, 12.5), 6.2, SKIN, 2.6, 0.35)
-		Art.flat(ci, Art.ellipse_pts(Vector2(24 - i * 0.6, y + 3.6), Vector2(2.4, 1.3), 8), Color(1, 1, 1, 0.6))
-	# Thumb across the front.
-	Art.push(ci, Vector2(3, 66), -0.38)
-	Art.t_rect(ci, Rect2(-15, -7, 30, 14), 7, SKIN, 2.8, 0.4)
-	Art.flat(ci, Art.rrect_pts(Rect2(7, -4.6, 6, 7.6), 3.0), NAIL)
-	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -3.4), Vector2(6, 1.4), 10), Color(1, 1, 1, 0.45))
-	Art.pop(ci)
-	# Cuff over the wrist.
-	Art.t_rect(ci, Rect2(-13, 76, 46, 14), 6, CUFF, 3.0, 0.5)
+	Art.toon(ci, _glove(), GLOVE, 3.2, 0.55)
+	# Finger gaps and the thumb crease.
+	for l in _creases():
+		Art.line_c(ci, l, Art.INK, 2.6)
+	# Shine down the index finger and on the knuckles.
+	Art.line_c(ci, PackedVector2Array([Vector2(-3.0, 6), Vector2(-3.0, 22)]), Color(1, 1, 1, 0.95), 2.4)
+	# Cuff.
+	Art.t_rect(ci, Rect2(-3, 76, 44, 14), 5, CUFF, 3.0, 0.5)
+	Art.line_c(ci, PackedVector2Array([Vector2(2, 80.5), Vector2(35, 80.5)]), Color(1, 1, 1, 0.55), 2.2)
 	Art.pop(ci)
 
 
-static var _finger_pts := PackedVector2Array()
-static var _palm_pts := PackedVector2Array()
+static var _glove_pts := PackedVector2Array()
+static var _crease_lines: Array[PackedVector2Array] = []
 
 
-static func _finger() -> PackedVector2Array:
-	if _finger_pts.is_empty():
-		var pts := PackedVector2Array()
-		for i in 13:
-			var a := PI + PI * i / 12.0
-			pts.append(Vector2(cos(a) * 8.0, 8.0 + sin(a) * 8.0))
-		pts.append_array([Vector2(9.0, 30), Vector2(9.5, 44), Vector2(-9.5, 44), Vector2(-9.0, 30)])
-		_finger_pts = pts
-	return _finger_pts
+## Outline of the glove, fingertip at (0, 0), x to the right, y down.
+static func _glove() -> PackedVector2Array:
+	if _glove_pts.is_empty():
+		var c := PackedVector2Array([
+			Vector2(-6, 40), Vector2(-6, 7), Vector2(-4.3, 1.8), Vector2(0, 0), Vector2(4.3, 1.8), Vector2(6, 7),
+			Vector2(6, 20.5),
+			Vector2(10, 19.6), Vector2(15.5, 19.8), Vector2(18.2, 22.6), Vector2(18.8, 27),
+			Vector2(22.5, 25.8), Vector2(28, 26), Vector2(30.8, 28.8), Vector2(31.4, 33),
+			Vector2(35, 32), Vector2(40, 32.3), Vector2(42.8, 35.3), Vector2(43.4, 40),
+			Vector2(43.4, 58), Vector2(38, 79), Vector2(0, 79), Vector2(-1, 69),
+			Vector2(-19.5, 45), Vector2(-21.5, 38.5), Vector2(-18, 33.5), Vector2(-12.5, 34.5), Vector2(-8, 38),
+		])
+		_glove_pts = Art.smooth_pts(c, 4)
+	return _glove_pts
 
 
-static func _palm() -> PackedVector2Array:
-	if _palm_pts.is_empty():
-		_palm_pts = Art.smooth_pts(PackedVector2Array([Vector2(-11, 42), Vector2(-7, 34), Vector2(4, 31), Vector2(16, 32),
-				Vector2(22, 40), Vector2(23, 62), Vector2(19, 75), Vector2(6, 81), Vector2(-6, 79), Vector2(-12, 68)]), 3)
-	return _palm_pts
+static func _creases() -> Array[PackedVector2Array]:
+	if _crease_lines.is_empty():
+		_crease_lines = [
+			PackedVector2Array([Vector2(6, 19.5), Vector2(5.8, 34)]),
+			PackedVector2Array([Vector2(18.8, 26), Vector2(18.6, 39)]),
+			PackedVector2Array([Vector2(31.4, 32), Vector2(31.2, 44)]),
+			PackedVector2Array([Vector2(-6, 39), Vector2(-5, 55)]),
+		]
+	return _crease_lines
 
 
 ## Two rings pulsing out from the fingertip every time it presses.
