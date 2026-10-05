@@ -714,13 +714,18 @@ static func mystery(ci: CanvasItem, at: Vector2, t: float, pulse: bool, size: fl
 	Art.pop(ci)
 
 
-## Planted flag and a green check on a finished island.
-static func done_mark(ci: CanvasItem, at: Vector2, t: float) -> void:
-	Art.stroke(ci, PackedVector2Array([at, at + Vector2(0, -64)]), Art.WOOD_DARK, 4.0, 2.0)
-	var wave := sin(t * 4.0) * 2.0
-	Art.toon(ci, PackedVector2Array([at + Vector2(2, -64), at + Vector2(36, -56 + wave), at + Vector2(2, -44)]), Art.RED, 2.5, 0.3)
-	Art.t_circle(ci, at + Vector2(22, -10), 15, Art.GREEN, 3.0, 0.5)
-	Art.polyline(ci, PackedVector2Array([at + Vector2(14, -10), at + Vector2(20, -4), at + Vector2(30, -17)]), Art.WHITE, 4.5)
+## Planted flag on a finished island.
+const FLAG_AT := {"ocean": Vector2(-150, 12), "volcano": Vector2(-168, 30), "acid": Vector2(-150, 20), "moon": Vector2(-150, 22)}
+
+
+static func done_mark(ci: CanvasItem, world: String, t: float) -> void:
+	var at: Vector2 = FLAG_AT.get(world, Vector2(-150, 20))
+	Art.t_ellipse(ci, at + Vector2(0, 2), Vector2(9, 4), Art.shade_of(Art.WOOD_DARK, 0.3), 2.0, 0.0)
+	Art.stroke(ci, PackedVector2Array([at, at + Vector2(0, -70)]), Art.WOOD_DARK, 4.0, 2.0)
+	var wave := sin(t * 4.0) * 2.5 if not still else 0.0
+	Art.toon(ci, PackedVector2Array([at + Vector2(2, -70), at + Vector2(22, -66 + wave * 0.5), at + Vector2(40, -60 + wave), at + Vector2(22, -54 + wave * 0.5), at + Vector2(2, -48)]), Art.RED, 2.5, 0.3)
+	Art.toon(ci, Art.star_pts(at + Vector2(17, -59), 6, 2.8, 5), Art.GOLD, 1.5, 0.0)
+	Art.disc(ci, at + Vector2(0, -71), 3.5, Art.GOLD)
 
 
 ## Map pins over the mine, factory and office of the current island.
@@ -779,11 +784,11 @@ static func _along(route: Array, f: float) -> Vector2:
 
 
 ## Little boat (or lava tug / swamp pontoon / moon hover), origin at the waterline.
-static func boat(ci: CanvasItem, at: Vector2, facing: float, world: String, loaded: bool, t: float, second: bool = false) -> void:
+static func boat(ci: CanvasItem, at: Vector2, facing: float, world: String, loaded: bool, t: float, second: bool = false, size: float = 1.0) -> void:
 	var lk := look(world)
 	var hull: Color = lk["boat2"] if second else lk["boat"]
-	var s := 0.82 if second else 1.0
-	var bob := sin(t * 3.0 + (1.0 if second else 0.0)) * 1.2
+	var s := (0.82 if second else 1.0) * size
+	var bob := sin(t * 3.0 + (1.0 if second else 0.0)) * 1.2 if not still else 0.0
 	Art.push(ci, at + Vector2(0, bob), 0.0, Vector2(facing * s, s))
 	if world == "moon":
 		Art.glow(ci, Vector2(0, 6), 22, Color(0.5, 0.95, 1.0, 0.45))
@@ -911,8 +916,15 @@ static func plate(ci: CanvasItem, at: Vector2, label: String, state: int, tier: 
 		NEXT: fill = Color("4a3f7a")
 		LOCKED: fill = Color("2a2342")
 	var r := Rect2(at.x - w / 2.0, at.y - size * 0.95, w, size * 1.6)
+	if state == DONE:
+		w += 34.0
+		r = Rect2(at.x - w / 2.0, at.y - size * 0.95, w, size * 1.6)
 	Art.t_rect(ci, r, size * 0.8, fill, 3.5, 0.6)
-	var tx := at.x - (27.0 if tier > 0 else 0.0)
+	if state == DONE:
+		var cc := Vector2(r.position.x + size * 0.85, at.y - size * 0.15)
+		Art.t_circle(ci, cc, size * 0.62, Art.GREEN, 3.0, 0.5)
+		Art.polyline(ci, PackedVector2Array([cc + Vector2(-7, 0), cc + Vector2(-2, 6), cc + Vector2(8, -6)]) , Art.WHITE, 4.5)
+	var tx := at.x - (27.0 if tier > 0 else 0.0) + (17.0 if state == DONE else 0.0)
 	var dark := state == NEXT or state == LOCKED
 	Art.text(ci, Vector2(tx, at.y + size * 0.36), s, size, Art.WHITE if dark else Art.INK, 7 if dark else 0)
 	if tier > 0:
@@ -925,8 +937,8 @@ static func plate(ci: CanvasItem, at: Vector2, label: String, state: int, tier: 
 ## static part clipped to the circle. p1/p2: boat cycle progress (p2 < -1.5
 ## = no second boat).
 static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, tier: int, p1: float, p2: float, t: float) -> void:
-	var k := radius / 150.0
-	var view := Vector2(0, -20)
+	var k := radius / 185.0
+	var view := Vector2(0, -6)
 	_shift = 0.0 if tier <= 0 else 0.07 * float(tier)
 	var key := hash(["mini", world, tier, radius])
 	Art.push(ci, center)
@@ -958,9 +970,9 @@ static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, 
 	Art.line_c(ci, line, Color(1, 1, 1, 0.55), 5.0)
 	if p2 > -1.5:
 		var b2 := boat_at(world, p2, 9.0)
-		boat(ci, Vector2(b2.x, b2.y), b2.z, world, p2 >= LOAD_END and p2 < UNLOAD_END, t, true)
+		boat(ci, Vector2(b2.x, b2.y), b2.z, world, p2 >= LOAD_END and p2 < UNLOAD_END, t, true, 1.7)
 	var b1 := boat_at(world, p1)
-	boat(ci, Vector2(b1.x, b1.y), b1.z, world, p1 >= LOAD_END and p1 < UNLOAD_END, t)
+	boat(ci, Vector2(b1.x, b1.y), b1.z, world, p1 >= LOAD_END and p1 < UNLOAD_END, t, false, 1.7)
 	Art.pop(ci)
 	Art.pop(ci)
 	_shift = 0.0

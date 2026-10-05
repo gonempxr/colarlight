@@ -260,7 +260,7 @@ func _ready() -> void:
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_panel.add_child(_scroll)
 	_box = VBoxContainer.new()
-	_box.add_theme_constant_override("separation", 12)
+	_box.add_theme_constant_override("separation", 10)
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_box)
 	get_viewport().size_changed.connect(_layout)
@@ -318,6 +318,8 @@ func _process(delta: float) -> void:
 	if _refit > 0:
 		_refit -= 1
 		_layout()
+	else:
+		_fit_panel()
 	MapArt.still = _reduce_motion()
 	_redraw_left -= delta
 	if _redraw_left <= 0.0:
@@ -366,15 +368,14 @@ func _layout() -> void:
 		var pw := minf(PANEL_W, view.x * 0.42)
 		_panel.position = Vector2(view.x - pw - 20, TITLE_H)
 		_panel.custom_minimum_size = Vector2(pw, 0)
-		_box.custom_minimum_size = Vector2(pw - 44, 0)
 		var want := _box.get_combined_minimum_size().y + 44.0
 		_panel.size = Vector2(pw, minf(want, view.y - TITLE_H - 20))
+		_panel.size.x = pw
 		_area = Rect2(0, TITLE_H * 0.6, view.x - pw - 30, view.y - TITLE_H * 0.6)
 		_zoom = clampf(minf(_area.size.y / 640.0, _area.size.x / (GAP_X * 2.6)), 0.6, 1.3)
 	else:
 		var pw := view.x - 24.0
 		_panel.custom_minimum_size = Vector2(pw, 0)
-		_box.custom_minimum_size = Vector2(pw - 44, 0)
 		var want := _box.get_combined_minimum_size().y + 44.0
 		var ph := minf(want, view.y * 0.48)
 		_panel.position = Vector2(12, view.y - ph - 12)
@@ -385,11 +386,25 @@ func _layout() -> void:
 	_clamp_pan()
 
 
+## Keeps the panel as tall as its content (wrapped labels settle late).
+func _fit_panel() -> void:
+	var view := get_viewport_rect().size
+	var want := _box.get_combined_minimum_size().y + 44.0
+	if _wide:
+		var h := minf(want, view.y - TITLE_H - 20)
+		if absf(_panel.size.y - h) > 1.0:
+			_panel.size.y = h
+	else:
+		var h := minf(want, view.y * 0.48)
+		if absf(_panel.size.y - h) > 1.0:
+			_layout()
+
+
 func _center_on(location: int, animate: bool) -> void:
 	if not _pos.has(location):
 		return
 	var want: Vector2 = _area.get_center() - (_pos[location] as Vector2) * _zoom
-	if location != cur_location() or _pos.has(location + 1):
+	if _wide and (location != cur_location() or _pos.has(location + 1)):
 		# Leave room for the next island too.
 		var nxt: Vector2 = _pos.get(location + 1, _pos[location])
 		want = _area.get_center() - ((_pos[location] as Vector2).lerp(nxt, 0.3)) * _zoom
@@ -555,29 +570,33 @@ func _build_panel() -> void:
 	for g in goals():
 		list.add_child(_goal_row(g))
 	_box.add_child(list)
-	# Price.
+	# Price and the button (side by side on a phone).
 	var cost := next_cost()
+	var have_coins := coins() >= cost
 	var price := HBoxContainer.new()
 	price.add_theme_constant_override("separation", 8)
-	var pl := _label(t("MAP_PRICE"), 24, Art.INK, true)
+	var pl := _label(t("MAP_PRICE"), 22 if not _wide else 24, Art.INK, true)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	price.add_child(pl)
-	price.add_child(_icon("coin", 36))
-	var have_coins := coins() >= cost
+	price.add_child(_icon("coin", 34))
 	var pv := _label(NumFormat.short(cost), 30, Art.INK if have_coins else Color("c0392b"), true)
 	pv.autowrap_mode = TextServer.AUTOWRAP_OFF
 	pv.custom_minimum_size.x = 0
+	pv.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	price.add_child(pv)
-	_box.add_child(price)
 	if not have_coins:
-		var hc := _label(t("MAP_YOU_HAVE") % NumFormat.short(coins()), 20, Art.INK_SOFT)
-		hc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_box.add_child(hc)
+		var hc := _label("(" + t("MAP_YOU_HAVE") % NumFormat.short(coins()) + ")", 19, Art.INK_SOFT)
+		hc.autowrap_mode = TextServer.AUTOWRAP_OFF
+		hc.custom_minimum_size.x = 0
+		hc.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		price.add_child(hc)
+	_box.add_child(price)
 	var go := Button.new()
 	go.theme_type_variation = &"GoldButton"
 	go.text = t("OPEN_WORLD") % name
-	go.custom_minimum_size = Vector2(0, 92)
-	go.add_theme_font_size_override("font_size", 32)
+	go.custom_minimum_size = Vector2(0, 92 if _wide else 84)
+	go.add_theme_font_size_override("font_size", 32 if _wide else 30)
 	go.disabled = not can_advance()
 	go.pressed.connect(func():
 		_sfx("click")
@@ -601,8 +620,8 @@ func _goal_row(g: Dictionary) -> Control:
 	sb.shadow = 0.0
 	sb.content_margin_left = 10
 	sb.content_margin_right = 14
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 9
+	sb.content_margin_top = 6 if _wide else 3
+	sb.content_margin_bottom = 9 if _wide else 6
 	card.add_theme_stylebox_override("panel", sb)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
@@ -613,7 +632,7 @@ func _goal_row(g: Dictionary) -> Control:
 		if ok:
 			Art.polyline(ci, PackedVector2Array([c + Vector2(-7, 0), c + Vector2(-2, 6), c + Vector2(8, -6)]), Art.WHITE, 4.5), Vector2(38, 38))
 	h.add_child(box)
-	var l := _label(t("MAP_GOAL_" + String(g["id"]).to_upper()), 23, Art.INK)
+	var l := _label(t("MAP_GOAL_" + String(g["id"]).to_upper()), 23 if _wide else 21, Art.INK)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	h.add_child(l)
@@ -635,7 +654,7 @@ func _carry() -> Control:
 		var ic := _icon(row[0], 28)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		h.add_child(ic)
-		var l := _label(t(row[1]), 20, row[2])
+		var l := _label(t(row[1]), 20 if _wide else 18, row[2])
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(l)
 		v.add_child(h)
@@ -728,7 +747,7 @@ func _paint(ci: CanvasItem) -> void:
 			MapArt.boat(ci, Vector2(b1.x, b1.y), b1.z, w, p1 >= MapArt.LOAD_END and p1 < MapArt.UNLOAD_END, tm)
 			MapArt.markers(ci, w, tm)
 		elif st == MapArt.DONE:
-			MapArt.done_mark(ci, Vector2(-150, -40), tm)
+			MapArt.done_mark(ci, w, tm)
 		else:
 			MapArt.mystery(ci, Vector2(0, -10), tm, st == MapArt.NEXT)
 		var label := world_name(l, false) if st != MapArt.LOCKED else "???"
@@ -737,6 +756,12 @@ func _paint(ci: CanvasItem) -> void:
 	if _hint_left > 0.0 and _pos.has(_hint_loc):
 		_hint_bubble(ci, (_pos[_hint_loc] as Vector2) + Vector2(0, -150), _hint_loc == cur + 1)
 	Art.pop(ci)
+	# Sky band behind the title, so the map scrolls away under it.
+	var top := Color("3fa9ec")
+	Art.grad(ci, PackedVector2Array([Vector2.ZERO, Vector2(s.x, 0), Vector2(s.x, TITLE_H * 0.7), Vector2(0, TITLE_H * 0.7)]),
+			PackedColorArray([top, top, Color(top, 0.85), Color(top, 0.85)]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, TITLE_H * 0.7), Vector2(s.x, TITLE_H * 0.7), Vector2(s.x, TITLE_H * 1.1), Vector2(0, TITLE_H * 1.1)]),
+			PackedColorArray([Color(top, 0.85), Color(top, 0.85), Color(top, 0.0), Color(top, 0.0)]))
 
 
 func _hint_bubble(ci: CanvasItem, at: Vector2, is_next: bool) -> void:

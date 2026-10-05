@@ -37,8 +37,8 @@ func _initialize() -> void:
 	var ready := args.size() > 2 and args[2] == "1"
 	var mode: String = args[3] if args.size() > 3 else "map"
 	var lang: String = args[4] if args.size() > 4 else "en"
-	TranslationServer.set_locale(lang)
 	await process_frame
+	TranslationServer.set_locale(lang)
 	var mv: GDScript = load("res://scripts/ui/map_view.gd")
 	var goals := [{"id": "sites", "have": 10 if ready else 7, "need": 10}, {"id": "foremen", "have": 10 if ready else 4, "need": 10},
 			{"id": "managers", "have": 5 if ready else 3, "need": 5}, {"id": "evo", "have": 12 if ready else 5, "need": 12}]
@@ -74,6 +74,11 @@ func _initialize() -> void:
 			v.call("_layout")
 	for i in 8:
 		await process_frame
+	if OS.get_environment("MAP_DEBUG") != "":
+		for n in host.find_children("*", "PanelContainer", true, false):
+			print(n.size, " min ", n.get_combined_minimum_size())
+		for n in host.find_children("*", "VBoxContainer", true, false):
+			print("box ", n.size, " min ", n.get_combined_minimum_size())
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out)
 	quit()

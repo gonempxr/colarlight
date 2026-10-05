@@ -96,7 +96,9 @@ func _draw() -> void:
 	# Name ribbon.
 	var fs := 18 if not big else 21
 	var font := UiTheme.heavy_font()
-	var tw := minf(font.get_string_size(_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 26.0, s + 10.0)
+	while fs > 12 and font.get_string_size(_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > s - 6.0:
+		fs -= 1
+	var tw := font.get_string_size(_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 24.0
 	var rr := Rect2(c.x - tw / 2.0, s - RIBBON + 2.0, tw, RIBBON)
 	Art.t_rect(self, rr, 11, Art.GOLD, 3.0, 0.5)
 	Art.text(self, Vector2(c.x, rr.position.y + RIBBON * 0.74), _name, fs, Art.INK, 0)
