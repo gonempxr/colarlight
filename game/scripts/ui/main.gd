@@ -49,10 +49,13 @@ var _side_evo: EvoCard
 var _side_plant: StageCard
 var _side_office: OfficeBar
 var _hint_btn: HintButton
-## The mini-map: PC under the lightbulb (over the room), phone in room 1
-## under the card row (it scrolls with the world).
+## The mini-map under the lightbulb in room 1: big on PC; on phones a
+## smaller one (in a scaled holder) that fades away while the mine scrolls
+## down to the work sites.
 var _mini: MiniMap
 var _mini_world: MiniMap
+var _mini_holder: Control
+const PHONE_MINI := 0.68
 var _map: MapView
 ## Under the lightbulb: x2 for an optional ad (only where ads exist) and
 ## the Rivals League trophy (only while a weekly reward waits).
@@ -91,6 +94,10 @@ var _room_key: Array[String] = ["d0", "plant", ""]
 var _swipe_from := Vector2.ZERO
 var _swipe_on := false
 var _swiped := false
+## The finger is down (a room tap that opens a dialog waits for the release,
+## so a swipe that starts on the sofa doesn't open the decor shop).
+var _finger_down := false
+var _on_release := Callable()
 ## Settings that change what dialogs show (not the volumes: rebuilding the
 ## settings dialog while a volume slider is dragged would drop the drag).
 var _settings_sig := []
@@ -128,9 +135,9 @@ func _ready() -> void:
 	_office.visible = false
 	add_child(_office)
 	_office.collected.connect(func(amount: float, from: Vector2): celebrate({"coins": amount}, from, false))
-	_office.open_evolution.connect(open_evolution)
-	_office.open_outfits.connect(open_outfits)
-	_office.decor_selected.connect(open_decor)
+	_office.open_evolution.connect(func(): _after_tap(open_evolution))
+	_office.open_outfits.connect(func(): _after_tap(open_outfits))
+	_office.decor_selected.connect(func(slot: String): _after_tap(open_decor.bind(slot)))
 	_office_bar = OfficeBar.new()
 	_connect_office_bar(_office_bar)
 	_office.add_child(_office_bar)
@@ -142,9 +149,13 @@ func _ready() -> void:
 	_evo_card.custom_minimum_size = Vector2(World.CARD_W, 0)
 	_evo_card.open_panel.connect(open_evolution)
 	_world.add_child(_evo_card)
+	_mini_holder = Control.new()
+	_mini_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mini_holder.scale = Vector2(PHONE_MINI, PHONE_MINI)
+	add_child(_mini_holder)
 	_mini_world = MiniMap.new()
 	_mini_world.open_map.connect(open_map)
-	_world.add_child(_mini_world)
+	_mini_holder.add_child(_mini_world)
 	_mini = MiniMap.new()
 	_mini.big = true
 	_mini.open_map.connect(open_map)
@@ -420,18 +431,28 @@ func _place_rooms() -> void:
 	var m := 1.0 - clampf(absf(_slide), 0.0, 1.0)
 	_mini.visible = _wide and m > 0.01
 	_mini.modulate.a = m
+	# Phone: it also fades while the mine scrolls down to the work sites.
+	var f := m * clampf(1.0 - (_scroller.scroll - 60.0) / 160.0, 0.0, 1.0)
+	_mini_holder.visible = not _wide and f > 0.01
+	_mini_holder.modulate.a = f
 
 
 ## Swipe left/right over the room changes it (phones; works with a mouse
 ## drag too). A swipe never presses the button it started on.
 func _track_swipe(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_finger_down = event.pressed
 		if event.pressed:
 			_swipe_on = _area.has_point(event.position) and not _blocked()
 			_swipe_from = event.position
 			_swiped = false
+			_on_release = Callable()
 		else:
 			_swipe_on = false
+			var f := _on_release
+			_on_release = Callable()
+			if f.is_valid() and not _swiped and not Scroller.is_drag():
+				f.call_deferred()
 	elif event is InputEventMouseMotion and _swipe_on and not _swiped:
 		var d: Vector2 = event.position - _swipe_from
 		if _scroller._dragging:
@@ -446,6 +467,15 @@ func _track_swipe(event: InputEvent) -> void:
 			# Buttons ask Scroller.is_drag() and ignore this release.
 			Scroller._dragged_recently = true
 			(func(): Scroller._dragged_recently = false).call_deferred()
+
+
+## Runs `f` now, or on the release when the finger is still down (and not
+## at all when that touch turns into a swipe).
+func _after_tap(f: Callable) -> void:
+	if _finger_down:
+		_on_release = f
+	else:
+		f.call()
 
 
 func _blocked() -> bool:
@@ -515,7 +545,6 @@ func _layout() -> void:
 	_hud.area_w = view.x - minf(SIDE_W, view.x * 0.4) - 24.0 if _wide else 0.0
 	_hud.set_notch(_wide)
 	_tabs.floating = _wide
-	_mini_world.visible = not _wide
 	if _wide:
 		var side := minf(SIDE_W, view.x * 0.4)
 		var world_w := view.x - side - 36.0
@@ -538,7 +567,7 @@ func _layout() -> void:
 		_dock.position = Vector2(view.x - side - 12.0, view.y - dock_h)
 	else:
 		_tabs.size = Vector2(view.x, RoomTabs.STRIP_H)
-		_tabs.position = Vector2(0, HUD_H - 4.0)
+		_tabs.position = Vector2(0, HUD_H - 2.0)
 		var top := _tabs.position.y + RoomTabs.STRIP_H - 10.0
 		_area = Rect2(0, top, view.x, view.y - top - dock_h + 10.0)
 		_scroller.zoom = 1.0
@@ -589,7 +618,6 @@ func _place_room_cards() -> void:
 	if boat.size.y > 0.0:
 		_evo_card.custom_minimum_size.y = boat.size.y
 	_evo_card.reset_size()
-	_mini_world.position = Vector2(_world.card_x() + (World.CARD_W - MiniMap.SIZE) / 2.0, 14.0 + _evo_card.size.y + 16.0)
 
 
 ## PC column per room: mine = lift, boat, evolution cards and the panel;
@@ -928,6 +956,12 @@ func _place_side_buttons() -> void:
 		_mini.position = Vector2(maxf(14.0, _hint_btn.position.x + (HintButton.SIZE - _mini.size.x) / 2.0), y + 4.0)
 		if _mini.visible:
 			y += _mini.size.y + 14.0
+	else:
+		_place_rooms()
+		var mw := MiniMap.SIZE * PHONE_MINI
+		_mini_holder.position = Vector2(roundf(_hint_btn.position.x + (HintButton.SIZE - mw) / 2.0), y)
+		if _mini_holder.visible and _mini_holder.modulate.a > 0.5:
+			y += _mini_world.size.y * PHONE_MINI + 10.0
 	# Not in the first minutes: the game comes first, then the extras.
 	var settled := _started and Progress.has_feature("quests")
 	_boost_btn.visible = settled and Platform.ads_available()

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Taps on the surface world (headless is fine):
 ##   godot --headless --path . --resolution 390x844 -s res://tests/test_world_taps.gd
-## The boat and the plant still take their taps; the sun, clouds, birds,
+## The boat takes its taps, the factory signpost opens room 2; the sun, clouds, birds,
 ## fish, palm and lighthouse react; a drag over them does nothing. The
 ## second boat and plant: their for-sale signs select them, once bought
 ## they take their own taps.
@@ -33,7 +33,7 @@ func _initialize() -> void:
 	pr.autosave_enabled = false
 	pr.save_path = "user://test_taps_progress.json"
 	pr.reset()
-	pr.tutorial_step = 9
+	pr.tutorial_step = 12
 	TranslationServer.set_locale("en")
 	load("res://scripts/ui/main.gd").show_title = false
 	var dn: GDScript = load("res://scripts/ui/day_night.gd")
@@ -51,8 +51,11 @@ func _initialize() -> void:
 	await _click(surface.boat_world_pos() + Vector2(0, -40))
 	check("boat" in taps, "tapping the boat taps the boat")
 	taps.clear()
-	await _click(surface.plant_world_pos() + Vector2(40, -80))
-	check("plant" in taps, "tapping the plant taps the plant")
+	# The plant works in the factory now: its signpost leads there.
+	await _click(surface.sign_pos() + Vector2(0, -50))
+	check(main.current_room() == 1, "tapping the factory signpost opens the factory")
+	main.show_room(0, false)
+	await _frames(2)
 	taps.clear()
 	await _click(surface.raft_pos() + Vector2(0, -60))
 	check("boat" in taps, "tapping the raft taps the boat")
@@ -203,13 +206,14 @@ func _initialize() -> void:
 	surface.boat_card.visible = false
 	surface.plant_card.visible = false
 	await _frames(2)
-	# The second plant lives in the factory room now; the shore signpost
-	# still takes the first plant's taps until that room is merged.
+	# Both plants live in the factory room: the shore signpost leads there.
 	taps.clear()
+	selected.clear()
 	var p1: Vector2 = surface.plant_world_pos() + Vector2(40, -60)
 	var why := "hit %s, card %s, drag %s" % [surface._building_at(p1), surface._on_card(p1), Scroller.is_drag()]
 	await _tap(p1)
-	check(taps == ["plant"], "the shore signpost takes the plant's taps (%s; %s)" % [taps, why])
+	check(taps.is_empty() and selected == ["room:factory"], "the shore signpost opens the factory (%s %s; %s)" % [taps, selected, why])
+	main.show_room(0, false)
 	surface.boat_card.visible = true
 	surface.plant_card.visible = true
 	gs.levels["boat2"] = 60

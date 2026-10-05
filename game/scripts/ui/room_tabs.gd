@@ -51,7 +51,7 @@ func height() -> float:
 ## Area of tab i (local).
 func tab_rect(i: int) -> Rect2:
 	var pad := Vector2(10, 8) if not floating else Vector2(8, 8)
-	var top := 6.0 if not floating else pad.y
+	var top := 9.0 if not floating else pad.y
 	var w := (size.x - pad.x * 2.0 - 8.0 * 2.0) / 3.0
 	var h := size.y - top - pad.y - (6.0 if not floating else 0.0)
 	return Rect2(pad.x + i * (w + 8.0), top, w, h)
