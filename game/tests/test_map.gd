@@ -93,9 +93,9 @@ func _initialize() -> void:
 	e2.pressed = false
 	mm.call("_gui_input", e2)
 	check(taps[0] == 1, "mini-map tap opens the map")
-	# Fallback without demo values (no location API yet).
+	# Without demo values the map reads the real gate (sites, foremen, managers).
 	mv.set("demo", {})
-	check(mv.goals().size() == 4, "fallback goals")
+	check(mv.goals().size() == 3, "real gate goals")
 	check(mv.world_name(0) != "", "world name")
 	print("%d passed, %d failed" % [ok, bad])
 	quit(1 if bad > 0 else 0)
