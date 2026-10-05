@@ -60,7 +60,7 @@ const LOOKS := {
 	},
 	"moon": {
 		"name": "WORLD_MOON",
-		"sea": [Color("b4bdd4"), Color("8d97b2"), Color("646d8c"), Color("3c4360")],
+		"sea": [Color("8f9cc4"), Color("7280ac"), Color("56618e"), Color("3a4268")],
 		"shaft": [Color("4a5068"), Color("3c4158"), Color("2e3248"), Color("1e2134")],
 		"day": [Color("0c1236"), Color("1e2862"), Color("3a4a8a")],
 		"night": [Color("03040f"), Color("090c24"), Color("161c40")],

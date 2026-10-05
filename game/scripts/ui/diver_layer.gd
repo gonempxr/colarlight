@@ -19,6 +19,13 @@ const DROP_END := 0.88
 const SPOTS: Array[Vector3] = [Vector3(-58, 0, 1), Vector3(-44, -80, 1), Vector3(-150, 0, 1), Vector3(-200, -80, 1), Vector3(-250, -2, 1)]
 ## Divers hovering at work lean forward so the tool reaches down.
 const HOVER_TILT := 0.45
+## The arms of a worker walking in an air world (volcano, acid, moon).
+## HOOK for W-Chars: Chars.diver has no "walk" arm yet, so walkers keep
+## the swim arms; set this to "walk" once Chars._arm_pair knows it. The
+## pose dict already carries "walk" (stride phase) and "world".
+const WALK_ARM := "swim"
+## Height of the scaffold walkway the high spots stand on in air worlds.
+const SCAFFOLD_Y := -84.0
 ## How far past the edge of the view a site is still drawn.
 const _SITE_MARGIN := 60.0
 static var _KEYS: Array[String] = _make_keys()
@@ -42,6 +49,7 @@ var _s_dp := Vector2.ZERO
 var _s_mood := ""
 var _s_wide := 1.0
 var _s_rushing := false
+var _s_walk := false
 var _rng := RandomNumberGenerator.new()
 
 
@@ -220,36 +228,73 @@ func _draw_veins(site: int, n: int, view: Rect2) -> void:
 	var ledge := _s_ledge
 	var dp := _s_dp
 	var vis := view.grow(80.0)
-	for j in range(2, mini(n, SPOTS.size())):
+	var walk := _s_walk
+	for j in range(1 if walk else 2, mini(n, SPOTS.size())):
 		var sp := _spot(j)
 		var high := sp.y < -20.0
-		var at := Vector2(dp.x + sp.x + 50.0, ledge + (sp.y + 12.0 if high else 0.0))
+		if walk and not high and j < 2:
+			continue
+		var at := Vector2(dp.x + sp.x + 50.0, ledge + (sp.y + (0.0 if walk else 12.0) if high else 0.0))
 		if not vis.has_point(at):
 			continue
 		# The vein glows and sways slowly: drawn once per quarter second.
 		# (each vein on its own beat, so they don't all redraw in one frame)
 		var tq := int(_t * 4.0 + ((site * 5 + j * 3) % 8) / 8.0)
-		var key := hash([40, site, j, tq])
+		var key := hash([40, site, j, tq, walk])
 		Art.push(self, Vector2(at.x, ledge))
 		if not Art.cache_begin(self, key):
-			if high:
+			if high and walk:
+				# Air worlds: a wooden scaffold with a ladder; the worker
+				# climbs up and digs a vein on the walkway.
+				_scaffold(sp.y)
+			elif high:
 				# A rock pillar holds the vein up where the hovering diver works.
 				Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
-			OreArt.deposit(self, Vector2(0, at.y - ledge), 32.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
+			OreArt.deposit(self, Vector2(0, at.y - ledge), 30.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
 			Art.cache_end(self, key)
 		Art.pop(self)
+
+
+## Scaffold under a high spot of an air world, drawn around its vein (the
+## worker stands 50 px left of the vein, on top of the ladder).
+func _scaffold(top: float) -> void:
+	var wood := Color("b07a48")
+	var dark := Color("7a4e30")
+	if WorldLook.world == "moon":
+		wood = Color("aab4c8")
+		dark = Color("6c7690")
+	for x in [-62.0, 24.0]:
+		Art.t_rect(self, Rect2(x, top, 7.0, -top), 2.0, dark, 2.5, 0.6)
+	# Ladder where the worker climbs.
+	Art.line(self, Vector2(-58, 0), Vector2(-58, top), Art.INK, 7.0)
+	Art.line(self, Vector2(-42, 0), Vector2(-42, top), Art.INK, 7.0)
+	Art.line(self, Vector2(-58, 0), Vector2(-58, top), wood, 3.5)
+	Art.line(self, Vector2(-42, 0), Vector2(-42, top), wood, 3.5)
+	var y := -10.0
+	while y > top + 4.0:
+		Art.line(self, Vector2(-58, y), Vector2(-42, y), wood, 3.0)
+		y -= 14.0
+	# Walkway.
+	Art.t_rect(self, Rect2(-74, top, 112, 9), 3.0, wood, 3.0, 0.7)
+	Art.line(self, Vector2(-70, top + 4.5), Vector2(34, top + 4.5), dark, 1.5)
 
 
 ## The pose of a diver at point p (0..1) of its trip: where it is, which
 ## way it faces, its arms and what it carries. Every phase begins exactly
 ## where the previous one ends, so nothing ever jumps.
-static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float, hover: bool, crate: Vector2, swim_bob: float) -> Dictionary:
+static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float, hover: bool, crate: Vector2, swim_bob: float, walk: bool = false) -> Dictionary:
 	var sp := Vector3(0, 0, spot_facing)
+	# Walking (air worlds): no swim arcs, no bob, no swim lean.
+	var arc := 0.0 if walk else 1.0
+	if walk:
+		swim_bob = 0.0
+		hover = false
 	var pos: Vector2
 	var facing := 1.0
 	var turn := 1.0
 	var tilt := 0.0
-	var arm := "swim"
+	var move_arm := WALK_ARM if walk else "swim"
+	var arm := move_arm
 	var arm_from := ""
 	var blend := 1.0
 	var hit := 0.0
@@ -263,8 +308,8 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		var e := _ease(f)
 		var b := _bump(f)
 		var settle := smoothstep(0.6, 1.0, f) if hover else 0.0
-		pos = home.lerp(spot, e) + Vector2(0, -sin(f * PI) * (22.0 + (34.0 if sp.z < 0.0 else 0.0)) + swim_bob * maxf(b, settle))
-		tilt = lerpf(0.5 * b, HOVER_TILT, settle)
+		pos = _path(home, spot, e, walk) + Vector2(0, -sin(f * PI) * (22.0 + (34.0 if sp.z < 0.0 else 0.0)) * arc + swim_bob * maxf(b, settle))
+		tilt = lerpf(0.5 * b * arc, HOVER_TILT, settle)
 		kick_amp = maxf(b, 0.6 * settle)
 		arm_from = "idle"
 		blend = smoothstep(0.0, 0.2, f)
@@ -277,7 +322,7 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		facing = sp.z
 		tilt = HOVER_TILT if hover else 0.0
 		arm = "dig"
-		arm_from = "swim"
+		arm_from = move_arm
 		blend = smoothstep(0.0, 0.07, f)
 		hit = fposmod(f * 3.0, 1.0)
 		kick_amp = 0.6 if hover else 0.0
@@ -288,13 +333,13 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		var b := _bump(f)
 		trip = "back"
 		var lift := (1.0 - smoothstep(0.0, 0.4, f)) if hover else 0.0
-		pos = spot.lerp(crate, e) + Vector2(0, -sin(f * PI) * 22.0 + swim_bob * maxf(b, lift))
+		pos = _path(spot, crate, e, walk) + Vector2(0, -sin(f * PI) * 22.0 * arc + swim_bob * maxf(b, lift))
 		facing = -1.0
 		if sp.z > 0.0:
 			# Turn around on the spot first.
 			facing = 1.0
 			turn = cos(PI * smoothstep(0.0, 0.22, f))
-		tilt = maxf(0.5 * b, HOVER_TILT * lift)
+		tilt = maxf(0.5 * b * arc, HOVER_TILT * lift)
 		carry = true
 		arm_from = "dig"
 		blend = smoothstep(0.0, 0.22, f)
@@ -303,10 +348,10 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 	elif p < DROP_END:
 		var f := (p - SWIM_BACK_END) / (DROP_END - SWIM_BACK_END)
 		# At the lift's crate: toss the sack in.
-		pos = crate + Vector2(0, -sin(f * PI) * 6.0)
+		pos = crate + Vector2(0, -sin(f * PI) * 6.0 * arc)
 		facing = -1.0
 		arm = "cheer"
-		arm_from = "swim"
+		arm_from = move_arm
 		blend = smoothstep(0.0, 0.3, f)
 		carry = f < 0.45
 		kick_amp = 0.6
@@ -317,18 +362,18 @@ static func trip_pose(p: float, home: Vector2, spot: Vector2, spot_facing: float
 		trip = "home"
 		# Back to the spot at the cave mouth.
 		var b := _bump(g, 0.3)
-		pos = crate.lerp(home, _ease(g)) + Vector2(0, -sin(g * PI) * 10.0 + swim_bob * b)
+		pos = crate.lerp(home, _ease(g)) + Vector2(0, -sin(g * PI) * 10.0 * arc + swim_bob * b)
 		facing = 1.0
 		turn = -cos(PI * smoothstep(0.0, 0.3, g))
-		tilt = 0.4 * b
+		tilt = 0.4 * b * arc
 		kick_amp = maxf(b, 0.6 * (1.0 - smoothstep(0.0, 0.3, g)))
 		if g < 0.5:
-			arm = "swim"
+			arm = move_arm
 			arm_from = "cheer"
 			blend = smoothstep(0.0, 0.3, g)
 		else:
 			arm = "idle"
-			arm_from = "swim"
+			arm_from = move_arm
 			blend = smoothstep(0.7, 1.0, g)
 	return {"pos": pos, "facing": facing, "turn": turn, "tilt": tilt, "arm": arm, "arm_from": arm_from, "blend": blend,
 			"hit": hit, "carry": carry, "sling": sling, "kick_amp": kick_amp, "emo": emo, "trip": trip}
@@ -343,7 +388,20 @@ func _spot(j: int) -> Vector3:
 	var sp: Vector3 = SPOTS[j % SPOTS.size()]
 	if sp.x < -100.0:
 		sp.x *= _s_wide
+	if _s_walk and sp.y < -20.0:
+		# Air worlds: no hovering; the worker stands on a scaffold.
+		sp.y = SCAFFOLD_Y
 	return sp
+
+
+## From a to b. Swimmers go straight; walkers walk along the floor and
+## climb the scaffold ladder (up at the end, down at the start).
+static func _path(a: Vector2, b: Vector2, e: float, walk: bool) -> Vector2:
+	if not walk or absf(a.y - b.y) < 8.0:
+		return a.lerp(b, e)
+	if b.y < a.y:
+		return Vector2(lerpf(a.x, b.x, smoothstep(0.0, 0.7, e)), lerpf(a.y, b.y, smoothstep(0.7, 1.0, e)))
+	return Vector2(lerpf(a.x, b.x, smoothstep(0.3, 1.0, e)), lerpf(a.y, b.y, smoothstep(0.0, 0.3, e)))
 
 
 static func _ease(x: float) -> float:
@@ -371,6 +429,7 @@ func _begin_site(site: int, key: String) -> void:
 	_s_mood = world.mood(key)
 	_s_wide = clampf((world.scene_right() - World.CAVE_L) / 340.0, 1.0, 1.8)
 	_s_rushing = GameState.is_rushing()
+	_s_walk = not WorldLook.is_water()
 
 
 func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
@@ -384,7 +443,8 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	var crate := Vector2(crate_at.x + 36.0 + j * 6.0, ledge - 4.0)
 	var sp := _spot(j)
 	var spot := Vector2(_s_dp.x + sp.x, ledge + sp.y)
-	var hover := sp.y < -20.0
+	var walk := _s_walk
+	var hover := sp.y < -20.0 and not walk
 	var mood := _s_mood
 	var hop := world.hop(key, j)
 	var blink := Chars.blinking(_t, site * 3.1 + j * 1.3)
@@ -409,7 +469,7 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	p = clampf((p - lag) / (1.0 - lag), 0.0, 1.0)
 	var kick := _t * (3.0 if rushing else 1.8) + seed
 	var swim_bob := sin(_t * 4.2 + seed) * 3.0
-	var st8 := trip_pose(p, home, spot, sp.z, hover, crate, swim_bob)
+	var st8 := trip_pose(p, home, spot, sp.z, hover, crate, swim_bob, walk)
 	var pos: Vector2 = st8["pos"]
 	var facing: float = st8["facing"]
 	var turn: float = st8["turn"]
@@ -454,6 +514,11 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 			arm_from = ""
 	pos.y -= hop
 	var pose := {"turn": turn, "kick_amp": kick_amp, "sling": sling}
+	if walk:
+		# HOOK for W-Chars: "world" picks the worker's suit (lava miner,
+		# chemist, astronaut) and "walk" is the stride phase for the legs.
+		pose["world"] = WorldLook.world
+		pose["walk"] = fposmod(kick * 0.5, 1.0)
 	if arm_from != "" and blend < 1.0:
 		pose["arm_from"] = arm_from
 		pose["blend"] = blend

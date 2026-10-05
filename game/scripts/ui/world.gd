@@ -389,7 +389,7 @@ func _process(delta: float) -> void:
 			_shooting.remove_at(i)
 	if _rng.randf() < delta * 0.05 * DayNight.night():
 		shooting_star(Vector2(_rng.randf_range(0.1, 0.8) * size.x, _rng.randf_range(40.0, 220.0)))
-	if _bubbles.size() < 12 and _rng.randf() < delta * 4.0 and WorldLook.world in ["ocean", "acid"]:
+	if _bubbles.size() < 12 and _rng.randf() < delta * 4.0 and WorldLook.is_water():
 		_bubbles.append(Vector3(_rng.randf_range(SHAFT_L + 8.0, SHAFT_R - 8.0), _rng.randf_range(TOP_H, height() - 80.0), _rng.randf_range(2.0, 5.0)))
 	for i in range(_bubbles.size() - 1, -1, -1):
 		var b := _bubbles[i]
@@ -488,7 +488,12 @@ func _paint_sky(ci: CanvasItem) -> void:
 			var tw := 0.55 + 0.45 * sin(t * (1.3 + s.z) + s.x * 40.0)
 			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, starlight * tw))
 	if WorldLook.world == "moon":
-		WorldArt.earth(ci, Vector2(w * 0.82 if w < 700.0 else w * 0.5, 150.0 if w < 700.0 else 120.0), t)
+		# Phones: small, in the strip of sky under the stage cards.
+		var vp := get_viewport_rect().size
+		var phone := vp.x < vp.y
+		Art.push(ci, Vector2(w * 0.52, SURFACE_Y - 98.0) if phone else Vector2(w * 0.68, 140.0), 0.0, Vector2.ONE * (0.62 if phone else 1.0))
+		WorldArt.earth(ci, Vector2.ZERO, t)
+		Art.pop(ci)
 
 
 func _draw_shooting_stars() -> void:
