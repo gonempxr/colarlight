@@ -181,7 +181,8 @@ func _initialize() -> void:
 	gs._timer["boat"] = -1.0
 	await _frames(3)
 	check(surface.second_state("boat2") == "sale" and surface.second_state("plant2") == "sale", "for-sale signs from the third dive site on")
-	for key in ["plant2", "boat2"]:
+	# (The plants left the shore for the factory room: only boat2 has a sign here.)
+	for key in ["boat2"]:
 		var r: Rect2 = surface._sign_rect(key)
 		selected.clear()
 		taps.clear()
@@ -202,14 +203,13 @@ func _initialize() -> void:
 	surface.boat_card.visible = false
 	surface.plant_card.visible = false
 	await _frames(2)
+	# The second plant lives in the factory room now; the shore signpost
+	# still takes the first plant's taps until that room is merged.
 	taps.clear()
-	var p2: Vector2 = surface.plant2_world_pos() + Vector2(12, -60)
-	var why := "hit %s, card %s, drag %s" % [surface._building_at(p2), surface._on_card(p2), Scroller.is_drag()]
-	await _tap(p2)
-	check(taps == ["plant2"], "tapping the second plant taps it (%s; %s)" % [taps, why])
-	taps.clear()
-	await _tap(surface.plant_world_pos() + Vector2(40, -80))
-	check(taps == ["plant"], "the first plant still takes its taps (%s)" % [taps])
+	var p1: Vector2 = surface.plant_world_pos() + Vector2(40, -60)
+	var why := "hit %s, card %s, drag %s" % [surface._building_at(p1), surface._on_card(p1), Scroller.is_drag()]
+	await _tap(p1)
+	check(taps == ["plant"], "the shore signpost takes the plant's taps (%s; %s)" % [taps, why])
 	surface.boat_card.visible = true
 	surface.plant_card.visible = true
 	gs.levels["boat2"] = 60

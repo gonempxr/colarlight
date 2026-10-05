@@ -36,24 +36,85 @@ const METAL := Color("cbd5e1")
 const BRASS := Color("f5b843")
 const GLASS := Color("bff3ff")
 
-## One look per dive site: rock, floor, ore colors, diver suit, cave water.
-const DEPTH_STYLE: Array[Dictionary] = [
-	{"rock": Color("e3aa6c"), "floor": Color("f8d898"), "ore": Color("ffc6d6"), "ore2": Color("ff8fb0"), "suit": Color("ff8a3d"), "water": Color("2a9cc6"), "deco": "shells"},  # shells
-	{"rock": Color("d9845c"), "floor": Color("f5c690"), "ore": Color("ff5d73"), "ore2": Color("ffa84a"), "suit": Color("ffd23f"), "water": Color("2283b6"), "deco": "coral"},  # coral
-	{"rock": Color("a88fc8"), "floor": Color("ded0ee"), "ore": Color("fbf8ff"), "ore2": Color("c6d4ff"), "suit": Color("ff6fae"), "water": Color("1f6aa8"), "deco": "pearls"},  # pearl
-	{"rock": Color("927668"), "floor": Color("c8ab94"), "ore": Color("f08a45"), "ore2": Color("ffc185"), "suit": Color("7fd34e"), "water": Color("1a5692"), "deco": "wreck"},  # copper
-	{"rock": Color("51817c"), "floor": Color("8cb8aa"), "ore": Color("3ee08f"), "ore2": Color("b0ffd9"), "suit": Color("9b72ff"), "water": Color("15457c"), "deco": "kelp"},  # emerald
-	{"rock": Color("45427a"), "floor": Color("7470b0"), "ore": Color("b58cff"), "ore2": Color("f0e3ff"), "suit": Color("2de2c5"), "water": Color("102e60"), "deco": "glow"},  # crystal
-	{"rock": Color("7a5a34"), "floor": Color("d4b06a"), "ore": Color("ffd23f"), "ore2": Color("fff1a8"), "suit": Color("ef5350"), "water": Color("12304f"), "deco": "wreck"},  # gold
-	{"rock": Color("7fa6c4"), "floor": Color("e4f4ff"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("0f3358"), "deco": "ice"},  # ice
-	{"rock": Color("4a2622"), "floor": Color("8a3a24"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("2a1420"), "deco": "lava"},  # lava
-	{"rock": Color("1f3a48"), "floor": Color("3a6a78"), "ore": Color("5affd8"), "ore2": Color("e0fff6"), "suit": Color("ff5ab4"), "water": Color("061c2a"), "deco": "mushrooms"},  # glow
-	{"rock": Color("3a4a70"), "floor": Color("9aaccc"), "ore": Color("ffd98a"), "ore2": Color("fff6d8"), "suit": Color("2de2c5"), "water": Color("0a1a3a"), "deco": "ruins"},  # atlantis
-	{"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("0a0f22"), "deco": "tentacles"},  # kraken
-	{"rock": Color("34455a"), "floor": Color("7c8ea0"), "ore": Color("f0e2c0"), "ore2": Color("9fe0ff"), "suit": Color("ff8a3d"), "water": Color("0a2030"), "deco": "whale"},  # whale
-	{"rock": Color("4a1e24"), "floor": Color("8a4238"), "ore": Color("ff5a2a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("2a0c12"), "deco": "dragon"},  # dragon
-	{"rock": Color("1c2a5a"), "floor": Color("4a64a8"), "ore": Color("4de8ff"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("0a1450"), "deco": "heart"},  # heart
-]
+## One look per work site, by site id: rock, floor, ore colors, worker
+## suit, the room's inside ("water": cave water, or the air of a dry cave)
+## and its decor. Ocean sites first (plus the old ones of the 15-site
+## ocean), then the volcano, the acid swamp and the moon.
+const SITE_STYLE := {
+	"shells": {"rock": Color("e3aa6c"), "floor": Color("f8d898"), "ore": Color("ffc6d6"), "ore2": Color("ff8fb0"), "suit": Color("ff8a3d"), "water": Color("2a9cc6"), "deco": "shells"},
+	"coral": {"rock": Color("d9845c"), "floor": Color("f5c690"), "ore": Color("ff5d73"), "ore2": Color("ffa84a"), "suit": Color("ffd23f"), "water": Color("2283b6"), "deco": "coral"},
+	"pearl": {"rock": Color("a88fc8"), "floor": Color("ded0ee"), "ore": Color("fbf8ff"), "ore2": Color("c6d4ff"), "suit": Color("ff6fae"), "water": Color("1f6aa8"), "deco": "pearls"},
+	"copper": {"rock": Color("927668"), "floor": Color("c8ab94"), "ore": Color("f08a45"), "ore2": Color("ffc185"), "suit": Color("7fd34e"), "water": Color("1a5692"), "deco": "wreck"},
+	"emerald": {"rock": Color("51817c"), "floor": Color("8cb8aa"), "ore": Color("3ee08f"), "ore2": Color("b0ffd9"), "suit": Color("9b72ff"), "water": Color("15457c"), "deco": "kelp"},
+	"crystal": {"rock": Color("45427a"), "floor": Color("7470b0"), "ore": Color("b58cff"), "ore2": Color("f0e3ff"), "suit": Color("2de2c5"), "water": Color("102e60"), "deco": "glow"},
+	"gold": {"rock": Color("7a5a34"), "floor": Color("d4b06a"), "ore": Color("ffd23f"), "ore2": Color("fff1a8"), "suit": Color("ef5350"), "water": Color("12304f"), "deco": "wreck"},
+	"ice": {"rock": Color("7fa6c4"), "floor": Color("e4f4ff"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("0f3358"), "deco": "ice"},
+	"lava": {"rock": Color("4a2622"), "floor": Color("8a3a24"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("2a1420"), "deco": "lava"},
+	"glow": {"rock": Color("1f3a48"), "floor": Color("3a6a78"), "ore": Color("5affd8"), "ore2": Color("e0fff6"), "suit": Color("ff5ab4"), "water": Color("061c2a"), "deco": "mushrooms"},
+	"atlantis": {"rock": Color("3a4a70"), "floor": Color("9aaccc"), "ore": Color("ffd98a"), "ore2": Color("fff6d8"), "suit": Color("2de2c5"), "water": Color("0a1a3a"), "deco": "ruins"},
+	"kraken": {"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("0a0f22"), "deco": "tentacles"},
+	"whale": {"rock": Color("34455a"), "floor": Color("7c8ea0"), "ore": Color("f0e2c0"), "ore2": Color("9fe0ff"), "suit": Color("ff8a3d"), "water": Color("0a2030"), "deco": "whale"},
+	"heart": {"rock": Color("1c2a5a"), "floor": Color("4a64a8"), "ore": Color("4de8ff"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("0a1450"), "deco": "heart"},
+	# Volcano: basalt tunnels lit by torches and lava cracks.
+	"ash": {"rock": Color("6e6470"), "floor": Color("a49aa4"), "ore": Color("c4bcc6"), "ore2": Color("ff9a4a"), "suit": Color("ff8a3d"), "water": Color("5a4a54"), "deco": "ash"},
+	"obsidian": {"rock": Color("564a66"), "floor": Color("8a7e9c"), "ore": Color("3a2e52"), "ore2": Color("c4a8ff"), "suit": Color("ffd23f"), "water": Color("483c58"), "deco": "obsidian"},
+	"sulfur": {"rock": Color("7e6e44"), "floor": Color("cab866"), "ore": Color("ffe03a"), "ore2": Color("fff6a0"), "suit": Color("4fb3ee"), "water": Color("5e5434"), "deco": "sulfur"},
+	"ruby": {"rock": Color("70404a"), "floor": Color("ae7078"), "ore": Color("ff3d6e"), "ore2": Color("ffb0c4"), "suit": Color("2de2c5"), "water": Color("5a3440"), "deco": "crystals"},
+	"magma": {"rock": Color("5a2e28"), "floor": Color("94482e"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("4a2a2c"), "deco": "lava"},
+	"fire_opal": {"rock": Color("664040"), "floor": Color("b8805e"), "ore": Color("ff8a3a"), "ore2": Color("7ae8ff"), "suit": Color("9b72ff"), "water": Color("523236"), "deco": "opal"},
+	"garnet": {"rock": Color("5a3044"), "floor": Color("96586e"), "ore": Color("c8203e"), "ore2": Color("ff8a9a"), "suit": Color("ffd23f"), "water": Color("4a2838"), "deco": "crystals"},
+	"ember": {"rock": Color("4c3230"), "floor": Color("844c34"), "ore": Color("ff5a1a"), "ore2": Color("ffc93c"), "suit": Color("4fb3ee"), "water": Color("3e2628"), "deco": "embers"},
+	"phoenix": {"rock": Color("643224"), "floor": Color("b8603e"), "ore": Color("ffb02e"), "ore2": Color("ff4a2a"), "suit": Color("2de2c5"), "water": Color("4e261e"), "deco": "phoenix"},
+	"dragon": {"rock": Color("54242a"), "floor": Color("8e4a3e"), "ore": Color("ff5a2a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("3e1a20"), "deco": "dragon"},
+	# Acid swamp: mossy caves with glowing pools and mushrooms.
+	"slime": {"rock": Color("5e6e40"), "floor": Color("a8c86a"), "ore": Color("8aff5a"), "ore2": Color("e0ffb0"), "suit": Color("ffd23f"), "water": Color("44583c"), "deco": "slime"},
+	"moss": {"rock": Color("54643c"), "floor": Color("8eaa5c"), "ore": Color("5ac83a"), "ore2": Color("d2f58e"), "suit": Color("ff8a3d"), "water": Color("3c5034"), "deco": "moss"},
+	"shroom": {"rock": Color("544870"), "floor": Color("9484b0"), "ore": Color("d07aff"), "ore2": Color("ffd0ff"), "suit": Color("7fd34e"), "water": Color("3c3456"), "deco": "mushrooms"},
+	"bubble": {"rock": Color("44645e"), "floor": Color("80aca4"), "ore": Color("9affe8"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("30504c"), "deco": "bubbles"},
+	"venom": {"rock": Color("54386a"), "floor": Color("9466ae"), "ore": Color("b04aff"), "ore2": Color("ecaaff"), "suit": Color("7fd34e"), "water": Color("3e2a52"), "deco": "venom"},
+	"amber": {"rock": Color("70502e"), "floor": Color("ca965c"), "ore": Color("ffb02e"), "ore2": Color("fff0a0"), "suit": Color("2de2c5"), "water": Color("54402a"), "deco": "amber"},
+	"radiant": {"rock": Color("365440"), "floor": Color("60926e"), "ore": Color("b8ff3a"), "ore2": Color("f6ffc8"), "suit": Color("ff6fae"), "water": Color("284432"), "deco": "radiant"},
+	"jade": {"rock": Color("34604e"), "floor": Color("6eaa8c"), "ore": Color("3ac88a"), "ore2": Color("b8ffe0"), "suit": Color("ff8a3d"), "water": Color("264a3e"), "deco": "lanterns"},
+	"orchid": {"rock": Color("604060"), "floor": Color("ac80aa"), "ore": Color("ff7ad0"), "ore2": Color("fff0fa"), "suit": Color("7fd34e"), "water": Color("483048"), "deco": "orchids"},
+	"goo_king": {"rock": Color("40345a"), "floor": Color("72609a"), "ore": Color("7aff4a"), "ore2": Color("ffe14a"), "suit": Color("ff5ab4"), "water": Color("2c2444"), "deco": "goo"},
+	# Moon: tunnels with metal supports, crystals and space rocks.
+	"dust": {"rock": Color("70748a"), "floor": Color("bcc0cf"), "ore": Color("dfe3ee"), "ore2": Color("9fe0ff"), "suit": Color("ff8a3d"), "water": Color("4a5068"), "deco": "base"},
+	"meteor": {"rock": Color("524c62"), "floor": Color("908aa2"), "ore": Color("ff8a4a"), "ore2": Color("ffd08a"), "suit": Color("4fb3ee"), "water": Color("3a3650"), "deco": "crater"},
+	"crater_ice": {"rock": Color("5e7290"), "floor": Color("cce2f2"), "ore": Color("bff4ff"), "ore2": Color("ffffff"), "suit": Color("ff6fae"), "water": Color("3a4c68"), "deco": "ice"},
+	"moonstone": {"rock": Color("5e5e80"), "floor": Color("aaaacc"), "ore": Color("e8f0ff"), "ore2": Color("b0c8ff"), "suit": Color("ffd23f"), "water": Color("42426a"), "deco": "crystals"},
+	"star": {"rock": Color("363666"), "floor": Color("6262a4"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("ff5ab4"), "water": Color("24244e"), "deco": "stars"},
+	"comet": {"rock": Color("405272"), "floor": Color("8494b8"), "ore": Color("8fe8ff"), "ore2": Color("ffffff"), "suit": Color("ff8a3d"), "water": Color("2a3a5a"), "deco": "comet"},
+	"nebula": {"rock": Color("44326a"), "floor": Color("7462a6"), "ore": Color("ff6ad8"), "ore2": Color("9aaaff"), "suit": Color("2de2c5"), "water": Color("2c2050"), "deco": "void"},
+	"alien_egg": {"rock": Color("365446"), "floor": Color("74948a"), "ore": Color("6aff8a"), "ore2": Color("e0ffd0"), "suit": Color("ff8a3d"), "water": Color("243e36"), "deco": "alien"},
+	"ufo": {"rock": Color("424258"), "floor": Color("8282a0"), "ore": Color("a8bcd8"), "ore2": Color("6affe8"), "suit": Color("ffd23f"), "water": Color("2c2c44"), "deco": "ufo"},
+	"cosmic_heart": {"rock": Color("242e64"), "floor": Color("5068ac"), "ore": Color("c86bff"), "ore2": Color("ffd0ff"), "suit": Color("ffc93c"), "water": Color("161e56"), "deco": "heart"},
+}
+
+
+static func _styles_for(ids: Array, tier: int = 0) -> Array[Dictionary]:
+	var shift: float = 0.0 if tier <= 0 else [0.045, -0.045, 0.08, -0.08, 0.11, -0.11][(tier - 1) % 6]
+	var out: Array[Dictionary] = []
+	for id in ids:
+		var st: Dictionary = SITE_STYLE.get(id, SITE_STYLE["shells"])
+		if shift != 0.0:
+			st = st.duplicate()
+			for k in ["rock", "floor", "water"]:
+				var c: Color = st[k]
+				st[k] = Color.from_hsv(fposmod(c.h + shift, 1.0), c.s, c.v, c.a)
+		out.append(st)
+	return out
+
+
+## Ids of the current world's sites, in Balance.DEPTHS order (WorldLook sets them).
+static var site_ids: Array[String] = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "ice", "lava",
+		"glow", "atlantis", "kraken", "whale", "dragon", "heart"]
+## One look per site of the current world, indexed like Balance.DEPTHS.
+static var DEPTH_STYLE: Array[Dictionary] = _styles_for(site_ids)
+
+
+static func set_world_sites(ids: Array[String], tier: int = 0) -> void:
+	site_ids = ids.duplicate()
+	DEPTH_STYLE = _styles_for(ids, tier)
 
 
 ## The world's water from the surface down (OceanLook sets it per ocean).

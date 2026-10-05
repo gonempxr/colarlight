@@ -58,7 +58,7 @@ var _view_frame := -1
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	OceanLook.apply(GameState.prestige_count)
+	WorldLook.apply(WorldLook.location_now())
 	_rng.seed = 7
 	_sky = PaintLayer.new(_paint_sky)
 	add_child(_sky)
@@ -92,7 +92,7 @@ func _ready() -> void:
 	for i in FISH:
 		_fish.append({"x": _rng.randf(), "y": _rng.randf_range(SURFACE_Y + 50.0, TOP_H - 50.0), "speed": _rng.randf_range(0.015, 0.04),
 				"dir": 1.0 if i % 2 == 0 else -1.0, "size": _rng.randf_range(10, 16), "dart": -99.0, "face": 1.0 if i % 2 == 0 else -1.0,
-				"color": [Color("ffd23f"), Color("ff7b54"), Color("7be0ff"), Color("ff9fd0"), Color("b6f36a")][i]})
+				"color": [Color("ffd23f"), Color("ff7b54"), Color("7be0ff"), Color("ff9fd0"), Color("b6f36a")][i], "i": i})
 	var srng := RandomNumberGenerator.new()
 	srng.seed = 21
 	for i in 46:
@@ -319,6 +319,8 @@ func is_fish_at(p: Vector2) -> bool:
 
 
 func _fish_at(p: Vector2) -> int:
+	if WorldLook.world == "moon":
+		return -1
 	var best := -1
 	var best_d := 46.0
 	for i in _fish.size():
@@ -366,17 +368,18 @@ func _notification(what: int) -> void:
 func _process(delta: float) -> void:
 	t += delta
 	DayNight.advance(delta)
-	# A Dive Deeper (or a loaded save) moved us to another ocean: new colors
-	# everywhere and its name shown for a moment.
-	var ocean: int = GameState.prestige_count
-	if OceanLook.apply(ocean):
+	# A new location (or a loaded save): new colors everywhere and its
+	# name shown for a moment.
+	var loc := WorldLook.location_now()
+	if WorldLook.apply(loc):
 		_painted_light = -1.0
 		_painted_tint = -1.0
+		_bubbles.clear()
 		repaint_still()
 		for row in rows:
 			row._check_now = true
-		if ocean > 0:
-			show_ocean_name(ocean)
+		if loc > 0:
+			show_world_name(loc)
 	_apply_night_tint()
 	for i in range(_shooting.size() - 1, -1, -1):
 		var s: Dictionary = _shooting[i]
@@ -386,7 +389,7 @@ func _process(delta: float) -> void:
 			_shooting.remove_at(i)
 	if _rng.randf() < delta * 0.05 * DayNight.night():
 		shooting_star(Vector2(_rng.randf_range(0.1, 0.8) * size.x, _rng.randf_range(40.0, 220.0)))
-	if _bubbles.size() < 12 and _rng.randf() < delta * 4.0:
+	if _bubbles.size() < 12 and _rng.randf() < delta * 4.0 and WorldLook.is_water():
 		_bubbles.append(Vector3(_rng.randf_range(SHAFT_L + 8.0, SHAFT_R - 8.0), _rng.randf_range(TOP_H, height() - 80.0), _rng.randf_range(2.0, 5.0)))
 	for i in range(_bubbles.size() - 1, -1, -1):
 		var b := _bubbles[i]
@@ -424,7 +427,7 @@ func _repaint_still(delta: float) -> void:
 		_painted_light = light
 		_sky.queue_redraw()
 		_sea.queue_redraw()
-	elif sky_on and DayNight.night() > 0.02 and tick(SCENERY) and tick_count(SCENERY) % 4 == 0:
+	elif sky_on and DayNight.starlight() > 0.02 and tick(SCENERY) and tick_count(SCENERY) % 4 == 0:
 		_sky.queue_redraw()   # twinkling stars
 	var tint := DayNight.stepped_phase()
 	if tint != _painted_tint:
@@ -458,8 +461,11 @@ func _draw() -> void:
 			Art.disc(self, Vector2(b.x - b.z * 0.3, b.y - b.z * 0.3), b.z * 0.28, Color(1, 1, 1, 0.55))
 	if is_visible_band(h - BOTTOM_H, h):
 		var floor_y := h - BOTTOM_H + 60.0
-		for i in 6:
-			Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, OceanLook.color("weed").darkened(0.3), t, i)
+		if WorldLook.is_water():
+			for i in 6:
+				Art.seaweed(self, Vector2(w * (0.08 + i * 0.17), floor_y + 20), 60 + (i % 3) * 22, WorldLook.color("weed").darkened(0.3), t, i)
+		else:
+			_draw_bottom_life(w, floor_y)
 
 
 ## Sky gradient, sunset glow and stars (a still layer).
@@ -476,10 +482,18 @@ func _paint_sky(ci: CanvasItem) -> void:
 	var warm := DayNight.warmth()
 	if warm > 0.02:
 		Props.halo(ci, Vector2(DayNight.light_pos(w).x, sy), 300.0, Color(cols[2].lightened(0.35), warm * 0.55), 28)
-	if night > 0.02:
+	var starlight := DayNight.starlight()
+	if starlight > 0.02:
 		for s in _stars:
 			var tw := 0.55 + 0.45 * sin(t * (1.3 + s.z) + s.x * 40.0)
-			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, night * tw))
+			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, starlight * tw))
+	if WorldLook.world == "moon":
+		# Phones: small, in the strip of sky under the stage cards.
+		var vp := get_viewport_rect().size
+		var phone := vp.x < vp.y
+		Art.push(ci, Vector2(w * 0.52, SURFACE_Y - 98.0) if phone else Vector2(w * 0.68, 140.0), 0.0, Vector2.ONE * (0.62 if phone else 1.0))
+		WorldArt.earth(ci, Vector2.ZERO, t)
+		Art.pop(ci)
 
 
 func _draw_shooting_stars() -> void:
@@ -509,7 +523,11 @@ func _paint_sun(ci: CanvasItem) -> void:
 		var k := clampf((t - float(pokes.get("moon", -99.0))) / 1.4, 0.0, 1.0)
 		var sq := sin(k * PI * 3.0) * (1.0 - k) * 0.12
 		Art.push(ci, DayNight.moon_pos(w), sin(k * PI * 2.0) * (1.0 - k) * 0.25, Vector2(1.0 + sq, 1.0 - sq))
-		Props.moon(ci, t, 1.0 if k < 0.85 else 0.0)
+		if WorldLook.world == "moon":
+			# On the moon, a ringed planet rises at night instead.
+			WorldArt.planet(ci, t, 1.0 if k < 0.85 else 0.0)
+		else:
+			Props.moon(ci, t, 1.0 if k < 0.85 else 0.0)
 		Art.pop(ci)
 
 
@@ -522,11 +540,19 @@ func _paint_sea(ci: CanvasItem) -> void:
 	for band: Vector2 in [Vector2(SURFACE_Y, TOP_H + 8.0), Vector2(h - BOTTOM_H - 8.0, h)]:
 		var c0 := water_at(band.x)
 		var c1 := water_at(band.y)
+		if band.x > TOP_H and not WorldLook.is_water():
+			# The dry worlds: deep cave air under the last site.
+			c0 = WorldLook.shaft_color(1.0) * DayNight.deep_tint()
+			c1 = c0.darkened(0.3)
+		elif band.x < TOP_H and WorldLook.world != "ocean":
+			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.75)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
 
 
 ## Glittering path of sun or moon light on the water.
 func _draw_reflection(w: float) -> void:
+	if WorldLook.world in ["volcano", "moon"]:
+		return
 	var light := DayNight.light_pos(w)
 	if light.y > SURFACE_Y + 20.0:
 		return
@@ -544,33 +570,72 @@ func _draw_reflection(w: float) -> void:
 		Art.grad(self, PackedVector2Array([Vector2(x, y - 1.5), Vector2(x + hw, y), Vector2(x + hw, y), Vector2(x, y + 1.5)]), PackedColorArray([mid, clear, clear, mid]))
 
 
-## Light rays, fish and seaweed above the first dive site.
+## What lives above the first site: light rays, fish and seaweed in the
+## sea; magma bubbles and fire fish in the lava; reeds, bubbles and frog
+## fish in the swamp; drifting dust in the moon's dust sea.
 func _draw_top_water(w: float) -> void:
 	var day := DayNight.daylight()
 	var tint := DayNight.deep_tint(DayNight.stepped_phase())
-	for i in 5:
-		var x := w * (0.1 + i * 0.2) + sin(t * 0.3 + i) * 16.0
-		var ray := Color(1, 1, 1, 0.07 * (0.2 + 0.8 * day))
-		Art.grad(self, PackedVector2Array([Vector2(x - 14, SURFACE_Y), Vector2(x + 14, SURFACE_Y),
-				Vector2(x + 70, TOP_H), Vector2(x + 20, TOP_H)]), PackedColorArray([ray, ray, Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
-	for f in _fish:
-		var dart := exp(-(t - float(f["dart"])) * 2.5)
-		var face: float = f["face"]
-		if absf(face) < 0.15:
-			face = 0.15 * signf(face) if face != 0.0 else 0.15
-		Art.fish(self, _fish_pos(f, w), f["size"], Color(f["color"]) * tint, face, t * (1.0 + dart * 2.0) + f["y"])
-	var weed: Color = OceanLook.color("weed")
-	var kelp := OceanLook.has("kelp")
-	for i in 5:
-		var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
-		Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 16, weed * tint, t, i)
-	# The kelp sea: tall kelp between them, reaching up to the waves.
-	if kelp:
-		for i in 4:
-			var x := SHAFT_R + 60.0 + (i + 0.5) * (w - SHAFT_R - 120.0) / 4.0
-			Art.seaweed(self, Vector2(x, TOP_H - 18), 92 + (i % 2) * 26, weed.darkened(0.15) * tint, t * 0.8, i + 7, 11.0)
-	if OceanLook.has("ice"):
-		_draw_ice(w)
+	var wl := WorldLook.world
+	if wl == "ocean":
+		for i in 5:
+			var x := w * (0.1 + i * 0.2) + sin(t * 0.3 + i) * 16.0
+			var ray := Color(1, 1, 1, 0.07 * (0.2 + 0.8 * day))
+			Art.grad(self, PackedVector2Array([Vector2(x - 14, SURFACE_Y), Vector2(x + 14, SURFACE_Y),
+					Vector2(x + 70, TOP_H), Vector2(x + 20, TOP_H)]), PackedColorArray([ray, ray, Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
+	elif wl == "volcano":
+		# Slow bright streaks of flowing lava and magma bubbles.
+		for i in 6:
+			var f := fposmod(t * 0.03 + i / 6.0, 1.0)
+			var x := f * (w + 160.0) - 80.0
+			var y := SURFACE_Y + 26.0 + (i % 3) * 34.0
+			Art.line_c(self, PackedVector2Array([Vector2(x - 40, y), Vector2(x, y - 3), Vector2(x + 40, y)]), Color(1.0, 0.9, 0.45, 0.35), 4.0)
+		for i in 7:
+			var f := fposmod(t * 0.12 + i * 0.37, 1.0)
+			var x := w * fposmod(i * 0.29 + 0.07, 1.0)
+			var y := lerpf(TOP_H - 30.0, SURFACE_Y + 10.0, f)
+			var r := 3.0 + (i % 3) * 2.0
+			Art.t_circle(self, Vector2(x + sin(t + i) * 6.0, y), r * (0.6 + f * 0.6), Color("ffd45a"), 1.6, 0.0)
+	elif wl == "acid":
+		for i in 6:
+			var f := fposmod(t * 0.1 + i * 0.41, 1.0)
+			var x := w * fposmod(i * 0.23 + 0.1, 1.0) + sin(t * 1.4 + i) * 5.0
+			var y := lerpf(TOP_H - 26.0, SURFACE_Y + 8.0, f)
+			var r := 3.0 + (i % 3) * 1.6
+			Art.arc(self, Vector2(x, y), r, 0, TAU, 10, Color(0.85, 1.0, 0.6, 0.65), 1.6)
+	if wl != "moon":
+		for f in _fish:
+			var dart := exp(-(t - float(f["dart"])) * 2.5)
+			var face: float = f["face"]
+			if absf(face) < 0.15:
+				face = 0.15 * signf(face) if face != 0.0 else 0.15
+			Art.fish(self, _fish_pos(f, w), f["size"], _fish_color(f) * tint, face, t * (1.0 + dart * 2.0) + f["y"])
+	else:
+		# Dust motes drifting in the moon's dust sea.
+		for i in 8:
+			var f := fposmod(t * 0.02 + i * 0.13, 1.0)
+			var p := Vector2(f * (w + 40.0) - 20.0, SURFACE_Y + 30.0 + (i * 37 % 110) + sin(t * 0.7 + i) * 6.0)
+			Art.dot(self, p, 2.0, Color(1, 1, 1, 0.35))
+	var weed: Color = WorldLook.color("weed")
+	if wl == "ocean":
+		for i in 5:
+			var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
+			Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 16, weed * tint, t, i)
+	elif wl == "acid":
+		for i in 5:
+			var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
+			Art.seaweed(self, Vector2(x, TOP_H - 22), 54 + (i % 3) * 20, Color("4fae4a") * tint, t * 0.7, i, 7.0)
+
+
+## Fish colors fit the world (fire fish in lava, frog fish in the swamp).
+func _fish_color(f: Dictionary) -> Color:
+	var i := int(f["i"])
+	match WorldLook.world:
+		"volcano":
+			return [Color("ffe066"), Color("ff5a3a"), Color("ff9a2a"), Color("ffd0a0"), Color("ff3d6e")][i % 5]
+		"acid":
+			return [Color("c8ff5a"), Color("b07aff"), Color("5ae0c8"), Color("ff9fd0"), Color("ffe14a")][i % 5]
+	return f["color"]
 
 
 static var _FLOE := Art.smooth_pts(PackedVector2Array([Vector2(-30, 0), Vector2(-24, -9), Vector2(-6, -12), Vector2(14, -10),
@@ -588,8 +653,8 @@ func _draw_ice(w: float) -> void:
 		Art.pop(self)
 
 
-## Sandy slope above the first dive site, with shells (a still layer over
-## the seaweed roots).
+## The slope above the first site (sand, basalt, mud or moon dust) with a
+## few things lying on it (a still layer over the seaweed roots).
 func _paint_ground(ci: CanvasItem) -> void:
 	var w := size.x
 	var tint := DayNight.deep_tint(DayNight.stepped_phase())
@@ -598,16 +663,36 @@ func _paint_ground(ci: CanvasItem) -> void:
 		var x := lerpf(SHAFT_R, w + 10.0, i / 12.0)
 		top.append(Vector2(x, TOP_H - 22.0 - sin(i * 1.3) * 5.0 - (7.0 if i % 3 == 0 else 0.0)))
 	top.append(Vector2(w + 10, TOP_H + 4))
-	Art.toon(ci, top, OceanLook.color("sand") * tint, 3.0, 0.6)
+	var ground := WorldLook.color("sand") * tint
+	Art.toon(ci, top, ground, 3.0, 0.6)
 	var left := PackedVector2Array([Vector2(-10, TOP_H + 4), Vector2(-10, TOP_H - 26), Vector2(20, TOP_H - 30), Vector2(SHAFT_L, TOP_H - 18), Vector2(SHAFT_L, TOP_H + 4)])
-	Art.toon(ci, left, OceanLook.color("sand") * tint, 3.0, 0.6)
-	for p: Vector2 in [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26)]:
-		Art.push(ci, p, 0.2)
-		Props.shell(ci, Color("ffb3c7") * tint)
-		Art.pop(ci)
+	Art.toon(ci, left, ground, 3.0, 0.6)
+	var spots: Array[Vector2] = [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26), Vector2(w * 0.82, TOP_H - 24)]
+	for k in spots.size():
+		var p := spots[k]
+		match WorldLook.world:
+			"ocean":
+				if k < 2:
+					Art.push(ci, p, 0.2)
+					Props.shell(ci, Color("ffb3c7") * tint)
+					Art.pop(ci)
+			"volcano":
+				Art.push(ci, p + Vector2(0, 4), 0.0, Vector2.ONE * (1.0 - k * 0.15))
+				WorldArt.hot_rock(ci, tint, k)
+				Art.pop(ci)
+			"acid":
+				Art.push(ci, p + Vector2(0, 4), 0.0, Vector2.ONE * (0.8 + (k % 2) * 0.3))
+				WorldArt.mushroom(ci, [Color("ff6fae"), Color("c86bff"), Color("ffd23f")][k] * tint, 0.0, k)
+				Art.pop(ci)
+			"moon":
+				Art.push(ci, p + Vector2(0, 6), 0.0, Vector2.ONE * (1.0 - k * 0.2))
+				WorldArt.crater(ci, ground, 30.0)
+				Art.pop(ci)
 
 
-## The sea floor under the last dive site, with an old anchor (a still layer).
+## The bottom of the world under the last site (a still layer): the sea
+## floor with an old anchor, or in the dry worlds the mountain's deep rock
+## with a magma pool, a glowing acid pool or a crystal cave.
 func _paint_floor(ci: CanvasItem) -> void:
 	var w := size.x
 	var h := height()
@@ -616,10 +701,33 @@ func _paint_floor(ci: CanvasItem) -> void:
 	for i in 13:
 		pts.append(Vector2(w * i / 12.0, floor_y + sin(i * 1.7) * 14.0))
 	pts.append(Vector2(w + 10, h + 10))
-	Art.toon(ci, pts, OceanLook.color("seabed"), 3.0, 0.4)
-	Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
-	Props.anchor(ci)
-	Art.pop(ci)
+	Art.toon(ci, pts, WorldLook.color("seabed"), 3.0, 0.4)
+	match WorldLook.world:
+		"ocean":
+			Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
+			Props.anchor(ci)
+			Art.pop(ci)
+		"volcano":
+			Art.push(ci, Vector2(w * 0.62, floor_y + 34))
+			WorldArt.pool(ci, Color("ff7a1e"), Color("ffd45a"), 1.6)
+			Art.pop(ci)
+			for k in 3:
+				Art.push(ci, Vector2(w * (0.18 + k * 0.3), floor_y + 22 + k * 3), 0.0, Vector2.ONE * (1.3 - k * 0.2))
+				WorldArt.hot_rock(ci, Color.WHITE, k)
+				Art.pop(ci)
+		"acid":
+			Art.push(ci, Vector2(w * 0.62, floor_y + 34))
+			WorldArt.pool(ci, Color("7ad84a"), Color("e0ff9a"), 1.6)
+			Art.pop(ci)
+			for k in 4:
+				Art.push(ci, Vector2(w * (0.12 + k * 0.24), floor_y + 26), 0.0, Vector2.ONE * (1.4 - (k % 2) * 0.4))
+				WorldArt.mushroom(ci, [Color("ff6fae"), Color("c86bff"), Color("5ad8ff"), Color("ffd23f")][k], 0.0, k)
+				Art.pop(ci)
+		"moon":
+			for k in 3:
+				Art.push(ci, Vector2(w * (0.22 + k * 0.28), floor_y + 30), 0.0, Vector2.ONE * (1.2 - k * 0.2))
+				WorldArt.crystal_cluster(ci, [Color("9fe0ff"), Color("c8a0ff"), Color("8affd0")][k])
+				Art.pop(ci)
 	_paint_rock_end(ci, w, h - BOTTOM_H)
 
 
@@ -627,7 +735,7 @@ func _paint_floor(ci: CanvasItem) -> void:
 ## the dive shaft closed by a rounded stone bottom (the rows cover the top).
 func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	var last := Balance.DEPTHS.size() - 1
-	var rock: Color = Art.calm(OceanLook.room_style(last)["rock"])
+	var rock: Color = Art.calm(WorldLook.room_style(last)["rock"])
 	var edge := PackedVector2Array([Vector2(-10, top - 12)])
 	edge.append(Vector2(w + 10, top - 12))
 	for i in 15:
@@ -640,7 +748,7 @@ func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	Art.flat(ci, Art.clipped(Art.moved(edge, Vector2(0, -9)), edge), Art.shade_of(rock, 0.18))
 	# The shaft's end: water down to a rounded stone floor, walls outlined
 	# like the shaft above.
-	var water: Color = Art.calm(Art.water_color(1.0)).darkened(0.1)
+	var water: Color = Art.calm(Art.water_color(1.0)).darkened(0.1) if WorldLook.is_water() else WorldLook.shaft_color(1.0)
 	var r := 16.0
 	var floor_y := top + 30.0
 	var sump := PackedVector2Array([Vector2(SHAFT_L, top - 12), Vector2(SHAFT_R, top - 12)])
@@ -660,15 +768,40 @@ func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 		Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(p.z * 1.3, p.z), rock.lightened(0.1), 2.0, 0.4)
 
 
-# --- New ocean banner --------------------------------------------------------------------
+# --- New location banner -----------------------------------------------------------------
 
-## Shows "Ocean N" and the ocean's name over the sea for a few seconds.
-func show_ocean_name(n: int) -> void:
+## Shows "Location N" and the world's name over the sea for a few seconds.
+func show_world_name(n: int) -> void:
 	var b := OceanBanner.new()
-	b.title = tr("OCEAN") % (n + 1)
-	b.name_text = OceanLook.name_of(n)
+	b.title = tr("LOCATION_N") % (n + 1)
+	b.name_text = WorldLook.name_of(n)
 	b.position = Vector2(scene_right() / 2.0 if size.x > 900.0 else size.x / 2.0, SURFACE_Y - 130.0)
 	add_child(b)
+
+
+## Old name (screenshot scenarios and older callers).
+func show_ocean_name(n: int) -> void:
+	show_world_name(n)
+
+
+## Life at the bottom of the dry worlds: embers over the magma pool,
+## bubbles over the acid pool, sparkles in the moon's crystal cave.
+func _draw_bottom_life(w: float, floor_y: float) -> void:
+	for k in 6:
+		var f := fposmod(t * 0.25 + k / 6.0, 1.0)
+		match WorldLook.world:
+			"volcano":
+				var p := Vector2(w * 0.62 + sin(t + k * 1.7) * 30.0 * f - 30.0 + k * 12.0, floor_y + 30.0 - f * 120.0)
+				Art.dot(self, p, 2.6 * (1.0 - f) + 0.8, Color(1.0, 0.75, 0.3, 1.0 - f))
+			"acid":
+				var p := Vector2(w * 0.62 - 40.0 + k * 16.0 + sin(t * 1.3 + k) * 4.0, floor_y + 30.0 - f * 90.0)
+				Art.arc(self, p, 3.0 + f * 3.0, 0, TAU, 10, Color(0.85, 1.0, 0.6, 0.8 * (1.0 - f)), 1.6)
+			_:
+				var p := Vector2(w * (0.15 + k * 0.14), floor_y - 10.0 - (k % 3) * 20.0)
+				var tw := snappedf(0.5 + 0.5 * sin(t * 2.4 + k * 1.9), 0.1)
+				Art.push(self, p, 0.0, Vector2.ONE * (0.3 + tw * 0.6))
+				Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.6, 4), Color(1, 1, 1, 0.8), 0.0, 0.0)
+				Art.pop(self)
 
 
 class OceanBanner extends Control:

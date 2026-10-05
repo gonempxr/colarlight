@@ -8,21 +8,25 @@ extends RefCounted
 ## Pieces are drawn in a unit space where one piece is ~40 px tall and
 ## stands on (0, 0), then placed with Art.push, so their geometry is cached.
 
-## One per dive site, in Balance.DEPTHS order (the art for the other kinds,
-## from the 30-site version, is still here unused).
-const KINDS: Array[String] = ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "ice", "lava",
-		"glow", "atlantis", "kraken", "whale", "dragon", "heart"]
+## The art kind of each site id (the id itself when it has its own art).
+## Sites come from the current world (Art.site_ids, set by WorldLook).
+const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "nebula": "void", "cosmic_heart": "heart",
+		"shroom": "glow", "garnet": "garnet", "ember": "ember"}
 ## Kinds that give off light (a soft pulsing glow behind them).
 const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
-		"vent", "storm", "dragon", "void", "time", "heart"]
+		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
+		"ufo", "fire_opal", "goo_king"]
 ## Kinds that sit in a mound of rock.
-const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm"]
+const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust"]
 ## Kinds with a big centerpiece of their own (loose pieces lie in front of it).
-const CENTERPIECE: Array[String] = ["gold", "kraken", "atlantis", "pearl", "vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart"]
+const CENTERPIECE: Array[String] = ["gold", "kraken", "atlantis", "pearl", "vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart",
+		"phoenix", "goo_king", "alien_egg", "ufo"]
 
 
 static func kind_of(depth: int) -> String:
-	return KINDS[clampi(depth, 0, KINDS.size() - 1)]
+	var ids: Array[String] = Art.site_ids
+	var id := ids[clampi(depth, 0, ids.size() - 1)]
+	return KIND_OF.get(id, id)
 
 
 static func style_of(depth: int) -> Dictionary:
@@ -59,7 +63,7 @@ static func deposit(ci: CanvasItem, base: Vector2, size: float, depth: int, seed
 			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.45)
 			_clam(ci, ore, st["ore2"], t, seed)
 			Art.pop(ci)
-		"vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart":
+		"vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart", "phoenix", "goo_king", "alien_egg", "ufo":
 			centerpiece(ci, kind, base, s, st, t, seed)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -145,6 +149,9 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			_star(ci, ore, ore2, t, i)
 		"vent", "whale", "mirror", "storm", "dragon", "crown", "void", "time", "heart":
 			abyss_piece(ci, kind, ore, ore2, t, i)
+		"ash", "sulfur", "fire_opal", "garnet", "ember", "phoenix", "slime", "moss", "bubble", "venom", "radiant", \
+				"goo_king", "dust", "comet", "alien_egg", "ufo":
+			world_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)
@@ -162,7 +169,8 @@ static func chunk(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: flo
 			piece(ci, kind, Vector2(0, 10 * s), s * 1.5, 0.0, st, 0.0, 0)
 		"kraken", "atlantis", "time":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 1)
-		"pearl", "copper", "moon", "lava", "meteor", "sapphire", "star", "fossil", "dragon":
+		"pearl", "copper", "moon", "lava", "meteor", "sapphire", "star", "fossil", "dragon", "ash", "fire_opal", "garnet", \
+				"slime", "moss", "bubble", "dust", "comet", "ufo", "alien_egg":
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.3, 0.0, st, 0.0, 1)
 		"crown", "void", "heart":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 0)
@@ -178,8 +186,12 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 	var c: Color = st["ore"]
 	Art.push(ci, at, rot, Vector2(size, size) / 4.0)
 	match kind:
-		"star", "moon", "glow", "storm", "crown", "heart":
+		"star", "moon", "glow", "storm", "crown", "heart", "radiant", "comet", "void", "dust":
 			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5.0, 2.2, 4), st["ore2"], 1.2, 0.0)
+		"slime", "bubble", "venom", "goo_king":
+			Art.t_circle(ci, Vector2.ZERO, 3.0, c, 1.2, 0.0)
+		"ember", "phoenix":
+			Art.toon(ci, _CHIP, Color("ffb02e"), 1.2, 0.0)
 		"dragon":
 			Art.toon(ci, _CHIP, c.lightened(0.2), 1.2, 0.0)
 		"mirror":
@@ -203,7 +215,8 @@ static var _CHIP := PackedVector2Array([Vector2(-3, -3), Vector2(3, -2), Vector2
 static func _tilt(kind: String) -> float:
 	match kind:
 		"glow", "gold", "atlantis", "jade", "moon", "pearl", "copper", "fossil", "lava", "meteor", "star", "kraken", \
-				"vent", "whale", "dragon", "crown", "void", "time", "heart":
+				"vent", "whale", "dragon", "crown", "void", "time", "heart", "ash", "fire_opal", "slime", "moss", "bubble", \
+				"venom", "goo_king", "dust", "comet", "alien_egg", "ufo":
 			return 0.35
 	return 1.0
 
@@ -219,6 +232,10 @@ static func _mound(ci: CanvasItem, base: Vector2, s: float, st: Dictionary, kind
 			rock = Color("2b2340")
 		"storm":
 			rock = Color("2a2c44")
+		"ash", "garnet":
+			rock = Color("4a4250")
+		"dust":
+			rock = Color("8a8ea2")
 	Art.push(ci, base + Vector2(0, 3), 0.0, Vector2(s, s))
 	Art.toon(ci, _MOUND, Art.shade_of(rock, 0.1), 2.2, 0.5)
 	Art.flat(ci, Art.ellipse_pts(Vector2(-12, -12), Vector2(6, 2.5), 10, -0.2), Color(1, 1, 1, 0.14))
@@ -794,6 +811,32 @@ static func centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, s
 			_hourglass(ci, c, c2, t, seed)
 			Art.pop(ci)
 			Art.pop(ci)
+		"phoenix":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.1)
+			Art.toon(ci, _NEST_SMALL, Color("a8743a"), 2.0, 0.5)
+			Art.push(ci, Vector2(0, -6), 0.0, Vector2(0.9, 0.9))
+			dragon_egg(ci, c, c2, t)
+			Art.pop(ci)
+			Art.pop(ci)
+		"goo_king":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.3)
+			_slime(ci, c, c2, 0)
+			Art.push(ci, Vector2(0, -26), 0.0, Vector2(0.6, 0.6))
+			_crown(ci, Color("ffc93c"), Color("fff6c0"), 0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"alien_egg":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.05)
+			Art.toon(ci, _NEST_SMALL, Color("4a6a5a"), 2.0, 0.5)
+			for k in 2:
+				Art.push(ci, Vector2(-9 + k * 18, -6), 0.0, Vector2(0.75, 0.75))
+				_alien_egg(ci, c, c2, t, k)
+				Art.pop(ci)
+			Art.pop(ci)
+		"ufo":
+			Art.push(ci, base + Vector2(0, 2), -0.18, Vector2(s, s) * 1.25)
+			_ufo(ci, c, c2, t, seed)
+			Art.pop(ci)
 		"heart":
 			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.1)
 			Art.toon(ci, _SCALLOP, Color("ffc93c"), 2.0, 0.4)
@@ -1216,3 +1259,186 @@ static func heart_rays(ci: CanvasItem, c: Vector2, r: float, color: Color, t: fl
 		var d1 := Vector2.from_angle(a - 0.12) * r
 		var d2 := Vector2.from_angle(a + 0.12) * r
 		Art.grad(ci, PackedVector2Array([c, c + d1, c + d2]), PackedColorArray([col, clear, clear]))
+
+
+# --- The volcano, swamp and moon sites ---------------------------------------------------
+
+## One piece of the newer worlds' kinds (unit space, ~40 tall, on 0,0).
+static func world_piece(ci: CanvasItem, kind: String, c: Color, c2: Color, t: float, i: int) -> void:
+	match kind:
+		"ash":
+			_ash(ci, c, c2, t, i)
+		"sulfur":
+			_sulfur(ci, c, c2, i)
+		"fire_opal":
+			_opal(ci, c, c2, i)
+		"garnet":
+			if i % 3 == 1:
+				_cut_gem(ci, c, c2)
+			else:
+				_hex_gem(ci, c, c2)
+		"ember":
+			_ember(ci, c, c2, t, i)
+		"phoenix":
+			_feather(ci, c, c2, i)
+		"slime", "goo_king":
+			if kind == "goo_king" and i % 3 == 2:
+				_crown(ci, Color("ffc93c"), Color("fff6c0"), i)
+			else:
+				_slime(ci, c, c2, i)
+		"moss":
+			_moss(ci, c, c2, i)
+		"bubble":
+			_bubbles(ci, c, c2, i)
+		"venom":
+			_flask(ci, c, c2, i)
+		"radiant":
+			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, c if i % 2 == 0 else c2.lerp(c, 0.4), 2.0)
+			Art.flat(ci, Art.ellipse_pts(Vector2(-2, -24), Vector2(1.6, 6), 8), Color(1, 1, 1, 0.6))
+		"dust":
+			_dust(ci, c, c2, t, i)
+		"comet":
+			_comet(ci, c, c2, i)
+		"alien_egg":
+			_alien_egg(ci, c, c2, t, i)
+		"ufo":
+			_ufo(ci, c, c2, t, i)
+
+
+static var _NEST_SMALL := Art.smooth_pts(PackedVector2Array([Vector2(-22, 0), Vector2(-24, -6), Vector2(-16, -10), Vector2(0, -8),
+		Vector2(16, -10), Vector2(24, -6), Vector2(22, 0)]), 3)
+
+
+## A lump of grey pumice with an ember in it.
+static func _ash(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _NUGGET, c, 2.0, 0.6)
+	for p: Vector3 in [Vector3(-6, -14, 2.2), Vector3(5, -18, 1.8), Vector3(8, -7, 2.0), Vector3(-9, -5, 1.6)]:
+		Art.flat(ci, Art.circle_pts(Vector2(p.x, p.y), p.z, 8), Art.shade_of(c, 0.3))
+	var hot := snappedf(0.6 + 0.4 * sin(t * 3.0 + i), 0.1)
+	Art.flat(ci, Art.circle_pts(Vector2(-1, -10), 3.0, 10), Color(c2, hot))
+	Art.pop(ci)
+
+
+## A fire opal: an oval cabochon with sparkling colored flecks.
+static func _opal(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.toon(ci, _OPAL, c, 2.0, 0.4)
+	Art.flat(ci, _OPAL_FLECK_A, Color(c2, 0.9))
+	Art.flat(ci, _OPAL_FLECK_B, Color("ff6ad8", 0.8))
+	Art.flat(ci, _OPAL_FLECK_C, Color("9aff6a", 0.8))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -24), Vector2(2.4, 5), 8, 0.4), Color(1, 1, 1, 0.7))
+
+
+static var _OPAL := Art.ellipse_pts(Vector2(0, -16), Vector2(13, 16), 22)
+static var _OPAL_FLECK_A := Art.ellipse_pts(Vector2(4, -20), Vector2(4, 2.4), 10, 0.5)
+static var _OPAL_FLECK_B := Art.ellipse_pts(Vector2(-4, -10), Vector2(3.4, 2.0), 10, -0.4)
+static var _OPAL_FLECK_C := Art.ellipse_pts(Vector2(5, -8), Vector2(2.2, 1.6), 8)
+
+
+## A phoenix feather: a flame-shaped feather with a bright quill.
+static func _feather(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _FEATHER, c, 2.0, 0.4)
+	Art.flat(ci, _FEATHER_TIP, c2)
+	Art.line_c(ci, PackedVector2Array([Vector2(0, 0), Vector2(1, -20), Vector2(4, -36)]), Color("fff0b0"), 1.8)
+	Art.pop(ci)
+
+
+static var _FEATHER := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-7, -10), Vector2(-9, -24), Vector2(-2, -38), Vector2(4, -40),
+		Vector2(9, -28), Vector2(8, -14), Vector2(2, -4)]), 3)
+static var _FEATHER_TIP := Art.clipped(Art.ellipse_pts(Vector2(2, -36), Vector2(9, 8), 14), _FEATHER)
+
+
+## A cute slime blob with a face.
+static func _slime(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.toon(ci, _SLIME, c, 2.2, 0.5)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -18), Vector2(3, 2), 10, -0.5), Color(c2, 0.9))
+	for sx: float in [-1.0, 1.0]:
+		Art.t_ellipse(ci, Vector2(sx * 5, -11), Vector2(1.8, 2.6), Art.INK, 0.0, 0.0)
+	Art.arc_c(ci, Vector2(0, -8), 3.0, 0.4, PI - 0.4, 6, Art.INK, 1.6)
+
+
+static var _SLIME := Art.smooth_pts(PackedVector2Array([Vector2(-14, 0), Vector2(-13, -9), Vector2(-7, -18), Vector2(0, -22),
+		Vector2(7, -18), Vector2(13, -9), Vector2(14, 0)]), 3)
+
+
+## A rock with a soft moss cap.
+static func _moss(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _NUGGET, Color("7a7468"), 2.0, 0.6)
+	Art.toon(ci, _MOSS_CAP, c, 1.8, 0.4)
+	for p: Vector2 in [Vector2(-6, -21), Vector2(4, -23), Vector2(10, -16)]:
+		Art.flat(ci, Art.circle_pts(p, 1.6, 6), c2)
+	Art.pop(ci)
+
+
+static var _MOSS_CAP := Art.smooth_pts(PackedVector2Array([Vector2(-17, -10), Vector2(-10, -20), Vector2(0, -26), Vector2(10, -22),
+		Vector2(17, -13), Vector2(10, -11), Vector2(4, -14), Vector2(-4, -11), Vector2(-10, -13)]), 2)
+
+
+## A cluster of shiny bubbles.
+static func _bubbles(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	for b: Vector3 in [Vector3(-6, -9, 9), Vector3(7, -10, 7), Vector3(1, -24, 8)]:
+		Art.t_circle(ci, Vector2(b.x, b.y), b.z, Color(c, 0.8), 2.0, 0.3)
+		Art.flat(ci, Art.ellipse_pts(Vector2(b.x - b.z * 0.35, b.y - b.z * 0.35), Vector2(b.z * 0.28, b.z * 0.18), 8, -0.6), Color(c2, 0.95))
+
+
+## A round potion flask of swamp venom.
+static func _flask(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.t_rect(ci, Rect2(-4, -38, 8, 12), 2, Art.GLASS, 2.0, 0.0)
+	Art.t_rect(ci, Rect2(-5, -42, 10, 5), 2, Color("a8743a"), 1.8, 0.0)
+	Art.t_circle(ci, Vector2(0, -14), 14, Art.GLASS, 2.2, 0.0)
+	Art.flat(ci, _FLASK_LIQUID, c)
+	Art.flat(ci, Art.circle_pts(Vector2(4, -10), 2.2, 8), c2)
+	Art.flat(ci, Art.circle_pts(Vector2(-3, -6), 1.5, 8), c2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -20), Vector2(2, 4), 8, 0.4), Color(1, 1, 1, 0.7))
+
+
+static var _FLASK_LIQUID := Art.clipped(Art.rrect_pts(Rect2(-14, -16, 28, 18), 1), Art.circle_pts(Vector2(0, -14), 12, 20))
+
+
+## A heap of glittering moon dust.
+static func _dust(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	Art.toon(ci, _DUST, c, 2.0, 0.5)
+	var tw := snappedf(0.5 + 0.5 * sin(t * 3.0 + i), 0.1)
+	for p: Vector2 in [Vector2(-6, -10), Vector2(5, -14)]:
+		Art.flat(ci, Art.circle_pts(p, 1.6, 6), Color(c2, 0.6 + tw * 0.4))
+	Art.push(ci, Vector2(2, -22), 0.0, Vector2.ONE * (0.4 + tw * 0.4))
+	Art.toon(ci, Art.star_pts(Vector2.ZERO, 6, 1.5, 4), Color(1, 1, 1, 0.9), 0.0, 0.0)
+	Art.pop(ci)
+
+
+static var _DUST := Art.smooth_pts(PackedVector2Array([Vector2(-17, 0), Vector2(-10, -10), Vector2(0, -17), Vector2(10, -10), Vector2(17, 0)]), 3)
+
+
+## A small icy comet with its glowing tail.
+static func _comet(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.flat(ci, _COMET_TAIL, Color(c, 0.5))
+	Art.toon(ci, _COMET, c.lerp(Color.WHITE, 0.3), 2.0, 0.5)
+	Art.flat(ci, Art.circle_pts(Vector2(-3, -16), 2.2, 8), Art.shade_of(c, 0.2))
+	Art.flat(ci, Art.ellipse_pts(Vector2(4, -20), Vector2(2, 3), 8, 0.4), Color(c2, 0.9))
+
+
+static var _COMET := Art.smooth_pts(PackedVector2Array([Vector2(-10, -4), Vector2(-12, -16), Vector2(-4, -26), Vector2(8, -24), Vector2(12, -12), Vector2(6, -2)]), 3)
+static var _COMET_TAIL := PackedVector2Array([Vector2(-6, -24), Vector2(-26, -40), Vector2(-30, -30), Vector2(-10, -10)])
+
+
+## An alien egg: speckled and softly glowing.
+static func _alien_egg(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var hot := snappedf(0.6 + 0.4 * sin(t * 2.0 + i * 1.3), 0.1)
+	Art.toon(ci, _EGG, c, 2.2, 0.5)
+	for p: Vector3 in [Vector3(-5, -24, 2.6), Vector3(5, -16, 3.0), Vector3(-4, -10, 2.0), Vector3(4, -28, 1.8)]:
+		Art.flat(ci, Art.circle_pts(Vector2(p.x, p.y), p.z, 8), Color(c2, hot))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -27), Vector2(2.6, 5), 10, 0.4), Color(1, 1, 1, 0.45))
+
+
+## A little flying saucer with a glass dome and blinking lights.
+static func _ufo(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	Art.t_ellipse(ci, Vector2(0, -16), Vector2(9, 8), Art.GLASS, 2.0, 0.0)
+	Art.t_ellipse(ci, Vector2(0, -9), Vector2(20, 6), c, 2.2, 0.5)
+	for k in 3:
+		var on := fposmod(t * 2.0 + k * 0.33 + i * 0.2, 1.0) < 0.5
+		Art.flat(ci, Art.circle_pts(Vector2(-10 + k * 10, -8), 2.0, 8), c2 if on else Art.shade_of(c2, 0.4))
+	Art.t_rect(ci, Rect2(-7, -4, 14, 4), 2, Art.shade_of(c, 0.2), 1.6, 0.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -19), Vector2(2, 3), 8, 0.4), Color(1, 1, 1, 0.7))
+

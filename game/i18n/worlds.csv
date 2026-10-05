@@ -1,0 +1,50 @@
+keys,en,ru,es,zh
+WORLD_OCEAN,Ocean,Океан,Océano,海洋
+WORLD_VOLCANO,Volcano,Вулкан,Volcán,火山
+WORLD_ACID,Acid Swamp,Кислотное болото,Pantano Ácido,酸液沼泽
+WORLD_MOON,Moon,Луна,Luna,月球
+LOCATION_N,Location %d,Локация %d,Lugar %d,第%d区
+SITE_SHELLS,Shell Shallows,Ракушечная отмель,Bajío de Conchas,贝壳浅滩
+SITE_CORAL,Coral Garden,Коралловый сад,Jardín de Coral,珊瑚花园
+SITE_PEARL,Pearl Ridge,Жемчужная гряда,Cresta de Perlas,珍珠岭
+SITE_COPPER,Copper Cliffs,Медные скалы,Acantilados de Cobre,铜矿崖
+SITE_EMERALD,Emerald Grotto,Изумрудный грот,Gruta Esmeralda,翡翠洞窟
+SITE_CRYSTAL,Crystal Abyss,Кристальная бездна,Abismo de Cristal,水晶深渊
+SITE_GOLD,Golden Wreck,Золотой затонувший корабль,Pecio Dorado,黄金沉船
+SITE_GLOW,Glow Garden,Светящийся сад,Jardín Luminoso,荧光花园
+SITE_ATLANTIS,Atlantis Ruins,Руины Атлантиды,Ruinas de la Atlántida,亚特兰蒂斯遗迹
+SITE_HEART,Heart of the Ocean,Сердце океана,Corazón del océano,海洋之心
+SITE_ASH,Ash Fields,Пепельные поля,Campos de Ceniza,火山灰原
+SITE_OBSIDIAN,Obsidian Canyon,Обсидиановый каньон,Cañón de Obsidiana,黑曜石峡谷
+SITE_SULFUR,Sulfur Springs,Серные источники,Fuentes de Azufre,硫磺泉
+SITE_RUBY,Ruby Rift,Рубиновая расщелина,Grieta de Rubí,红宝石裂谷
+SITE_MAGMA,Magma Chamber,Магмовая пещера,Cámara de Magma,岩浆室
+SITE_FIRE_OPAL,Fire Opal Vault,Кладовая огненных опалов,Bóveda de Ópalo de Fuego,火欧泊宝库
+SITE_GARNET,Garnet Gallery,Гранатовая галерея,Galería de Granates,石榴石长廊
+SITE_EMBER,Ember Forge,Тлеющая кузница,Forja de Brasas,余烬熔炉
+SITE_PHOENIX,Phoenix Nest,Гнездо феникса,Nido del Fénix,凤凰巢
+SITE_DRAGON,Dragon's Lair,Логово дракона,Guarida del Dragón,龙巢
+SITE_SLIME,Slime Puddles,Слизистые лужи,Charcos de Baba,黏液水坑
+SITE_MOSS,Moss Hollow,Моховая лощина,Hondonada de Musgo,苔藓洼地
+SITE_SHROOM,Mushroom Grove,Грибная роща,Bosque de Hongos,蘑菇林
+SITE_BUBBLE,Bubble Pools,Пузырьковые пруды,Pozas de Burbujas,泡泡池
+SITE_VENOM,Venom Vats,Ядовитые чаны,Tinas de Veneno,毒液池
+SITE_AMBER,Amber Cove,Янтарная бухта,Cala de Ámbar,琥珀湾
+SITE_RADIANT,Radiant Caves,Сияющие пещеры,Cuevas Radiantes,辐光洞穴
+SITE_JADE,Jade Maze,Нефритовый лабиринт,Laberinto de Jade,玉石迷宫
+SITE_ORCHID,Orchid Hollow,Орхидеевая лощина,Hondonada de Orquídeas,兰花谷
+SITE_GOO_KING,Goo King's Throne,Трон Короля Слизи,Trono del Rey Baba,黏液王王座
+SITE_DUST,Dust Dunes,Пыльные дюны,Dunas de Polvo,尘土沙丘
+SITE_METEOR,Meteor Crater,Метеоритный кратер,Cráter del Meteorito,陨石坑
+SITE_CRATER_ICE,Crater Ice,Ледяной кратер,Hielo del Cráter,陨坑冰
+SITE_MOONSTONE,Moonstone Shelf,Россыпь лунного камня,Repisa de Piedra Lunar,月光石架
+SITE_STAR,Star Abyss,Звёздная бездна,Abismo Estelar,星光深渊
+SITE_COMET,Comet Tail,Хвост кометы,Cola de Cometa,彗星尾
+SITE_NEBULA,Nebula Grotto,Туманный грот,Gruta Nebulosa,星云洞窟
+SITE_ALIEN_EGG,Alien Nest,Гнездо пришельцев,Nido Alienígena,外星巢穴
+SITE_UFO,UFO Crash Site,Место крушения НЛО,Ovni Estrellado,飞碟坠毁点
+SITE_COSMIC_HEART,Cosmic Heart,Космическое сердце,Corazón Cósmico,宇宙之心
+WORLD_OCEAN_FLAVOR,Sandy beach and deep blue sea,Песчаный пляж и синее море,Playa de arena y mar azul,沙滩与蔚蓝大海
+WORLD_VOLCANO_FLAVOR,A river of lava under a smoking volcano,Лавовая река у дымящего вулкана,Un río de lava junto a un volcán humeante,冒烟火山下的熔岩河
+WORLD_ACID_FLAVOR,Bubbling green swamp with giant mushrooms,Бурлящее зелёное болото с огромными грибами,Pantano verde burbujeante con hongos gigantes,冒泡的绿色沼泽和巨大蘑菇
+WORLD_MOON_FLAVOR,Craters and a sea of dust under the stars,Кратеры и море пыли под звёздами,Cráteres y un mar de polvo bajo las estrellas,星空下的陨坑与尘埃之海

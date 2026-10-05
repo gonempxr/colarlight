@@ -4,7 +4,7 @@ extends SceneTree
 ##     -s res://tests/screenshot.gd -- out.png ru mid 0 [sheet]
 ## Args: output file, language, scenario (start|mid|late), scroll px,
 ## optional overlay ("-" for none), optional UI scale (1.0/1.12/1.25): sheet | title | avatar | settings | prestige | quests |
-## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial | ocean:N[:night][:banner] |
+## daily | museum | wardrobe[:tab] | players | profile | feature:<id> | chest | tutorial | ocean:N[:night][:banner] | world:N[:night|:dusk][:banner] |
 ## sheet:<stage> (e.g. sheet:lift) | relang:<lang> (switch language live) | second (a new second boat and plant
 ## without managers: the red tab dots) | ads (test ad provider: the x2
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
@@ -92,6 +92,15 @@ func _initialize() -> void:
 		gs.prestige_count = int(parts[1])
 		if "night" in parts:
 			load("res://scripts/ui/day_night.gd").fixed_phase = 0.75
+	# world:N[:night][:banner] - location N (0 ocean, 1 volcano, 2 acid
+	# swamp, 3 moon, 4 = ocean ★2 ...) by day (noon) or at night.
+	if overlay.begins_with("world:"):
+		var parts := overlay.split(":")
+		if gs.get("location") != null:
+			gs.set("location", int(parts[1]))
+		else:
+			gs.prestige_count = int(parts[1])
+		load("res://scripts/ui/day_night.gd").fixed_phase = 0.75 if "night" in parts else (0.47 if "dusk" in parts else 0.2)
 	if overlay == "second":
 		gs.levels.merge({"boat2": 3, "plant2": 2}, true)
 		gs.managers["boat2"] = false
@@ -165,7 +174,7 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
-			elif overlay.begins_with("ocean:") and overlay.ends_with(":banner"):
+			elif (overlay.begins_with("ocean:") or overlay.begins_with("world:")) and overlay.ends_with(":banner"):
 				main._world.show_ocean_name(gs.prestige_count)
 			elif overlay.begins_with("relang:"):
 				# Switch the language with the settings and the upgrade

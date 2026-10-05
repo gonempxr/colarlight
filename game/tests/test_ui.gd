@@ -261,7 +261,7 @@ func test_new_ocean() -> void:
 		if c.get_class() == "Control" and c.get("name_text") != null:
 			banner_found = c.name_text == ocean_look.name_of(1) and c.name_text != ""
 	check(banner_found, "the new ocean's name is shown")
-	check(ocean_look.name_of(6).ends_with(" II"), "later oceans repeat the looks with a numeral")
+	check(ocean_look.name_of(6).ends_with("★2"), "later tiers repeat the worlds with a star badge")
 	gs.prestige_count = 0
 	await _frames(3)
 	check(art.water_color(0.0).is_equal_approx(sea0), "back home: the original water")

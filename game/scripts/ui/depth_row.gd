@@ -34,7 +34,7 @@ func key() -> String:
 
 
 func style() -> Dictionary:
-	return OceanLook.room_style(index)
+	return WorldLook.room_style(index)
 
 
 func _ready() -> void:
@@ -103,7 +103,7 @@ func refresh() -> void:
 	var is_next := GameState.next_depth() == key()
 	_open_btn.visible = not open and is_next
 	_lock_label.visible = not open
-	var name := tr("DEPTH_%s" % String(Balance.DEPTHS[index]["id"]).to_upper())
+	var name := WorldLook.site_name(index)
 	if not open:
 		_lock_label.text = name if is_next else "???"
 		_open_btn.set_price(tr("OPEN"), NumFormat.short(GameState.unlock_cost(key())))
@@ -167,7 +167,7 @@ func _process(delta: float) -> void:
 	if not _check_now and (Engine.get_process_frames() + index) % 6 != 0:
 		return
 	_check_now = false
-	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale(), OceanLook.ocean]
+	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale(), WorldLook.location]
 	if sig != _bg_sig:
 		_bg_sig = sig
 		_bg.queue_redraw()
@@ -190,6 +190,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 			band.append(Vector2(lerpf(w + 10, -10, k / 8.0), y + 18.0 + sin((8 - k) * 1.7 + index + i) * 6.0))
 		Art.flat(ci, band, Art.shade_of(rock, 0.1))
 	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, 7), Vector2(0, 7)]), Art.shade_of(rock, 0.3))
+	_wall_details(ci, w, h, rock)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = index * 97 + 5
 	for i in 16:
@@ -198,7 +199,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.t_ellipse(ci, p, Vector2(r * 1.3, r), rock.lightened(0.12), 2.0, 0.5, rng.randf_range(-0.5, 0.5))
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
-	var water: Color = Art.calm(Art.water_color(0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)))
+	var f := 0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)
+	var water: Color = Art.calm(Art.water_color(f)) if WorldLook.is_water() else WorldLook.shaft_color(f)
 	Art.grad(ci, PackedVector2Array([shaft.position, Vector2(shaft.end.x, shaft.position.y), shaft.end, Vector2(shaft.position.x, shaft.end.y)]), PackedColorArray([water, water, water.darkened(0.1), water.darkened(0.1)]))
 	# Cave and the passage from the shaft.
 	var cave := cave_rect()
@@ -226,10 +228,14 @@ func _draw_bg(ci: CanvasItem) -> void:
 	floor_pts.append(Vector2(cave.end.x + 10, CAVE_BOTTOM + 10))
 	floor_pts.append(Vector2(World.SHAFT_L, CAVE_BOTTOM + 10))
 	Art.flat(ci, Art.clipped(floor_pts, cave_poly), st["floor"])
-	# Mine frame.
+	# Mine frame (metal supports on the moon).
 	Art.push(ci, Vector2(World.CAVE_L + 22, LEDGE_Y + 2))
-	Props.mine_frame(ci, 150, 76)
+	if WorldLook.world == "moon":
+		_metal_frame(ci, 150, 76)
+	else:
+		Props.mine_frame(ci, 150, 76)
 	Art.pop(ci)
+	_room_furniture(ci, cave)
 	# Depth sign.
 	Art.push(ci, Vector2(World.CAVE_L + 60, CAVE_TOP + 48), -0.04)
 	Art.t_rect(ci, Rect2(-40, -17, 80, 34), 6, Art.CREAM, 3.0, 0.3)
@@ -286,9 +292,7 @@ func _draw() -> void:
 	var cave := cave_rect()
 	var cave_poly := _cave_poly()
 	_cp = cave_poly
-	Art.push(self, Vector2(cave.get_center().x + 20, CAVE_TOP + 4))
-	Props.lantern(self, _t + index, Color("ffd780"))
-	Art.pop(self)
+	_draw_lamps(cave)
 	_draw_decor(st, cave)
 	# Ore vein, glowing on each delivery.
 	var dp := deposit_pos()
@@ -309,6 +313,8 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 	var x0 := World.CAVE_L + 130.0
 	var x1 := cave.end.x - 140.0
 	var mid := (x0 + x1) / 2.0
+	if _draw_decor_world(st, cave):
+		return
 	match st["deco"]:
 		"shells":
 			for p: Vector3 in [Vector3(x0, y + 2, 0.2), Vector3(mid + 30, y + 4, -0.3)]:
@@ -898,3 +904,428 @@ static func _ticks() -> Array[PackedVector2Array]:
 		var d := Vector2.from_angle(TAU * k / 12.0)
 		out.append(PackedVector2Array([d * (22.0 if k % 3 == 0 else 24.0), d * 26.5]))
 	return out
+
+
+# --- The rooms of the dry worlds ----------------------------------------------------------
+
+## Veins in the rock around the cave (a still layer): lava veins by the
+## volcano, moss on the swamp's rock, pits and crystal specks on the moon.
+func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 31 + 7
+	match WorldLook.world:
+		"volcano":
+			for k in 3:
+				var x := rng.randf_range(20.0, w - 40.0)
+				var y := 20.0 if k % 2 == 0 else h - 20.0
+				var pts := PackedVector2Array([Vector2(x, y)])
+				for j in 4:
+					pts.append(pts[j] + Vector2(rng.randf_range(10, 26), rng.randf_range(-8, 8)))
+				Art.line_c(ci, pts, Color("ff7a2a"), 3.0)
+				Art.line_c(ci, pts, Color("ffd45a"), 1.2)
+		"acid":
+			for k in 5:
+				var p := Vector2(rng.randf_range(10, w - 10), 6.0)
+				Art.toon(ci, Art.moved(_MOSS_TOP, p), Color("6cc24a"), 2.0, 0.3)
+		"moon":
+			for k in 4:
+				var p := Vector2(rng.randf_range(20, w - 20), rng.randf_range(16, h - 16))
+				Art.t_ellipse(ci, p, Vector2(7, 4), Art.shade_of(rock, 0.25), 1.6, 0.0)
+			for k in 2:
+				var p := Vector2(rng.randf_range(20, w - 20), h - 12.0)
+				Art.crystal(ci, p, 14, 4, rng.randf_range(-0.3, 0.3), Color("9fe0ff"), 1.6)
+
+
+static var _MOSS_TOP := Art.smooth_pts(PackedVector2Array([Vector2(-16, -4), Vector2(16, -4), Vector2(14, 4), Vector2(6, 9), Vector2(0, 5), Vector2(-7, 10), Vector2(-13, 4)]), 2)
+
+
+## Still things inside the cave of a dry world: glowing cracks in the
+## volcano's back wall, hanging moss in the swamp, a rail on the moon.
+func _room_furniture(ci: CanvasItem, cave: Rect2) -> void:
+	var cp := _cave_poly()
+	var x0 := World.CAVE_L + 110.0
+	var x1 := cave.end.x - 150.0
+	match WorldLook.world:
+		"volcano":
+			for k in 2:
+				var x := lerpf(x0, x1, 0.25 + k * 0.5)
+				var crack := PackedVector2Array([Vector2(x, CAVE_TOP + 20), Vector2(x + 8, CAVE_TOP + 46), Vector2(x - 4, CAVE_TOP + 70), Vector2(x + 6, CAVE_TOP + 96)])
+				Art.glow(ci, Vector2(x, CAVE_TOP + 58), 40.0, Color(1.0, 0.5, 0.2, 0.25), 14)
+				Art.line_c(ci, crack, Color("ff7a2a"), 4.0)
+				Art.line_c(ci, crack, Color("ffe08a"), 1.6)
+		"acid":
+			for k in 6:
+				var x := lerpf(World.CAVE_L + 60.0, cave.end.x - 60.0, k / 5.0)
+				var len := 18.0 + float((k * 7 + index) % 4) * 9.0
+				var strand := Art.clipped(Art.rrect_pts(Rect2(x - 3, CAVE_TOP - 4, 6, len), 3), cp)
+				Art.flat(ci, strand, Color("5ab84a"))
+				Art.disc(ci, Vector2(x, CAVE_TOP + len - 3), 3.0, Color("8ae04a"))
+		"moon":
+			# A rail along the floor for the ore carts.
+			Art.line(ci, Vector2(World.CAVE_L + 30, LEDGE_Y + 10), Vector2(cave.end.x - 40, LEDGE_Y + 10), Color("8a90a8"), 3.0)
+			var n := int((cave.end.x - World.CAVE_L - 70.0) / 30.0)
+			for k in n:
+				var x := World.CAVE_L + 40.0 + k * 30.0
+				Art.line(ci, Vector2(x, LEDGE_Y + 7), Vector2(x, LEDGE_Y + 14), Color("6a6e86"), 3.0)
+
+
+## Metal supports (the moon's mine frame): two girders and a beam with rivets.
+func _metal_frame(ci: CanvasItem, h: float, w: float) -> void:
+	var steel := Color("aeb6cc")
+	for x: float in [0.0, w]:
+		Art.t_rect(ci, Rect2(x - 6, -h, 12, h), 2, steel, 2.5, 0.4)
+		for k in 3:
+			Art.disc(ci, Vector2(x, -h + 30.0 + k * 40.0), 1.8, Color("6a6e86"))
+	Art.t_rect(ci, Rect2(-14, -h - 8, w + 28, 14), 3, Color("8a92ac"), 2.8, 0.4)
+	for k in 4:
+		var x := -4.0 + k * (w + 8.0) / 3.0
+		Art.line(ci, Vector2(x, -h - 6), Vector2(x + (w + 8.0) / 6.0, -h + 4), Color("6a6e86"), 2.0)
+
+
+## The cave's light: a hanging lantern under water, torches by the volcano,
+## a glowing mushroom lamp in the swamp, a ceiling lamp on the moon.
+func _draw_lamps(cave: Rect2) -> void:
+	var at := Vector2(cave.get_center().x + 20, CAVE_TOP + 4)
+	match WorldLook.world:
+		"volcano":
+			for x: float in [World.CAVE_L + 118.0, cave.get_center().x + 40.0]:
+				_torch(Vector2(x, CAVE_TOP + 74))
+		"acid":
+			var flick := snappedf(0.8 + 0.2 * sin(_t * 2.0 + index), 0.05)
+			Art.line(self, at, at + Vector2(0, 26), Art.INK, 2.0)
+			Art.glow(self, at + Vector2(0, 34), 46.0, Color(0.7, 1.0, 0.45, 0.22 * flick), 16)
+			Art.push(self, at + Vector2(0, 26), PI)
+			WorldArt.mushroom(self, Color("b8ff5a"), 0.0, index)
+			Art.pop(self)
+		"moon":
+			Art.glow(self, at + Vector2(0, 30), 60.0, Color(0.8, 0.9, 1.0, 0.22), 16)
+			Art.line(self, at, at + Vector2(0, 14), Art.INK, 2.0)
+			Art.t_rect(self, Rect2(at.x - 22, at.y + 12, 44, 8), 3, Color("aeb6cc"), 2.2, 0.3)
+			Art.t_rect(self, Rect2(at.x - 18, at.y + 19, 36, 4), 2, Color("eaf6ff"), 1.6, 0.0)
+		_:
+			Art.push(self, at)
+			Props.lantern(self, _t + index, Color("ffd780"))
+			Art.pop(self)
+
+
+## A wall torch with a flickering flame; `at` is the top of its handle.
+func _torch(at: Vector2) -> void:
+	var flick := snappedf(0.85 + 0.15 * sin(_t * 9.0 + at.x * 0.1), 0.05)
+	Art.glow(self, at + Vector2(0, -12), 48.0, Color(1.0, 0.6, 0.25, 0.28 * flick), 16)
+	Art.push(self, at, 0.12)
+	Art.t_rect(self, Rect2(-3, 0, 6, 26), 2, Art.WOOD_DARK, 2.0, 0.0)
+	Art.t_rect(self, Rect2(-5, -4, 10, 6), 2, Color("6a6e86"), 2.0, 0.0)
+	Art.push(self, Vector2(0, -4), sin(_t * 7.0 + at.x) * 0.1, Vector2(1.0, flick))
+	Art.toon(self, _FLAME, Color("ff8a2a"), 2.0, 0.0)
+	Art.flat(self, _FLAME_IN, Color("ffe066"))
+	Art.pop(self)
+	Art.pop(self)
+
+
+static var _FLAME := Art.smooth_pts(PackedVector2Array([Vector2(-7, 0), Vector2(-6, -9), Vector2(0, -20), Vector2(6, -9), Vector2(7, 0)]), 2)
+static var _FLAME_IN := Art.smooth_pts(PackedVector2Array([Vector2(-3.5, -1), Vector2(-3, -6), Vector2(0, -12), Vector2(3, -6), Vector2(3.5, -1)]), 2)
+
+
+## Decor of the volcano, swamp and moon sites (true when drawn).
+func _draw_decor_world(st: Dictionary, cave: Rect2) -> bool:
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	match st["deco"]:
+		"ash":
+			for p: Vector3 in [Vector3(x0 - 10, 1.0, 0), Vector3(mid + 30, 0.8, 1)]:
+				Art.push(self, Vector2(p.x, y + 3), 0.0, Vector2(p.y, p.y))
+				Art.toon(self, _ASH_PILE, Color("8a8290"), 2.2, 0.5)
+				Art.pop(self)
+			Art.push(self, Vector2(x1 + 10, y + 2))
+			Art.toon(self, _VENT, Color("5a4e5c"), 2.2, 0.4)
+			Art.flat(self, Art.ellipse_pts(Vector2(0, -20), Vector2(5, 2), 10), Color("ff8a2a"))
+			Art.pop(self)
+			for k in 3:
+				var f := fposmod(_t * 0.3 + k / 3.0, 1.0)
+				Art.dot(self, Vector2(x1 + 10 + sin(_t + k * 2.0) * 10.0 * f, y - 24.0 - f * 70.0), 5.0 + f * 9.0, Color(0.6, 0.56, 0.62, 0.45 * (1.0 - f)))
+			_embers(Vector2(mid, y), 4, ore2)
+		"obsidian":
+			for p: Vector3 in [Vector3(x0 - 16, 46, -0.25), Vector3(x0 + 6, 30, 0.2), Vector3(x1 + 14, 40, 0.15)]:
+				Art.crystal(self, Vector2(p.x, y + 2), p.y, p.y * 0.24, p.z, Color("3a2e52"), 2.4)
+			for p: Vector3 in [Vector3(mid - 20, 30, 0.1), Vector3(mid + 40, 22, -0.2)]:
+				Art.crystal(self, Vector2(p.x, top - 2), p.y, p.y * 0.22, PI + p.z, Color("4a3c66"), 2.2)
+			var crack := PackedVector2Array([Vector2(x0 + 30, y + 6), Vector2(mid - 10, y + 3), Vector2(mid + 20, y + 7), Vector2(x1 - 10, y + 4)])
+			var hot := snappedf(0.7 + 0.3 * sin(_t * 2.0 + index), 0.1)
+			Art.line_c(self, crack, Color(1.0, 0.5, 0.2, hot), 4.0)
+			Art.line_c(self, crack, Color(1.0, 0.9, 0.5, hot), 1.6)
+			var tw := snappedf(0.5 + 0.5 * sin(_t * 3.0 + index), 0.05)
+			Art.push(self, Vector2(x0 + 4, y - 38), _t, Vector2.ONE * (0.4 + tw * 0.6))
+			Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.6, 4), Color(ore2, 0.9), 0.0, 0.0)
+			Art.pop(self)
+		"sulfur":
+			for p: Vector3 in [Vector3(x0 - 10, 1.4, 0.0), Vector3(x1 + 20, 1.0, 1.7)]:
+				Art.push(self, Vector2(p.x, y + 2), 0.0, Vector2(p.y, p.y))
+				Art.toon(self, _VENT, Color("8a7a4a"), 2.2, 0.4)
+				Art.flat(self, Art.ellipse_pts(Vector2(0, -20), Vector2(5, 2), 10), ore)
+				Art.pop(self)
+				for k in 3:
+					var f := fposmod(_t * 0.35 + k / 3.0 + p.z, 1.0)
+					Art.dot(self, Vector2(p.x + sin(_t * 1.3 + k) * 8.0 * f, y - 26.0 * p.y - f * 80.0), 6.0 + f * 10.0, Color(1.0, 0.95, 0.5, 0.4 * (1.0 - f)))
+			for k in 3:
+				OreArt.piece(self, "sulfur", Vector2(lerpf(x0 + 30, x1 - 20, k / 2.0), y + 3), 0.45 + (k % 2) * 0.15, -0.2 + k * 0.2, st, _t, k)
+		"opal":
+			# A geode cut open: rainbow rings inside a dark shell.
+			Art.push(self, Vector2(mid, y + 2), 0.0, Vector2.ONE * 1.1)
+			Art.toon(self, _GEODE, Color("6a4a4a"), 2.4, 0.4)
+			Art.flat(self, _GEODE_IN, Color("ffb070"))
+			Art.flat(self, _GEODE_MID, Color("7ae8ff"))
+			Art.flat(self, _GEODE_CORE, Color("ff7ad0"))
+			Art.pop(self)
+			var tw := snappedf(0.5 + 0.5 * sin(_t * 2.6 + index), 0.05)
+			Art.push(self, Vector2(mid + 8, y - 30), _t * 0.6, Vector2.ONE * (0.5 + tw * 0.6))
+			Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.6, 4), Color(1, 1, 1, 0.9), 0.0, 0.0)
+			Art.pop(self)
+			for x: float in [x0 - 6, x1 + 14]:
+				Art.push(self, Vector2(x, y + 3))
+				WorldArt.hot_rock(self, Color.WHITE, int(x) % 3)
+				Art.pop(self)
+		"embers":
+			# A brazier of glowing coals.
+			var hot := snappedf(0.8 + 0.2 * sin(_t * 5.0 + index), 0.05)
+			Art.glow(self, Vector2(mid, y - 30), 70.0, Color(1.0, 0.55, 0.2, 0.3 * hot), 16)
+			Art.push(self, Vector2(mid, y + 2))
+			Art.t_rect(self, Rect2(-4, -22, 8, 22), 2, Color("5a5060"), 2.2, 0.0)
+			Art.toon(self, _BOWL, Color("6e6474"), 2.4, 0.4)
+			for k in 4:
+				Art.t_circle(self, Vector2(-15 + k * 10, -30 - (k % 2) * 3), 5, Color("ff7a2a") if k % 2 else Color("ffb02e"), 1.6, 0.0)
+			Art.push(self, Vector2(0, -34), sin(_t * 6.0) * 0.08, Vector2(1.6, 1.6 * hot))
+			Art.toon(self, _FLAME, Color("ff8a2a"), 1.6, 0.0)
+			Art.flat(self, _FLAME_IN, Color("ffe066"))
+			Art.pop(self)
+			Art.pop(self)
+			_embers(Vector2(mid, y - 40), 6, ore2)
+			for x: float in [x0 - 4, x1 + 16]:
+				Art.push(self, Vector2(x, y + 3), 0.0, Vector2.ONE * 1.2)
+				WorldArt.hot_rock(self, Color.WHITE, int(x) % 3)
+				Art.pop(self)
+		"phoenix":
+			Art.push(self, Vector2(mid, y + 3))
+			Art.toon(self, _NEST, Color("a8743a"), 2.4, 0.5)
+			for k in 5:
+				Art.line(self, Vector2(-34 + k * 15, -10), Vector2(-24 + k * 15, -2), Color("7a4a24"), 2.0)
+			var bob := snappedf(sin(_t * 1.6) * 2.0, 0.5)
+			Art.glow(self, Vector2(0, -26 + bob), 40.0, Color(1.0, 0.6, 0.2, 0.35), 14)
+			Art.push(self, Vector2(0, -12 + bob), sin(_t * 8.0) * 0.06 * maxf(0.0, sin(_t * 0.7)))
+			OreArt.dragon_egg(self, ore, ore2, _t)
+			Art.pop(self)
+			Art.pop(self)
+			for k in 4:
+				var f := fposmod(_t * 0.1 + k * 0.25, 1.0)
+				var fp := Vector2(lerpf(x0 - 40, x1 + 40, fposmod(k * 0.37, 1.0)) + sin(_t * 1.5 + k) * 16.0, lerpf(top + 20, y - 10, f))
+				Art.push(self, fp, sin(_t * 2.0 + k) * 0.8)
+				OreArt.piece(self, "phoenix", Vector2.ZERO, 0.35, 0.0, st, _t, 1)
+				Art.pop(self)
+		"slime":
+			for p: Vector3 in [Vector3(x0 - 10, 1.0, 0), Vector3(mid + 40, 0.7, 1)]:
+				Art.push(self, Vector2(p.x, y + 3), 0.0, Vector2(p.y, p.y))
+				Art.toon(self, _PUDDLE, ore.darkened(0.1), 2.0, 0.0)
+				Art.pop(self)
+			for k in 2:
+				var hopf := absf(sin(_t * 2.2 + k * 1.7))
+				var sq := 1.0 + (1.0 - hopf) * 0.18
+				Art.push(self, Vector2(lerpf(x0 + 20, x1 - 10, k), y + 2 - snappedf(hopf * 10.0, 1.0)), 0.0, Vector2(sq, 2.0 - sq) * (0.9 + k * 0.2))
+				_slime_blob(ore, k)
+				Art.pop(self)
+		"moss":
+			Art.push(self, Vector2(mid + 10, y + 3))
+			WorldArt.pool(self, Color("7ad84a"), Color("e0ff9a"), 0.9)
+			Art.pop(self)
+			for k in 5:
+				Art.push(self, Vector2(lerpf(x0 - 40, x1 + 40, k / 4.0), y + 4), 0.0, Vector2.ONE * (0.8 + (k % 2) * 0.4))
+				Art.toon(self, _TUFT, Color("5ab84a") if k % 2 else Color("8ae04a"), 2.0, 0.3)
+				Art.pop(self)
+			for k in 4:
+				var f := fposmod(_t * 0.1 + k * 0.25, 1.0)
+				Art.dot(self, Vector2(mid + 10 + sin(k * 2.0 + _t) * 30.0, y - f * 80.0), 2.0, Color(0.85, 1.0, 0.5, 0.7 * sin(f * PI)))
+		"bubbles":
+			Art.push(self, Vector2(mid, y + 3))
+			WorldArt.pool(self, ore.darkened(0.15), ore2, 1.2)
+			Art.pop(self)
+			for k in 7:
+				var f := fposmod(_t * 0.3 + k / 7.0, 1.0)
+				var r := 4.0 + (k % 3) * 3.0
+				var bp := Vector2(mid - 40 + k * 13 + sin(_t * 1.4 + k) * 6.0, y - 4 - f * 120.0)
+				Art.arc(self, bp, r * (0.6 + f * 0.5), 0, TAU, 14, Color(1, 1, 1, 0.75 * (1.0 - f)), 2.0)
+				Art.dot(self, bp + Vector2(-r * 0.3, -r * 0.3), 1.4, Color(1, 1, 1, 0.8 * (1.0 - f)))
+			for x: float in [x0 - 8, x1 + 18]:
+				Art.push(self, Vector2(x, y + 3))
+				WorldArt.mushroom(self, Color("5ad8ff"), 0.0, int(x))
+				Art.pop(self)
+		"venom":
+			Art.push(self, Vector2(mid + 20, y + 3))
+			WorldArt.pool(self, ore.darkened(0.2), ore2, 1.0)
+			Art.pop(self)
+			for x: float in [x0 - 10, x1 + 20]:
+				Art.push(self, Vector2(x, y + 3), sin(_t * 0.8 + x) * 0.05)
+				Art.toon(self, _THORN_PLANT, Color("4a8a5a"), 2.2, 0.4)
+				for p: Vector2 in [Vector2(-8, -30), Vector2(7, -44), Vector2(-4, -56)]:
+					Art.t_circle(self, p, 4, ore, 1.6, 0.0)
+				Art.pop(self)
+			for k in 3:
+				var f := fposmod(_t * 0.4 + k / 3.0, 1.0)
+				Art.arc(self, Vector2(mid + 4 + k * 14, y - 2 - f * 20.0), 3.0 + f * 3.0, PI, TAU, 8, Color(ore2, 1.0 - f), 1.8)
+		"radiant":
+			var pulse := snappedf(0.7 + 0.3 * sin(_t * 2.4 + index), 0.05)
+			Art.glow(self, Vector2(mid, y - 30), 90.0, Color(ore, 0.25 * pulse), 18)
+			for p: Vector3 in [Vector3(x0 - 10, 36, -0.3), Vector3(x0 + 10, 50, 0.1), Vector3(mid + 30, 30, 0.2), Vector3(x1 + 14, 44, -0.15)]:
+				Art.crystal(self, Vector2(p.x, y + 2), p.y, p.y * 0.22, p.z, ore if p.y > 40 else ore.lightened(0.2), 2.2)
+			for k in 6:
+				var f := fposmod(_t * 0.12 + k / 6.0, 1.0)
+				var sp := Vector2(lerpf(x0 - 40, x1 + 40, fposmod(k * 0.41, 1.0)), lerpf(y - 10, top + 20, f))
+				Art.dot(self, sp, 2.2, Color(ore2, 0.8 * sin(f * PI)))
+		"orchids":
+			for k in 4:
+				Art.push(self, Vector2(lerpf(x0 - 30, x1 + 30, k / 3.0), y + 3), sin(_t * 0.9 + k) * 0.06, Vector2.ONE * (0.9 + (k % 2) * 0.3))
+				_orchid(ore if k % 2 == 0 else ore2.darkened(0.15), k)
+				Art.pop(self)
+			for k in 3:
+				var vx := lerpf(x0, x1, k / 2.0) + 20.0
+				Art.line_c(self, PackedVector2Array([Vector2(vx, top - 4), Vector2(vx + 6, top + 20), Vector2(vx - 2, top + 40)]), Color("4a8a4a"), 2.6)
+				Art.push(self, Vector2(vx - 2, top + 42), PI)
+				Art.t_circle(self, Vector2.ZERO, 5, ore, 1.6, 0.3)
+				Art.pop(self)
+		"goo":
+			# The goo king sits on his puddle throne.
+			Art.push(self, Vector2(mid, y + 3), 0.0, Vector2(1.4, 1.4))
+			Art.toon(self, _PUDDLE, ore.darkened(0.15), 2.0, 0.0)
+			var sq := 1.0 + 0.05 * sin(_t * 2.0)
+			Art.push(self, Vector2.ZERO, 0.0, Vector2(sq, 2.0 - sq) * 1.3)
+			_slime_blob(ore, 2)
+			Art.pop(self)
+			Art.push(self, Vector2(0, -37), sin(_t * 2.0) * 0.05, Vector2(0.75, 0.75))
+			OreArt.piece(self, "crown", Vector2.ZERO, 0.7, 0.0, {"ore": ore2, "ore2": Color("fff6c0")}, _t, 0)
+			Art.pop(self)
+			Art.pop(self)
+			for k in 2:
+				Art.push(self, Vector2(x0 - 10 + k * (x1 - x0 + 30), y + 2), 0.0, Vector2.ONE * 0.6)
+				_slime_blob(ore.lightened(0.15), k)
+				Art.pop(self)
+		"base":
+			for p: Vector3 in [Vector3(x0 - 10, 0, 0), Vector3(x0 + 18, 0, 1), Vector3(x0 + 4, -24, 2)]:
+				Art.t_rect(self, Rect2(p.x - 13, y + 2 + p.y - 24, 26, 24), 3, Color("aeb6cc") if p.z != 1 else Color("8ab4ff"), 2.2, 0.4)
+				Art.line(self, Vector2(p.x - 9, y + 2 + p.y - 12), Vector2(p.x + 9, y + 2 + p.y - 12), Color("6a6e86"), 2.0)
+			Art.push(self, Vector2(x1 + 16, y + 2))
+			var d := Props.downwind
+			Props.downwind = -1.0
+			Props.flag(self, Vector2.ZERO, 60, Color("ff5a7a"), 0.0, 0.8)
+			Props.downwind = d
+			Art.pop(self)
+			Art.push(self, Vector2(mid + 20, y + 4))
+			WorldArt.crater(self, st["floor"], 34.0)
+			Art.pop(self)
+		"comet":
+			var c := Vector2(mid + 10, top + 70)
+			Art.glow(self, c, 70.0, Color(ore, 0.25), 16)
+			Art.push(self, c, -0.4)
+			Art.toon(self, _TAIL_C, Color(ore2, 0.6), 0.0, 0.0)
+			Art.pop(self)
+			Art.push(self, c, snappedf(_t * 0.2, 0.02))
+			WorldArt.asteroid(self, 1, Color("a8d8f0"), Art.INK)
+			Art.pop(self)
+			for p: Vector3 in [Vector3(x0 - 10, 30, -0.2), Vector3(x1 + 14, 26, 0.25)]:
+				Art.crystal(self, Vector2(p.x, y + 2), p.y, p.y * 0.25, p.z, ore, 2.2)
+			_twinkles(x0, x1, top, y, ore2, 5)
+		"alien":
+			Art.push(self, Vector2(mid, y + 3))
+			Art.toon(self, _NEST, Color("4a6a5a"), 2.4, 0.5)
+			for k in 3:
+				Art.push(self, Vector2(-18 + k * 18, -10 - (k % 2) * 4), sin(_t * 7.0 + k) * 0.05 * maxf(0.0, sin(_t * 0.6 + k)), Vector2.ONE * (0.7 + (k % 2) * 0.15))
+				OreArt.dragon_egg(self, ore, ore2, _t + k)
+				Art.pop(self)
+			Art.pop(self)
+			# Two curious eyes peeking from a hole in the wall; they blink.
+			var hole := Vector2(x1 + 10, top + 60)
+			Art.t_ellipse(self, hole, Vector2(22, 15), Color("10201a"), 2.4, 0.0)
+			var open := 0.15 if Chars.blinking(_t * 0.6, index) else 1.0
+			for sx: float in [-1.0, 1.0]:
+				Art.push(self, hole + Vector2(sx * 8, 0), 0.0, Vector2(1.0, open))
+				Art.t_circle(self, Vector2.ZERO, 5, Color("c8ff8a"), 1.6, 0.0)
+				Art.disc(self, Vector2(0, 0.5), 2.2, Art.INK)
+				Art.pop(self)
+			for x: float in [x0 - 10]:
+				Art.push(self, Vector2(x, y + 3))
+				WorldArt.mushroom(self, Color("6aff8a"), 0.0, 1)
+				Art.pop(self)
+		"ufo":
+			# A little crashed saucer, its lights still blinking.
+			Art.push(self, Vector2(mid, y + 4), -0.22)
+			OreArt.piece(self, "ufo", Vector2.ZERO, 1.6, 0.0, st, _t, 0)
+			Art.pop(self)
+			for k in 3:
+				var f := fposmod(_t * 0.25 + k * 0.33, 1.0)
+				Art.dot(self, Vector2(mid - 30 + sin(k * 2.0 + _t) * 6.0, y - 10 - f * 60.0), 4.0 + f * 8.0, Color(0.8, 0.8, 0.9, 0.35 * (1.0 - f)))
+			for x: float in [x0 - 10, x1 + 20]:
+				Art.push(self, Vector2(x, y + 3))
+				WorldArt.crystal_cluster(self, ore2)
+				Art.pop(self)
+		_:
+			return false
+	return true
+
+
+func _embers(at: Vector2, n: int, c: Color) -> void:
+	for k in n:
+		var f := fposmod(_t * 0.35 + k / float(n), 1.0)
+		Art.dot(self, at + Vector2(sin(_t * 2.0 + k * 1.7) * 14.0 * f + (k - n / 2.0) * 8.0, -f * 90.0), 2.2 * (1.0 - f) + 0.6, Color(c, 1.0 - f))
+
+
+func _twinkles(x0: float, x1: float, top: float, y: float, c: Color, n: int) -> void:
+	for k in n:
+		var sp := Vector2(lerpf(x0 - 60, x1 + 70, fposmod(k * 0.377 + index * 0.1, 1.0)), lerpf(top + 16, y - 30, fposmod(k * 0.618, 1.0)))
+		var tw := snappedf(0.5 + 0.5 * sin(_t * (2.0 + k * 0.3) + k), 0.05)
+		Art.push(self, sp, 0.0, Vector2.ONE * (0.4 + tw * 0.7))
+		Art.toon(self, Art.star_pts(Vector2.ZERO, 7, 1.8, 4), Color(c, 0.5 + 0.5 * tw), 0.0, 0.0)
+		Art.pop(self)
+
+
+## A cute slime with a shine and a face; origin at its bottom.
+func _slime_blob(c: Color, k: int) -> void:
+	Art.toon(self, _BLOB, c, 2.4, 0.5)
+	Art.flat(self, _BLOB_SHINE, Color(1, 1, 1, 0.55))
+	var blink := Chars.blinking(_t + k * 1.3, index + k)
+	for sx: float in [-1.0, 1.0]:
+		if blink:
+			Art.line(self, Vector2(sx * 6 - 2, -12), Vector2(sx * 6 + 2, -12), Art.INK, 1.8)
+		else:
+			Art.t_ellipse(self, Vector2(sx * 6, -12), Vector2(2.0, 2.8), Art.INK, 0.0, 0.0)
+	Art.arc(self, Vector2(0, -9), 3.5, 0.4, PI - 0.4, 8, Art.INK, 1.8)
+
+
+func _orchid(c: Color, k: int) -> void:
+	Art.line_c(self, PackedVector2Array([Vector2(0, 0), Vector2(2, -16), Vector2(-1, -30)]), Color("4a8a4a"), 2.6)
+	Art.toon(self, _LEAF, Color("5ab84a"), 1.8, 0.3)
+	Art.push(self, Vector2(-1, -32))
+	for a in 5:
+		Art.push(self, Vector2.ZERO, TAU * a / 5.0 + k)
+		Art.toon(self, _PETAL, c, 1.6, 0.3)
+		Art.pop(self)
+	Art.t_circle(self, Vector2.ZERO, 3.5, Color("ffe066"), 1.4, 0.0)
+	Art.pop(self)
+
+
+static var _ASH_PILE := Art.smooth_pts(PackedVector2Array([Vector2(-30, 1), Vector2(-20, -10), Vector2(-4, -16), Vector2(12, -13), Vector2(28, -4), Vector2(32, 1)]), 3)
+static var _GEODE := Art.smooth_pts(PackedVector2Array([Vector2(-34, 0), Vector2(-32, -20), Vector2(-16, -36), Vector2(4, -40), Vector2(24, -32), Vector2(34, -14), Vector2(32, 0)]), 3)
+static var _GEODE_IN := Art.ellipse_pts(Vector2(0, -18), Vector2(24, 16), 22)
+static var _GEODE_MID := Art.ellipse_pts(Vector2(0, -18), Vector2(16, 11), 20)
+static var _GEODE_CORE := Art.ellipse_pts(Vector2(0, -18), Vector2(8, 6), 16)
+static var _BOWL := Art.smooth_pts(PackedVector2Array([Vector2(-24, -34), Vector2(24, -34), Vector2(18, -22), Vector2(0, -18), Vector2(-18, -22)]), 2)
+static var _NEST := Art.smooth_pts(PackedVector2Array([Vector2(-40, 0), Vector2(-42, -10), Vector2(-30, -16), Vector2(0, -14), Vector2(30, -16), Vector2(42, -10), Vector2(40, 0)]), 3)
+static var _PUDDLE := Art.ellipse_pts(Vector2(0, -2), Vector2(34, 6), 22)
+static var _BLOB := Art.smooth_pts(PackedVector2Array([Vector2(-16, 0), Vector2(-15, -10), Vector2(-8, -20), Vector2(0, -23), Vector2(8, -20), Vector2(15, -10), Vector2(16, 0)]), 3)
+static var _BLOB_SHINE := Art.ellipse_pts(Vector2(-7, -16), Vector2(3.5, 2.2), 10, -0.5)
+static var _TUFT := Art.smooth_pts(PackedVector2Array([Vector2(-14, 0), Vector2(-12, -6), Vector2(-6, -10), Vector2(0, -8), Vector2(6, -11), Vector2(12, -6), Vector2(14, 0)]), 2)
+static var _THORN_PLANT := Art.union([Geometry2D.offset_polyline(PackedVector2Array([Vector2(0, 0), Vector2(-4, -24), Vector2(2, -46), Vector2(-2, -60)]), 3.5, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0],
+		PackedVector2Array([Vector2(-2, -20), Vector2(-14, -26), Vector2(-3, -28)]), PackedVector2Array([Vector2(1, -38), Vector2(13, -44), Vector2(2, -46)])])
+static var _TAIL_C := PackedVector2Array([Vector2(0, -14), Vector2(110, -6), Vector2(110, 6), Vector2(0, 14)])
+static var _LEAF := Art.smooth_pts(PackedVector2Array([Vector2(1, -8), Vector2(12, -14), Vector2(18, -10), Vector2(10, -6)]), 2)
+static var _PETAL := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-5, -7), Vector2(0, -12), Vector2(5, -7)]), 2)
