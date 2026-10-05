@@ -3,6 +3,11 @@ extends RefCounted
 ## Old name of WorldLook (one look per ocean before the worlds update),
 ## kept as a thin alias for older callers. New code uses WorldLook.
 
+## The location the colors were built for (WorldLook.location).
+static var ocean: int:
+	get:
+		return WorldLook.location
+
 
 static func apply(n: int) -> bool:
 	return WorldLook.apply(n)
