@@ -212,7 +212,7 @@ func test_vault() -> void:
 	# The tab's badge shows whole coins (a first cycle can make less than 1).
 	gs.vault = maxf(gs.vault, 25.0)
 	gs.vault_changed.emit()
-	await _frames(20)
+	await create_timer(0.4).timeout
 	var tabs: Node = main.room_tabs()
 	check(tabs._badge[2] != "", "the Office tab shows the coins waiting")
 	main.show_room(2, false)
@@ -411,13 +411,16 @@ func test_tutorial() -> void:
 	pr.tutorial_step = 3
 	gs.dock = 50.0
 	gs.managers["plant"] = false
+	# The reset brings back "something new" news: put them away.
+	await _frames(2)
+	await _close_dialogs()
 	main.show_room(0, false)
-	await _frames(6)
+	await _wait_key("TUT_GO_FACTORY")
 	var tutor: Node = main._tutor
 	check(tutor._has_target and tutor.key == "TUT_GO_FACTORY", "the tutorial points at the Factory tab (%s)" % tutor.key)
 	check(tutor._target.distance_to(_tab(1)) < 5.0, "right at the tab")
 	main.show_room(1, false)
-	await _frames(4)
+	await _wait_key("TUT_TAP_PLANT")
 	check(tutor.key == "TUT_TAP_PLANT", "in the factory it points at the machine (%s)" % tutor.key)
 	gs.tap("plant")
 	await _frames(2)
@@ -426,19 +429,32 @@ func test_tutorial() -> void:
 	gs.coins = 0.0
 	gs.vault = gs.upgrade_cost("d0") * 2.0
 	main.show_room(0, false)
-	await _frames(4)
+	await _wait_key("TUT_VAULT")
 	check(tutor.key == "TUT_VAULT", "coins in the vault: it points at the Office (%s)" % tutor.key)
 	main.show_room(2, false)
-	await _frames(4)
+	await _wait_key("TUT_COLLECT")
 	check(tutor.key == "TUT_COLLECT", "then at Collect (%s)" % tutor.key)
 	gs.collect_vault()
-	await _frames(4)
+	await _wait_key("TUT_GO_MINE")
 	check(tutor.key == "TUT_GO_MINE", "then back to the mine (%s)" % tutor.key)
 	main.show_room(0, false)
-	await _frames(4)
+	await _wait_key("TUT_UPGRADE")
 	check(tutor.key == "TUT_UPGRADE", "and the upgrade (%s)" % tutor.key)
 	pr.tutorial_step = 12
 	await _frames(2)
+
+
+## Waits (up to 3 s) for the tutorial to show `key`.
+func _wait_key(key: String) -> void:
+	var t0 := Time.get_ticks_msec()
+	while main._tutor.key != key and Time.get_ticks_msec() - t0 < 3000:
+		await process_frame
+	if main._tutor.key != key:
+		print("  tutor: top=%s map=%s puzzle=%s fish=%s title=%s sheet=%s step=%d" % [main._top.visible, main._map.visible, is_instance_valid(main._puzzle), is_instance_valid(main._fishing), is_instance_valid(main._title), main._sheet_open, pr.tutorial_step])
+		var ls := []
+		for l in _find(main._top, "Label", []):
+			ls.append(l.text)
+		print("  top: ", ls.slice(0, 6))
 
 
 func test_cursor_setting() -> void:
