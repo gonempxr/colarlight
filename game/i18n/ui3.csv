@@ -18,7 +18,7 @@ EVO_NEED,%s more coins to go,Ещё %s монет,Faltan %s monedas,还差 %s �
 EVO_HAVE,Looks: %d of %d · bonus +%d%%,Образы: %d из %d · бонус +%d%%,Looks: %d de %d · bonus +%d%%,造型：%d / %d · 加成 +%d%%
 EVO_OPTIONAL,New looks are not needed to open the next world: they just make every coin come faster.,"Новые образы не нужны, чтобы открыть следующий мир: они просто ускоряют все монеты.",Los looks nuevos no hacen falta para abrir el siguiente mundo: solo hacen que las monedas lleguen más rápido.,开启下一个世界不需要新造型：它们只是让金币来得更快。
 EVO_NOW,Wearing now,Сейчас надето,Lo llevan ahora,正在穿
-EVO_LATER,Later…,Потом…,Más tarde…,以后…
+EVO_LATER,Locked,Закрыто,Bloqueado,未解锁
 EVO_NEW,New look!,Новый образ!,¡Nuevo look!,新造型！
 EVO_BOUGHT,Your workers are now: %s!,Теперь твои работники — %s!,¡Ahora tus trabajadores son: %s!,你的工人变成了：%s！
 WORLD_WELCOME,Welcome to %s!,Добро пожаловать: %s!,¡Bienvenido a %s!,欢迎来到%s！

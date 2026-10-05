@@ -207,6 +207,12 @@ func bar_bottom() -> float:
 	return maxf(0.0, _bar.position.y + _bar.size.y)
 
 
+## Bottom of the drawn bar on phones (its content can make it taller than
+## the HUD's own size).
+func phone_bottom() -> float:
+	return maxf(size.y, _bar.position.y + maxf(_bar.size.y, _bar.get_combined_minimum_size().y))
+
+
 ## Height the HUD takes from the top of the screen (the notch on PC).
 func used_height() -> float:
 	return _pill.size.y if _notch else size.y

@@ -162,7 +162,7 @@ static func _cell(w: String, f: int, e: int, fresh: int) -> Control:
 	v.add_child(pic)
 	var name_text := t(WorkerLooks.name_key(w, f)) if owned or ahead else "???"
 	var name := Views.label(name_text, 16, Art.INK if owned or ahead else Color("cfc6ef"), true)
-	_one_line(name)
+	_two_lines(name, 16)
 	v.add_child(name)
 	var line: Label
 	if f == e:
@@ -185,6 +185,33 @@ static func _cell(w: String, f: int, e: int, fresh: int) -> Control:
 	_one_line(line)
 	v.add_child(line)
 	return card
+
+
+## Up to two centered lines (long names wrap, then shrink); always two
+## lines tall so the cells in a row line up.
+static func _two_lines(l: Label, fs: int) -> void:
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.max_lines_visible = 2
+	l.custom_minimum_size = Vector2(40, l.get_theme_font("font").get_height(fs) * 2.0 - 6.0)
+	l.add_theme_constant_override("line_spacing", -3)
+	l.resized.connect(func():
+		if l.size.x <= 1.0:
+			return
+		var font := l.get_theme_font("font")
+		var f := fs
+		while f > 11:
+			# Every word must fit the width, and the whole name two lines.
+			var ok := true
+			for w in l.text.split(" ", false):
+				if font.get_string_size(w, HORIZONTAL_ALIGNMENT_LEFT, -1, f).x > l.size.x:
+					ok = false
+			if ok and font.get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_CENTER, l.size.x, f, 3, TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND | TextServer.BREAK_ADAPTIVE).y <= font.get_height(f) * 2.0 + 1.0:
+				break
+			f -= 1
+		if l.get_theme_font_size("font_size") != f:
+			l.add_theme_font_size_override("font_size", f))
 
 
 ## One centered line that shrinks to the card (no wrapping, no overflow).

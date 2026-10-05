@@ -567,8 +567,10 @@ func _layout() -> void:
 		_dock.position = Vector2(view.x - side - 12.0, view.y - dock_h)
 	else:
 		_tabs.size = Vector2(view.x, RoomTabs.STRIP_H)
-		_tabs.position = Vector2(0, HUD_H - 2.0)
-		var top := _tabs.position.y + RoomTabs.STRIP_H - 10.0
+		# Right under the drawn bar (whole pills visible, nothing tucked under).
+		_tabs.position = Vector2(0, _hud.phone_bottom() - 4.0)
+		# (+4: the Office badge hangs under its tab; keep it off the room cards.)
+		var top := _tabs.position.y + RoomTabs.STRIP_H + 4.0
 		_area = Rect2(0, top, view.x, view.y - top - dock_h + 10.0)
 		_scroller.zoom = 1.0
 		_factory.set_insets(0.0, 10.0)
