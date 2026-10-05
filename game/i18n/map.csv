@@ -1,0 +1,26 @@
+keys,en,ru,es,zh
+MAP_TITLE,World map,Карта мира,Mapa del mundo,世界地图
+OPEN_WORLD,Open %s,Открыть: %s,Abrir %s,开启%s
+MAP_W_OCEAN,Ocean Island,Океанский остров,Isla del Océano,海洋岛
+MAP_W_VOLCANO,Volcano Island,Остров-вулкан,Isla Volcán,火山岛
+MAP_W_ACID,Acid Swamp,Кислотное болото,Pantano Ácido,酸液沼泽
+MAP_W_MOON,Moon,Луна,Luna,月球
+MAP_NEXT,Next: %s,Дальше: %s,Siguiente: %s,下一站：%s
+MAP_HINT_OCEAN,A new sea with bigger treasures is waiting!,Новое море с ещё большими сокровищами!,¡Un mar nuevo con tesoros más grandes te espera!,新的大海，藏着更大的宝藏！
+MAP_HINT_VOLCANO,Something hot is rumbling there…,Там что-то горячее грохочет…,Algo caliente retumba allí…,那里有什么滚烫的东西在轰鸣……
+MAP_HINT_ACID,Something green is bubbling there…,Там что-то зелёное булькает…,Algo verde burbujea allí…,那里有什么绿色的东西在冒泡……
+MAP_HINT_MOON,Something shines among the stars…,Что-то сияет среди звёзд…,Algo brilla entre las estrellas…,群星之间有什么在闪光……
+MAP_LOCKED_FAR,Open the islands before this one first!,Сначала открой острова перед этим!,¡Primero abre las islas de antes!,先开启前面的岛屿吧！
+MAP_GOAL_SITES,Open all work sites,Открой все места добычи,Abre todos los sitios de trabajo,开启所有工作点
+MAP_GOAL_FOREMEN,Hire all foremen,Найми всех бригадиров,Contrata a todos los capataces,雇佣所有工头
+MAP_GOAL_MANAGERS,"Hire the lift, boat and factory managers","Найми управляющих лифта, лодок и заводов","Contrata a los jefes del ascensor, barcos y fábricas",雇佣升降机、船和工厂的经理
+MAP_GOAL_EVO,Unlock every worker look,Открой все образы работника,Desbloquea todos los aspectos del trabajador,解锁工人的所有造型
+MAP_PRICE,Ticket price,Цена билета,Precio del billete,船票价格
+MAP_YOU_HAVE,You have %s,У тебя %s,Tienes %s,你有%s
+MAP_GOALS_FIRST,Finish the list above first,Сначала выполни список выше,Primero completa la lista de arriba,先完成上面的清单
+MAP_NEED_COINS,Save up a few more coins,Накопи ещё немного монет,Ahorra unas monedas más,再攒一些金币
+MAP_KEEP,"Stays with you: your managers, room decor and outfits.","Останется с тобой: управляющие, украшения комнаты и наряды.","Se queda contigo: tus jefes, la decoración y los trajes.",会保留：你的经理、房间装饰和服装。
+MAP_RESET,Starts again: coins and levels. But the new island pays much more!,Начнутся заново: монеты и уровни. Зато новый остров платит гораздо больше!,Empiezan de nuevo: monedas y niveles. ¡Pero la nueva isla paga mucho más!,会重新开始：金币和等级。但新岛屿的收入高得多！
+MAP_CONFIRM,Sail to %s?,Отправляемся? Новый мир: %s,¿Viajamos a %s?,出发去%s吗？
+MAP_YES,Let's go!,Поехали!,¡Vamos!,出发！
+MAP_NO,Not yet,Пока нет,Todavía no,还不要
