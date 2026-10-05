@@ -1,7 +1,8 @@
 class_name Hud
 extends Control
 ## Top bar: the player's avatar (opens the profile), coins and income
-## in a pill with the rush meter, Dive Deeper (prestige) and settings.
+## in a pill with the rush meter, and settings. (The next world opens from
+## the map's gate panel; the old Dive Deeper button is gone.)
 ## Phone: one bar across the top with the pill in the middle.
 ## PC ("notch"): only the coin pill stays, hanging from the top edge in the
 ## middle like a MacBook notch; the bar with the buttons hides above the
@@ -11,7 +12,6 @@ extends Control
 const NOTCH_REVEAL_Y := 90.0
 const HIDE_DELAY := 0.9
 
-signal prestige_pressed
 signal settings_pressed
 signal avatar_pressed
 
@@ -23,7 +23,6 @@ var _pearl_icon: TextureRect
 var _pearl_bump := 0.0
 var _rush: ProgressBar
 var _rush_label: Label
-var _prestige: Button
 var _avatar: Control
 var _shown_coins := 0.0
 var _t := 0.0
@@ -140,15 +139,6 @@ func _ready() -> void:
 	_rush_label.add_theme_color_override("font_color", Color("ff9fd0"))
 	_rush_label.visible = false
 	mid.add_child(_rush_label)
-
-	_prestige = Button.new()
-	_prestige.theme_type_variation = &"PurpleButton"
-	_prestige.custom_minimum_size = Vector2(80, 80)
-	_prestige.icon = Icons.get_icon("helmet", 46)
-	_prestige.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_prestige.tooltip_text = tr("PRESTIGE")
-	_prestige.pressed.connect(func(): Sfx.play("click"); prestige_pressed.emit())
-	row.add_child(_prestige)
 
 	var settings := Button.new()
 	settings.theme_type_variation = &"BlueButton"
@@ -327,8 +317,6 @@ func _process(delta: float) -> void:
 	elif boosted:
 		_rush_label.text = "×2  %s" % NumFormat.duration(GameState.boost_left)
 		_rush_label.add_theme_color_override("font_color", Art.GOLD)
-	_prestige.tooltip_text = tr("PRESTIGE")
-	_prestige.theme_type_variation = &"GoldButton" if GameState.can_prestige() else &"PurpleButton"
 
 
 ## Scales a label about its middle, touching it only when something changed

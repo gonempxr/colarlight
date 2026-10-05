@@ -79,6 +79,8 @@ static func build(m: Modal, main: Node) -> void:
 	_row(m, "UI_SIZE", _cycle(t(["SIZE_NORMAL", "SIZE_BIG", "SIZE_HUGE"][scales.find(Settings.ui_scale)]),
 			func(): Settings.set_value("ui_scale", scales[(scales.find(Settings.ui_scale) + 1) % scales.size()])))
 	_row(m, "REDUCE_MOTION", _toggle(Settings.reduce_motion, func(v): Settings.set_value("reduce_motion", v)))
+	if not HandCursor.touch_device():
+		_row(m, "HAND_CURSOR", _toggle(Settings.hand_cursor, func(v): Settings.set_value("hand_cursor", v)))
 
 	_section(m, "SET_PLAYER")
 	m.button("%s: %s" % [t("PLAYERS"), Profiles.player_name() if Profiles.player_name() != "" else "?"],

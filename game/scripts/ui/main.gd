@@ -1,8 +1,13 @@
 extends Control
-## Main screen. Phone (portrait): top bar, scrolling ocean, the feature dock
-## at the bottom and the upgrade sheet sliding up over it. PC (landscape):
-## top bar, ocean on the left, upgrade panel and dock on the right.
-## Also routes the meta game: dialogs, rewards, the puzzle, players.
+## Main screen with three rooms: the Mine (room 1: the world with the lift,
+## the boats and the work sites), the Factory (room 2) and the Office
+## (room 3: the vault, the accountant, evolution, outfits and decor).
+## Phone (portrait): top bar, the room tabs under it, the room, the feature
+## dock at the bottom and the upgrade sheet sliding up over it; a swipe
+## left or right changes the room. PC (landscape): the coin notch, the room
+## on the left with the tabs floating under the notch, cards, the upgrade
+## panel and the dock on the right.
+## Also routes the meta game: dialogs, rewards, the map, the puzzle, players.
 
 const WIDE_ASPECT := 1.05
 const REFRESH_SEC := 0.1
@@ -12,20 +17,43 @@ const HUD_H := 112.0
 const DOCK_H := 128.0
 const PUZZLE_SCRIPT := "res://scripts/puzzle/puzzle_screen.gd"
 const LEVELS_SCRIPT := "res://scripts/puzzle/puzzle_levels.gd"
+const ROOMS := ["mine", "factory", "office"]
+const MINE := 0
+const FACTORY := 1
+const OFFICE := 2
+const SLIDE_SEC := 0.34
+## A finger has to travel this far sideways (and mostly sideways) to swipe.
+const SWIPE_MIN := 70.0
 
 var _hud: Hud
+var _tabs: RoomTabs
 var _scroller: Scroller
 var _world: World
+var _factory: FactoryRoom
+var _office: OfficeRoom
 var _panel: UpgradePanel
 var _dock: Dock
 var _dock_laid_out := false
-## PC only: lift, boat and plant cards in a row in the side column (the
-## in-world ones hide).
+## Phone: the plant's card on the factory's wall, the office buttons under
+## the office, the evolution card in room 1's card row.
+var _factory_card: StageCard
+var _office_bar: OfficeBar
+var _evo_card: EvoCard
+## PC only: the cards in a row in the side column (the in-room ones hide):
+## lift, boat, evolution in the mine; the plant in the factory; the office
+## card replaces cards and panel in the office.
 var _side_cards: HBoxContainer
 var _side_lift: StageCard
 var _side_boat: StageCard
+var _side_evo: EvoCard
 var _side_plant: StageCard
+var _side_office: OfficeBar
 var _hint_btn: HintButton
+## The mini-map: PC under the lightbulb (over the room), phone in room 1
+## under the card row (it scrolls with the world).
+var _mini: MiniMap
+var _mini_world: MiniMap
+var _map: MapView
 ## Under the lightbulb: x2 for an optional ad (only where ads exist) and
 ## the Rivals League trophy (only while a weekly reward waits).
 var _boost_btn: SideButton
@@ -50,6 +78,19 @@ var _refresh_left := 0.0
 var _news: Array[String] = []
 var _started := false
 var _sheet_tween: Tween
+## The room shown (0 mine, 1 factory, 2 office) and the slide between rooms
+## (a float index: 0.5 is halfway from the mine to the factory).
+var _room := MINE
+var _slide := 0.0
+var _slide_tween: Tween
+## Rooms' area on screen.
+var _area := Rect2()
+## The stage each room last showed in the upgrade panel.
+var _room_key: Array[String] = ["d0", "plant", ""]
+## Swipe tracking.
+var _swipe_from := Vector2.ZERO
+var _swipe_on := false
+var _swiped := false
 ## Settings that change what dialogs show (not the volumes: rebuilding the
 ## settings dialog while a volume slider is dragged would drop the drag).
 var _settings_sig := []
@@ -74,6 +115,41 @@ func _ready() -> void:
 	_world.stage_selected.connect(_on_stage_selected)
 	_world.chest.opened.connect(func(r, at): celebrate(r, at))
 
+	_factory = FactoryRoom.new()
+	_factory.visible = false
+	add_child(_factory)
+	_factory.stage_selected.connect(_on_stage_selected)
+	_factory_card = StageCard.new("plant")
+	_factory_card.world = _world
+	_factory_card.custom_minimum_size = Vector2(World.CARD_W, 0)
+	_factory.add_child(_factory_card)
+
+	_office = OfficeRoom.new()
+	_office.visible = false
+	add_child(_office)
+	_office.collected.connect(func(amount: float, from: Vector2): celebrate({"coins": amount}, from, false))
+	_office.open_evolution.connect(open_evolution)
+	_office.open_outfits.connect(open_outfits)
+	_office.decor_selected.connect(open_decor)
+	_office_bar = OfficeBar.new()
+	_connect_office_bar(_office_bar)
+	_office.add_child(_office_bar)
+
+	# Room 1: the evolution card takes the plant card's place in the row
+	# (the plant works in the factory now), the mini-map hangs under it.
+	_world.surface.plant_card.visible = false
+	_evo_card = EvoCard.new()
+	_evo_card.custom_minimum_size = Vector2(World.CARD_W, 0)
+	_evo_card.open_panel.connect(open_evolution)
+	_world.add_child(_evo_card)
+	_mini_world = MiniMap.new()
+	_mini_world.open_map.connect(open_map)
+	_world.add_child(_mini_world)
+	_mini = MiniMap.new()
+	_mini.big = true
+	_mini.open_map.connect(open_map)
+	add_child(_mini)
+
 	_dock = Dock.new()
 	_dock.pressed.connect(open_feature)
 	add_child(_dock)
@@ -86,25 +162,41 @@ func _ready() -> void:
 	_side_cards.add_theme_constant_override("separation", 8)
 	_side_cards.visible = false
 	add_child(_side_cards)
-	for k in ["lift", "boat", "plant"]:
-		var c := StageCard.new(k)
-		c.world = _world
-		c.hero = true
-		c.narrow = true
+	for k in ["lift", "boat", "evo", "plant"]:
+		var c: Control
+		if k == "evo":
+			_side_evo = EvoCard.new()
+			_side_evo.hero = true
+			_side_evo.narrow = true
+			_side_evo.open_panel.connect(open_evolution)
+			c = _side_evo
+		else:
+			var sc := StageCard.new(k)
+			sc.world = _world
+			sc.hero = true
+			sc.narrow = true
+			c = sc
+			match k:
+				"lift":
+					_side_lift = sc
+				"boat":
+					_side_boat = sc
+				_:
+					_side_plant = sc
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		c.size_flags_stretch_ratio = 1.0
 		c.custom_minimum_size.x = 0
 		_side_cards.add_child(c)
-		match k:
-			"lift":
-				_side_lift = c
-			"boat":
-				_side_boat = c
-			_:
-				_side_plant = c
+	_side_office = OfficeBar.new()
+	_side_office.full = true
+	_side_office.visible = false
+	_connect_office_bar(_side_office)
+	add_child(_side_office)
 
+	_tabs = RoomTabs.new()
+	_tabs.selected.connect(func(i): show_room(i))
+	add_child(_tabs)
 	_hud = Hud.new()
-	_hud.prestige_pressed.connect(_open_prestige)
 	_hud.settings_pressed.connect(_open_settings)
 	_hud.avatar_pressed.connect(open_profile)
 	add_child(_hud)
@@ -138,6 +230,12 @@ func _ready() -> void:
 	_toast.add_child(_toast_label)
 	add_child(_toast)
 
+	_map = MapView.new()
+	_map.visible = false
+	add_child(_map)
+	_map.location_opened.connect(_on_location_opened)
+	_map.closed.connect(_on_map_closed)
+
 	_modal = Modal.new()
 	add_child(_modal)
 	_top = Modal.new()
@@ -169,6 +267,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	Wardrobe.apply_looks()
 	Progress.changed.connect(Wardrobe.apply_looks)
+	HandCursor.apply(Settings.hand_cursor)
 	_layout()
 	_refresh()
 	if show_title:
@@ -180,6 +279,18 @@ func _ready() -> void:
 	else:
 		_after_title()
 	_announce_ready()
+
+
+func _connect_office_bar(b: OfficeBar) -> void:
+	b.evolution_pressed.connect(open_evolution)
+	b.outfits_pressed.connect(open_outfits)
+	b.decor_pressed.connect(func(): open_decor(""))
+	b.collect_pressed.connect(func(from: Vector2):
+		var amount := GameState.collect_vault()
+		if amount > 0.0:
+			celebrate({"coins": amount}, from)
+		else:
+			Sfx.play("tap"))
 
 
 ## Tells the web loading screen (web/shell.html) that the first frame is
@@ -205,22 +316,43 @@ func _after_title() -> void:
 
 func _process(delta: float) -> void:
 	if _wide:
-		# The lightbulb rides below the top bar while it slides down on PC.
-		_hint_btn.position.y = 24.0 + _hud.bar_bottom()
+		# The lightbulb, the mini-map and the tabs ride below the top bar
+		# while it slides down on PC.
+		var drop := _hud.bar_bottom()
+		_hint_btn.position.y = 24.0 + drop
+		_tabs.position.y = maxf(_hud.used_height() + 10.0, drop + 10.0)
 	_place_side_buttons()
 	_refresh_left -= delta
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title)
+	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or _room != MINE
 	if _side_fit_frames > 0 and _wide:
 		_side_fit_frames -= 1
 		var view := get_viewport_rect().size
 		_fit_side_column(view, minf(SIDE_W, view.x * 0.4), _dock_height())
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		HandCursor.press(event.pressed)
+	_track_swipe(event)
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if not OS.is_debug_build() or not event is InputEventKey or not event.pressed:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if _modal.visible or _top.visible or _map.visible or is_busy():
+		return
+	# PC: 1 / 2 / 3 or the arrow keys change the room.
+	match event.keycode:
+		KEY_1, KEY_2, KEY_3:
+			show_room(event.keycode - KEY_1)
+		KEY_LEFT:
+			show_room(maxi(0, _room - 1))
+		KEY_RIGHT:
+			show_room(mini(2, _room + 1))
+	if not OS.is_debug_build():
 		return
 	match event.keycode:
 		KEY_F8:
@@ -231,9 +363,98 @@ func _unhandled_input(event: InputEvent) -> void:
 			Progress.reset_progress()
 
 
-## True while something covers the ocean (tutorial waits).
-## The card the player sees for a stage (PC: the side column for the boat
-## and the plant).
+# --- Rooms ------------------------------------------------------------------------------
+
+## Which room a stage's card and machine live in.
+static func room_of(key: String) -> int:
+	if key == "plant" or key == "plant2":
+		return FACTORY
+	if key == "vault":
+		return OFFICE
+	return MINE
+
+
+func current_room() -> int:
+	return _room
+
+
+## Shows room i (0 mine, 1 factory, 2 office), sliding over from the one
+## shown now (left to right is the way the ore goes).
+func show_room(i: int, animate: bool = true) -> void:
+	i = clampi(i, 0, 2)
+	if i == _room:
+		return
+	_room = i
+	_tabs.set_current(i)
+	Sfx.play("pop", 0.9 + i * 0.1)
+	if _sheet_open and not _wide:
+		_close_sheet()
+	if _wide and i != OFFICE and _room_key[i] != "":
+		_panel.show_stage(_room_key[i])
+	if _slide_tween:
+		_slide_tween.kill()
+	if not animate or Settings.reduce_motion or not is_inside_tree():
+		_slide = float(i)
+		_place_rooms()
+	else:
+		_slide_tween = create_tween()
+		_slide_tween.tween_method(func(v: float):
+			_slide = v
+			_place_rooms(), _slide, float(i), SLIDE_SEC).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_layout_side()
+	_refresh()
+
+
+## Rooms side by side, moved by the slide; only the ones on screen show.
+func _place_rooms() -> void:
+	var rooms: Array[Control] = [_scroller, _factory, _office]
+	for i in rooms.size():
+		var r := rooms[i]
+		var off := (float(i) - _slide) * (_area.size.x + 24.0)
+		var on := absf(float(i) - _slide) < 0.999
+		r.visible = on
+		r.position = Vector2(_area.position.x + roundf(off), _area.position.y)
+		if r.size != _area.size:
+			r.size = _area.size
+	# Room 1's overlays go with it.
+	var m := 1.0 - clampf(absf(_slide), 0.0, 1.0)
+	_mini.visible = _wide and m > 0.01
+	_mini.modulate.a = m
+
+
+## Swipe left/right over the room changes it (phones; works with a mouse
+## drag too). A swipe never presses the button it started on.
+func _track_swipe(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_swipe_on = _area.has_point(event.position) and not _blocked()
+			_swipe_from = event.position
+			_swiped = false
+		else:
+			_swipe_on = false
+	elif event is InputEventMouseMotion and _swipe_on and not _swiped:
+		var d: Vector2 = event.position - _swipe_from
+		if _scroller._dragging:
+			_swipe_on = false
+			return
+		if absf(d.x) > SWIPE_MIN and absf(d.x) > absf(d.y) * 1.8:
+			_swiped = true
+			_swipe_on = false
+			var to := _room + (1 if d.x < 0.0 else -1)
+			if to >= 0 and to <= 2:
+				show_room(to)
+			# Buttons ask Scroller.is_drag() and ignore this release.
+			Scroller._dragged_recently = true
+			(func(): Scroller._dragged_recently = false).call_deferred()
+
+
+func _blocked() -> bool:
+	return _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title)
+
+
+# --- Cards ------------------------------------------------------------------------------
+
+## The card the player sees for a stage (PC: the side column).
 func stage_card(key: String) -> StageCard:
 	if key == "lift":
 		return _side_lift if _wide else _world.lift.phone_card()
@@ -241,13 +462,28 @@ func stage_card(key: String) -> StageCard:
 	if GameState.is_boat(key):
 		return _side_boat if _wide else _world.surface.boat_card
 	if GameState.is_plant(key):
-		return _side_plant if _wide else _world.surface.plant_card
+		return _side_plant if _wide else _factory_card
 	var i := GameState.depth_index(key)
 	return _world.rows[i].card if i >= 0 else null
 
 
+## The evolution card the player sees (room 1 or the PC column).
+func evo_card() -> EvoCard:
+	return _side_evo if _wide else _evo_card
+
+
+## The office buttons the player sees (under the office or the PC column).
+func office_bar() -> OfficeBar:
+	return _side_office if _wide else _office_bar
+
+
+func room_tabs() -> RoomTabs:
+	return _tabs
+
+
+## True while something covers the rooms (tutorial waits).
 func is_busy() -> bool:
-	return _top.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or (_sheet_open and not _wide)
+	return _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or (_sheet_open and not _wide)
 
 
 func _apply_ui_scale() -> void:
@@ -278,29 +514,38 @@ func _layout() -> void:
 	_hud.size = Vector2(view.x, HUD_H)
 	_hud.area_w = view.x - minf(SIDE_W, view.x * 0.4) - 24.0 if _wide else 0.0
 	_hud.set_notch(_wide)
+	_tabs.floating = _wide
+	_mini_world.visible = not _wide
 	if _wide:
 		var side := minf(SIDE_W, view.x * 0.4)
 		var world_w := view.x - side - 36.0
-		# The notch floats over the sky, so the ocean fills the whole height.
-		_scroller.position = Vector2(12, 0)
-		_scroller.size = Vector2(world_w, view.y)
+		# The notch floats over the sky, so the rooms fill the whole height.
+		_area = Rect2(12, 0, world_w, view.y)
+		var tw := minf(RoomTabs.PILL_W, world_w - 2.0 * (HintButton.SIZE + 40.0))
+		_tabs.size = Vector2(tw, RoomTabs.PILL_H)
+		_tabs.position = Vector2(roundf(12.0 + (world_w - tw) / 2.0), maxf(_hud.used_height() + 10.0, 0.0))
+		var top := _hud.used_height() + 10.0 + RoomTabs.PILL_H + 8.0
 		_scroller.zoom = clampf(world_w / 960.0, 1.0, 1.7)
-		_scroller.scroll_to(_scroller.scroll)
+		_factory.set_insets(top, 0.0)
+		_office.set_insets(top, 0.0)
+		_office_bar.visible = false
+		_factory_card.visible = false
+		_evo_card.visible = false
 		_panel.set_docked(true)
-		_panel.visible = true
-		_side_cards.visible = true
 		_panel.custom_minimum_size = Vector2(side, 0)
-		_fit_side_column(view, side, dock_h)
-		_side_fit_frames = 2
 		_dock.fit(side)
 		_dock.size = Vector2(side, dock_h)
 		_dock.position = Vector2(view.x - side - 12.0, view.y - dock_h)
 	else:
-		_side_cards.visible = false
-		_scroller.position = Vector2(0, HUD_H - 8.0)
-		_scroller.size = Vector2(view.x, view.y - HUD_H + 8.0 - dock_h + 10.0)
+		_tabs.size = Vector2(view.x, RoomTabs.STRIP_H)
+		_tabs.position = Vector2(0, HUD_H - 4.0)
+		var top := _tabs.position.y + RoomTabs.STRIP_H - 10.0
+		_area = Rect2(0, top, view.x, view.y - top - dock_h + 10.0)
 		_scroller.zoom = 1.0
-		_scroller.scroll_to(_scroller.scroll)
+		_factory.set_insets(0.0, 10.0)
+		_office_bar.visible = true
+		_factory_card.visible = true
+		_evo_card.visible = true
 		_panel.set_docked(false)
 		_panel.custom_minimum_size = Vector2(view.x, 0)
 		_panel.size = Vector2(view.x, 0)
@@ -309,18 +554,76 @@ func _layout() -> void:
 		_dock.fit(view.x)
 		_dock.size = Vector2(view.x, dock_h)
 		_dock.position = Vector2(0, view.y - dock_h)
-	# Lightbulb: top-left over the sky, clear of the bar and the cards.
-	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, HUD_H + 16.0)
+	_place_rooms()
+	_scroller.scroll_to(_scroller.scroll)
+	_place_room_cards()
+	# Lightbulb: top-left over the room, clear of the bar and the tabs.
+	_hint_btn.position = Vector2(24, 24) if _wide else Vector2(10, _area.position.y + 18.0)
+	_mini.position = Vector2(24.0 + (HintButton.SIZE - MiniMap.SIZE_BIG) / 2.0 + 6.0, 24.0 + HintButton.SIZE + 14.0)
+	_layout_side()
 	_place_side_buttons()
 	_world.surface.boat_card.visible = not _wide
-	_world.surface.plant_card.visible = not _wide
+	_world.surface.plant_card.visible = false
 	_world.lift.wide = _wide
 	_world.lift._place_card()
 
 
-## Stacks the boat/plant cards and the upgrade panel above the dock; on
-## short screens (or big UI) the pictures shrink, then hide, so it all fits.
+## Phone: the plant card on the factory wall, the office buttons under the
+## office, the evolution card in room 1's row (where the plant card was).
+func _place_room_cards() -> void:
+	if _wide:
+		return
+	var a := _factory.card_anchor("plant")
+	_factory_card.custom_minimum_size.x = a.size.x
+	_factory_card.position = a.position
+	_factory_card.reset_size()
+	var w := _area.size.x
+	_office_bar.custom_minimum_size.x = w - 20.0
+	_office_bar.reset_size()
+	var bh := _office_bar.get_combined_minimum_size().y
+	_office_bar.size = Vector2(w - 20.0, bh)
+	_office_bar.position = Vector2(10, _area.size.y - 10.0 - bh - 8.0)
+	_office.set_insets(0.0, bh + 26.0)
+	_evo_card.position = Vector2(_world.card_x(), 14)
+	var boat := _world.surface.boat_card
+	if boat.size.y > 0.0:
+		_evo_card.custom_minimum_size.y = boat.size.y
+	_evo_card.reset_size()
+	_mini_world.position = Vector2(_world.card_x() + (World.CARD_W - MiniMap.SIZE) / 2.0, 14.0 + _evo_card.size.y + 16.0)
+
+
+## PC column per room: mine = lift, boat, evolution cards and the panel;
+## factory = the plant card and the panel; office = the office card.
+func _layout_side() -> void:
+	if not _wide:
+		_side_cards.visible = false
+		_side_office.visible = false
+		return
+	var view := get_viewport_rect().size
+	var side := minf(SIDE_W, view.x * 0.4)
+	var office := _room == OFFICE
+	_side_cards.visible = not office
+	_panel.visible = not office
+	_side_office.visible = office
+	_side_lift.visible = _room == MINE
+	_side_boat.visible = _room == MINE
+	_side_evo.visible = _room == MINE
+	_side_plant.visible = _room == FACTORY
+	if office:
+		_side_office.custom_minimum_size = Vector2(side, 0)
+		_side_office.position = Vector2(view.x - side - 12.0, 12.0)
+		_side_office.size = Vector2(side, 0)
+		_side_office.reset_size()
+	else:
+		_fit_side_column(view, side, _dock_height())
+		_side_fit_frames = 2
+
+
+## Stacks the cards and the upgrade panel above the dock; on short screens
+## (or big UI) the pictures shrink, then hide, so it all fits.
 func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
+	if _room == OFFICE:
+		return
 	var x := view.x - side - 12.0
 	var bottom := view.y - dock_h - 8.0
 	var panel_hero := 190.0
@@ -329,6 +632,7 @@ func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
 		for c in [_side_lift, _side_boat, _side_plant]:
 			if c._pic:
 				c._pic.visible = card_pics
+		_side_evo._pic.visible = card_pics
 		_side_cards.position = Vector2(x, 12.0)
 		_side_cards.size = Vector2(side, 0)
 		_side_cards.reset_size()
@@ -352,6 +656,13 @@ func _place_sheet() -> void:
 
 
 func _on_stage_selected(key: String) -> void:
+	if key.begins_with("room:"):
+		show_room(ROOMS.find(key.substr(5)))
+		return
+	var r := room_of(key)
+	if r != _room:
+		show_room(r)
+	_room_key[r] = key
 	_panel.show_stage(key)
 	if GameState.is_boat(key) or GameState.is_plant(key):
 		# Keep the card on the same unit as the panel.
@@ -390,6 +701,8 @@ func _refresh() -> void:
 		_side_lift.refresh()
 		_side_boat.refresh()
 		_side_plant.refresh()
+	if _factory_card.is_visible_in_tree():
+		_factory_card.refresh()
 	for row in _world.rows:
 		row.refresh_if_shown()
 	_world.lift.refresh()
@@ -401,6 +714,8 @@ func _refresh() -> void:
 		else:
 			_panel.reset_size()
 			_side_fit_frames = maxi(_side_fit_frames, 1)
+	if not _wide and _evo_card.size.y != _world.surface.boat_card.size.y and _world.surface.boat_card.size.y > 0.0:
+		_place_room_cards()
 	# The dock shows itself when a feature opens (Dock.refresh), so compare
 	# with what the layout last made room for, not with its visibility.
 	var dock_shown := _dock.count() > 0
@@ -416,12 +731,13 @@ func _refresh() -> void:
 
 func _settings_signature() -> Array:
 	var s := Settings
-	return [s.language, s.voices, s.vibration, s.quality, s.reduce_motion, s.ui_scale, s.number_style, s.avatar.hash()]
+	return [s.language, s.voices, s.vibration, s.quality, s.reduce_motion, s.ui_scale, s.number_style, s.avatar.hash(), s.hand_cursor]
 
 
 func _on_settings_changed() -> void:
 	if not is_equal_approx(get_tree().root.content_scale_factor, Settings.ui_scale) or Art.low_power != Settings.low_quality():
 		_apply_ui_scale()
+	HandCursor.apply(Settings.hand_cursor)
 	var sig := _settings_signature()
 	var shown_changed := sig != _settings_sig
 	_settings_sig = sig
@@ -433,6 +749,7 @@ func _on_settings_changed() -> void:
 	# showed up there late).
 	_dock.refresh()
 	_hud.queue_redraw()
+	_tabs.queue_redraw()
 	if _modal.visible:
 		_modal.rebuild()
 	if _top.visible:
@@ -500,6 +817,8 @@ func _show_toast(text: String) -> void:
 
 ## Screen-space point -> scroll the ocean so it sits in the middle.
 func scroll_to_screen_point(p: Vector2) -> void:
+	if _room != MINE:
+		return
 	var mid := _scroller.global_position.y + _scroller.size.y * 0.45
 	var target := _scroller.scroll + (p.y - mid)
 	var tw := create_tween()
@@ -507,11 +826,81 @@ func scroll_to_screen_point(p: Vector2) -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
+# --- Map, evolution, office ---------------------------------------------------------------
+
+func open_map() -> void:
+	if _map.visible:
+		return
+	_modal.close()
+	_map.open()
+	_tutor.on_map_opened()
+
+
+func _on_map_closed() -> void:
+	_show_next_news()
+
+
+## The gate in the map opened the next location: everything follows (the
+## world's look, the rooms, the cards), and a little party.
+func _on_location_opened(location: int) -> void:
+	Sfx.play("prestige")
+	Progress.add_pearls(25)
+	Progress.save_game()
+	_room_key = ["d0", "plant", ""]
+	show_room(MINE, false)
+	_scroller.scroll_to(0.0)
+	if _sheet_open:
+		_close_sheet()
+	_panel.show_stage("d0")
+	for c in [_side_lift, _side_boat, _side_plant, _factory_card, _world.surface.boat_card]:
+		c.show_unit(c.base)
+	_refresh()
+	var v := get_viewport_rect().size
+	_fx.burst(v / 2.0, 60)
+	_fx.float_text(v / 2.0 + Vector2(0, -60), "+25", Color("f1e6ff"), 40)
+	_show_toast(tr("WORLD_WELCOME") % WorldLook.name_of(location))
+	if _world.has_method("show_ocean_name"):
+		_world.show_ocean_name(location)
+
+
+func open_evolution() -> void:
+	if not _map.visible:
+		_modal.open(func(m): EvoPanel.build(m, self), {"wide": true})
+
+
+## A form was bought in the evolution panel: the party, and the workers in
+## room 1 wear it at once (they read GameState.evo).
+func on_evo_bought(from: Vector2) -> void:
+	_fx.burst(from, 40)
+	_fx.float_text(from + Vector2(0, -50), tr("EVO_NEW"), Art.GOLD, 36)
+	_show_toast(tr("EVO_BOUGHT") % tr(WorkerLooks.name_key(GameState.world_id(), GameState.evo)))
+	for i in Balance.DEPTHS.size():
+		if GameState.is_open("d%d" % i):
+			_world.react("d%d" % i, "joy", 2.5, true)
+
+
+func open_outfits() -> void:
+	Wardrobe.tab = "outfit"
+	_open_wardrobe()
+
+
+## slot "" keeps the last chosen piece.
+func open_decor(slot: String) -> void:
+	if slot in Content.DECOR_SLOTS:
+		DecorPanel.slot = slot
+	_modal.open(func(m): DecorPanel.build(m, self))
+
+
+func on_decor_bought(_slot: String, from: Vector2) -> void:
+	_fx.burst(from, 30)
+	_fx.float_text(from + Vector2(0, -50), "+1%", Art.GOLD, 34)
+
+
 # --- Rewards -------------------------------------------------------------------------
 
 ## Shows a reward: coins and pearls fly from `from` into the top bar.
 ## r: {"coins", "pearls", "boost" (minutes)}.
-func celebrate(r: Dictionary, from: Vector2) -> void:
+func celebrate(r: Dictionary, from: Vector2, sound: bool = true) -> void:
 	_fx.burst(from, 26)
 	var coins := float(r.get("coins", 0.0))
 	var pearls := int(r.get("pearls", 0))
@@ -523,17 +912,22 @@ func celebrate(r: Dictionary, from: Vector2) -> void:
 		_fx.float_text(from + Vector2(0, 10), "+%d" % pearls, Color("f1e6ff"), 34)
 	if int(r.get("boost", 0)) > 0:
 		_fx.float_text(from + Vector2(0, 50), "×2  " + tr("MINUTES") % int(r["boost"]), Art.GOLD, 34)
-	Sfx.play("coins")
+	if sound:
+		Sfx.play("coins")
 	Sfx.voice("yay", 1.1)
 	Settings.buzz(30)
 
 
 # --- Side buttons: x2 for an ad, Rivals League ---------------------------------------
 
-## Stacks the shown side buttons under the lightbulb.
+## Stacks the shown side buttons under the lightbulb (and the PC mini-map).
 func _place_side_buttons() -> void:
 	var x := _hint_btn.position.x + (HintButton.SIZE - SideButton.SIZE) / 2.0
 	var y := _hint_btn.position.y + HintButton.SIZE + 10.0
+	if _wide:
+		_mini.position = Vector2(maxf(14.0, _hint_btn.position.x + (HintButton.SIZE - _mini.size.x) / 2.0), y + 4.0)
+		if _mini.visible:
+			y += _mini.size.y + 14.0
 	# Not in the first minutes: the game comes first, then the extras.
 	var settled := _started and Progress.has_feature("quests")
 	_boost_btn.visible = settled and Platform.ads_available()
@@ -580,7 +974,7 @@ func open_feature(id: String) -> void:
 
 
 func _show_next_news() -> void:
-	if _news.is_empty() or _top.visible or _modal.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or not _started:
+	if _news.is_empty() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or not _started:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")
@@ -591,6 +985,8 @@ func _show_next_news() -> void:
 
 
 func _open_wardrobe() -> void:
+	if Wardrobe.tab == "suit":
+		Wardrobe.tab = "outfit"
 	_modal.open(func(m): Wardrobe.build(m, self), {"wide": true})
 
 
@@ -740,28 +1136,6 @@ func after_profile_switch() -> void:
 
 func _open_settings() -> void:
 	_modal.open(func(m): SettingsView.build(m, self))
-
-
-func _open_prestige() -> void:
-	_modal.open(func(m: Modal):
-		m.title(tr("PRESTIGE"))
-		m.text(tr("OCEAN") % (GameState.prestige_count + 1), 26, Color("1c7fb8"))
-		var mult := Balance.prestige_mult(GameState.prestige_count + 1)
-		m.text(tr("PRESTIGE_DESC") % NumFormat.short(mult))
-		m.text(tr("PRESTIGE_KEEPS"), 21, Art.INK_SOFT)
-		if not GameState.prestige_gate_open():
-			var gate := GameState.prestige_gate_depth()
-			m.text(tr("PRESTIGE_NEED_DEPTHS") % tr("DEPTH_" + gate.to_upper()), 24, Color("d8363c"))
-		var go := m.price_button(tr("PRESTIGE_GO"), NumFormat.short(GameState.prestige_cost()), func():
-			if GameState.prestige():
-				Sfx.play("prestige")
-				Progress.add_pearls(25)
-				Progress.save_game()
-				_modal.close()
-				_fx.burst(get_viewport_rect().size / 2.0, 60)
-				_scroller.scroll_to(0.0), &"GoldButton")
-		go.disabled = not GameState.can_prestige()
-		m.button(tr("CLOSE"), func(): _modal.close(), &"CreamButton"))
 
 
 func _open_offline(report: Dictionary) -> void:

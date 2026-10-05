@@ -90,6 +90,8 @@ func _tint() -> Color:
 			return Color("8fd0ff")
 		"plant", "plant2":
 			return Color("ffd98a")
+		"vault":
+			return Color("e6d2ff")
 	return Art.DEPTH_STYLE[GameState.depth_index(key)]["water"].lightened(0.45)
 
 

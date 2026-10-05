@@ -22,6 +22,8 @@ var reduce_motion := false
 var ui_scale := 1.0
 ## "short" = 1.2K, 3.4M; "sci" = 1.2e3.
 var number_style := "short"
+## PC: the cartoon glove cursor (hidden on touch screens).
+var hand_cursor := true
 var avatar: Dictionary = Chars.default_avatar()
 
 var sound: bool:
@@ -46,6 +48,7 @@ func _ready() -> void:
 		var sc = cfg.get_value("ui", "scale", 1.0)
 		ui_scale = float(sc) if (sc is float or sc is int) else 1.0
 		number_style = str(cfg.get_value("ui", "numbers", "short"))
+		hand_cursor = cfg.get_value("ui", "hand_cursor", true) == true
 	if language not in LANGUAGES:
 		language = detect_language()
 	if quality not in QUALITIES:
@@ -120,6 +123,8 @@ func set_value(key: String, value: Variant) -> void:
 				_sync_web_quality()
 		"reduce_motion":
 			reduce_motion = value == true
+		"hand_cursor":
+			hand_cursor = value == true
 		"ui_scale":
 			ui_scale = _closest_scale(float(value))
 		"number_style":
@@ -190,5 +195,6 @@ func _save() -> void:
 	cfg.set_value("ui", "reduce_motion", reduce_motion)
 	cfg.set_value("ui", "scale", ui_scale)
 	cfg.set_value("ui", "numbers", number_style)
+	cfg.set_value("ui", "hand_cursor", hand_cursor)
 	cfg.save(PATH)
 	changed.emit()
