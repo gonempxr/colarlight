@@ -23,7 +23,7 @@ const PANEL_W := 600.0
 const GAP_X := 470.0
 const ZIG_Y := 60.0
 const GAP_Y := 470.0
-const ZIG_X := 110.0
+const ZIG_X := 55.0
 const DRAG_MIN := 14.0
 const HINT_SEC := 3.2
 
@@ -695,11 +695,12 @@ func _state(l: int, cur: int) -> int:
 	return MapArt.LOCKED
 
 
-## Point on the rim of an island facing `toward`.
-static func _rim(c: Vector2, toward: Vector2) -> Vector2:
-	var d := (toward - c).normalized()
-	var e := Vector2(d.x / MapArt.RX, d.y / MapArt.RY).length()
-	return c + d / maxf(e, 0.0001) * 0.92 + Vector2(0, 26)
+## Where the route enters and leaves island `l` (local): the tips of its
+## front edge. Phones snake down: every other island runs right to left.
+func _ends(l: int) -> Array:
+	var tip := Vector2(MapArt.RX * 0.93, 34)
+	var flip := not _wide and (l - _first) % 2 == 1
+	return [Vector2(tip.x, tip.y), Vector2(-tip.x, tip.y)] if flip else [Vector2(-tip.x, tip.y), tip]
 
 
 func _paint(ci: CanvasItem) -> void:
@@ -723,7 +724,7 @@ func _paint(ci: CanvasItem) -> void:
 		var b: Vector2 = _pos[l + 1]
 		var lit := l + 1 <= cur
 		var glowing := world_of(l) == "moon" or world_of(l + 1) == "moon"
-		MapArt.bridge(ci, _rim(a, b), _rim(b, a), lit, glowing, tm)
+		MapArt.bridge(ci, a + (_ends(l)[1] as Vector2), b + (_ends(l + 1)[0] as Vector2), lit, glowing, tm)
 	for l in range(_first, _last + 1):
 		var p: Vector2 = _pos[l]
 		var st := _state(l, cur)
@@ -733,9 +734,8 @@ func _paint(ci: CanvasItem) -> void:
 		Art.push(ci, p)
 		MapArt.island(ci, w, st, tm + l * 1.3, tier_of(l))
 		if st == MapArt.DONE or st == MapArt.CURRENT:
-			var from := _rim(p, _pos[l - 1]) - p if _pos.has(l - 1) else Vector2(-MapArt.RX, 30) if _wide else Vector2(0, -MapArt.RY)
-			var to := _rim(p, _pos[l + 1]) - p if _pos.has(l + 1) else Vector2(MapArt.RX, 30)
-			MapArt.path(ci, w, from, to, true)
+			var ends := _ends(l)
+			MapArt.path(ci, w, ends[0], ends[1], true)
 			MapArt.nodes(ci, w, 4 if st == MapArt.DONE else lit_nodes())
 		if st == MapArt.CURRENT:
 			var p2 := boat_progress("boat2")
@@ -768,7 +768,9 @@ func _hint_bubble(ci: CanvasItem, at: Vector2, is_next: bool) -> void:
 	var s := t("MAP_HINT_" + world_of(_hint_loc).to_upper()) if is_next else t("MAP_LOCKED_FAR")
 	var font := UiTheme.body_font()
 	var size := 24
-	var w := minf(font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 40.0, 520.0)
+	while size > 15 and font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > 480.0:
+		size -= 1
+	var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 40.0
 	var r := Rect2(at.x - w / 2.0, at.y - 36, w, 52)
 	Art.toon(ci, PackedVector2Array([at + Vector2(-12, 14), at + Vector2(12, 14), at + Vector2(0, 32)]), Art.WHITE, 3.0, 0.0)
 	Art.t_rect(ci, r, 22, Art.WHITE, 3.0, 0.3)

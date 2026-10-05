@@ -656,6 +656,9 @@ static func island(ci: CanvasItem, world: String, state: int, t: float, tier: in
 
 
 static func nodes(ci: CanvasItem, world: String, lit: int) -> void:
+	var key := hash(["nodes", world, lit])
+	if Art.cache_begin(ci, key):
+		return
 	var lk := look(world)
 	var i := 0
 	for p: Vector2 in spots(world)["nodes"]:
@@ -664,6 +667,7 @@ static func nodes(ci: CanvasItem, world: String, lit: int) -> void:
 		Art.toon(ci, Art.ellipse_pts(p, Vector2(17, 7), 18), Color("aeb6cc") if not on else Art.GOLD, 2.5, 0.0)
 		Art.flat(ci, Art.ellipse_pts(p, Vector2(9, 3.5), 14), Color(lk["path"], 0.9) if on else Color("8a93ab"))
 		i += 1
+	Art.cache_end(ci, key)
 
 
 ## Moving bits of a lit island.
