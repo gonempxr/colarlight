@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://baj7kkkglc6jk"
+
+[deps]
+
+files=["res://i18n/worlds.en.translation", "res://i18n/worlds.ru.translation", "res://i18n/worlds.es.translation", "res://i18n/worlds.zh.translation"]
+
+source_file="res://i18n/worlds.csv"
+dest_files=["res://i18n/worlds.en.translation", "res://i18n/worlds.ru.translation", "res://i18n/worlds.es.translation", "res://i18n/worlds.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
