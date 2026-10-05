@@ -50,6 +50,9 @@ var _s_mood := ""
 var _s_wide := 1.0
 var _s_rushing := false
 var _s_walk := false
+## The bought evolution form (GameState.evo), read every frame so a
+## purchase shows at once. "world" + "form" go to Chars.diver's pose.
+var _s_form := 0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -430,6 +433,8 @@ func _begin_site(site: int, key: String) -> void:
 	_s_wide = clampf((world.scene_right() - World.CAVE_L) / 340.0, 1.0, 1.8)
 	_s_rushing = GameState.is_rushing()
 	_s_walk = not WorldLook.is_water()
+	var evo = GameState.get("evo")
+	_s_form = int(evo) if evo != null else 0
 
 
 func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
@@ -458,7 +463,8 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 			return
 		var idle: float = _t - float(_idle_since.get(key, _t))
 		var emo := mood if mood != "" else ("sleepy" if idle > 5.0 else "bored")
-		Chars.diver(self, at, DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t + seed, site)
+		Chars.diver(self, at, DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t + seed, site,
+				{"world": WorldLook.world, "form": _s_form})
 		if emo == "sleepy" and j == 0:
 			Chars.mark(self, "zzz", at + Vector2(20, -80), _t)
 		elif mood == "wow" and j == 0:
@@ -513,11 +519,9 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 			arm = "cheer"
 			arm_from = ""
 	pos.y -= hop
-	var pose := {"turn": turn, "kick_amp": kick_amp, "sling": sling}
+	var pose := {"turn": turn, "kick_amp": kick_amp, "sling": sling, "world": WorldLook.world, "form": _s_form}
 	if walk:
-		# HOOK for W-Chars: "world" picks the worker's suit (lava miner,
-		# chemist, astronaut) and "walk" is the stride phase for the legs.
-		pose["world"] = WorldLook.world
+		# HOOK for W-Chars: "walk" is the stride phase for the legs.
 		pose["walk"] = fposmod(kick * 0.5, 1.0)
 	if arm_from != "" and blend < 1.0:
 		pose["arm_from"] = arm_from
