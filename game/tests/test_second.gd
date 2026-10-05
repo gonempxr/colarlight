@@ -45,11 +45,11 @@ func _initialize() -> void:
 	gs.managers["plant2"] = true
 	gs.hold = 1e6
 	gs.dock = 0.0
-	var coins_before: float = gs.coins
+	var coins_before: float = gs.coins + gs.vault
 	for i in 200:
 		gs.advance(0.1)
 	check(gs.hold < 1e6, "boats took ore from the raft")
-	check(gs.coins > coins_before, "plants turned it into coins")
+	check(gs.coins + gs.vault > coins_before, "plants turned it into coins (in the vault)")
 	# Offline counts both.
 	gs.hold = 1e9
 	gs.dock = 0.0
@@ -62,12 +62,14 @@ func _initialize() -> void:
 	check(not gs.is_open("boat2"), "reset closes them")
 	gs.load_game()
 	check(gs.get_level("boat2") == 2 and gs.is_open("plant2"), "save keeps them")
-	# Dive Deeper closes them again but keeps their managers (automation).
-	gs.prestige_count = 0
-	gs.levels["d5"] = 1
+	# The next location closes them again but keeps their managers (automation).
+	gs.location = 0
+	for key in gs.stage_keys():
+		gs.levels[key] = maxi(1, gs.levels[key])
+		gs.managers[key] = true
 	gs.coins = 1e12
-	check(gs.prestige(), "dive deeper")
-	check(not gs.is_open("boat2") and gs.has_manager("boat2"), "closed after a dive, captain kept")
+	check(gs.advance_location(), "next location")
+	check(not gs.is_open("boat2") and gs.has_manager("boat2"), "closed in the next location, captain kept")
 
 	# UI.
 	gs.reset()
