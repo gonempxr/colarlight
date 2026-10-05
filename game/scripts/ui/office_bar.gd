@@ -217,7 +217,12 @@ func _draw_evo(ci: CanvasItem, s: Vector2, t: float) -> void:
 	WorkerLooks.draw_card(ci, s / 2.0 + Vector2(0, 2), s.y, w, e, true, t)
 	if e > 0:
 		var tag := "+%d%%" % roundi((Balance.evo_mult(e) - 1.0) * 100.0)
-		Art.text(ci, Vector2(s.x / 2.0 + s.y * 0.45, s.y - 6.0), tag, 18, Art.GOLD, 5)
+		# A small pill in the top-right corner (over the glow, not the worker's face).
+		var fs := 18 if full else 15
+		var tw := UiTheme.heavy_font().get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var pill := Rect2(Vector2(s.x - tw - 14.0, 0.0), Vector2(tw + 12.0, fs + 8.0))
+		Art.t_rect(ci, pill, pill.size.y / 2.0, Art.INK, 0.0, 0.0)
+		Art.text(ci, pill.position + Vector2(6.0, fs + 1.0), tag, fs, Art.GOLD, 0, false)
 
 
 func _draw_outfit(ci: CanvasItem, s: Vector2, _t: float) -> void:

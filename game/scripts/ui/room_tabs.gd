@@ -183,8 +183,9 @@ func _draw() -> void:
 		Art.pop(self)
 		Art.text(self, Vector2(x0 + ic * 2.0 + 8.0, fs * 0.36), label, fs, Art.WHITE if on else Color("cfe2ff"), 6 if on else 5, false)
 		Art.pop(self)
-		# Badge (vault coins) or a red dot, at the tab's top-right corner.
-		var corner := r.position + Vector2(r.size.x - 6.0, 4.0)
+		# Badge (vault coins) or a red dot, at the tab's top-right corner
+		# (phone: bottom-right, the top bar covers the top edge).
+		var corner := r.position + Vector2(r.size.x - 6.0, 4.0 if floating else r.size.y + 2.0)
 		if _badge[i] != "":
 			var bs := 17
 			var bw := font.get_string_size(_badge[i], HORIZONTAL_ALIGNMENT_LEFT, -1, bs).x + 34.0

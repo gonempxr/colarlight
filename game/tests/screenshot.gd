@@ -62,7 +62,7 @@ func _initialize() -> void:
 		pr._fill_quests()
 		pr.quests[0]["count"] = pr.quests[0]["goal"]
 	match scenario:
-		"mid":
+		"mid", "rich":
 			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "lift": 40, "boat": 45, "plant": 41}, true)
 			for k in ["d0", "d1", "lift", "boat", "plant"]:
 				gs.managers[k] = true
@@ -71,6 +71,10 @@ func _initialize() -> void:
 			gs.dock = 620.0
 			gs.evo = 2
 			gs.vault = 8400.0
+			if scenario == "rich":
+				# Coins for the late tutorial steps (accountant, evolution).
+				gs.coins = 2.5e6
+				gs.evo = 0
 		"late":
 			gs.levels.merge({"d0": 62, "d1": 58, "d2": 42, "d3": 32, "d4": 11, "d5": 1, "lift": 160, "boat": 168, "plant": 152}, true)
 			for k in gs.stage_keys():
