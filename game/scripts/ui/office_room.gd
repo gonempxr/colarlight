@@ -482,7 +482,7 @@ func _draw() -> void:
 	OfficeArt.aquarium(self, decor("aquarium"), _t)
 	Art.pop(self)
 	# Chute and pile.
-	var pile_top := _p("pile") + Vector2(0, -lerpf(14.0, 92.0, _fill)) * _s("pile")
+	var pile_top := _p("pile") + Vector2(0, -lerpf(14.0, 92.0, Props._q(_fill, 12))) * _s("pile")
 	var mouth := Vector2(_p("chute").x, pile_top.y - (60.0 if not _wide else 40.0))
 	mouth.y = minf(mouth.y, _wall + 10.0)
 	OfficeArt.chute(self, 10.0, mouth, _flap)
