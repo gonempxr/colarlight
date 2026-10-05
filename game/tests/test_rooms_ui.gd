@@ -209,6 +209,9 @@ func test_vault() -> void:
 	while gs.vault <= 0.0 and Time.get_ticks_msec() - t0 < 8000:
 		await process_frame
 	check(gs.vault > 0.0, "the plant's coins land in the vault (%.1f)" % gs.vault)
+	# The tab's badge shows whole coins (a first cycle can make less than 1).
+	gs.vault = maxf(gs.vault, 25.0)
+	gs.vault_changed.emit()
 	await _frames(20)
 	var tabs: Node = main.room_tabs()
 	check(tabs._badge[2] != "", "the Office tab shows the coins waiting")
