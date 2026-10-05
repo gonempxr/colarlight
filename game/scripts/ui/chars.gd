@@ -227,6 +227,16 @@ static func _head_draw(ci: CanvasItem, l: Dictionary, emotion: String, blink: bo
 				Art.toon(ci, Art.rrect_pts(Rect2(7 * sx - 6, -3, 12, 8.5), 3.5), Color("2a2240"), 1.4, 0.0)
 				Art.line_c(ci, PackedVector2Array([Vector2(7 * sx - 3.5, -1), Vector2(7 * sx - 1, -1)]), Color(1, 1, 1, 0.7), 1.4)
 			Art.line_c(ci, PackedVector2Array([Vector2(-1.5, -0.5), Vector2(1.5, -0.5)]), Art.INK, 2.0)
+		"eyepatch":
+			Art.line_c(ci, PackedVector2Array([Vector2(-20, -8), Vector2(-2, 3), Vector2(20, -6)]), Art.INK, 1.8)
+			Art.t_ellipse(ci, Vector2(-7, 1.5), Vector2(5.4, 5.8), Color("2a2240"), 1.2, 0.0)
+		"hero_mask":
+			var mask := Art.smooth_pts(PackedVector2Array([Vector2(-17, -3), Vector2(-8, -6), Vector2(0, -3), Vector2(8, -6), Vector2(17, -3),
+					Vector2(15, 6), Vector2(7, 8), Vector2(0, 4), Vector2(-7, 8), Vector2(-15, 6)]), 2)
+			Art.flat(ci, Art.clipped(mask, Art.ellipse_pts(Vector2.ZERO, Vector2(20, 19.5), 32)), Art.RED)
+			for sx: float in [-1.0, 1.0]:
+				Art.flat(ci, Art.ellipse_pts(Vector2(7 * sx, 1.5), Vector2(4.3, 4.6), 12), Art.WHITE)
+				Art.flat(ci, Art.ellipse_pts(Vector2(7 * sx + 0.4, 2.1), Vector2(2.3, 2.8), 10), Art.INK)
 		"freckles":
 			for p: Vector2 in [Vector2(-12, 7), Vector2(-9.5, 9.5), Vector2(-13.5, 10), Vector2(12, 7), Vector2(9.5, 9.5), Vector2(13.5, 10)]:
 				Art.flat(ci, Art.circle_pts(p, 0.9, 6), Color("b5653c"))
@@ -317,6 +327,17 @@ static func _hat(ci: CanvasItem, hat: String) -> void:
 			Art.t_circle(ci, Vector2(0, -24), 4.2, Art.WHITE, 1.2, 0.0)
 			Art.flat(ci, Art.circle_pts(Vector2(-1.5, -24.5), 1.0, 6), Art.INK)
 			Art.flat(ci, Art.circle_pts(Vector2(1.5, -24.5), 1.0, 6), Art.INK)
+		"knight":
+			Art.toon(ci, _KNIGHT_PLUME, Art.RED, 2.2, 0.3)
+			var dome := PackedVector2Array()
+			for i in 17:
+				var a := PI + PI * i / 16.0
+				dome.append(Vector2(cos(a) * 22.0, -6.0 + sin(a) * 20.0))
+			Art.toon(ci, dome, Color("c8d0e0"), 2.5, 0.6)
+			Art.t_rect(ci, Rect2(-24, -10, 48, 6), 3, Color("9aa4b8"), 2.2, 0.0)
+			for sx: float in [-1.0, 1.0]:
+				Art.toon(ci, PackedVector2Array([Vector2(sx * 23, -8), Vector2(sx * 16, -8), Vector2(sx * 17, 10), Vector2(sx * 22, 12)]), Color("b0bacc"), 2.0, 0.0)
+			Art.t_rect(ci, Rect2(-3, -26, 6, 18), 2, Color("9aa4b8"), 0.0, 0.0)
 		"crown":
 			var pts := PackedVector2Array([Vector2(-15, -14), Vector2(-17, -32), Vector2(-8, -23), Vector2(0, -36), Vector2(8, -23), Vector2(17, -32), Vector2(15, -14)])
 			Art.toon(ci, pts, Art.GOLD, 2.5, 0.6)
@@ -329,6 +350,10 @@ static func _hat(ci: CanvasItem, hat: String) -> void:
 				var a := TAU * i / 5.0
 				Art.t_circle(ci, c + Vector2(cos(a), sin(a)) * 5.5, 4.5, Color("ff8fc0"), 1.6, 0.0)
 			Art.t_circle(ci, c, 3.5, Art.GOLD, 1.6, 0.0)
+
+
+static var _KNIGHT_PLUME := Art.smooth_pts(PackedVector2Array([Vector2(-3, -24), Vector2(-4, -36), Vector2(-14, -42), Vector2(-26, -34),
+		Vector2(-22, -28), Vector2(-14, -32), Vector2(-8, -24)]), 2)
 
 
 ## Round portrait: shoulders and head inside a colored frame.
@@ -374,6 +399,9 @@ static func fit_scale(l: Dictionary, want: float, max_h: float) -> float:
 static func _torso_colors(ci: CanvasItem, shape: PackedVector2Array, l: Dictionary, s: float) -> void:
 	var outfit := _outfit(l)
 	var clothes: String = l.get("clothes", "shirt")
+	if clothes.begins_with("o_"):
+		_outfit_torso(ci, shape, clothes.substr(2), s)
+		return
 	match clothes:
 		"suit":
 			Art.toon(ci, shape, Art.shade_of(outfit, 0.1), 0.0, 0.4)
@@ -421,20 +449,19 @@ static func person(ci: CanvasItem, pos: Vector2, scale: float, facing: float, l:
 	var skin := _skin(l)
 	var outfit := _outfit(l)
 	var clothes: String = l.get("clothes", "shirt")
-	var pants := Color("3a3f5c") if clothes != "overalls" else outfit
-	if clothes == "suit":
-		pants = Art.shade_of(outfit, 0.15)
+	var pants := pants_color(l)
+	var shoes := shoe_color(l)
 	var walk: float = pose.get("walk", -1.0)
 	# Shadow on the ground and legs (the walk cycle in 16 steps).
 	var wq := -1 if walk < 0.0 else int(fposmod(walk, 1.0) * 16.0 + 0.5) % 16
-	var leg_key := hash([20, pants, wq])
+	var leg_key := hash([20, pants, shoes, wq])
 	if not Art.cache_begin(ci, leg_key):
 		Art.flat(ci, Art.ellipse_pts(Vector2(0, 1), Vector2(17, 3.5), 16), Color(0, 0, 0, 0.18))
 		for sx: float in [-1.0, 1.0]:
 			var swing := sin(wq / 16.0 * TAU + (0.0 if sx < 0 else PI)) * 0.5 if wq >= 0 else 0.0
 			Art.push(ci, Vector2(6.0 * sx, -18), swing)
 			Art.t_rect(ci, Rect2(-4.5, -2, 9, 17), 4, pants, 2.2, 0.0)
-			Art.t_ellipse(ci, Vector2(2.5, 15.5), Vector2(7, 4), Color("3b2a2a"), 2.2, 0.0)
+			Art.t_ellipse(ci, Vector2(2.5, 15.5), Vector2(7, 4), shoes, 2.2, 0.0)
 			Art.pop(ci)
 		Art.cache_end(ci, leg_key)
 	var arms: bool = not pose.get("no_arms", false)
@@ -477,16 +504,8 @@ static func _arm(ci: CanvasItem, shoulder: Vector2, angle: float, l: Dictionary,
 	if Art.cache_begin(ci, key):
 		return
 	angle = aq * ARM_STEP
-	var clothes: String = l.get("clothes", "shirt")
-	var sleeve := _outfit(l)
-	match clothes:
-		"suit":
-			sleeve = Art.shade_of(sleeve, 0.1)
-		"overalls", "sailor", "lab":
-			sleeve = Color("f2f2f2") if clothes != "lab" else Art.WHITE
-		"vest":
-			sleeve = Color("4a78c2")
-	var glove := Color("5a5f7a") if clothes in ["overalls", "vest"] else _skin(l)
+	var sleeve := sleeve_color(l)
+	var glove := glove_color(l)
 	var tool := front and hold in TOOLS
 	Art.push(ci, shoulder, -angle)
 	if tool:
@@ -554,6 +573,8 @@ const REACH_SEG := 13.0
 
 static func sleeve_color(l: Dictionary) -> Color:
 	var clothes: String = l.get("clothes", "shirt")
+	if clothes.begins_with("o_"):
+		return (OUTFIT_STYLE.get(clothes.substr(2), OUTFIT_STYLE["casual"]) as Dictionary)["sleeve"]
 	match clothes:
 		"suit":
 			return Art.shade_of(_outfit(l), 0.1)
@@ -568,11 +589,15 @@ static func sleeve_color(l: Dictionary) -> Color:
 
 ## Work gloves with overalls and vests, else bare hands.
 static func glove_color(l: Dictionary) -> Color:
+	var clothes: String = l.get("clothes", "shirt")
+	if clothes.begins_with("o_"):
+		var g = (OUTFIT_STYLE.get(clothes.substr(2), OUTFIT_STYLE["casual"]) as Dictionary).get("glove")
+		return g if g != null else _skin(l)
 	return Color("5a5f7a") if l.get("clothes", "shirt") in ["overalls", "vest"] else _skin(l)
 
 
 ## Things held by a handle: they point out of the fist.
-const TOOLS := ["wrench", "hammer"]
+const TOOLS := ["wrench", "hammer", "cutlass", "ladle", "flask", "sword", "wand", "scepter"]
 
 
 ## Draws a carried thing so it hangs straight down from the hand (sacks,
@@ -596,6 +621,32 @@ static func hang(ci: CanvasItem, kind: String, hand: Vector2, arm_angle: float, 
 
 static func _tool_item(ci: CanvasItem, kind: String) -> void:
 	match kind:
+		"cutlass":
+			Art.t_rect(ci, Rect2(-2, -4, 4, 8), 2, Color("6a3a20"), 1.6, 0.0)
+			Art.arc_c(ci, Vector2(-3, 1), 5.0, -PI * 0.5, PI * 0.5, 6, Art.INK, 3.6)
+			Art.arc_c(ci, Vector2(-3, 1), 5.0, -PI * 0.5, PI * 0.5, 6, Art.GOLD, 1.8)
+			Art.toon(ci, PackedVector2Array([Vector2(-3, 5), Vector2(3, 5), Vector2(4, 18), Vector2(1, 30), Vector2(-3, 34), Vector2(-1, 20)]), Art.METAL, 1.8, 0.0)
+		"ladle":
+			Art.t_rect(ci, Rect2(-1.8, -4, 3.6, 24), 1.8, Art.METAL, 1.6, 0.0)
+			Art.t_ellipse(ci, Vector2(0, 24), Vector2(6.5, 4.5), Art.METAL, 1.8, 0.4)
+			Art.flat(ci, Art.ellipse_pts(Vector2(0, 23.5), Vector2(4.5, 2.2), 10), Color("ffb070"))
+		"flask":
+			Art.t_rect(ci, Rect2(-2.2, -4, 4.4, 9), 1.5, Color("dff8ff"), 1.6, 0.0)
+			Art.t_circle(ci, Vector2(0, 11), 7.5, Color("dff8ff"), 1.8, 0.0)
+			Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-8, 10, 16, 9), 1), Art.circle_pts(Vector2(0, 11), 6.5, 16)), Color("5cff8a"))
+			Art.flat(ci, Art.circle_pts(Vector2(-2.5, 8), 1.4, 6), Color(1, 1, 1, 0.8))
+		"sword":
+			Art.t_rect(ci, Rect2(-2, -4, 4, 8), 2, Color("6a3a20"), 1.6, 0.0)
+			Art.t_rect(ci, Rect2(-7, 3, 14, 3.5), 1.5, Art.GOLD, 1.6, 0.0)
+			Art.toon(ci, PackedVector2Array([Vector2(-2.8, 6.5), Vector2(2.8, 6.5), Vector2(2.8, 30), Vector2(0, 35), Vector2(-2.8, 30)]), Art.METAL, 1.8, 0.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(-0.6, 9), Vector2(-0.6, 29)]), Color(1, 1, 1, 0.7), 1.2)
+		"wand":
+			Art.t_rect(ci, Rect2(-1.6, -4, 3.2, 22), 1.6, Color("3a2a4a"), 1.4, 0.0)
+			Art.toon(ci, Art.star_pts(Vector2(0, 22), 6.0, 2.6, 5, PI / 2.0), Art.GOLD, 1.6, 0.0)
+		"scepter":
+			Art.t_rect(ci, Rect2(-2, -4, 4, 22), 2, Art.GOLD, 1.6, 0.0)
+			Art.t_circle(ci, Vector2(0, 22), 5.0, Art.RED, 1.8, 0.3)
+			Art.t_rect(ci, Rect2(-1.2, 25, 2.4, 6), 1, Art.GOLD, 1.2, 0.0)
 		"hammer":
 			Art.t_rect(ci, Rect2(-2.6, -4, 5.2, 26), 2.4, Art.WOOD, 1.8, 0.0)
 			Art.t_rect(ci, Rect2(-10, 18, 20, 9), 2.5, Art.METAL, 2.0, 0.4)
@@ -782,7 +833,8 @@ static func dig_tip(tier: int) -> Vector2:
 
 
 ## Diver, feet at `pos`, ~80 px tall at scale 1.
-## arm: "swim" | "rope" | "dig" | "pick" | "idle" | "cheer".
+## arm: "swim" | "rope" | "dig" | "pick" | "idle" | "cheer" (and, for forms,
+##   "walk" and "show"; see WorkerLooks).
 ##   dig: `hit` is the phase of the dig cycle (0..1, see dig_pose);
 ##   pick: `hit` 0 = tool raised, 1 = struck (a simple back-and-forth).
 ## carry: holds a sack of ore (in the hand, or on the back on the rope).
@@ -790,10 +842,20 @@ static func dig_tip(tier: int) -> Vector2:
 ## pose (optional): "arm_from" + "blend" (0..1) ease from another arm pose,
 ## "turn" (-1..1) squashes x while turning around, "kick_amp" (0..1) how
 ## hard the legs kick, "sling" (0..1) moves a carried sack from the hand
-## to the back.
+## to the back. "world" (default "ocean") and "form" (0..12, default -1 =
+## the old depth-based gear) pick an evolution form drawn by WorkerLooks;
+## outside the ocean "swim" becomes "walk".
 static func diver(ci: CanvasItem, pos: Vector2, scale: float, suit: Color, facing: float, tilt: float,
 		kick: float, arm: String, hit: float, carry: bool, ore: Color, emotion: String, blink: bool, t: float = 0.0,
 		depth: int = -1, pose: Dictionary = {}) -> void:
+	# Evolution forms and the workers of the other worlds (see WorkerLooks).
+	var form: int = pose.get("form", -1)
+	var world: String = pose.get("world", "ocean")
+	if form >= 0 or world != "ocean":
+		if depth < 0:
+			depth = _depth_for_ore(ore)
+		WorkerLooks.draw(ci, pos, scale, world, maxi(form, 0), facing, tilt, kick, arm, hit, carry, ore, emotion, blink, t, depth, pose)
+		return
 	if depth < 0:
 		depth = _depth_for_ore(ore)
 	var tier := gear_tier(depth)
@@ -1766,3 +1828,204 @@ static var _SHIELD_MARK := PackedVector2Array([Vector2(-21, -32), Vector2(-21, -
 static var _SKIRT_STRIPS := Art.rrect_pts(Rect2(-3, -24, 6, 8.5), 1.5, 1)
 static var _KING_GEMS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-5, -91.5), 1.9, 6), Art.circle_pts(Vector2(2, -91.5), 1.9, 6), Art.circle_pts(Vector2(9, -91.5), 1.9, 6)]
 static var _KING_PEARLS: Array[PackedVector2Array] = [Art.circle_pts(Vector2(-11, -104), 2.2, 8), Art.circle_pts(Vector2(2, -108), 2.2, 8), Art.circle_pts(Vector2(15, -104), 2.2, 8)]
+
+
+# --- The player (office room) ----------------------------------------------------------
+#
+# The player's own character: the avatar look in one of the wardrobe outfits
+# (ids "outfit_<name>"). An outfit dresses the body (clothes "o_<name>"),
+# may swap the hat, add a cape or a face extra, and puts its prop in hand.
+
+const OUTFIT_IDS: Array[String] = ["outfit_casual", "outfit_captain", "outfit_pirate", "outfit_chef", "outfit_scientist",
+		"outfit_astronaut", "outfit_knight", "outfit_wizard", "outfit_king", "outfit_superhero"]
+
+## Per outfit: body, sleeve, glove (null = bare hands), pants and shoe
+## colors, the hat ("" keeps the avatar's), the prop in hand, a face extra,
+## a cape color (alpha 0 = none).
+const OUTFIT_STYLE := {
+	"casual": {"body": Color("3aa6f0"), "sleeve": Color("3aa6f0"), "glove": null, "pants": Color("3a3f5c"), "shoes": Color("3b2a2a"), "hat": "", "hold": "", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"captain": {"body": Color("26365e"), "sleeve": Color("26365e"), "glove": Color("ffffff"), "pants": Color("f2f2f2"), "shoes": Color("2a2240"), "hat": "captain", "hold": "", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"pirate": {"body": Color("f4f4f4"), "sleeve": Color("f4f4f4"), "glove": null, "pants": Color("6a3a20"), "shoes": Color("2a2240"), "hat": "pirate", "hold": "cutlass", "extra": "eyepatch", "cape": Color(0, 0, 0, 0)},
+	"chef": {"body": Color("ffffff"), "sleeve": Color("ffffff"), "glove": null, "pants": Color("3a3f5c"), "shoes": Color("3b2a2a"), "hat": "chef", "hold": "ladle", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"scientist": {"body": Color("ffffff"), "sleeve": Color("ffffff"), "glove": Color("8ad0ff"), "pants": Color("3a3f5c"), "shoes": Color("3b2a2a"), "hat": "", "hold": "flask", "extra": "glasses", "cape": Color(0, 0, 0, 0)},
+	"astronaut": {"body": Color("f4f7ff"), "sleeve": Color("f4f7ff"), "glove": Color("dfe4ec"), "pants": Color("e8eef6"), "shoes": Color("9aa3b5"), "hat": "astronaut", "hold": "", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"knight": {"body": Color("c8d0e0"), "sleeve": Color("b0bacc"), "glove": Color("9aa4b8"), "pants": Color("9aa4b8"), "shoes": Color("6a7488"), "hat": "knight", "hold": "sword", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"wizard": {"body": Color("5a3ab0"), "sleeve": Color("5a3ab0"), "glove": null, "pants": Color("4a2a90"), "shoes": Color("2a1a4a"), "hat": "wizard", "hold": "wand", "extra": "", "cape": Color(0, 0, 0, 0)},
+	"king": {"body": Color("c0304a"), "sleeve": Color("c0304a"), "glove": null, "pants": Color("3a2a5a"), "shoes": Color("2a2240"), "hat": "crown", "hold": "scepter", "extra": "", "cape": Color("c0304a")},
+	"superhero": {"body": Color("3a6af0"), "sleeve": Color("3a6af0"), "glove": Color("ef5350"), "pants": Color("3a6af0"), "shoes": Color("ef5350"), "hat": "none", "hold": "", "extra": "hero_mask", "cape": Color("ef5350")},
+}
+
+
+static func pants_color(l: Dictionary) -> Color:
+	var clothes: String = l.get("clothes", "shirt")
+	if clothes.begins_with("o_"):
+		return (OUTFIT_STYLE.get(clothes.substr(2), OUTFIT_STYLE["casual"]) as Dictionary)["pants"]
+	if clothes == "overalls":
+		return _outfit(l)
+	if clothes == "suit":
+		return Art.shade_of(_outfit(l), 0.15)
+	return Color("3a3f5c")
+
+
+static func shoe_color(l: Dictionary) -> Color:
+	var clothes: String = l.get("clothes", "shirt")
+	if clothes.begins_with("o_"):
+		return (OUTFIT_STYLE.get(clothes.substr(2), OUTFIT_STYLE["casual"]) as Dictionary)["shoes"]
+	return Color("3b2a2a")
+
+
+## The avatar look dressed in `outfit` (an "outfit_<name>" id; casual or
+## unknown ids keep the avatar's own clothes).
+static func outfit_look(l: Dictionary, outfit: String) -> Dictionary:
+	var o := outfit.trim_prefix("outfit_")
+	if o == "casual" or o == "" or not OUTFIT_STYLE.has(o):
+		return l
+	var st: Dictionary = OUTFIT_STYLE[o]
+	var d := l.duplicate()
+	d["clothes"] = "o_" + o
+	if st["hat"] != "":
+		d["hat"] = st["hat"]
+	if st["extra"] != "" and (st["extra"] != "glasses" or d.get("extra", "none") in ["none", "freckles"]):
+		d["extra"] = st["extra"]
+	return d
+
+
+static func _outfit_torso(ci: CanvasItem, shape: PackedVector2Array, o: String, s: float) -> void:
+	var st: Dictionary = OUTFIT_STYLE.get(o, OUTFIT_STYLE["casual"])
+	var body: Color = st["body"]
+	Art.toon(ci, shape, body, 0.0, 0.4)
+	var c := func(r: Rect2, col: Color, rad: float = 1.0) -> void:
+		Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(r.position * s, r.size * s), rad * s), shape), col)
+	match o:
+		"captain":
+			Art.flat(ci, PackedVector2Array([Vector2(-7, 23) * s, Vector2(7, 23) * s, Vector2(0, 34) * s]), Art.WHITE)
+			for y: float in [33.0, 40.0, 47.0]:
+				for x: float in [-4.5, 4.5]:
+					Art.flat(ci, Art.circle_pts(Vector2(x, y) * s, 1.6 * s, 8), Art.GOLD)
+			c.call(Rect2(-60, 50, 120, 4), Art.GOLD)
+			for sx: float in [-1.0, 1.0]:
+				c.call(Rect2(sx * 15 - 6 + sx * 3, 23, 12, 4), Art.GOLD, 2.0)
+		"pirate":
+			for i in 3:
+				c.call(Rect2(-60, 30 + i * 8, 120, 3.5), Art.RED)
+			var vest := Art.clipped(PackedVector2Array([Vector2(-60, 20) * s, Vector2(-6, 20) * s, Vector2(-3, 90) * s, Vector2(-60, 90) * s]), shape)
+			var vest2 := Art.clipped(PackedVector2Array([Vector2(60, 20) * s, Vector2(6, 20) * s, Vector2(3, 90) * s, Vector2(60, 90) * s]), shape)
+			Art.flat(ci, vest, Color("6a3a20"))
+			Art.flat(ci, vest2, Color("6a3a20"))
+			c.call(Rect2(-60, 48, 120, 5), Color("2a2240"))
+			Art.flat(ci, Art.rrect_pts(Rect2(Vector2(-3, 47.5) * s, Vector2(6, 6) * s), 1.5 * s), Art.GOLD)
+		"chef":
+			for y: float in [32.0, 40.0, 48.0]:
+				for x: float in [-5.0, 5.0]:
+					Art.flat(ci, Art.circle_pts(Vector2(x, y) * s, 1.5 * s, 8), Color("9aa3b5"))
+			Art.toon(ci, PackedVector2Array([Vector2(-9, 23) * s, Vector2(9, 23) * s, Vector2(2, 31) * s, Vector2(0, 36) * s, Vector2(-2, 31) * s]), Art.RED, 1.2, 0.0)
+		"scientist":
+			Art.flat(ci, PackedVector2Array([Vector2(-7, 23) * s, Vector2(7, 23) * s, Vector2(0, 40) * s]), Color("8ad0ff"))
+			Art.line_c(ci, PackedVector2Array([Vector2(0, 40) * s, Vector2(0, 60) * s]), Color("c8d0e0"), 1.2)
+			c.call(Rect2(5, 36, 7, 8), Color("e8eef6"))
+			Art.line_c(ci, PackedVector2Array([Vector2(7, 33) * s, Vector2(7, 38) * s]), Art.BLUE, 1.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(9.5, 34) * s, Vector2(9.5, 38) * s]), Art.RED, 1.4)
+		"astronaut":
+			c.call(Rect2(-8, 32, 16, 11), Color("dfe4ec"), 2.0)
+			Art.flat(ci, Art.circle_pts(Vector2(-4, 37.5) * s, 1.8 * s, 8), Art.RED)
+			Art.flat(ci, Art.circle_pts(Vector2(0.5, 37.5) * s, 1.8 * s, 8), Art.BLUE)
+			Art.flat(ci, Art.circle_pts(Vector2(5, 37.5) * s, 1.8 * s, 8), Art.GOLD)
+			c.call(Rect2(-60, 48, 120, 4), Color("7ab0ff"))
+		"knight":
+			c.call(Rect2(-6, 23, 12, 40), Color("3a5ad0"))
+			Art.toon(ci, Art.star_pts(Vector2(0, 36) * s, 5.0 * s, 2.2 * s, 5), Art.GOLD, 1.2, 0.0)
+			c.call(Rect2(-60, 48, 120, 4), Color("6a3a20"))
+		"wizard":
+			c.call(Rect2(-2.5, 23, 5, 40), Art.GOLD)
+			for p: Vector2 in [Vector2(-9, 32), Vector2(9, 40), Vector2(-8, 48)]:
+				Art.flat(ci, Art.star_pts(p * s, 2.6 * s, 1.1 * s, 5), Color("ffe38a"))
+			c.call(Rect2(-60, 47, 120, 4), Color("ffd23f"))
+		"king":
+			c.call(Rect2(-2.5, 23, 5, 40), Art.GOLD)
+			c.call(Rect2(-60, 22, 120, 7), Color("f4f7ff"), 3.0)
+			for x: float in [-11.0, -4.0, 4.0, 11.0]:
+				Art.flat(ci, Art.ellipse_pts(Vector2(x, 25.5) * s, Vector2(0.9, 1.6) * s, 6), Art.INK)
+			c.call(Rect2(-60, 48, 120, 4), Art.GOLD)
+		"superhero":
+			Art.t_circle(ci, Vector2(0, 36) * s, 7.0 * s, Art.GOLD, 1.4, 0.0)
+			Art.toon(ci, PackedVector2Array([Vector2(1, 30) * s, Vector2(-3.5, 37) * s, Vector2(0, 37) * s, Vector2(-1.5, 42) * s, Vector2(3.5, 35) * s, Vector2(0, 35) * s]), Art.RED, 1.0, 0.0)
+			c.call(Rect2(-60, 48, 120, 4), Art.GOLD)
+
+
+## The player's character, feet at `pos`, ~95 px tall at scale 1.
+## pose keys: "pose" ("stand" | "idle" | "wave" | "cheer" | "collect",
+## default "idle"), "t" (time), "emotion", "blink", "facing", "walk".
+static func player(ci: CanvasItem, pos: Vector2, scale: float, look: Dictionary, outfit: String, pose: Dictionary = {}) -> void:
+	var t: float = pose.get("t", 0.0)
+	var p: String = pose.get("pose", "idle")
+	var o := outfit.trim_prefix("outfit_")
+	var st: Dictionary = OUTFIT_STYLE.get(o, OUTFIT_STYLE["casual"])
+	var l := outfit_look(look, outfit)
+	var facing: float = pose.get("facing", 1.0)
+	var hold: String = st["hold"]
+	var emo := "happy"
+	var al := -0.12
+	var ar := 0.12
+	var bob := 0.0
+	var b := sin(t * 2.2)
+	match p:
+		"idle":
+			al = -0.15 - b * 0.05
+			ar = 0.15 + b * 0.05
+			bob = maxf(0.0, b) * 0.4
+		"wave":
+			ar = 2.55 + sin(t * 9.0) * 0.35
+			al = -0.2
+			emo = "joy"
+		"cheer":
+			var w := sin(t * 12.0) * 0.18
+			ar = 2.75 + w
+			al = -2.75 - w
+			emo = "joy"
+			pos.y -= absf(sin(t * 6.0)) * 7.0 * scale
+		"collect":
+			ar = 1.25 + b * 0.05
+			al = 1.05 - b * 0.05
+			hold = "coinbag"
+			emo = "rich"
+	emo = pose.get("emotion", emo)
+	var cape: Color = st["cape"]
+	if cape.a > 0.0:
+		Art.push(ci, pos, 0.0, Vector2(scale * facing, scale))
+		var key := hash([27, cape, int(b * 3.0)])
+		if not Art.cache_begin(ci, key):
+			var sw := int(b * 3.0) * 0.6
+			var pts := Art.smooth_pts(PackedVector2Array([Vector2(-13, -47), Vector2(13, -47), Vector2(19 + sw, -20), Vector2(23 + sw, -4),
+					Vector2(12, -1), Vector2(0, -4), Vector2(-12, -1), Vector2(-23 - sw, -4), Vector2(-19 - sw, -20)]), 3)
+			Art.toon(ci, pts, cape, 2.4, 0.0)
+			if o == "king":
+				Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-30, -8, 60, 8), 2), pts), Color("f4f7ff"))
+			Art.cache_end(ci, key)
+		Art.pop(ci)
+	if o == "knight":
+		# The shield on the back arm's side.
+		Art.push(ci, pos + Vector2(-17 * facing, -34) * scale, 0.0, Vector2(scale * facing, scale))
+		Art.toon(ci, _SHIELD, Color("3a5ad0"), 2.4, 0.4)
+		Art.toon(ci, Art.star_pts(Vector2(0, -1), 5.0, 2.2, 5), Art.GOLD, 1.4, 0.0)
+		Art.pop(ci)
+	person(ci, pos, scale, facing, l, {"emotion": emo, "blink": pose.get("blink", blinking(t, 2.0)), "arm_l": al, "arm_r": ar,
+			"hold": hold, "bob": bob, "walk": pose.get("walk", -1.0), "hold_color": Art.GOLD})
+
+
+static var _SHIELD := Art.smooth_pts(PackedVector2Array([Vector2(-9, -11), Vector2(9, -11), Vector2(9, 2), Vector2(0, 12), Vector2(-9, 2)]), 2)
+static var _outfit_fit := {}
+
+
+## Wardrobe tile picture: the default avatar wearing `outfit`, fitted into
+## a `size` square at `center`.
+static func outfit_icon(ci: CanvasItem, center: Vector2, size: float, outfit: String) -> void:
+	var l := look(1, "short", 1, "none", "none", 0, "shirt")
+	var r: Rect2 = _outfit_fit.get(outfit, Rect2())
+	if r.size == Vector2.ZERO:
+		Art.measure_begin()
+		player(null, Vector2.ZERO, 1.0, l, outfit, {"pose": "stand", "blink": false})
+		r = Art.measure_end()
+		_outfit_fit[outfit] = r
+	var s := minf(size * 0.9 / maxf(r.size.y, 1.0), size * 0.9 / maxf(r.size.x, 1.0))
+	var feet := center - (r.position + r.size * 0.5) * s
+	player(ci, feet, s, l, outfit, {"pose": "stand", "blink": false})

@@ -1,0 +1,68 @@
+keys,en,ru,es,zh
+FORM_OCEAN_0,Snorkel Kid,Малыш с трубкой,Niño con tubo,浮潜小子
+FORM_OCEAN_1,Scuba Diver,Аквалангист,Buzo,潜水员
+FORM_OCEAN_2,Neon Diver,Неоновый ныряльщик,Buzo neón,霓虹潜水员
+FORM_OCEAN_3,Robo-Diver,Робо-водолаз,Robobuzo,机器潜水员
+FORM_OCEAN_4,Shark Suit,Костюм акулы,Traje de tiburón,鲨鱼服
+FORM_OCEAN_5,Octopus,Осьминожка,Pulpo,小章鱼
+FORM_OCEAN_6,Coral Knight,Коралловый рыцарь,Caballero de coral,珊瑚骑士
+FORM_OCEAN_7,Glow Jelly,Светомедуза,Medusa brillante,发光水母
+FORM_OCEAN_8,Pirate Diver,Пират-водолаз,Buzo pirata,海盗潜水员
+FORM_OCEAN_9,Mermaid,Русалка,Sirena,美人鱼
+FORM_OCEAN_10,Sea Dragon,Морской дракон,Dragón marino,海龙
+FORM_OCEAN_11,Kraken King,Король Кракен,Rey Kraken,海怪之王
+FORM_OCEAN_12,Poseidon,Посейдон,Poseidón,波塞冬
+FORM_VOLCANO_0,Lava Miner,Лавовый шахтёр,Minero de lava,熔岩矿工
+FORM_VOLCANO_1,Heat Suit,Жаростойкий костюм,Traje térmico,隔热服
+FORM_VOLCANO_2,Lava Cracks,Лавовые трещинки,Grietas de lava,熔岩裂纹
+FORM_VOLCANO_3,Robo-Driller,Робо-бурильщик,Robotaladro,钻探机器人
+FORM_VOLCANO_4,Salamander,Саламандра,Salamandra,火蜥蜴
+FORM_VOLCANO_5,Obsidian Knight,Обсидиановый рыцарь,Caballero de obsidiana,黑曜石骑士
+FORM_VOLCANO_6,Magma Golem,Магмовый голем,Gólem de magma,岩浆巨人
+FORM_VOLCANO_7,Fire Fox,Огненный лис,Zorro de fuego,火狐
+FORM_VOLCANO_8,Dwarf King,Король гномов,Rey enano,矮人国王
+FORM_VOLCANO_9,Phoenix,Феникс,Fénix,凤凰
+FORM_VOLCANO_10,Lava Dragon,Лавовый дракон,Dragón de lava,熔岩龙
+FORM_VOLCANO_11,Volcano Titan,Титан вулкана,Titán volcánico,火山泰坦
+FORM_VOLCANO_12,Fire Lord,Повелитель огня,Señor del fuego,火焰领主
+FORM_ACID_0,Chemist,Химик,Químico,化学家
+FORM_ACID_1,Gas Mask,Противогаз,Máscara de gas,防毒面具
+FORM_ACID_2,Neon Slime,Неоновая слизь,Baba neón,霓虹黏液
+FORM_ACID_3,Robo-Cleaner,Робо-уборщик,Robolimpiador,清洁机器人
+FORM_ACID_4,Froggy,Лягушонок,Ranita,小青蛙
+FORM_ACID_5,Mushroom,Грибочек,Hongo,小蘑菇
+FORM_ACID_6,Slime Blob,Слизнячок,Gotita de baba,史莱姆
+FORM_ACID_7,Rhino Beetle,Жук-носорог,Escarabajo,独角仙
+FORM_ACID_8,Plant Monster,Цветок-обжора,Planta monstruo,食人花
+FORM_ACID_9,Alchemist,Алхимик,Alquimista,炼金术士
+FORM_ACID_10,Swamp Spirit,Болотный дух,Espíritu del pantano,沼泽精灵
+FORM_ACID_11,Hydra,Гидра,Hidra,三头蛇
+FORM_ACID_12,Toxic Wizard King,Король-чародей,Rey brujo tóxico,毒巫之王
+FORM_MOON_0,Astronaut,Космонавт,Astronauta,宇航员
+FORM_MOON_1,Jetpack,Реактивный ранец,Mochila cohete,喷气背包
+FORM_MOON_2,Galaxy Suit,Галактический костюм,Traje galáctico,银河服
+FORM_MOON_3,Moon Robot,Луноробот,Robot lunar,月球机器人
+FORM_MOON_4,Alien,Инопланетянин,Alienígena,外星人
+FORM_MOON_5,Octo-Alien,Осьминог-пришелец,Pulpo alienígena,章鱼外星人
+FORM_MOON_6,Star Knight,Звёздный рыцарь,Caballero estelar,星辰骑士
+FORM_MOON_7,Comet Rider,Кометный гонщик,Jinete de cometa,彗星骑手
+FORM_MOON_8,Nebula Cape,Плащ туманности,Capa nebulosa,星云斗篷
+FORM_MOON_9,Moon Cat,Лунный кот,Gato lunar,月亮猫
+FORM_MOON_10,Meteor Golem,Метеоритный голем,Gólem de meteorito,陨石巨人
+FORM_MOON_11,Cosmic Dragon,Космический дракон,Dragón cósmico,宇宙龙
+FORM_MOON_12,Star King,Звёздный король,Rey de las estrellas,星辰之王
+RARITY_BASE,Basic,Обычный,Básico,基础
+RARITY_RARE,Rare,Редкий,Raro,稀有
+RARITY_EPIC,Epic,Эпический,Épico,史诗
+RARITY_LEGENDARY,Legendary,Легендарный,Legendario,传说
+RARITY_MYTHIC,Mythic,Мифический,Mítico,神话
+OUTFIT_CASUAL,Casual,Повседневный,Casual,便装
+OUTFIT_CAPTAIN,Captain,Капитан,Capitán,船长
+OUTFIT_PIRATE,Pirate,Пират,Pirata,海盗
+OUTFIT_CHEF,Chef,Повар,Chef,厨师
+OUTFIT_SCIENTIST,Scientist,Учёный,Científico,科学家
+OUTFIT_ASTRONAUT,Astronaut,Космонавт,Astronauta,宇航员
+OUTFIT_KNIGHT,Knight,Рыцарь,Caballero,骑士
+OUTFIT_WIZARD,Wizard,Волшебник,Mago,魔法师
+OUTFIT_KING,King,Король,Rey,国王
+OUTFIT_SUPERHERO,Superhero,Супергерой,Superhéroe,超级英雄
