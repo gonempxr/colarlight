@@ -546,7 +546,12 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			key = "boat"
 		if key == "plant":
+			# The signpost leads to the factory room (main.gd switches rooms).
 			_sign_poke_at = _t
+			Sfx.play("click")
+			world.divers.tap_ripple(p)
+			world.select("room:factory")
+			return
 		if GameState.tap(key):
 			Sfx.play("tap" if GameState.is_boat(key) else "machine")
 		else:

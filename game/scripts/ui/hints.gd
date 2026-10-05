@@ -3,7 +3,8 @@ extends RefCounted
 ## The lightbulb's brain: looks at the game and picks the single most useful
 ## next step, in plain words a child can follow, plus where to point.
 ## pick() returns {id, text, urgent, point (Callable -> screen point or
-## null), open (feature id to open instead of pointing, or "")}.
+## null), open (feature id to open instead of pointing, or ""), room (the
+## room to show before pointing: 0 mine, 1 factory, 2 office)}.
 
 
 static func t(key: String) -> String:
@@ -17,25 +18,32 @@ static func pick(main: Node) -> Dictionary:
 		return _hint("daily", t("HINT_DAILY"), true, Callable(), "daily")
 	if Progress.has_feature("quests") and Progress.quests_ready() > 0:
 		return _hint("quests", t("HINT_QUESTS"), true, Callable(), "quests")
+	# Coins waiting in the vault (no accountant yet).
+	if not gs.has_manager("vault") and gs.vault >= 1.0 and gs.vault >= gs.coins * 0.25:
+		return _hint("vault", t("HINT_VAULT") % NumFormat.short(gs.vault), true, func(): return _office_point(main, "collect"), "", 2)
 	for k in GameState.AUTOMATED:
 		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
 			return _hint("hire_" + k, t("HINT_HIRE_" + k.to_upper()), true, func():
 				if card.key != k:
 					card.show_unit(k)
-				return _control(card._manager), "")
+				return _control(card._manager), "", main.room_of(k))
+	if not gs.has_manager("vault") and gs.coins >= gs.manager_cost("vault"):
+		return _hint("hire_vault", t("HINT_HIRE_VAULT"), true, func(): return _control(main.office_bar().button("vault")), "", 2)
 	if not gs.has_manager("lift") and gs.pit > 0.0 and gs.cycle_progress("lift") < 0.0:
 		return _hint("tap_lift", t("HINT_TAP_LIFT"), true, func(): return _world(world, world.lift.cabin_pos() + Vector2(0, -30)), "")
 	if not gs.has_manager("boat") and gs.hold > 0.0 and gs.cycle_progress("boat") < 0.0:
 		return _hint("tap_boat", t("HINT_TAP_BOAT"), true, func(): return _world(world, world.surface.boat_world_pos() + Vector2(0, -40)), "")
 	if not gs.has_manager("plant") and gs.dock > 0.0 and gs.cycle_progress("plant") < 0.0:
-		return _hint("tap_plant", t("HINT_TAP_PLANT"), true, func(): return _world(world, world.surface.plant_world_pos() + Vector2(40, -80)), "")
+		return _hint("tap_plant", t("HINT_TAP_PLANT_ROOM"), true, func():
+			var f: FactoryRoom = main._factory
+			return f.get_global_transform_with_canvas() * f.line_rect("plant").get_center(), "", 1)
 	# The second boat/plant when ore piles up in front of the first one.
 	for k in ["boat2", "plant2"]:
 		var group := "boat" if k == "boat2" else "plant"
 		if gs.is_open("d2") and not gs.is_open(k) and gs.bottleneck() == group and gs.coins >= gs.unlock_cost(k):
 			var card: StageCard = main.stage_card(k)
-			return _hint("buy_" + k, t("HINT_" + k.to_upper()), true, func(): return _control(card._unit_btns[1] if card._unit_btns[1].visible else card._upgrade), "")
+			return _hint("buy_" + k, t("HINT_" + k.to_upper()), true, func(): return _control(card._unit_btns[1] if card._unit_btns[1].visible else card._upgrade), "", main.room_of(k))
 	var next: String = gs.next_depth()
 	if next != "" and gs.coins >= gs.unlock_cost(next):
 		var row: DepthRow = world.rows[gs.depth_index(next)]
@@ -45,13 +53,15 @@ static func pick(main: Node) -> Dictionary:
 		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
 			return _hint("foreman", t("HINT_FOREMAN") % Views.stage_name(k), true, func(): return _control(card._manager), "")
-	if gs.can_prestige():
-		return _hint("prestige", t("HINT_PRESTIGE"), true, Callable(), "prestige")
+	if gs.can_advance_location():
+		return _hint("map", t("HINT_MAP_READY"), true, Callable(), "map")
+	if gs.can_buy_evo():
+		return _hint("evo", t("HINT_EVO"), true, func(): return _control(main.evo_card().button()), "", 0)
 	# Upgrade the slowest part if the player can afford it.
 	var weak := _weakest(gs)
 	if weak != "" and gs.coins >= gs.upgrade_cost(weak):
 		var card: StageCard = main.stage_card(weak)
-		return _hint("upgrade", t("HINT_BOTTLENECK") % Views.stage_name(weak), true, func(): return _control(card._upgrade), "")
+		return _hint("upgrade", t("HINT_BOTTLENECK") % Views.stage_name(weak), true, func(): return _control(card._upgrade), "", main.room_of(weak))
 	if Progress.has_feature("fishing") and _fish_caught(main) < 3:
 		return _hint("fishing", t("HINT_FISHING"), false, Callable(), "fishing")
 	if Progress.has_feature("puzzle") and int(Progress.stats.get("puzzles_won", 0)) < 3:
@@ -63,13 +73,15 @@ static func pick(main: Node) -> Dictionary:
 			return _hint("save_" + k, line, false, func():
 				if card.key != k:
 					card.show_unit(k)
-				return _control(card._manager), "")
+				return _control(card._manager), "", main.room_of(k))
+	if gs.location_ready():
+		return _hint("map_save", t("HINT_MAP_SAVE") % NumFormat.short(gs.next_location_cost()), false, Callable(), "map")
 	if next != "":
 		var row: DepthRow = world.rows[gs.depth_index(next)]
 		return _hint("save_depth", t("HINT_SAVE_DEPTH") % [NumFormat.short(gs.unlock_cost(next)), Views.stage_name(next)], false, func(): return _control(row._open_btn), "")
 	if weak != "":
 		var card: StageCard = main.stage_card(weak)
-		return _hint("upgrade_later", t("HINT_UPGRADE") % Views.stage_name(weak), false, func(): return _control(card._upgrade), "")
+		return _hint("upgrade_later", t("HINT_UPGRADE") % Views.stage_name(weak), false, func(): return _control(card._upgrade), "", main.room_of(weak))
 	return _hint("tap_divers", t("HINT_TAP_DIVERS"), false, func(): return _world(world, world.rows[0].position + Vector2(world.rows[0].deposit_pos().x - 40, 150)), "")
 
 
@@ -93,8 +105,16 @@ static func _weakest(gs: Node) -> String:
 	return best
 
 
-static func _hint(id: String, text: String, urgent: bool, point: Callable, open: String) -> Dictionary:
-	return {"id": id, "text": text, "urgent": urgent, "point": point, "open": open}
+static func _hint(id: String, text: String, urgent: bool, point: Callable, open: String, room: int = 0) -> Dictionary:
+	return {"id": id, "text": text, "urgent": urgent, "point": point, "open": open, "room": room}
+
+
+## A spot in the office room (its Collect button, the board...).
+static func _office_point(main: Node, what: String) -> Variant:
+	var office: OfficeRoom = main._office
+	if not office.is_visible_in_tree():
+		return null
+	return office.get_global_transform_with_canvas() * office.slot_rect(what).get_center()
 
 
 static func _control(c: Control) -> Variant:
@@ -120,14 +140,15 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 		m.button(t("OPEN_IT"), func():
 			Sfx.play("click")
 			m.close()
-			if open == "prestige":
-				main._open_prestige()
+			if open == "map":
+				main.open_map()
 			else:
 				main.open_feature(open), &"GoldButton")
 	elif point.is_valid():
 		m.button(t("HINT_SHOW"), func():
 			Sfx.play("click")
 			m.close()
+			main.show_room(int(h.get("room", 0)))
 			main._tutor.show_hint(point, h["text"]), &"GoldButton")
 	# Automation checklist.
 	var card := Views.card(Color("eaf6ff"))
@@ -155,6 +176,7 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 	for k in ["boat2", "plant2"]:
 		if gs.is_open(k):
 			rows.append([gs.has_manager(k), t("HINT_AUTO_" + k.to_upper())])
+	rows.append([gs.has_manager("vault"), t("HINT_AUTO_VAULT")])
 	for r in rows:
 		var h2 := HBoxContainer.new()
 		h2.add_theme_constant_override("separation", 10)

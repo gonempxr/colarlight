@@ -1,0 +1,41 @@
+keys,en,ru,es,zh
+DECOR,Decor,Уют,Decoración,装饰
+DECOR_HOW,Make your office cozy! Every level of every piece gives +%d%% coins forever.,Сделай офис уютным! Каждый уровень любой вещи даёт +%d%% монет навсегда.,¡Decora tu oficina! Cada nivel de cada objeto da +%d%% de monedas para siempre.,把办公室布置得舒舒服服！每件家具每升一级，金币永久 +%d%%。
+DECOR_MAXED,The best it can be!,Лучше уже не бывает!,¡No puede ser mejor!,已经是最好的啦！
+DECOR_BUY,Level %d,Уровень %d,Nivel %d,升到 %d 级
+DECOR_NEED_PEARLS,"Not enough pearls yet. Play the puzzle, fish and do tasks!","Пока не хватает жемчуга. Играй в пазл, лови рыбу и выполняй задания!","Aún te faltan perlas. ¡Juega al puzle, pesca y haz tareas!",珍珠还不够。去玩拼图、钓鱼、完成任务吧！
+ACCOUNTANT_WORKS,The accountant collects the coins from the vault for you.,Бухгалтер сам забирает монеты из сейфа.,El contable recoge las monedas de la bóveda por ti.,会计会替你从金库收取金币。
+ACCOUNTANT_HIRED,Hooray! The accountant collects the coins now!,Ура! Теперь бухгалтер сам собирает монеты!,¡Hurra! ¡Ahora el contable recoge las monedas!,太好了！现在会计会自动收取金币！
+ACCOUNTANT_SAVE,Save %s coins for the accountant.,Накопи %s монет на бухгалтера.,Ahorra %s monedas para el contable.,攒够 %s 金币来雇用会计。
+VAULT_HOW,"New coins land in the vault. Collect them, or hire the accountant to do it!",Новые монеты падают в сейф. Забирай их сам или найми бухгалтера!,Las monedas nuevas caen en la bóveda. ¡Recógelas o contrata al contable!,新金币会落进金库。自己收取，或者雇用会计来收！
+EVO_CARD_BONUS,+%d%% coins,+%d%% монет,+%d%% monedas,金币 +%d%%
+EVO_CARD_EACH,+10% each,+10% за каждый,+10% cada uno,每个 +10%
+EVO_ALL,All looks!,Все образы!,¡Todos los looks!,全部解锁！
+EVO_SUB,Workers of %s,Работники мира «%s»,Trabajadores de %s,%s 的工人
+EVO_PERK,+10% coins in this world,+10% монет в этом мире,+10% monedas en este mundo,本世界金币 +10%
+EVO_BUY,Buy,Купить,Comprar,购买
+EVO_NEED,%s more coins to go,Ещё %s монет,Faltan %s monedas,还差 %s 金币
+EVO_HAVE,Looks: %d of %d · bonus +%d%%,Образы: %d из %d · бонус +%d%%,Looks: %d de %d · bonus +%d%%,造型：%d / %d · 加成 +%d%%
+EVO_OPTIONAL,New looks are not needed to open the next world: they just make every coin come faster.,"Новые образы не нужны, чтобы открыть следующий мир: они просто ускоряют все монеты.",Los looks nuevos no hacen falta para abrir el siguiente mundo: solo hacen que las monedas lleguen más rápido.,开启下一个世界不需要新造型：它们只是让金币来得更快。
+EVO_NOW,Wearing now,Сейчас надето,Lo llevan ahora,正在穿
+EVO_LATER,Locked,Закрыто,Bloqueado,未解锁
+EVO_NEW,New look!,Новый образ!,¡Nuevo look!,新造型！
+EVO_BOUGHT,Your workers are now: %s!,Теперь твои работники — %s!,¡Ahora tus trabajadores son: %s!,你的工人变成了：%s！
+WORLD_WELCOME,Welcome to %s!,Добро пожаловать: %s!,¡Bienvenido a %s!,欢迎来到%s！
+HAND_CURSOR,Hand cursor,Курсор-рука,Cursor de mano,手形光标
+TUT_GO_MINE,Back to the Mine!,Назад в шахту!,¡De vuelta a la mina!,回到矿场！
+TUT_GO_FACTORY,The boat took the ore to the factory. Let's go there!,Лодка увезла руду на фабрику. Пойдём туда!,El barco llevó el mineral a la fábrica. ¡Vamos allí!,船把矿石运到了工厂。我们去看看！
+TUT_GO_OFFICE,Now the office!,Теперь в офис!,¡Ahora a la oficina!,现在去办公室！
+TUT_VAULT,Your coins are in the vault! Open the Office.,Твои монеты в сейфе! Открой офис.,¡Tus monedas están en la bóveda! Abre la oficina.,你的金币在金库里！打开办公室。
+TUT_COLLECT,Tap Collect to take your coins!,Нажми «Забрать» — монеты твои!,¡Toca Recoger para tomar tus monedas!,点“收取”拿走你的金币！
+TUT_HIRE_VAULT,Hire the accountant: he will collect the coins for you!,Найми бухгалтера — он будет сам собирать монеты!,¡Contrata al contable: recogerá las monedas por ti!,雇用会计：他会替你收金币！
+TUT_EVO,Give your workers a new look: +10% coins!,Подари работникам новый образ: +10% монет!,¡Dales un look nuevo a tus trabajadores: +10% monedas!,给工人换个新造型：金币 +10%！
+TUT_MAP,Tap the map: see where your boat sails and what worlds wait!,"Нажми на карту: посмотри, куда плывёт лодка и какие миры ждут!",¡Toca el mapa: mira adónde navega tu barco y qué mundos esperan!,点开地图：看看船开到哪里，还有哪些世界在等你！
+TUT_TAP_PLANT_ROOM,Tap the machine to turn ore into coins,Тапни по станку — он сделает из руды монеты,Toca la máquina para convertir el mineral en monedas,点一下机器，把矿石变成金币
+HINT_VAULT,%s coins are waiting in the vault! Open the Office and tap Collect.,В сейфе ждут %s монет! Открой офис и нажми «Забрать».,¡%s monedas esperan en la bóveda! Abre la oficina y toca Recoger.,金库里有 %s 金币在等你！打开办公室，点“收取”。
+HINT_HIRE_VAULT,Hire the accountant in the Office: then the coins come to you by themselves!,Найми бухгалтера в офисе — тогда монеты будут приходить сами!,Contrata al contable en la oficina: ¡las monedas llegarán solas!,在办公室雇用会计：金币就会自己来到你手里！
+HINT_TAP_PLANT_ROOM,Ore is waiting at the factory! Tap the machine to turn it into coins.,"Руда ждёт на фабрике! Тапни по станку, чтобы сделать монеты.",¡El mineral espera en la fábrica! Toca la máquina para hacer monedas.,矿石在工厂等着！点一下机器把它变成金币。
+HINT_MAP_READY,You can open a new world! Open the map and tap the big button.,Можно открыть новый мир! Открой карту и нажми большую кнопку.,¡Puedes abrir un mundo nuevo! Abre el mapa y toca el botón grande.,可以开启新世界啦！打开地图，点那个大按钮。
+HINT_EVO,A new look for your workers is ready: +10% coins!,Новый образ для работников уже по карману: +10% монет!,Ya puedes comprar un look nuevo para tus trabajadores: ¡+10% monedas!,可以给工人买新造型了：金币 +10%！
+HINT_MAP_SAVE,Everything is done here! Save %s coins to sail to the next world.,"Здесь всё готово! Накопи %s монет, чтобы уплыть в следующий мир.",¡Aquí está todo hecho! Ahorra %s monedas para navegar al siguiente mundo.,这里都完成啦！攒够 %s 金币就能去下一个世界。
+HINT_AUTO_VAULT,Vault: collects by itself once you hire the accountant.,"Сейф: монеты собираются сами, когда наймёшь бухгалтера.",Bóveda: se recoge sola cuando contratas al contable.,金库：雇用会计后会自动收取。

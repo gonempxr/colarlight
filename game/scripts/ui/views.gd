@@ -26,6 +26,9 @@ static func stage_name(key: String) -> String:
 			return t("STAGE_BOAT2")
 		"plant2":
 			return t("STAGE_PLANT2")
+	var i := GameState.depth_index(key)
+	if i >= 0:
+		return WorldLook.site_name(i)
 	return t("DEPTH_%s" % String(GameState.stage_data(key)["id"]).to_upper())
 
 

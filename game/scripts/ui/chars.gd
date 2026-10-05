@@ -53,6 +53,8 @@ static func manager_look(key: String) -> Dictionary:
 		# The second boat's captain and the second plant's manager.
 		"boat2": return look(4, "long", 3, "sailor", "freckles", 1, "sailor")
 		"plant2": return look(0, "long", 1, "hardhat_blue", "none", 6, "lab")
+		# The accountant at the office desk (the vault's manager).
+		"vault": return look(0, "short", 4, "none", "glasses", 0, "vest")
 	return default_avatar()
 
 

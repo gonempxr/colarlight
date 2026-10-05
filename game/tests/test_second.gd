@@ -167,6 +167,9 @@ func _automation(main, gs: Node) -> void:
 	# Hire both by tapping their portraits on the cards.
 	for card in [boat, plant]:
 		var unit: String = card.base + "2"
+		# The boat's card lives in the mine, the plant's in the factory.
+		main.show_room(main.room_of(unit), false)
+		await process_frame
 		card.show_unit(unit)
 		main._refresh()
 		await process_frame

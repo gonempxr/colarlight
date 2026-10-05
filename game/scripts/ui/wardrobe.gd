@@ -1,11 +1,12 @@
 class_name Wardrobe
 extends RefCounted
-## Wardrobe and pearl shop: the player with their pet on top, tabs for pets,
-## hats, boat paint, diver suits and the pearl shop, and a grid of items.
+## Wardrobe and pearl shop: the player with their pet on top, tabs for
+## outfits (the player's clothes in the office), pets, hats, boat paint and
+## the pearl shop, and a grid of items.
 ## Items are bought with pearls (earned by playing) or unlocked by goals;
 ## nothing here is random and nothing costs real money.
 
-const TABS := [["pet", "TAB_PETS"], ["hat", "TAB_HATS"], ["boat", "TAB_BOATS"], ["suit", "TAB_SUITS"], ["shop", "TAB_SHOP"]]
+const TABS := [["outfit", "TAB_OUTFITS"], ["pet", "TAB_PETS"], ["hat", "TAB_HATS"], ["boat", "TAB_BOATS"], ["shop", "TAB_SHOP"]]
 
 static var tab := "pet"
 
@@ -20,8 +21,8 @@ static func build(m: Modal, main: Node) -> void:
 	var preview := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		var c := Vector2(s.x / 2.0 - 30.0, s.y - 12.0)
 		Art.t_ellipse(ci, c + Vector2(30, 0), Vector2(150, 18), Art.CREAM_DARK, 3.0, 0.0)
-		Chars.person(ci, c + Vector2(0, -4 - absf(sin(tt * 2.2)) * 3.0), Chars.fit_scale(Settings.avatar, 1.9, s.y - 22.0), 1.0, Settings.avatar,
-				{"emotion": "happy", "blink": Chars.blinking(tt, 2.0), "arm_r": 0.3 + sin(tt * 2.0) * 0.1, "arm_l": -0.2, "hold": ""})
+		Chars.player(ci, c + Vector2(0, -4 - absf(sin(tt * 2.2)) * 3.0), _player_scale(s.y - 22.0), Settings.avatar, current_outfit(),
+				{"pose": "wave", "t": tt, "blink": Chars.blinking(tt, 2.0), "emotion": "happy"})
 		var pet: String = Progress.equipped_art("pet")
 		if pet != "":
 			Art.push(ci, c + Vector2(125, -50 + sin(tt * 2.6) * 6.0), 0.0, Vector2(1.9, 1.9))
@@ -76,6 +77,8 @@ static func _draw_item(ci: CanvasItem, c: Dictionary, s: Vector2, tt: float) -> 
 	var mid := s / 2.0
 	var art: String = c["art"]
 	match str(c["slot"]):
+		"outfit":
+			Chars.outfit_icon(ci, mid + Vector2(0, 2), minf(s.x, s.y) - 6.0, str(c["id"]))
 		"hat":
 			var look := Settings.avatar.duplicate()
 			look["hat"] = art
@@ -89,7 +92,7 @@ static func _draw_item(ci: CanvasItem, c: Dictionary, s: Vector2, tt: float) -> 
 				_draw_art(null, c, 0.0)
 				_item_bounds[id] = Art.measure_end()
 			var b: Rect2 = _item_bounds[id]
-			var most: float = {"pet": 2.3, "boat": 0.62, "suit": 1.25}.get(str(c["slot"]), 1.0)
+			var most: float = {"pet": 2.3, "boat": 0.62}.get(str(c["slot"]), 1.0)
 			var sc := minf(most, minf((s.x - 16.0) / maxf(b.size.x, 1.0), (s.y - 10.0) / maxf(b.size.y, 1.0)))
 			Art.push(ci, mid - b.get_center() * sc, 0.0, Vector2(sc, sc))
 			_draw_art(ci, c, tt)
@@ -108,10 +111,6 @@ static func _draw_art(ci: CanvasItem, c: Dictionary, tt: float) -> void:
 			Props.boat_paint = Content.BOAT_PAINTS.get(art, Content.BOAT_PAINTS["classic"])
 			Props.boat(ci, tt, 2, Art.GOLD, false, "happy", false)
 			Props.boat_paint = current_boat_paint()
-		"suit":
-			var paint = Content.SUIT_PAINTS.get(art)
-			var col: Color = paint[0] if paint != null else Art.DEPTH_STYLE[0]["suit"]
-			Chars.diver(ci, Vector2.ZERO, 1.0, col, 1.0, 0.0, tt * 0.8, "idle", 0.0, false, Art.GOLD, "happy", Chars.blinking(tt, 5.0), tt)
 
 
 static func _cell(c: Dictionary, m: Modal) -> Control:
@@ -134,10 +133,6 @@ static func _cell(c: Dictionary, m: Modal) -> Control:
 	var name := Views.label(t("ITEM_" + id.to_upper()), 18, Art.INK, true)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(name)
-	if Content.suit_bonus(id) > 0.0:
-		var perk := Views.label(t("SUIT_BONUS") % roundi(Content.suit_bonus(id) * 100.0), 16, Color("2f8f3a"), true)
-		perk.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(perk)
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, 58)
 	b.add_theme_font_size_override("font_size", 21)
@@ -212,11 +207,29 @@ static func _after_equip(id: String) -> void:
 	Progress.save_game()
 
 
-## Pushes the equipped boat and suit paint into the scene's drawing code.
+## Pushes the equipped boat paint into the scene's drawing code (the
+## workers' looks come from their evolution form now, not from suits).
 static func apply_looks() -> void:
 	Props.boat_paint = current_boat_paint()
-	var suit = Content.SUIT_PAINTS.get(Progress.equipped_art("suit"))
-	DiverLayer.suit_paint = suit if suit != null else []
+	DiverLayer.suit_paint = []
+
+
+## The player's outfit id ("outfit_casual" when none is worn).
+static func current_outfit() -> String:
+	var o := str(Progress.equipped.get("outfit", ""))
+	return o if o != "" else "outfit_casual"
+
+
+static var _player_h := 0.0
+
+
+## Scale for Chars.player so the player stands `h` px tall.
+static func _player_scale(h: float) -> float:
+	if _player_h <= 0.0:
+		Art.measure_begin()
+		Chars.player(null, Vector2.ZERO, 1.0, Settings.avatar, "outfit_casual", {"pose": "stand", "blink": false})
+		_player_h = maxf(Art.measure_end().size.y, 1.0)
+	return minf(2.4, h / _player_h)
 
 
 static func current_boat_paint() -> Array:

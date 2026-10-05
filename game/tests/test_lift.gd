@@ -263,7 +263,9 @@ func test_tutorial_remap() -> void:
 	pr.save_path = "user://test_lift_progress.json"
 	var tutor: GDScript = load("res://scripts/ui/tutor.gd")
 	var old_done := 7
-	for pair in [[0, 0], [1, 1], [2, 1], [4, 5], [5, 7], [6, 8], [old_done, tutor.DONE]]:
+	# A finished v1 tutorial lands on the first step of the rooms (9: the
+	# accountant, the evolution and the map come next).
+	for pair in [[0, 0], [1, 1], [2, 1], [4, 5], [5, 7], [6, 8], [old_done, 9]]:
 		var f := FileAccess.open(pr.save_path, FileAccess.WRITE)
 		f.store_string(JSON.stringify({"version": 1, "tutorial_step": pair[0]}))
 		f.close()

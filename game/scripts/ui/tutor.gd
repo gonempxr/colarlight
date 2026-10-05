@@ -6,9 +6,12 @@ extends Control
 ## Progress.tutorial_step remembers where the player is.
 
 ## Progress keeps the step index; when steps change, Progress remaps old
-## saves (Progress.TUTORIAL_V1_TO_V2).
-const STEPS := ["tap_divers", "tap_lift", "tap_boat", "tap_plant", "upgrade", "hire_lift", "hire_boat", "hire_plant", "open_depth"]
-const DONE := 9
+## saves (Progress.TUTORIAL_V1_TO_V2). Steps 9.. came with the three rooms:
+## players who had finished the old tutorial meet the accountant, the
+## evolution and the map next.
+const STEPS := ["tap_divers", "tap_lift", "tap_boat", "tap_plant", "upgrade", "hire_lift", "hire_boat", "hire_plant", "open_depth",
+		"hire_vault", "evo", "map"]
+const DONE := 12
 
 var main: Node
 var _t := 0.0
@@ -24,6 +27,8 @@ var _hint_point := Callable()
 var _hint_text := ""
 var _hint_left := 0.0
 var _hint_scrolled := false
+## The text key the hand shows now (tests read it).
+var key := ""
 
 
 func _ready() -> void:
@@ -44,9 +49,16 @@ func _ready() -> void:
 	GameState.tapped.connect(_on_tapped)
 	GameState.upgraded.connect(func(k, _c): if k == "d0" and _step() == 4: _next())
 	GameState.manager_hired.connect(func(k):
-		if (k == "lift" and _step() == 5) or (k == "boat" and _step() == 6) or (k == "plant" and _step() == 7):
+		if (k == "lift" and _step() == 5) or (k == "boat" and _step() == 6) or (k == "plant" and _step() == 7) or (k == "vault" and _step() == 9):
 			_next())
 	GameState.depth_opened.connect(func(k): if k == "d1" and _step() == 8: _next())
+	GameState.evo_bought.connect(func(_f): if _step() == 10: _next())
+
+
+## The map was opened (the mini-map's step ends).
+func on_map_opened() -> void:
+	if _step() == 11:
+		_next()
 
 
 func show_hint(point: Callable, text: String, seconds: float = 7.0) -> void:
@@ -97,14 +109,82 @@ func _skip_done() -> void:
 			skip = GameState.has_manager("plant")
 		8:
 			skip = GameState.is_open("d1")
+		9:
+			skip = GameState.has_manager("vault")
+		10:
+			skip = GameState.evo > 0
+		11:
+			skip = GameState.location > 0
 	if skip:
 		Progress.advance_tutorial(s + 1)
 
 
-## Screen point to point at for the current step, or null while waiting.
+## Coins the step waits for (0: none).
+func _step_cost(s: int) -> float:
+	match s:
+		4:
+			return GameState.upgrade_cost("d0")
+		5:
+			return GameState.manager_cost("lift")
+		6:
+			return GameState.manager_cost("boat")
+		7:
+			return GameState.manager_cost("plant")
+		8:
+			return GameState.unlock_cost("d1")
+		9:
+			return GameState.manager_cost("vault")
+		10:
+			return GameState.evo_cost(GameState.evo + 1)
+	return 0.0
+
+
+## Room a step's target lives in.
+func _step_room(s: int) -> int:
+	match s:
+		3, 7:
+			return 1
+		9:
+			return 2
+	return 0
+
+
+## [screen point, text key] for the current step, or null while waiting.
+## A target in another room points at that room's tab first; while the
+## coins the step needs sit in the vault, it points at the vault first.
 func _find_target() -> Variant:
-	var world: World = main._world
 	var s := _step()
+	var cost := _step_cost(s)
+	var gs := GameState
+	if cost > 0.0 and gs.coins < cost and gs.coins + gs.vault >= cost and not gs.has_manager("vault"):
+		return _go(2, "collect")
+	var p = _step_target(s)
+	if p == null:
+		return null
+	var room := _step_room(s)
+	if room != main.current_room():
+		return _go(room, "")
+	return [p, "TUT_" + STEPS[s].to_upper()]
+
+
+## Point at the room's tab, or at the vault's Collect once there.
+func _go(room: int, what: String) -> Variant:
+	if room == main.current_room():
+		if what == "collect":
+			var office: OfficeRoom = main._office
+			var r := office.slot_rect("collect")
+			return [office.get_global_transform_with_canvas() * r.get_center(), "TUT_COLLECT"]
+		return null
+	var tabs: RoomTabs = main.room_tabs()
+	var rect := tabs.tab_rect(room)
+	var key2 := "TUT_GO_" + String(main.ROOMS[room]).to_upper()
+	if what == "collect":
+		key2 = "TUT_VAULT"
+	return [tabs.get_global_transform_with_canvas() * rect.get_center(), key2]
+
+
+func _step_target(s: int) -> Variant:
+	var world: World = main._world
 	match s:
 		0:
 			var row: DepthRow = world.rows[0]
@@ -117,7 +197,8 @@ func _find_target() -> Variant:
 				return _world_point(world.surface.boat_world_pos() + Vector2(0, -40))
 		3:
 			if GameState.dock > 0.0 and GameState.cycle_progress("plant") < 0.0:
-				return _world_point(world.surface.plant_world_pos() + Vector2(40, -80))
+				var f: FactoryRoom = main._factory
+				return f.get_global_transform_with_canvas() * f.line_rect("plant").get_center()
 		4:
 			if GameState.coins >= GameState.upgrade_cost("d0"):
 				return _control_point(world.rows[0].card._upgrade)
@@ -133,6 +214,15 @@ func _find_target() -> Variant:
 		8:
 			if GameState.coins >= GameState.unlock_cost("d1"):
 				return _control_point(world.rows[1]._open_btn)
+		9:
+			if GameState.coins >= GameState.manager_cost("vault"):
+				return _control_point(main.office_bar().button("vault"))
+		10:
+			if GameState.can_buy_evo():
+				return _control_point(main.evo_card().button())
+		11:
+			if GameState.has_manager("vault") and GameState.evo > 0:
+				return _control_point(main._mini if main._wide else main._mini_world)
 	return null
 
 
@@ -153,7 +243,8 @@ func _process(delta: float) -> void:
 	if active:
 		_skip_done()
 		s = _step()
-	var target = _find_target() if active and s < DONE else null
+	var found = _find_target() if active and s < DONE else null
+	var target = found[0] if found != null else null
 	_hint_left = maxf(0.0, _hint_left - delta)
 	var hinting := false
 	if target == null and _hint_left > 0.0 and _hint_point.is_valid() and not main._modal.visible:
@@ -168,6 +259,7 @@ func _process(delta: float) -> void:
 	if _has_target and hinting:
 		_target = target
 		_text = _hint_text
+		key = ""
 	elif _has_target:
 		_target = target
 		# Bring the target into view once per step.
@@ -177,7 +269,8 @@ func _process(delta: float) -> void:
 			if not view.grow(-80).has_point(_target):
 				main.scroll_to_screen_point(_target)
 				return
-		_text = tr("TUT_" + STEPS[s].to_upper())
+		key = found[1]
+		_text = tr(key)
 	_bubble.visible = _has_target
 	if _has_target:
 		_label.text = _text

@@ -19,11 +19,9 @@ const DROP_END := 0.88
 const SPOTS: Array[Vector3] = [Vector3(-58, 0, 1), Vector3(-44, -80, 1), Vector3(-150, 0, 1), Vector3(-200, -80, 1), Vector3(-250, -2, 1)]
 ## Divers hovering at work lean forward so the tool reaches down.
 const HOVER_TILT := 0.45
-## The arms of a worker walking in an air world (volcano, acid, moon).
-## HOOK for W-Chars: Chars.diver has no "walk" arm yet, so walkers keep
-## the swim arms; set this to "walk" once Chars._arm_pair knows it. The
-## pose dict already carries "walk" (stride phase) and "world".
-const WALK_ARM := "swim"
+## The arms of a worker walking in an air world (volcano, acid, moon):
+## WorkerLooks draws "walk"; the pose dict carries the stride phase.
+const WALK_ARM := "walk"
 ## Height of the scaffold walkway the high spots stand on in air worlds.
 const SCAFFOLD_Y := -84.0
 ## How far past the edge of the view a site is still drawn.

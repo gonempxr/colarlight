@@ -9,7 +9,9 @@ extends SceneTree
 ## without managers: the red tab dots) | ads (test ad provider: the x2
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
-## week's pearls waiting).
+## week's pearls waiting) | room:<0|1|2> (mine, factory, office) | evo (the
+## evolution panel) | decor[:slot] | map (the world map) | tut:<step> (the
+## tutorial at that step) | hint:<room> (the lightbulb's hint).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -19,9 +21,6 @@ func _initialize() -> void:
 	var scenario := args[2] if args.size() > 2 else "mid"
 	var scroll := float(args[3]) if args.size() > 3 else 0.0
 	var overlay: String = args[4] if args.size() > 4 else ""
-	# "<overlay>+suit": the sunset diver suit is worn (its ore bonus shows).
-	var with_suit := overlay.ends_with("+suit")
-	overlay = overlay.trim_suffix("+suit")
 	var ui_scale := float(args[5]) if args.size() > 5 else 1.0
 	await process_frame
 	root.get_node("Settings").language = lang
@@ -43,7 +42,7 @@ func _initialize() -> void:
 		pr.fresh["puzzle"] = true
 		pr.pearls = 135
 		pr.pearls_total = 180
-		pr.tutorial_step = 9
+		pr.tutorial_step = 12
 		pr.artifacts["compass"] = {"level": 2, "pieces": 1}
 		pr.artifacts["bell_shell"] = {"level": 1, "pieces": 3}
 		pr.artifacts["fish_idol"] = {"level": 0, "pieces": 2}
@@ -52,9 +51,10 @@ func _initialize() -> void:
 		pr.owned["hat_cat_ears"] = true
 		pr.equipped["pet"] = "pet_octopus"
 		pr.stats["puzzles_won"] = 4
-		if with_suit:
-			pr.owned["suit_sunset"] = true
-			pr.equip("suit_sunset")
+		pr.owned["outfit_pirate"] = true
+		pr.equipped["outfit"] = "outfit_pirate"
+		pr.decor["sofa"] = 2
+		pr.decor["plant"] = 1
 		pr.chest_ready = overlay == "chest"
 		if overlay != "daily":
 			pr.daily_last = pr.today()
@@ -62,13 +62,19 @@ func _initialize() -> void:
 		pr._fill_quests()
 		pr.quests[0]["count"] = pr.quests[0]["goal"]
 	match scenario:
-		"mid":
+		"mid", "rich":
 			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "lift": 40, "boat": 45, "plant": 41}, true)
 			for k in ["d0", "d1", "lift", "boat", "plant"]:
 				gs.managers[k] = true
 			gs.coins = 48250.0
 			gs.hold = 1840.0
 			gs.dock = 620.0
+			gs.evo = 2
+			gs.vault = 8400.0
+			if scenario == "rich":
+				# Coins for the late tutorial steps (accountant, evolution).
+				gs.coins = 2.5e6
+				gs.evo = 0
 		"late":
 			gs.levels.merge({"d0": 62, "d1": 58, "d2": 42, "d3": 32, "d4": 11, "d5": 1, "lift": 160, "boat": 168, "plant": 152}, true)
 			for k in gs.stage_keys():
@@ -167,13 +173,27 @@ func _initialize() -> void:
 			root.get_node("Platform").show_rewarded(func(_ok): pass)
 		"rivals", "rivals_reward":
 			main.open_rivals()
+		"evo":
+			main.open_evolution()
+		"map":
+			main.open_map()
 		_:
-			if overlay.begins_with("sheet:"):
+			if overlay.begins_with("room:"):
+				main.show_room(int(overlay.split(":")[1]), false)
+			elif overlay.begins_with("decor"):
+				main.open_decor(overlay.split(":")[1] if ":" in overlay else "sofa")
+			elif overlay.begins_with("tut:"):
+				pr.tutorial_step = int(overlay.split(":")[1])
+				if overlay.split(":").size() > 2:
+					main.show_room(int(overlay.split(":")[2]), false)
+			elif overlay.begins_with("sheet:"):
 				main._on_stage_selected(overlay.split(":")[1])
 			elif overlay.begins_with("wardrobe"):
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+			elif overlay.begins_with("world:") and overlay.ends_with(":sheet"):
+				main._on_stage_selected("d0")
 			elif (overlay.begins_with("ocean:") or overlay.begins_with("world:")) and overlay.ends_with(":banner"):
 				main._world.show_ocean_name(gs.prestige_count)
 			elif overlay.begins_with("relang:"):
