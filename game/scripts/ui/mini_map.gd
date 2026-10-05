@@ -13,6 +13,8 @@ const RIBBON := 26.0
 
 ## Bigger on PC; set before adding to the tree (or call set_big).
 var big := false
+## Preview sheets: show this location instead of the current one.
+var location_override := -1
 var _t := 0.0
 var _down := false
 var _press := 0.0
@@ -39,7 +41,7 @@ func set_big(on: bool) -> void:
 
 
 func _refresh() -> void:
-	_loc = MapView.cur_location()
+	_loc = MapView.cur_location() if location_override < 0 else location_override
 	_name = MapView.world_name(_loc)
 	tooltip_text = TranslationServer.translate("MAP_TITLE")
 	_ready_gate = MapView.can_advance()

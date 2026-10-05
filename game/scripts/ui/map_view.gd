@@ -57,6 +57,9 @@ var _pressed := false
 var _hint_loc := -1
 var _hint_left := 0.0
 var _pan_tween: Tween
+## Frames left to fit the panel again (wrapped labels know their height
+## only after a layout pass).
+var _refit := 0
 
 
 class Canvas extends Control:
@@ -312,6 +315,9 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	_hint_left -= delta
+	if _refit > 0:
+		_refit -= 1
+		_layout()
 	MapArt.still = _reduce_motion()
 	_redraw_left -= delta
 	if _redraw_left <= 0.0:
@@ -359,10 +365,12 @@ func _layout() -> void:
 	if _wide:
 		var pw := minf(PANEL_W, view.x * 0.42)
 		_panel.position = Vector2(view.x - pw - 20, TITLE_H)
-		_panel.size = Vector2(pw, view.y - TITLE_H - 20)
 		_panel.custom_minimum_size = Vector2(pw, 0)
+		_box.custom_minimum_size = Vector2(pw - 44, 0)
+		var want := _box.get_combined_minimum_size().y + 44.0
+		_panel.size = Vector2(pw, minf(want, view.y - TITLE_H - 20))
 		_area = Rect2(0, TITLE_H * 0.6, view.x - pw - 30, view.y - TITLE_H * 0.6)
-		_zoom = clampf(_area.size.y / 640.0, 0.7, 1.6)
+		_zoom = clampf(minf(_area.size.y / 640.0, _area.size.x / (GAP_X * 2.6)), 0.6, 1.3)
 	else:
 		var pw := view.x - 24.0
 		_panel.custom_minimum_size = Vector2(pw, 0)
@@ -373,8 +381,6 @@ func _layout() -> void:
 		_panel.size = Vector2(pw, ph)
 		_area = Rect2(0, TITLE_H, view.x, view.y - ph - 12 - TITLE_H)
 		_zoom = clampf(view.x / 640.0, 0.6, 1.4)
-	if _wide:
-		_box.custom_minimum_size = Vector2(_panel.size.x - 44, 0)
 	_scroll.custom_minimum_size = Vector2(0, 0)
 	_clamp_pan()
 
@@ -491,6 +497,7 @@ func _icon(name: String, px: int) -> TextureRect:
 
 func _build_panel() -> void:
 	_panel_sig = _sig()
+	_refit = 3
 	for c in _box.get_children():
 		_box.remove_child(c)
 		c.queue_free()
@@ -532,7 +539,7 @@ func _build_panel() -> void:
 		Art.push(ci, s / 2.0 + Vector2(0, 6), 0.0, Vector2(k, k))
 		MapArt.island(ci, world_of(nxt), MapArt.NEXT, tt, tier_of(nxt))
 		Art.pop(ci)
-		MapArt.mystery(ci, s / 2.0 + Vector2(0, 0), tt, false), Vector2(96, 96))
+		MapArt.mystery(ci, s / 2.0 + Vector2(-4, 2), tt, false, 0.4), Vector2(96, 96))
 	pic.custom_minimum_size = Vector2(96, 96)
 	head.add_child(pic)
 	var hv := VBoxContainer.new()

@@ -64,7 +64,7 @@ const SPOTS := {
 	"acid": {"mine": Vector2(-122, -10), "factory": Vector2(116, -10), "office": Vector2(20, -64),
 		"boat": [Vector2(-94, 8), Vector2(-40, 20), Vector2(24, 18), Vector2(84, 8)],
 		"nodes": [Vector2(-140, 50), Vector2(-50, 72), Vector2(42, 72), Vector2(130, 52)]},
-	"moon": {"mine": Vector2(-126, -6), "factory": Vector2(118, -14), "office": Vector2(-30, -62),
+	"moon": {"mine": Vector2(-126, -6), "factory": Vector2(118, -14), "office": Vector2(-30, -58),
 		"boat": [Vector2(-98, 12), Vector2(-40, 22), Vector2(26, 20), Vector2(86, 6)],
 		"nodes": [Vector2(-140, 50), Vector2(-50, 72), Vector2(42, 72), Vector2(130, 52)]},
 }
@@ -111,64 +111,75 @@ static func top_pts(world: String) -> PackedVector2Array:
 	return pts
 
 
-## The cliff band under the front edge of the top.
+## The cliff band under the front edge of the top (the top pushed down,
+## merged with itself; drawn under the top).
 static func _side_pts(top: PackedVector2Array) -> PackedVector2Array:
-	var half := top.size() / 2
-	var pts := PackedVector2Array()
-	for i in half + 1:
-		pts.append(top[i])
-	for i in range(half, -1, -1):
-		pts.append(top[i] + Vector2(0, SIDE))
-	return pts
+	return Art.union([top, Art.moved(top, Vector2(0, SIDE))])
 
 
 ## The chunky rock hanging under the island, made of blocks like the concept.
+## Its top edge hides behind the cliff band.
 static func _under_pts(top: PackedVector2Array, seed: int) -> PackedVector2Array:
 	var half := top.size() / 2
 	var pts := PackedVector2Array()
-	for i in half + 1:
-		pts.append(top[i] + Vector2(0, SIDE - 3))
 	var x0 := top[half].x + 10.0
 	var x1 := top[0].x - 10.0
+	pts.append(Vector2(x1, SIDE + 20.0))
+	pts.append(Vector2(x0, SIDE + 20.0))
 	var steps := 11
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
+	var cuts: Array[float] = [x0]
+	for k in range(1, steps):
+		cuts.append(lerpf(x0, x1, (float(k) + rng.randf_range(-0.3, 0.3)) / steps))
+	cuts.append(x1)
 	for k in steps:
-		var xa := lerpf(x0, x1, float(k) / steps)
-		var xb := lerpf(x0, x1, float(k + 1) / steps)
+		var xa := cuts[k]
+		var xb := cuts[k + 1]
 		var xm := ((xa + xb) / 2.0) / x1
-		var d := SIDE + 34.0 + HANG * pow(maxf(0.0, 1.0 - xm * xm), 1.3) * rng.randf_range(0.78, 1.08)
+		# Always below the front edge above it (the inner end of the block).
+		var xi := minf(absf(xa), absf(xb)) if xa * xb > 0.0 else 0.0
+		var front := SIDE + RY * 1.06 * sqrt(maxf(0.0, 1.0 - pow(xi / RX, 2.0)))
+		var d := front + 22.0 + HANG * pow(maxf(0.0, 1.0 - xm * xm), 1.3) * rng.randf_range(0.6, 0.9)
 		pts.append(Vector2(xa + 1.5, d))
 		pts.append(Vector2(xb - 1.5, d))
 	return pts
 
 
 ## Block seams on the underside (x of each block edge and its depth).
-static func _seams(ci: CanvasItem, under: PackedVector2Array, col: Color) -> void:
-	var half := 25
-	for i in range(half + 1, under.size() - 1, 2):
-		var a := under[i]
-		var b := under[i + 1]
-		var x := b.x + 1.5
-		Art.line_c(ci, PackedVector2Array([Vector2(x, SIDE + 18), Vector2(x, maxf(b.y, under[mini(i + 2, under.size() - 1)].y) - 8)]), col, 2.5)
-		Art.line_c(ci, PackedVector2Array([Vector2(a.x + 6, SIDE + 46 + float(i % 3) * 22), Vector2(b.x - 6, SIDE + 46 + float(i % 3) * 22)]), col, 2.0)
+## Columns of rock under the island: a lit left face, seams and strata.
+static func _blocks(ci: CanvasItem, under: PackedVector2Array, col: Color, lit: Color, seed: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed + 99
+	var line := Art.shade_of(col, 0.35)
+	var prev := 0.0
+	for k in (under.size() - 2) / 2:
+		var a := under[2 + 2 * k]
+		var b := under[3 + 2 * k]
+		var x0 := a.x - 1.5
+		var x1 := b.x + 1.5
+		var d := a.y
+		var xm := x0 + (x1 - x0) * 0.4
+		Art.flat(ci, PackedVector2Array([Vector2(x0 + 2, SIDE + 20), Vector2(xm, SIDE + 20), Vector2(xm, d - 3), Vector2(x0 + 2, d - 5)]), Color(lit, 0.55))
+		if k > 0:
+			Art.line_c(ci, PackedVector2Array([Vector2(x0, SIDE + 24), Vector2(x0, minf(d, prev) - 4)]), line, 2.5)
+		for j in 2:
+			var y := SIDE + 50.0 + rng.randf() * maxf(0.0, d - SIDE - 80.0)
+			if y < d - 14.0:
+				Art.line_c(ci, PackedVector2Array([Vector2(x0 + 4, y), Vector2(x1 - 4, y + rng.randf_range(-3, 3))]), line, 2.0)
+		prev = d
 
 
 static func _body(ci: CanvasItem, world: String, seed: int) -> void:
 	var lk := look(world)
 	var top := top_pts(world)
 	var under := _under_pts(top, seed)
-	Art.toon(ci, under, _c(lk["under"]), 3.5, 1.0)
-	_seams(ci, under, Art.shade_of(_c(lk["under"]), 0.35))
-	# Lighter block faces on the underside.
-	for i in range(26, under.size() - 1, 4):
-		var a := under[i]
-		var b := under[i + 1]
-		Art.flat(ci, Art.rrect_pts(Rect2(a.x + 5, SIDE + 10, b.x - a.x - 10, (a.y - SIDE) * 0.45), 4), Color(_c(lk["under2"]), 0.6))
+	Art.toon(ci, under, _c(lk["under"]), 3.5, 0.6)
+	_blocks(ci, under, _c(lk["under"]), _c(lk["under2"]), seed)
 	var side := _side_pts(top)
 	Art.toon(ci, side, _c(lk["side"]), 3.5, 0.8)
 	for i in range(2, 24, 3):
-		var p := top[i]
+		var p: Vector2 = top[i]
 		Art.line_c(ci, PackedVector2Array([p + Vector2(0, 8), p + Vector2(0, SIDE - 6)]), Art.shade_of(_c(lk["side"]), 0.3), 2.5)
 	Art.toon(ci, top, _c(lk["top"]), 3.5, 0.5)
 
@@ -183,6 +194,9 @@ static func _debris(ci: CanvasItem, col: Color, spots_list: Array, rim: float = 
 		Art.toon(ci, pts, col, rim, 0.8)
 
 
+const OBS_SCALE := 1.35
+## How tall each building is (for the pins over them).
+const PIN_H := {"ocean": [44.0, 58.0, 62.0], "volcano": [44.0, 58.0, 50.0], "acid": [44.0, 60.0, 52.0], "moon": [64.0, 74.0, 100.0]}
 const DEBRIS := [[Vector2(-212, 96), 13.0], [Vector2(214, 120), 10.0], [Vector2(-170, 210), 9.0], [Vector2(186, 220), 12.0]]
 
 
@@ -530,7 +544,7 @@ static func _moon(ci: CanvasItem) -> void:
 	for c in [[Vector2(-180, 30), 0.3, Color("6fe8ff")], [Vector2(-168, 34), -0.2, Color("c08cff")], [Vector2(178, 40), -0.3, Color("c08cff")],
 			[Vector2(110, -84), 0.2, Color("6fe8ff")]]:
 		Art.crystal(ci, c[0], 26, 8, c[1], c[2])
-	_observatory(ci, spots("moon")["office"], 1.0)
+	_observatory(ci, spots("moon")["office"], OBS_SCALE)
 	_hangar(ci, spots("moon")["factory"], 0.9)
 	_rig(ci, spots("moon")["mine"], 0.9)
 	_debris(ci, _c(lk["under"]), DEBRIS)
@@ -570,16 +584,17 @@ static func sil_polys(world: String) -> Array:
 				polys.append(PackedVector2Array([b + Vector2(-w * 0.16, 4), b + Vector2(-w * 0.11, -h + 4), b + Vector2(w * 0.11, -h + 4), b + Vector2(w * 0.16, 4)]))
 		"moon":
 			var o: Vector2 = spots("moon")["office"]
+			var k := OBS_SCALE
 			var dome := PackedVector2Array()
 			for i in 17:
 				var a := PI + PI * i / 16.0
-				dome.append(o + Vector2(cos(a) * 34, -28 + sin(a) * 32))
-			dome.append(o + Vector2(38, 2))
-			dome.append(o + Vector2(-38, 2))
+				dome.append(o + Vector2(cos(a) * 34, -28 + sin(a) * 32) * k)
+			dome.append(o + Vector2(38, 2) * k)
+			dome.append(o + Vector2(-38, 2) * k)
 			polys.append(dome)
 			var tube := PackedVector2Array()
 			for p in [Vector2(-10, -48), Vector2(10, -48), Vector2(10, 4), Vector2(-10, 4)]:
-				tube.append(o + Vector2(8, -50) + p.rotated(-0.75))
+				tube.append(o + (Vector2(8, -50) + p.rotated(-0.75)) * k)
 			polys.append(tube)
 			var f: Vector2 = spots("moon")["factory"]
 			polys.append(PackedVector2Array([f + Vector2(-34, 0), f + Vector2(-30, -22), f + Vector2(0, -32), f + Vector2(30, -22), f + Vector2(34, 0)]))
@@ -685,12 +700,12 @@ static func _fx(ci: CanvasItem, world: String, t: float) -> void:
 		"moon":
 			var b := 0.5 + 0.5 * sin(t * 3.0)
 			Art.dot(ci, spots("moon")["factory"] + Vector2(27, -59), 3.0, Color(1.0, 0.3, 0.3, 0.4 + 0.6 * b))
-			Art.glow(ci, spots("moon")["office"] + Vector2(-28, -96), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
+			Art.glow(ci, spots("moon")["office"] + Vector2(-38, -130), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
 
 
 ## "?" and padlock over a locked island; `pulse` makes the next one breathe.
-static func mystery(ci: CanvasItem, at: Vector2, t: float, pulse: bool) -> void:
-	var k := 1.0 + (0.06 * sin(t * 3.0) if pulse else 0.0)
+static func mystery(ci: CanvasItem, at: Vector2, t: float, pulse: bool, size: float = 1.0) -> void:
+	var k := size * (1.0 + (0.06 * sin(t * 3.0) if pulse else 0.0))
 	if pulse:
 		Art.glow(ci, at + Vector2(0, -30), 90, Color(1.0, 0.85, 0.3, 0.22))
 	Art.push(ci, at, 0.0, Vector2(k, k))
@@ -712,10 +727,9 @@ static func done_mark(ci: CanvasItem, at: Vector2, t: float) -> void:
 static func markers(ci: CanvasItem, world: String, t: float) -> void:
 	var sp := spots(world)
 	var i := 0
+	var hs: Array = PIN_H.get(world, PIN_H["ocean"])
 	for k in ["mine", "factory", "office"]:
-		var p: Vector2 = sp[k] + Vector2(0, -78 + sin(t * 2.5 + i) * 3.0)
-		if world == "moon" and k == "office":
-			p.y -= 16
+		var p: Vector2 = sp[k] + Vector2(0, -hs[i] - 34.0 + sin(t * 2.5 + i) * 3.0)
 		Art.toon(ci, PackedVector2Array([p + Vector2(-7, 12), p + Vector2(7, 12), p + Vector2(0, 24)]), Art.WHITE, 2.5, 0.0)
 		Art.t_circle(ci, p, 16, Art.WHITE, 3.0, 0.4)
 		match k:
