@@ -1,0 +1,9 @@
+keys,en,ru,es,zh
+ROOM_MINE,Mine,Шахта,Mina,矿场
+ROOM_FACTORY,Factory,Фабрика,Fábrica,工厂
+ROOM_OFFICE,Office,Офис,Oficina,办公室
+EVO_BOARD,Evolution,Эволюция,Evolución,进化
+VAULT,Vault,Сейф,Bóveda,金库
+VAULT_EMPTY,The vault is empty,Сейф пока пуст,La bóveda está vacía,金库是空的
+ACCOUNTANT,Accountant,Бухгалтер,Contable,会计
+FACTORY_LINE2,Second line,Второй цех,Segunda línea,第二条生产线
