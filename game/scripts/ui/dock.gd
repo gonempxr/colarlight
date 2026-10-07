@@ -140,11 +140,16 @@ func refresh() -> void:
 			"quests":
 				n = Progress.quests_ready()
 		if Progress.fresh.has(id):
+			# A small tilted sticker on the corner, so the icon stays visible.
 			badge.text = tr("NEW")
+			badge.add_theme_font_size_override("font_size", 15)
+			badge.rotation = 0.14
 			(badge.get_theme_stylebox("normal") as ToonBox).fill = Art.GOLD
 			badge.add_theme_color_override("font_color", Art.INK)
 		elif n > 0:
 			badge.text = "!" if id == "daily" else str(n)
+			badge.add_theme_font_size_override("font_size", 20)
+			badge.rotation = 0.0
 			(badge.get_theme_stylebox("normal") as ToonBox).fill = Art.RED
 			badge.add_theme_color_override("font_color", Art.WHITE)
 		badge.visible = Progress.fresh.has(id) or n > 0
@@ -161,7 +166,7 @@ func _process(delta: float) -> void:
 		if not b.visible:
 			continue
 		var badge: Label = _badges[id]
-		badge.position = Vector2(b.size.x - badge.size.x + 6, -10)
+		badge.position = Vector2(b.size.x - badge.size.x + (16 if badge.rotation != 0.0 else 6), -26 if badge.rotation != 0.0 else -10)
 		b.pivot_offset = b.size / 2.0
 		# A new or ready button wiggles for a little while, then just
 		# keeps its badge (a wiggle that never stops becomes noise).

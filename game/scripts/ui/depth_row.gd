@@ -560,10 +560,33 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		Props.boards(ci, Rect2(cave.position.x + 20, cave.position.y + 30, cave.size.x - 40, cave.size.y - 60))
 		# The card column rock is empty on closed rows: a lock there.
 		Art.lock(ci, Vector2(world.card_x() + World.CARD_W / 2.0, World.ROW_H / 2.0), 30)
-	else:
-		# Inside the cave, between its top edge and the "???" label.
-		Art.lock(ci, Vector2(size.x / 2.0, CAVE_TOP + 22.0), 16)
+		_cave_edge(ci, cave_poly)
+		return
+	# Deeper, still unknown: darker towards the floor, dark rocks on the
+	# ledge, a pair of curious eyes in the dark and the lock under the
+	# "???" (drawn after the edge, so it never cuts through it).
+	var deep := Color(0.01, 0.02, 0.08, 0.5)
+	Art.grad(ci, PackedVector2Array([Vector2(cave.position.x, cave.position.y + cave.size.y * 0.4), Vector2(cave.end.x, cave.position.y + cave.size.y * 0.4),
+			cave.end, Vector2(cave.position.x, cave.end.y)]), PackedColorArray([Color(deep, 0.0), Color(deep, 0.0), deep, deep]))
+	var rock := Color(0.02, 0.04, 0.12, 0.6)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 7 + 3
+	for k in 4:
+		var x := lerpf(cave.position.x + 50.0, cave.end.x - 60.0, (k + rng.randf_range(0.0, 0.6)) / 4.0)
+		var w := rng.randf_range(26.0, 48.0)
+		var h := rng.randf_range(16.0, 34.0)
+		Art.flat(ci, Art.smooth_pts(PackedVector2Array([Vector2(x - w, LEDGE_Y + 4), Vector2(x - w * 0.6, LEDGE_Y - h * 0.7),
+				Vector2(x - w * 0.1, LEDGE_Y - h), Vector2(x + w * 0.5, LEDGE_Y - h * 0.6), Vector2(x + w, LEDGE_Y + 4)]), 2), rock)
 	_cave_edge(ci, cave_poly)
+	# Left or right of the lock, never next to it.
+	var side := rng.randf() < 0.5
+	var ex := lerpf(cave.position.x + 60.0, size.x / 2.0 - 80.0, rng.randf()) if side else lerpf(size.x / 2.0 + 80.0, cave.end.x - 60.0, rng.randf())
+	var eyes := Vector2(ex, LEDGE_Y - 46.0 - rng.randf_range(0.0, 50.0))
+	for sx: float in [-9.0, 9.0]:
+		Art.glow(ci, eyes + Vector2(sx, 0), 11.0, Color(1.0, 0.95, 0.55, 0.25), 12)
+		Art.flat(ci, Art.ellipse_pts(eyes + Vector2(sx, 0), Vector2(4.5, 3.2), 12), Color(1.0, 0.96, 0.7, 0.85))
+		Art.flat(ci, Art.ellipse_pts(eyes + Vector2(sx + 1.2, 0.4), Vector2(1.6, 2.2), 8), Color(0.1, 0.06, 0.2, 0.9))
+	Art.lock(ci, Vector2(size.x / 2.0, 150.0), 24)
 
 
 
