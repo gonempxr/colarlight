@@ -18,6 +18,13 @@ var _t := 0.0
 var _taps := 0
 var _target := Vector2.ZERO
 var _has_target := false
+## Where the hand is drawn: it glides to a new target (a new step, a hint)
+## instead of jumping, and sticks to a target that moves (scrolling).
+var _hand := Vector2.ZERO
+var _glide_from := Vector2.ZERO
+var _glide := 1.0
+var _had_target := false
+var _glide_target_last := Vector2.ZERO
 var _text := ""
 var _bubble: PanelContainer
 var _label: Label
@@ -272,14 +279,21 @@ func _process(delta: float) -> void:
 		key = found[1]
 		_text = tr(key)
 	_bubble.visible = _has_target
+	if _has_target and _had_target and _target.distance_to(_glide_target_last) > 40.0 and not Settings.reduce_motion:
+		_glide_from = _hand
+		_glide = 0.0
+	_glide_target_last = _target
+	_glide = minf(1.0, _glide + delta / 0.45)
+	_hand = _target if not _had_target else _glide_from.lerp(_target, Motion.ease_in_out(_glide))
+	_had_target = _has_target
 	if _has_target:
 		_label.text = _text
 		var v := get_viewport_rect().size
 		_bubble.custom_minimum_size.x = minf(520.0, v.x - 40.0)
 		_bubble.reset_size()
 		var below := _target.y < v.y * 0.45
-		var y := _target.y + 130.0 if below else _target.y - 130.0 - _bubble.size.y
-		_bubble.position = Vector2(clampf(_target.x - _bubble.size.x / 2.0, 20.0, v.x - _bubble.size.x - 20.0), clampf(y, 120.0, v.y - _bubble.size.y - 20.0))
+		var y := _hand.y + 130.0 if below else _hand.y - 130.0 - _bubble.size.y
+		_bubble.position = Vector2(clampf(_hand.x - _bubble.size.x / 2.0, 20.0, v.x - _bubble.size.x - 20.0), clampf(y, 120.0, v.y - _bubble.size.y - 20.0))
 	queue_redraw()
 
 
@@ -288,4 +302,4 @@ func _draw() -> void:
 		return
 	# The hand taps the target from the lower right; its rings pulse out
 	# from the fingertip on every press.
-	PointerArt.draw(self, _target + Vector2(6, 8), _t, not Settings.reduce_motion, -0.5, 1.15)
+	PointerArt.draw(self, _hand + Vector2(6, 8), _t, not Settings.reduce_motion, -0.5, 1.15)

@@ -123,6 +123,8 @@ static var show_title := true
 func _ready() -> void:
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Every button squashes when pressed and wobbles back when let go.
+	add_child(ButtonJuice.new())
 	_apply_ui_scale()
 	var bg := ColorRect.new()
 	bg.color = Art.SEA_DEEP
