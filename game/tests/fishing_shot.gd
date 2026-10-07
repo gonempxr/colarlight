@@ -1,16 +1,22 @@
 extends SceneTree
 ## Screenshots of the fishing screen (needs a real renderer, not --headless):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
-##     -s res://tests/fishing_shot.gd -- out.png [lang] [mode]
+##     -s res://tests/fishing_shot.gd -- out.png [lang] [mode] [world 0..3] [rod level 1..20]
 ## modes: sheet (every fish + silhouettes), idle, wait, bite, reel,
 ##   catch:<fish id>, reel:<fish id>:<rod level>, full, escaped, helper, land, bucket, book, shop.
 ## Uses its own save files, never the player's.
+
+var _rod_level := 0
+
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out := args[0] if args.size() > 0 else "user://fishing.png"
 	var lang := args[1] if args.size() > 1 else "en"
 	var mode := args[2] if args.size() > 2 else "idle"
+	var world := int(args[3]) if args.size() > 3 else 0
+	var rod_level := int(args[4]) if args.size() > 4 else 0
+	_rod_level = rod_level
 	await process_frame
 	TranslationServer.set_locale(lang)
 	var gs := root.get_node("GameState")
@@ -24,6 +30,9 @@ func _initialize() -> void:
 	gs.reset()
 	fishing.reset()
 	fishing.rng.seed = 7
+	fishing.world_override = world
+	if rod_level > 0:
+		fishing.rod = rod_level - 1
 	gs.coins = 12500.0
 	var bg := ColorRect.new()
 	bg.color = Art.SEA_DEEP
@@ -148,7 +157,8 @@ func _screen(mode: String, fishing: Node) -> void:
 			fishing.record({"id": "koi", "size": 60.0, "value": 10.0})
 			screen.open_panel("book")
 		"shop":
-			fishing.rod = 2
+			if _rod_level <= 0:
+				fishing.rod = 2
 			fishing.helper = 1
 			screen.open_panel("shop")
 		_:

@@ -25,7 +25,7 @@ const MOON := 3
 const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON"]
 const LEVELS := 20
 const UNIT := 110.0
-const SIL := Color("46406e")
+const SIL := Color("b4b2cc")
 ## Parts (reels, rings, vials) are drawn this much bigger than the rod's
 ## own scale so they read on small ladder icons.
 const PART := 1.3
@@ -35,6 +35,7 @@ static var _cum := PackedFloat32Array()
 static var _len := 1.0
 static var _sc := 1.0
 static var _sil := false
+static var _part := PART
 
 
 # --- Names ------------------------------------------------------------------------------
@@ -97,7 +98,7 @@ static func _sub(f0: float, f1: float, n: int = 5) -> PackedVector2Array:
 
 ## Local frame at fraction f: x along the rod, +y the underside, rod units.
 static func _in(ci: CanvasItem, f: float, rot: float = 0.0) -> void:
-	Art.push(ci, _at(f), _ang(f) + rot, Vector2.ONE * _sc * PART)
+	Art.push(ci, _at(f), _ang(f) + rot, Vector2.ONE * _sc * _part)
 
 
 static func _out(ci: CanvasItem) -> void:
@@ -140,8 +141,8 @@ static func _tube(ci: CanvasItem, f0: float, f1: float, w0: float, w1: float, co
 ## A band (ring, sleeve, wrap) around the rod at f, `w` units long.
 static func _band(ci: CanvasItem, f: float, w: float, thick: float, col: Color, shade: float = 0.3) -> void:
 	_in(ci, f)
-	w /= PART
-	thick = (thick + 1.0) / PART
+	w /= _part
+	thick = (thick + 1.0) / _part
 	Art.t_rect(ci, Rect2(-w / 2.0, -thick / 2.0, w, thick), minf(w, thick) * 0.3, _c(col), 2.0, shade)
 	_out(ci)
 
@@ -215,10 +216,13 @@ static func icon(ci: CanvasItem, world: int, level: int, t: float, silhouette: b
 
 # --- The rod -----------------------------------------------------------------------------
 
-## Draws the rod along `pts` (butt first, tip last, canvas space).
-static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int, t: float) -> void:
+## Draws the rod along `pts` (butt first, tip last, canvas space). `part`:
+## how much bigger the parts are drawn than the rod's own scale (icons want
+## them chunkier than a rod in a hand).
+static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int, t: float, part: float = PART) -> void:
 	if pts.size() < 2:
 		return
+	_part = part
 	_setup(pts)
 	_sc = _len / (UNIT * length_mult(world, level))
 	var lv := clampi(level, 1, LEVELS)

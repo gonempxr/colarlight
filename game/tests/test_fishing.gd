@@ -181,20 +181,43 @@ func test_upgrades() -> void:
 	# Difficulty: a new rod is fine for common fish, rare ones want a better
 	# rod, and every rod level shows (wider zone, slower fish, more tries).
 	var top: int = FishData.max_level("rod")
-	check(FishData.reel_window(0, 0) >= 0.5, "a new rod reels common fish easily (%.2f s in the zone)" % FishData.reel_window(0, 0))
-	check(FishData.reel_window(4, 0) <= 0.2 and FishData.reel_window(4, 0) >= 0.1, "a legendary on a new rod is hard but fair (%.2f s)" % FishData.reel_window(4, 0))
-	check(FishData.reel_window(4, top) >= FishData.reel_window(4, 0) * 2.0, "the best rod makes a legendary over twice as easy (%.2f s)" % FishData.reel_window(4, top))
+	check(top + 1 == 20 and FishData.ROD_LEVELS == 20, "20 rod levels per world")
+	check(FishData.reel_window(0, 0) >= 0.3, "a new rod reels common fish fine (%.2f s in the zone)" % FishData.reel_window(0, 0))
+	check(FishData.reel_window(4, 0) <= 0.1 and FishData.reel_window(4, 0) >= 0.06, "a legendary on a new rod is really hard (%.2f s)" % FishData.reel_window(4, 0))
+	check(FishData.reel_window(4, top) >= FishData.reel_window(4, 0) * 3.5, "the best rod makes a legendary about four times easier (%.2f s)" % FishData.reel_window(4, top))
 	var easier := true
 	for r in 5:
 		for lv in top:
 			easier = easier and FishData.reel_window(r, lv + 1) > FishData.reel_window(r, lv)
 	check(easier, "every rod level helps with every fish")
-	check(FishData.reel_window(4, 0, 2) >= 0.18, "misses make even a legendary catchable (%.2f s)" % FishData.reel_window(4, 0, 2))
+	check(FishData.reel_window(4, 0, 2) >= 0.1, "misses make even a legendary catchable (%.2f s)" % FishData.reel_window(4, 0, 2))
+	check(FishData.reel_dart(0, 0) == 0.0 and FishData.reel_dart(4, 0) > FishData.reel_dart(2, 0), "only rare fish dart, legendary ones most")
+	check(FishData.reel_dart(4, top) < FishData.reel_dart(4, 0) * 0.6, "a better rod calms the darting")
+	check(FishData.reel_grade(0.5, 0.5, 0.2) == 2 and FishData.reel_grade(0.57, 0.5, 0.2) == 1 and FishData.reel_grade(0.63, 0.5, 0.2) == 0, "the middle of the zone is Perfect, its edge a hit, outside a miss")
+	check(FishData.reel_grade(0.5 + 0.1 + FishData.REEL_MARGIN * 0.9, 0.5, 0.2) == 1, "a tap a little late still counts")
+	# A kid who taps within +-0.15 s of the right moment: what each rod lands.
+	check(_catch_rate(0, 0, 0.15) >= 0.95, "rod 1 lands common fish (%.2f)" % _catch_rate(0, 0, 0.15))
+	check(_catch_rate(4, 0, 0.15) <= 0.2, "rod 1 rarely lands a legendary (%.2f)" % _catch_rate(4, 0, 0.15))
+	check(_catch_rate(4, 10, 0.15) >= 0.85 and _catch_rate(4, top, 0.15) >= 0.99, "rod 11 and up land legendaries (%.2f, %.2f)" % [_catch_rate(4, 10, 0.15), _catch_rate(4, top, 0.15)])
+	var climbs := true
+	for lv in range(0, 10, 2):
+		climbs = climbs and _catch_rate(3, lv + 2, 0.2) > _catch_rate(3, lv, 0.2)
+	check(climbs, "for a less exact kid every two rod levels land more epic fish")
+	check(FishData.odds(top)[4] > FishData.odds(0)[4] * 2.5, "the best rod brings legendaries over 2.5x more often")
 	check(FishData.reel_tries(top) > FishData.reel_tries(0) and FishData.reel_tries(0) >= 3, "a stronger line gives more tries")
 	check(FishData.reel_hits(4) > FishData.reel_hits(0) and FishData.reel_hits(0) == 3, "big fish need more pulls")
 	while fi.buy("rod"):
 		pass
 	check(fi.is_maxed("rod") and fi.upgrade_cost("rod") < 0.0 and not fi.buy("rod"), "rod stops at max")
+	check(fi.rod == 19 and fi.capacity() == FishData.BUCKET_BASE + FishData.BUCKET_STEP + 9, "rod levels add bucket slots (+1 per 2)")
+	# Every world has its own rod.
+	fi.world_override = 2
+	check(fi.rod == 0 and fi.upgrade_cost("rod") > 0.0, "the swamp rod starts at level 1")
+	check(fi.buy("rod") and fi.rods[2] == 1 and fi.rods[0] == 19, "buying the swamp rod leaves the sea rod alone")
+	gs.location = 1
+	fi.world_override = -1
+	check(fi.world() == 1 and fi.rod == 0, "the rod follows the player's world")
+	gs.location = 0
 	# Prices scale with income.
 	gs.reset()
 	var low: float = fi.upgrade_cost("helper")
@@ -203,6 +226,31 @@ func test_upgrades() -> void:
 	gs.levels["boat"] = 200
 	gs.levels["plant"] = 200
 	check(fi.upgrade_cost("helper") > low * 5.0, "upgrade prices follow income")
+
+
+## Chance to land a fish of rarity r with rod level lv for a player whose
+## taps are off by up to `err` seconds (evenly spread), with the mercy
+## widening after each miss.
+func _catch_rate(r: int, lv: int, err: float) -> float:
+	var need := FishData.reel_hits(r)
+	var tries := FishData.reel_tries(lv)
+	var memo := {}
+	return _catch_step(r, lv, err, 0, 0, need, tries, memo)
+
+
+func _catch_step(r: int, lv: int, err: float, hits: int, misses: int, need: int, tries: int, memo: Dictionary) -> float:
+	if hits >= need:
+		return 1.0
+	if misses >= tries:
+		return 0.0
+	var key := hits * 100 + misses
+	if memo.has(key):
+		return memo[key]
+	var half := FishData.reel_zone(r, lv, misses) / 2.0 + FishData.REEL_MARGIN
+	var p := minf(1.0, half / FishData.reel_speed(r, lv) / err)
+	var v := p * _catch_step(r, lv, err, hits + 1, misses, need, tries, memo) + (1.0 - p) * _catch_step(r, lv, err, hits, misses + 1, need, tries, memo)
+	memo[key] = v
+	return v
 
 
 func test_helper() -> void:
@@ -231,6 +279,7 @@ func test_helper() -> void:
 func test_save_roundtrip() -> void:
 	_fresh()
 	fi.rod = 3
+	fi.rods[3] = 7
 	fi.bucket_level = 2
 	fi.helper = 2
 	fi.keep({"id": "koi", "size": 44.5, "value": 1234.0})
@@ -243,7 +292,7 @@ func test_save_roundtrip() -> void:
 	fi.reset()
 	check(fi.bucket.is_empty() and fi.rod == 0, "reset clears")
 	check(fi.load_game(), "load works")
-	check(fi.rod == 3 and fi.bucket_level == 2 and fi.helper == 2, "upgrades survive")
+	check(fi.rod == 3 and fi.rods[3] == 7 and fi.bucket_level == 2 and fi.helper == 2, "upgrades survive (a rod per world)")
 	check(fi.bucket.size() >= 2 and fi.bucket[0]["id"] == "koi" and is_equal_approx(fi.bucket[0]["value"], 1234.0), "bucket survives")
 	check(fi.has_found("golden") and fi.count_of("koi") == 1 and is_equal_approx(fi.best_of("koi"), 44.5), "book survives")
 	check(int(fi.stats.get("sold", 0)) == 7, "stats survive")
@@ -272,7 +321,7 @@ func test_corrupted_save() -> void:
 			"book": {"koi": {"count": 2, "best": 50}, "boot": {"count": 1}, "perch": "x", "tang": {"count": -2}}, "stats": {"sold": 3, "bad": "x"}}))
 	f.close()
 	check(fi.load_game(), "odd values still load")
-	check(fi.rod == FishData.max_level("rod") and fi.bucket_level == 0 and fi.helper == 0, "levels are clamped")
+	check(fi.rod == FishData.max_level("rod") and fi.bucket_level == 0 and fi.helper == 0, "levels are clamped (an old single rod becomes the sea rod)")
 	check(fi.bucket.size() == fi.capacity(), "bucket never loads over capacity")
 	check(fi.bucket[0]["id"] == "koi" and fi.bucket[0]["size"] >= 0.0 and fi.bucket[0]["value"] >= 0.0, "unknown fish dropped, negatives fixed")
 	check(fi.book.size() == 1 and fi.count_of("koi") == 2, "book keeps only good entries")
@@ -281,7 +330,12 @@ func test_corrupted_save() -> void:
 
 
 func test_translations() -> void:
-	var keys := ["FISHING_CAST", "FISHING_PRESS_CAST", "FISHING_ROD_STATS", "FISHING_KEEP", "FISH_R_LEGENDARY", "DOCK_FISHING", "FEATURE_FISHING_DESC"]
+	var keys := ["FISHING_CAST", "FISHING_PRESS_CAST", "FISHING_KEEP", "FISH_R_LEGENDARY", "DOCK_FISHING", "FEATURE_FISHING_DESC",
+			"FISHING_PERFECT", "FISHING_ROD_NEXT", "FISHING_ROD_LADDER", "FISHING_STAT_RARE", "FISHING_PERFECT_BONUS"]
+	for w in 4:
+		keys.append(RodArt.name_key(w))
+		for lv in 20:
+			keys.append(RodArt.level_key(w, lv + 1))
 	for id in FishData.ids():
 		keys.append(FishData.name_key(id))
 	for lang in ["en", "ru", "es", "zh"]:
@@ -314,9 +368,15 @@ func test_screen() -> void:
 	check(screen.state() == "cast", "the Cast button casts")
 	screen._on_action()
 	check(screen.state() == "cast", "early taps do nothing bad")
+	await _wait_for(screen, "wait", 2.0)
+	var wl: float = screen._wait_len
+	screen._last_tap = -1.0
+	screen._on_action()
+	check(screen.state() == "wait" and screen._wait_len > wl, "a tap before the bite makes the fish wait a little")
 	screen._wait_len = 0.0
 	await _wait_for(screen, "bite", 3.0)
 	check(screen.state() == "bite", "the float dips")
+	screen._last_tap = -1.0
 	screen._on_screen_tap()
 	check(screen.state() == "reel", "a tap anywhere in time starts reeling")
 	# A miss, then hits right in the zone.
@@ -325,10 +385,12 @@ func test_screen() -> void:
 	screen._reel_tap()
 	check(screen._misses == 1 and screen.state() == "reel", "a miss doesn't end it")
 	check(screen._tries == FishData.reel_tries(fi.rod) and screen._need_hits == FishData.reel_hits(FishData.rarity_of(str(screen._fish["id"]))), "the reel uses the rod's tries and the fish's pulls")
+	var v0: float = screen._fish["value"]
 	for i in screen._need_hits:
 		screen._marker = screen._zone
 		screen._reel_tap()
 	check(screen.state() == "land", "enough hits land the fish")
+	check(screen._perfects == screen._need_hits and float(screen._fish["value"]) >= v0 * (1.0 + FishData.PERFECT_BONUS * screen._need_hits) - 1.0, "Perfect pulls make the fish worth more")
 	await _wait_for(screen, "card", 3.0)
 	check(screen.state() == "card" and fi.found() == 1, "catch card shows and the book has it")
 	var card: Node = screen._card_layer.get_node_or_null("Card")
@@ -362,6 +424,19 @@ func test_screen() -> void:
 		screen.open_panel(p)
 		await _frames(3)
 		check(screen._modal.visible, p + " panel opens")
+	var ladder := _find(screen._modal, "RodLadder")
+	check(ladder != null and ladder.get_child_count() == 20, "the shop shows the ladder of 20 rods")
+	gs.coins += 1.0e9
+	screen._modal.rebuild()
+	await _frames(2)
+	var buy := _find(screen._modal, "BuyRod") as Button
+	var rod_before: int = fi.rod
+	check(buy != null, "the rod card has a buy button")
+	if buy:
+		buy.pressed.emit()
+	await _frames(2)
+	check(fi.rod == rod_before + 1, "the rod is bought from the ladder card")
+	gs.coins -= 1.0e9
 	screen._modal.close()
 	await _frames(12)
 	screen.close()
