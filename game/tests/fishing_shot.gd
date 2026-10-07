@@ -31,6 +31,8 @@ func _initialize() -> void:
 	root.add_child(bg)
 	if mode == "sheet":
 		await _sheet()
+	elif mode.begins_with("rods:"):
+		await _rods(int(mode.substr(5)))
 	else:
 		await _screen(mode, fishing)
 	await RenderingServer.frame_post_draw
@@ -77,6 +79,29 @@ func _sheet() -> void:
 	tr.texture = FishArt.icon(96)
 	tr.position = Vector2(560, 1380)
 	root.add_child(tr)
+	for i in 5:
+		await process_frame
+
+
+## The 20 rods of one world on a 4 x 5 sheet (like Mark's rod sheet).
+func _rods(world: int) -> void:
+	var v := ArtView.make(func(ci: CanvasItem, s: Vector2, t: float):
+		Art.flat(ci, Art.rrect_pts(Rect2(Vector2.ZERO, s), 0.0), Color("eef6ff"))
+		var cols := 4 if s.x < s.y else 5
+		var rows := 5 if s.x < s.y else 4
+		var cw := s.x / cols
+		var ch := (s.y - 40.0) / rows
+		var k := minf(cw / 130.0, ch / 150.0)
+		Art.text(ci, Vector2(s.x / 2.0, 30), tr(RodArt.name_key(world)), 24, Art.WHITE, 6)
+		for i in 20:
+			var p := Vector2(cw * (i % cols) + cw / 2.0, 40.0 + ch * (i / cols) + ch / 2.0 - 8.0)
+			Art.t_rect(ci, Rect2(p - Vector2(cw, ch) / 2.0 + Vector2(4, 4), Vector2(cw, ch) - Vector2(8, 0)), 12, Art.CREAM, 2.0, 0.0)
+			Art.push(ci, p, 0.0, Vector2.ONE * k)
+			RodArt.icon(ci, world, i + 1, 0.5 + i * 0.37)
+			Art.pop(ci)
+			Art.text(ci, p + Vector2(0, ch / 2.0 - 4.0), tr("FISHING_LEVEL") % (i + 1), int(14 * maxf(1.0, k)), Art.INK, 0), Vector2.ZERO, false)
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(v)
 	for i in 5:
 		await process_frame
 

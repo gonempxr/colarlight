@@ -21,7 +21,8 @@ signal helper_caught(fish: Dictionary)
 signal sold(coins: float)
 signal upgraded(kind: String, level: int)
 
-const SAVE_VERSION := 1
+## 2: one rod per world ("rods"); version 1 had a single "rod" (now the ocean rod).
+const SAVE_VERSION := 2
 const UPGRADES: Array[String] = ["rod", "bucket", "helper"]
 
 var save_path := "user://fishing.json"
@@ -30,7 +31,16 @@ var autosave_enabled := true
 var bucket: Array = []
 ## species id -> {"count": int, "best": float (cm)}
 var book: Dictionary = {}
-var rod := 0
+## Rod level index (0..19) in each world: ocean, volcano, acid, moon.
+var rods: Array[int] = [0, 0, 0, 0]
+## The rod of the world the player is in now.
+var rod: int:
+	get:
+		return rods[world()]
+	set(value):
+		rods[world()] = clampi(value, 0, FishData.max_level("rod"))
+## Tests and screenshots: fish in this world (-1 = the player's world).
+var world_override := -1
 var bucket_level := 0
 ## 0 = no fisherman yet.
 var helper := 0
@@ -56,7 +66,7 @@ func _ready() -> void:
 func reset() -> void:
 	bucket = []
 	book = {}
-	rod = 0
+	rods = [0, 0, 0, 0]
 	bucket_level = 0
 	helper = 0
 	helper_timer = 0.0
@@ -108,8 +118,26 @@ func base_rate() -> float:
 	return maxf(r, FishData.MIN_RATE)
 
 
+## World index 0..3 the fishing happens in (GameState's world).
+func world() -> int:
+	if world_override >= 0:
+		return world_override % 4
+	var gs := get_node_or_null("/root/GameState")
+	if gs == null or not gs.has_method("world_index"):
+		return 0
+	return posmod(int(gs.world_index()), 4)
+
+
+## Rod levels of every world added up (they all grow the bucket a little).
+func rod_total() -> int:
+	var n := 0
+	for r in rods:
+		n += r
+	return n
+
+
 func capacity() -> int:
-	return FishData.capacity(bucket_level)
+	return FishData.capacity(bucket_level, rod_total())
 
 
 func space() -> int:
@@ -336,7 +364,7 @@ func take_offline_catch() -> int:
 func save_game() -> bool:
 	_dirty = false
 	var data := {
-		"version": SAVE_VERSION, "bucket": bucket, "book": book, "rod": rod,
+		"version": SAVE_VERSION, "bucket": bucket, "book": book, "rods": rods, "rod": rods[0],
 		"bucket_level": bucket_level, "helper": helper, "helper_timer": helper_timer,
 		"stats": stats, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -357,7 +385,14 @@ func load_game() -> bool:
 	if not d is Dictionary:
 		push_warning("Fishing save is corrupted, starting fresh")
 		return false
-	rod = clampi(_int(d.get("rod")), 0, FishData.max_level("rod"))
+	var top := FishData.max_level("rod")
+	if d.get("rods") is Array:
+		var arr: Array = d["rods"]
+		for i in mini(arr.size(), 4):
+			rods[i] = clampi(_int(arr[i]), 0, top)
+	else:
+		# Version 1: one rod for all, it becomes the ocean rod.
+		rods[0] = clampi(_int(d.get("rod")), 0, top)
 	bucket_level = clampi(_int(d.get("bucket_level")), 0, FishData.max_level("bucket"))
 	helper = clampi(_int(d.get("helper")), 0, FishData.max_level("helper"))
 	if d.get("book") is Dictionary:
