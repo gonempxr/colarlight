@@ -78,7 +78,7 @@ static func build(m: Modal, main: Node) -> void:
 	m.text(t("RIVALS_REWARDS") % [r[0], r[1], r[2]], 19, Art.INK_SOFT)
 
 
-## The motivation line: how many stars to pass the rival just above, or a
+## The motivation line: how far ahead the rival just above is, or a
 ## cheer when the player leads ("" when there is no board).
 static func chase_text(rows: Array) -> String:
 	for i in rows.size():
@@ -87,7 +87,7 @@ static func chase_text(rows: Array) -> String:
 		if i == 0:
 			return t("RIVALS_TOP")
 		var above: Dictionary = rows[i - 1]
-		var gap := maxf(1.0, float(above["score"]) - float(rows[i]["score"]) + 1.0)
+		var gap := maxf(1.0, float(above["score"]) - float(rows[i]["score"]))
 		return t("RIVALS_GAP") % [rival_name(str(above["id"])), NumFormat.short(gap)]
 	return ""
 
@@ -156,9 +156,9 @@ static func _cpu_tag() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	pill.add_child(row)
-	var icon := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _draw_screen(ci, s / 2.0), Vector2(18, 18))
+	var icon := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _draw_screen(ci, s / 2.0), Vector2(20, 20))
 	row.add_child(icon)
-	var l := Views.label(t("RIVALS_CPU"), 15, Color("5a6280"), true)
+	var l := Views.label(t("RIVALS_CPU"), 17, Color("5a6280"), true)
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(l)
