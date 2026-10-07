@@ -115,12 +115,14 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "hat_unicorn", "slot": "hat", "art": "unicorn", "unlock": "pearls", "price": 300, "rarity": 2},
 	{"id": "hat_pumpkin", "slot": "hat", "art": "pumpkin", "unlock": "goal", "goal": "puzzle_20", "rarity": 2},
 	{"id": "hat_astronaut", "slot": "hat", "art": "astronaut", "unlock": "goal", "goal": "depth_5", "rarity": 3},
+	{"id": "hat_flame", "slot": "hat", "art": "flame", "unlock": "goal", "goal": "streak_30", "rarity": 3},
 	# Boat paint
 	{"id": "boat_classic", "slot": "boat", "art": "classic", "unlock": "free", "rarity": 0},
 	{"id": "boat_sunny", "slot": "boat", "art": "sunny", "unlock": "pearls", "price": 60, "rarity": 0},
 	{"id": "boat_candy", "slot": "boat", "art": "candy", "unlock": "pearls", "price": 120, "rarity": 1},
 	{"id": "boat_pirate", "slot": "boat", "art": "pirate", "unlock": "pearls", "price": 200, "rarity": 2},
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
+	{"id": "boat_flame", "slot": "boat", "art": "flame", "unlock": "goal", "goal": "streak_14", "rarity": 2},
 	# Player outfits (room 3). Pearls or goals only, never real money.
 	{"id": "outfit_casual", "slot": "outfit", "art": "casual", "unlock": "free", "rarity": 0},
 	{"id": "outfit_captain", "slot": "outfit", "art": "captain", "unlock": "pearls", "price": 60, "rarity": 0},
@@ -143,6 +145,7 @@ const BOAT_PAINTS := {
 	"candy": [Color("ff8fc7"), Color("fff0f7"), Color("b07cff"), Color("7be0ff"), Color("b6f36a")],
 	"pirate": [Color("3a3350"), Color("e8c48a"), Color("7a2e3a"), Color("5c5470"), Color("1a1a24")],
 	"royal": [Color("2a4fb8"), Color("ffd84a"), Color("ffd84a"), Color("ffd84a"), Color("d8363c")],
+	"flame": [Color("ff6a2b"), Color("ffd23f"), Color("d8363c"), Color("ffb347"), Color("ffe36b")],
 }
 ## The diver suits are gone (worker evolution replaced them). Pearls spent
 ## on them are refunded once on load (Progress). Old id -> pearl price.
@@ -176,6 +179,8 @@ const GOALS := {
 	"location_4": ["location", 4],
 	"depth_5": ["deepest", 5],
 	"prestige_1": ["prestiges", 1],
+	"streak_14": ["streak_best", 14],
+	"streak_30": ["streak_best", 30],
 }
 
 # --- Worker skins --------------------------------------------------------------------
@@ -293,6 +298,25 @@ const DAILY: Array[Dictionary] = [
 	{"kind": "coins", "amount": 20},
 	{"kind": "boost", "amount": 30},
 	{"kind": "pearls", "amount": 25},
+]
+
+# --- Streak -------------------------------------------------------------------
+## Days in a row with one small action (Progress.streak_action). Every lit
+## day gives STREAK_DAY_PEARLS; milestones give their reward once ever (shown
+## in advance on the streak screen, never random). Items come through GOALS
+## ("streak_N" uses the best streak, so a new flame never loses them).
+const STREAK_DAY_PEARLS := 2
+const STREAK_FREEZE_START := 1
+const STREAK_FREEZE_EVERY := 7
+const STREAK_FREEZE_MAX := 2
+## days, pearls, coins_min (minutes of income, shown as a chest), item.
+const STREAK_MILESTONES: Array[Dictionary] = [
+	{"days": 3, "pearls": 10},
+	{"days": 7, "pearls": 15, "coins_min": 30.0},
+	{"days": 14, "item": "boat_flame"},
+	{"days": 30, "pearls": 30, "item": "hat_flame"},
+	{"days": 50, "pearls": 50, "coins_min": 60.0},
+	{"days": 100, "pearls": 100, "coins_min": 120.0},
 ]
 
 # --- Pearl shop ------------------------------------------------------------------

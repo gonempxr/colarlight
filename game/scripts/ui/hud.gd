@@ -14,6 +14,7 @@ const HIDE_DELAY := 0.9
 
 signal settings_pressed
 signal avatar_pressed
+signal streak_pressed
 
 var _coins: Label
 var _coin_icon: TextureRect
@@ -40,6 +41,7 @@ var _reveal := 1.0
 var area_w := 0.0
 var _reveal_hold := 0.0
 var _intro_show := 3.0
+var streak_badge: Control
 
 
 func _ready() -> void:
@@ -126,6 +128,7 @@ func _ready() -> void:
 	_pearls.add_theme_color_override("font_color", Color("f1e6ff"))
 	_pearls.add_theme_constant_override("outline_size", 6)
 	sub.add_child(_pearls)
+	_add_streak(sub)
 	_rush = ProgressBar.new()
 	_rush.show_percentage = false
 	_rush.max_value = 1.0
@@ -153,6 +156,14 @@ func _ready() -> void:
 	Settings.changed.connect(_avatar.queue_redraw)
 	resized.connect(_place)
 	_pill.resized.connect(func(): if _notch: _place())
+
+
+## The streak flame next to the pearls (StreakBadge).
+func _add_streak(row: HBoxContainer) -> void:
+	var badge := StreakBadge.new()
+	badge.pressed.connect(func(): streak_pressed.emit())
+	row.add_child(badge)
+	streak_badge = badge
 
 
 ## Screen points where flying rewards land.

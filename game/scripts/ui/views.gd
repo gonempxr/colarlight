@@ -184,6 +184,7 @@ static func daily_amount(gift: Dictionary, week: int) -> String:
 
 static func daily(m: Modal, main: Node) -> void:
 	m.title(t("DAILY"))
+	m.add(StreakView.today_card(main, m))
 	m.text(t("DAILY_HINT"), 21, Art.INK_SOFT)
 	var n := Content.DAILY.size()
 	var week := Progress.daily_day / n

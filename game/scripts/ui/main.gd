@@ -258,6 +258,7 @@ func _ready() -> void:
 	_fx.arrived.connect(func(kind): _hud.bump(kind))
 	_ad_overlay = AdOverlay.new()
 	add_child(_ad_overlay)
+	_setup_streak()
 
 	GameState.changed.connect(_refresh)
 	GameState.milestone_reached.connect(_on_milestone)
@@ -1184,3 +1185,28 @@ func _open_offline(report: Dictionary) -> void:
 			_modal.close()
 			if Progress.daily_ready():
 				(func(): open_feature("daily")).call_deferred()))
+
+
+# --- Streak (StreakView, StreakPop) ----------------------------------------------------
+
+var _streak_pop: StreakPop
+
+
+func _setup_streak() -> void:
+	_streak_pop = StreakPop.new()
+	_streak_pop.main = self
+	_streak_pop.tapped.connect(open_streak)
+	add_child(_streak_pop)
+	_hud.streak_pressed.connect(open_streak)
+	Progress.streak_lit.connect(_on_streak_lit)
+
+
+func _on_streak_lit(res: Dictionary) -> void:
+	_streak_pop.top_y = (_hud.used_height() if _wide else _hud.phone_bottom()) + 8.0
+	_streak_pop.show_result(res)
+
+
+func open_streak() -> void:
+	if _streak_pop.is_showing():
+		_streak_pop.hide_pop()
+	_modal.open(func(m): StreakView.build(m, self))
