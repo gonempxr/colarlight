@@ -250,7 +250,13 @@ func stage_anchor(key: String) -> Vector2:
 # --- Moods --------------------------------------------------------------------------
 
 func react(key: String, emotion: String, seconds: float, jump: bool = false) -> void:
-	_moods[key] = {"emotion": emotion, "until": t + seconds, "jump_at": t if jump else -99.0}
+	# A hop still in the air finishes (starting it over would snap the
+	# characters back down to the ground).
+	var was: Dictionary = _moods.get(key, {})
+	var jump_at := t if jump else -99.0
+	if not was.is_empty() and t - float(was["jump_at"]) < 1.4:
+		jump_at = float(was["jump_at"])
+	_moods[key] = {"emotion": emotion, "until": t + seconds, "jump_at": jump_at}
 
 
 func mood(key: String) -> String:

@@ -537,6 +537,24 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 		Chars.mark(self, "sweat", pos + Vector2(-16 * facing * turn, -76), _t)
 
 
+## Where diver j of a site is drawn now (the jump checks of test_motion).
+func diver_at(site: int, j: int) -> Vector2:
+	var key: String = _KEYS[site]
+	_begin_site(site, key)
+	var p := Motion.progress(key)
+	var home := home_pos(site, j)
+	var hop := world.hop(key, j)
+	if p < 0.0:
+		return home - Vector2(0, hop)
+	var lag := j * 0.03
+	p = clampf((p - lag) / (1.0 - lag), 0.0, 1.0)
+	var sp := _spot(j)
+	var spot := Vector2(_s_dp.x + sp.x, _s_ledge + sp.y)
+	var crate := Vector2(_s_crate.x + 36.0 + j * 6.0, _s_ledge - 4.0)
+	var st8 := trip_pose(p, home, spot, sp.z, sp.y < -20.0 and not _s_walk, crate, sin(_t * 4.2 + site * 0.7 + j) * 3.0, _s_walk)
+	return (st8["pos"] as Vector2) - Vector2(0, hop)
+
+
 ## Bits of the site's ore flying off the tool, and a flash where it hits.
 func _draw_chips(at: Vector2, f: float, site: int, facing: float, id: int) -> void:
 	var tool := Chars.tool_of(Chars.gear_tier(site))
