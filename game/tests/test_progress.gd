@@ -147,8 +147,15 @@ func test_artifacts_and_puzzle() -> void:
 	var high: Dictionary = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})
 	pr.puzzle_level = 30
 	var high1: float = pr.puzzle_reward({"won": true, "stars": 1, "artifact": first})["coins"]
-	check(low <= inc * 1.25 and low >= inc * 0.5, "late game, puzzle level 1 pays about a minute of income (%.2f min)" % (low / inc))
-	check(float(high["coins"]) >= low * 4.0, "a deep puzzle level pays much more than level 1 (%.1fx)" % (float(high["coins"]) / low))
+	check(low <= 5000.0 and low < inc * 0.01, "late game, puzzle level 1 pays a small treat, not a share of the income (%.0f coins)" % low)
+	check(low >= 500.0, "puzzle level 1 still pays something useful early (%.0f coins)" % low)
+	check(float(high["coins"]) >= low * 1000.0, "a deep puzzle level pays far more than level 1 (%.1fx)" % (float(high["coins"]) / low))
+	check(float(high["coins"]) <= inc * 3.0 * Content.PUZZLE_FACTOR_MAX, "a deep puzzle level never pays more than its minutes of income")
+	# Early in the game the income is the limit (a beginner is not flooded).
+	_fresh()
+	pr.puzzle_level = 30
+	var early: float = pr.puzzle_reward({"won": true, "stars": 3, "artifact": first})["coins"]
+	check(early < 5000.0, "a beginner on a deep puzzle level gets about their own minutes of income (%.0f)" % early)
 	check(float(high["coins"]) > high1, "more stars pay more")
 	check(int(high["pearls"]) > 5, "deep puzzle levels give extra pearls (%d)" % int(high["pearls"]))
 	check(Content.puzzle_factor(1000) <= Content.PUZZLE_FACTOR_MAX, "the level factor is capped")

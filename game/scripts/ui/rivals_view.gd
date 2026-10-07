@@ -2,8 +2,10 @@ class_name RivalsView
 extends RefCounted
 ## The Rivals League board (Rivals autoload): the player's weekly place
 ## among made-up sea characters, each a sea creature in a little costume
-## inside a round frame. A line under the title says plainly that they are
-## game characters. Last week's pearls are collected here.
+## inside a round frame. A line under the title and a "Computer" tag on
+## every rival say plainly that they are computer characters, not players
+## (kids rule). A line under the board says how close the next rival is.
+## Last week's pearls are collected here.
 
 ## Per rival: frame colour and costume, in the pet's own coordinates.
 ## hat: a Chars hat (or "bicorne" / "mortarboard"), at/s/rot place it;
@@ -29,7 +31,7 @@ static func rival_name(id: String) -> String:
 
 static func build(m: Modal, main: Node) -> void:
 	m.title(t("RIVALS"))
-	m.text(t("RIVALS_SUB"), 20, Art.INK_SOFT)
+	m.text(t("RIVALS_SUB_CPU"), 20, Art.INK_SOFT)
 	if Rivals.reward_pending():
 		var c := Views.card(Color("fff1c2"))
 		var h := HBoxContainer.new()
@@ -62,9 +64,32 @@ static func build(m: Modal, main: Node) -> void:
 	for i in rows.size():
 		list.add_child(_row(i + 1, rows[i]))
 	m.add(list)
+	var goal := chase_text(rows)
+	if goal != "":
+		var gc := Views.card(Color("dff3ff"))
+		var gl := Views.label(goal, 21, Color("1c5f8f"), true)
+		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		gl.custom_minimum_size.x = 200
+		gc.add_child(gl)
+		m.add(gc)
 	m.text(t("RIVALS_HOW"), 19, Art.INK_SOFT)
 	var r: Array[int] = Rivals.REWARDS
 	m.text(t("RIVALS_REWARDS") % [r[0], r[1], r[2]], 19, Art.INK_SOFT)
+
+
+## The motivation line: how far ahead the rival just above is, or a
+## cheer when the player leads ("" when there is no board).
+static func chase_text(rows: Array) -> String:
+	for i in rows.size():
+		if not rows[i]["you"]:
+			continue
+		if i == 0:
+			return t("RIVALS_TOP")
+		var above: Dictionary = rows[i - 1]
+		var gap := maxf(1.0, float(above["score"]) - float(rows[i]["score"]))
+		return t("RIVALS_GAP") % [rival_name(str(above["id"])), NumFormat.short(gap)]
+	return ""
 
 
 static func _row(place: int, row: Dictionary) -> Control:
@@ -96,13 +121,56 @@ static func _row(place: int, row: Dictionary) -> Control:
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name.custom_minimum_size.x = 60
 	name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	h.add_child(name)
+	if you:
+		h.add_child(name)
+	else:
+		# Rivals: the name with a small "Computer" tag under it.
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 2)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.add_child(name)
+		col.add_child(_cpu_tag())
+		h.add_child(col)
 	var score := Views.label("★ " + NumFormat.short(float(row["score"])), 23, Color("1c7fb8") if not you else Art.INK, true)
 	score.autowrap_mode = TextServer.AUTOWRAP_OFF
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(score)
 	return card
+
+
+## Small grey pill with a screen icon and "Computer".
+static func _cpu_tag() -> Control:
+	var tag := HBoxContainer.new()
+	tag.add_theme_constant_override("separation", 0)
+	var pill := PanelContainer.new()
+	var sb := UiTheme.panel_box(Color("e3e7f2"), 10, 0)
+	sb.shadow = 0.0
+	sb.line_w = 2.0
+	sb.content_margin_left = 6
+	sb.content_margin_right = 8
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	pill.add_theme_stylebox_override("panel", sb)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	pill.add_child(row)
+	var icon := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _draw_screen(ci, s / 2.0), Vector2(20, 20))
+	row.add_child(icon)
+	var l := Views.label(t("RIVALS_CPU"), 17, Color("5a6280"), true)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	tag.add_child(pill)
+	return tag
+
+
+## A tiny computer screen on a stand.
+static func _draw_screen(ci: CanvasItem, c: Vector2) -> void:
+	Art.t_rect(ci, Rect2(c + Vector2(-7, -6), Vector2(14, 10)), 2.0, Color("7fc8e8"), 1.6, 0.0)
+	Art.flat(ci, Art.rrect_pts(Rect2(c + Vector2(-2, 4), Vector2(4, 3)), 0.5), Art.INK)
+	Art.flat(ci, Art.rrect_pts(Rect2(c + Vector2(-5, 6.5), Vector2(10, 2)), 1.0), Art.INK)
 
 
 ## Places 1-3 get a gold, silver or bronze medal; the rest a plain number.

@@ -11,6 +11,9 @@ const W := 2.2           # body outline width
 const W2 := 1.7          # small parts
 const MOUTH := Color("b8455f")
 const TONGUE := Color("ff8fa3")
+## Closed smiles: a deep berry line, softer than the ink outline (an ink
+## mouth on a tiny face read as dark lips).
+const SMILE := Color("8a2f4f")
 
 
 ## facing: 1 = right, -1 = left.
@@ -87,7 +90,7 @@ static func _mouth(ci: CanvasItem, c: Vector2, w: float, happy: bool) -> void:
 		Art.toon(ci, pts, MOUTH, 0.75, 0.0)
 		Art.flat(ci, Art.clipped(Art.ellipse_pts(c + Vector2(0, w * 0.55), Vector2(w * 0.5, w * 0.3), 10), pts), TONGUE)
 	else:
-		Art.flat(ci, _smile(c + Vector2(0, -w * 0.75), w * 1.05, 0.62, clampf(w * 0.42, 0.8, 1.0)), Art.INK)
+		Art.flat(ci, _smile(c + Vector2(0, -w * 0.75), w * 1.05, 0.62, clampf(w * 0.38, 0.7, 0.9)), SMILE)
 
 
 ## Thin smile as a filled crescent (a polyline's soft edge is a whole local
@@ -171,13 +174,13 @@ static func _turtle(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
 	Art.toon(ci, PackedVector2Array([Vector2(-19, 4), Vector2(-26, 7), Vector2(-19, 9)]), skin, W2, 0.0)
 	var dome := _dome(Vector2(-3, 7), Vector2(19, 17))
 	Art.toon(ci, dome, shell, W, 0.6)
-	# Shell plates: rounded scutes in a lighter green with darker seams,
-	# all kept inside the dome (no shape pokes out of the outline).
+	# Shell spots: soft round patches in a lighter green (no angular
+	# plates, which read as an odd hexagon), all kept inside the dome.
 	var plate := Color("6fcf8a")
 	var inner := Art.ellipse_pts(Vector2(-3, 6), Vector2(16, 14.5), 24)
-	for sc: Array in [[Vector2(-3, -2), Vector2(5.5, 5.0)], [Vector2(-12.5, 1.5), Vector2(4.2, 4.6)],
-			[Vector2(6.5, 1.5), Vector2(4.2, 4.6)], [Vector2(-8, -8.5), Vector2(3.6, 2.6)], [Vector2(2, -8.5), Vector2(3.6, 2.6)]]:
-		Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(sc[0] - sc[1], sc[1] * 2.0), minf(sc[1].x, sc[1].y) * 0.7), inner), plate)
+	for sc: Array in [[Vector2(-3, -1), Vector2(5.2, 4.4)], [Vector2(-13, 2.5), Vector2(3.4, 3.6)],
+			[Vector2(7, 2.5), Vector2(3.4, 3.6)], [Vector2(-9, -7.5), Vector2(2.4, 2.0)], [Vector2(3, -7.5), Vector2(2.4, 2.0)]]:
+		Art.flat(ci, Art.clipped(Art.ellipse_pts(sc[0], sc[1], 16), inner), plate)
 	_shine(ci, Vector2(-9, -6), Vector2(3.2, 1.6), -0.5)
 	Art.t_rect(ci, Rect2(-23, 4, 40, 6), 3, rim, W2, 0.0)
 	for p: Vector3 in [Vector3(-11, 9, 0.35), Vector3(9, 9, -0.35)]:
@@ -367,7 +370,7 @@ static func _axolotl(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void
 	if happy:
 		_mouth(ci, Vector2(8, 2), 2.4, true)
 	else:
-		Art.flat(ci, _smile(Vector2(8, -1), 4.0, 0.4, 1.0), Art.INK)
+		Art.flat(ci, _smile(Vector2(8, -1), 4.0, 0.4, 0.9), SMILE)
 	Art.pop(ci)
 
 
@@ -504,6 +507,6 @@ static func _shark_pup(ci: CanvasItem, t: float, blink: bool, happy: bool) -> vo
 		for sx: float in [-1.0, 1.0]:
 			Art.flat(ci, PackedVector2Array([m + Vector2(1.6 * sx - 0.9, -0.9), m + Vector2(1.6 * sx + 0.9, -0.9), m + Vector2(1.6 * sx, 0.6)]), Art.WHITE)
 	else:
-		Art.flat(ci, _smile(m + Vector2(0, -2), 2.8, 0.45, 1.0), Art.INK)
+		Art.flat(ci, _smile(m + Vector2(0, -2), 2.8, 0.45, 0.9), SMILE)
 		for sx: float in [-1.0, 1.0]:
 			Art.flat(ci, PackedVector2Array([m + Vector2(1.3 * sx - 0.8, 0.5), m + Vector2(1.3 * sx + 0.8, 0.5), m + Vector2(1.3 * sx, 1.8)]), Art.WHITE)

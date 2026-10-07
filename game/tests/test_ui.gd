@@ -139,6 +139,8 @@ func test_upgrade_sheet() -> void:
 	await _click(_center(main._panel._modes[1]))
 	gs.coins = 1e6
 	main._panel.refresh()
+	var total := NumFormat.short(gs.upgrade_cost("d0", 10))
+	check(main._panel._buy.full_text.find("×10") >= 0 and main._panel._buy.full_text.find(total) >= 0, "x10 shows the total price of ten levels (%s)" % main._panel._buy.full_text)
 	await _click(_center(main._panel._buy))
 	check(gs.get_level("d0") == before + 11, "x10 buys ten levels")
 	await _click(_center(main._panel._close))

@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ubaty2af64j5"
+
+[deps]
+
+files=["res://i18n/fix.en.translation", "res://i18n/fix.ru.translation", "res://i18n/fix.es.translation", "res://i18n/fix.zh.translation"]
+
+source_file="res://i18n/fix.csv"
+dest_files=["res://i18n/fix.en.translation", "res://i18n/fix.ru.translation", "res://i18n/fix.es.translation", "res://i18n/fix.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

@@ -41,6 +41,9 @@ DEPTHS = [
     {"id": "atlantis", "value": 5.5e6,  "cost0": 6.0e8, "unlock": 1.2e9, "manager": 2.4e9},
     {"id": "heart",    "value": 3.8e7,  "cost0": 6.0e9, "unlock": 3.0e9, "manager": 6.0e9},
 ]
+# The lift's trip speed (balance.gd LIFT_LOOK_SPEED, LIFT_SPEED_PER_LEVEL,
+# LIFT_SPEED_MAX, LIFT_MIN_TRIP*) is not modelled here on purpose: a trip
+# carries rate x trip time, so a faster lift moves the same ore per second.
 LIFT = {"value": 3.0, "cost0": 4.0, "manager": 10.0, "growth": CHAIN_GROWTH}
 BOAT = {"value": 1.5, "cost0": 8.0, "manager": 25.0, "growth": CHAIN_GROWTH}
 PLANT = {"value": 1.7, "cost0": 10.0, "manager": 45.0, "growth": CHAIN_GROWTH}

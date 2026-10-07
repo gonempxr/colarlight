@@ -39,6 +39,12 @@ const PUZZLE_STAR_MIN := 0.5
 ## "Collect what you got": (PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN x pieces) x factor.
 const PUZZLE_LOSS_MIN := 0.5
 const PUZZLE_PIECE_MIN := 0.25
+## Coins per "minute" are the player's income per minute, but never more
+## than PUZZLE_MINUTE_CAP0 x PUZZLE_MINUTE_GROWTH^(level - 1): the pay grows
+## with the puzzle progress, so a rich player replaying the first puzzle
+## levels gets a small treat (not millions), new deep levels pay well.
+const PUZZLE_MINUTE_CAP0 := 500.0
+const PUZZLE_MINUTE_GROWTH := 1.4
 ## A win gives 2 + stars pearls, plus one more every PUZZLE_PEARL_EVERY
 ## puzzle levels (at most PUZZLE_PEARL_MAX_EXTRA more).
 const PUZZLE_PEARL_EVERY := 10
@@ -53,6 +59,11 @@ static func puzzle_factor(level: int) -> float:
 static func puzzle_minutes(level: int, won: bool, stars: int, pieces: int) -> float:
 	var base := PUZZLE_WIN_MIN + PUZZLE_STAR_MIN * stars if won else PUZZLE_LOSS_MIN + PUZZLE_PIECE_MIN * pieces
 	return base * puzzle_factor(level)
+
+
+## Most coins one "minute" of puzzle pay is worth at this puzzle level.
+static func puzzle_minute_cap(level: int) -> float:
+	return PUZZLE_MINUTE_CAP0 * pow(PUZZLE_MINUTE_GROWTH, maxi(0, level - 1))
 
 
 static func puzzle_pearls(level: int, won: bool, stars: int, pieces: int) -> int:

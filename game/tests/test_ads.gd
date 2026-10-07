@@ -384,7 +384,7 @@ func test_rivals_week_reward() -> void:
 func test_strings() -> void:
 	var keys := ["BOOST_BTN", "BOOST_TITLE", "BOOST_OFFER", "BOOST_LEFT", "BOOST_FULL", "BOOST_WATCH", "BOOST_NO", "BOOST_GOT",
 		"AD_FAIL", "AD_BLOCKED", "AD_SKIPPED", "AD_TEST", "AD_TEST_NOTE", "AD_SKIP", "RIVALS", "RIVALS_SUB", "RIVALS_HOW",
-		"RIVALS_YOU", "RIVALS_REWARDS", "RIVALS_LAST", "RIVALS_CLAIM"]
+		"RIVALS_YOU", "RIVALS_REWARDS", "RIVALS_LAST", "RIVALS_CLAIM", "RIVALS_SUB_CPU", "RIVALS_CPU", "RIVALS_GAP", "RIVALS_TOP"]
 	for r in rv.RIVALS:
 		keys.append("RIVAL_" + str(r["id"]).to_upper())
 	var missing := []
@@ -395,3 +395,5 @@ func test_strings() -> void:
 				missing.append(lang + ":" + k)
 	TranslationServer.set_locale("en")
 	check(missing.is_empty(), "every new string in 4 languages %s" % str(missing))
+	# Kids rule: the board says plainly that the rivals are the computer.
+	check(TranslationServer.translate("RIVALS_SUB_CPU").to_lower().find("computer") >= 0 and TranslationServer.translate("RIVALS_CPU") == "Computer", "rivals are labelled as computer characters")
