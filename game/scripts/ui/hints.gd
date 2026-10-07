@@ -74,7 +74,7 @@ static func pick(main: Node) -> Dictionary:
 				if card.key != k:
 					card.show_unit(k)
 				return _control(card._manager), "", main.room_of(k))
-	if gs.location_ready():
+	if gs.location_ready() and not gs.is_last_location():
 		return _hint("map_save", t("HINT_MAP_SAVE") % NumFormat.short(gs.next_location_cost()), false, Callable(), "map")
 	if next != "":
 		var row: DepthRow = world.rows[gs.depth_index(next)]
