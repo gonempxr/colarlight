@@ -107,6 +107,9 @@ var _k := 1.0
 var _tip := 440.0
 
 var _t := 0.0
+## Shown facing of each boat while it turns round (see _turned).
+var _turn := {}
+const TURN_SEC := 0.7
 var _smoke: Array[Vector3] = []   # x, y, age
 var _boat_p := -1.0
 var _boat2_p := -1.0
@@ -340,7 +343,7 @@ func _water_y() -> float:
 
 func boat_world_pos() -> Vector2:
 	var r := boat_x_range()
-	var p := GameState.cycle_progress("boat")
+	var p := Motion.progress("boat")
 	var x := r.x
 	if p >= BOAT_LOAD_END and p < BOAT_OUT_END:
 		x = lerpf(r.x, r.y, smoothstep(BOAT_LOAD_END, BOAT_OUT_END, p))
@@ -352,7 +355,34 @@ func boat_world_pos() -> Vector2:
 
 
 func _boat_facing() -> float:
-	return -1.0 if GameState.cycle_progress("boat") >= BOAT_BACK_START else 1.0
+	return _turned("boat")
+
+
+## Where a boat heads now (+1 right, -1 left), before the turn is shown.
+func _heading(key: String) -> float:
+	var p := Motion.progress(key)
+	if key == "boat":
+		return -1.0 if p >= BOAT_BACK_START else 1.0
+	# It starts turning round a moment before it pulls away from the raft.
+	return 1.0 if p >= B2_LEAVE - 0.04 and p < B2_OUT + 0.01 else -1.0
+
+
+## Shown facing: a boat turns round over TURN_SEC (its width goes through
+## a thin sliver) instead of flipping in one frame.
+func _turned(key: String) -> float:
+	var f: float = _turn.get(key, _heading(key))
+	var e := Motion.ease_in_out(f * 0.5 + 0.5) * 2.0 - 1.0
+	return signf(e) * maxf(0.08, absf(e)) if e != 0.0 else 0.08
+
+
+func _update_turns(delta: float) -> void:
+	for key in BUILDINGS:
+		var want := _heading(key)
+		var f: float = _turn.get(key, want)
+		# Off screen (at the factory) it simply faces the new way.
+		if _boat_pos(key).x - maxf(_hull(key).x, _hull(key).y) > size.x + 10.0:
+			f = want
+		_turn[key] = move_toward(f, want, delta * 2.0 / TURN_SEC)
 
 
 func _boat_deck(bp: Vector2) -> Vector2:
@@ -370,7 +400,7 @@ func boat2_x_range() -> Vector2:
 func boat2_world_pos() -> Vector2:
 	var r := boat2_x_range()
 	var off := size.x + _hull("boat2").y + 30.0
-	var p := GameState.cycle_progress("boat2")
+	var p := Motion.progress("boat2")
 	var x := r.y
 	if p >= 0.0 and p < B2_ARRIVE:
 		x = lerpf(r.y, r.x, smoothstep(0.0, B2_ARRIVE, p))
@@ -386,8 +416,7 @@ func boat2_world_pos() -> Vector2:
 
 
 func _boat2_facing() -> float:
-	var p := GameState.cycle_progress("boat2")
-	return 1.0 if p >= B2_LEAVE and p < B2_OUT + 0.01 else -1.0
+	return _turned("boat2")
 
 
 func _boat_pos(key: String) -> Vector2:
@@ -408,7 +437,7 @@ func _deck_of(key: String) -> Vector2:
 
 ## Is the boat under way (for the foam and the sailor's wave)?
 func _sailing(key: String) -> bool:
-	var p := GameState.cycle_progress(key)
+	var p := Motion.progress(key)
 	if key == "boat":
 		return p >= BOAT_LOAD_END
 	return p >= 0.0 and not (p >= B2_ARRIVE and p < B2_LEAVE)
@@ -416,7 +445,7 @@ func _sailing(key: String) -> bool:
 
 ## Crates on deck (0..3) while the boat carries ore.
 func _crates(key: String) -> int:
-	var p := GameState.cycle_progress(key)
+	var p := Motion.progress(key)
 	var loaded := (p >= 0.04 and p < BOAT_BACK_START) if key == "boat" else (p >= B2_ARRIVE and p < B2_BACK)
 	if not loaded:
 		return 0
@@ -777,12 +806,13 @@ func _process(delta: float) -> void:
 		if _t >= th[0]:
 			world.divers.throw_item(th[1], th[2], th[3], _ore(), 0.5)
 			_pending_throws.remove_at(i)
-	var bprog := GameState.cycle_progress("boat")
+	_update_turns(delta)
+	var bprog := Motion.progress("boat")
 	if _boat_p < BOAT_BACK_START and bprog >= BOAT_BACK_START:
 		world.react("sailor", "joy", 0.8, true)
 	_boat_p = bprog
 	# The second boat loads when it reaches the raft.
-	var b2 := GameState.cycle_progress("boat2")
+	var b2 := Motion.progress("boat2")
 	if _boat2_p < B2_ARRIVE and b2 >= B2_ARRIVE:
 		var from := _raft_chest_pos() + Vector2(0, -34)
 		_pending_throws.append([_t, "sack", from, _deck_of("boat2")])
@@ -922,7 +952,7 @@ func _update_sky(dt: float, wind: float) -> void:
 					Sfx.voice("hup", 1.3)
 			else:
 				v.y = 0.0
-				v.x *= 0.96
+				v.x *= Motion.drag(0.96, dt)
 		c["rot"] = float(c["rot"]) + v.x * dt / 5.0
 		c["vel"] = v
 		c["pos"] = pos
@@ -1416,7 +1446,7 @@ func _draw_boat(key: String, lights: float) -> void:
 	var e := _hull(key)
 	if bp.x - maxf(e.x, e.y) > size.x + 10.0:
 		return   # at the factory
-	var p := GameState.cycle_progress(key)
+	var p := Motion.progress(key)
 	var facing := _facing(key)
 	var mood := world.mood(key)
 	var sailor: String = _SAILOR_LOOKS[key][0]

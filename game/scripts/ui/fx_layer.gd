@@ -88,7 +88,7 @@ func _process(delta: float) -> void:
 	for p in _parts:
 		p["age"] += delta
 		p["v"].y += 900.0 * delta
-		p["v"] *= 0.985
+		p["v"] *= Motion.drag(0.985, delta)
 		p["p"] += p["v"] * delta
 		p["r"] += delta * 8.0
 	_parts = _parts.filter(func(p): return p["age"] < p["life"])
