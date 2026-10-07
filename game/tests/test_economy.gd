@@ -316,7 +316,8 @@ func test_lift_speed() -> void:
 	for i in range(1, Balance.LIFT_LOOKS.size()):
 		var at: int = Balance.LIFT_LOOKS[i]
 		check(Balance.lift_speed(at) > Balance.lift_speed(at - 1) * 1.1, "a new lift look at level %d is clearly faster" % at)
-	check(Balance.lift_trip(100, 10) <= Balance.lift_trip(1, 10) * 0.55, "at level 100 a trip takes about half as long (%.1f s)" % Balance.lift_trip(100, 10))
+	check(Balance.lift_trip(100, 9) <= Balance.lift_trip(1, 9) * 0.42, "at level 100 a trip is well over twice as fast (%.1f s)" % Balance.lift_trip(100, 9))
+	check(Balance.lift_trip(150, 9) <= Balance.lift_trip(1, 9) * 0.3, "at level 150 a trip is over 3x faster (%.1f s)" % Balance.lift_trip(150, 9))
 	check(Balance.lift_trip(250, 20) <= Balance.lift_trip(1, 20) * 0.35, "at level 250 a deep trip is about 3x faster (%.1f s)" % Balance.lift_trip(250, 20))
 	check(Balance.lift_trip(400, 29) >= Balance.LIFT_MIN_TRIP, "trips never get too short to see")
 	var gs := _fresh()
