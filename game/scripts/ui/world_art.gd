@@ -641,7 +641,7 @@ static func magma_still(ci: CanvasItem, w: float, top: float, bottom: float) -> 
 ## currents, crust chunks drifting down, heavy bubbles rising.
 static func magma_body(ci: CanvasItem, w: float, top: float, bottom: float, t: float) -> void:
 	var h := bottom - top
-	for i in 4:
+	for i in 3:
 		var x := fposmod(t * (4.0 + i * 1.3) + i * 157.0, w + 260.0) - 130.0
 		var y := top + h * (0.42 + 0.26 * float(i % 2)) + sin(t * 0.27 + i * 1.9) * 7.0
 		Art.push(ci, Vector2(x, y), sin(t * 0.18 + i) * 0.12)
@@ -652,9 +652,9 @@ static func magma_body(ci: CanvasItem, w: float, top: float, bottom: float, t: f
 		var x := fposmod(t * (6.0 + i * 1.7) + i * 173.0 + 60.0, w + 240.0) - 120.0
 		var y := top + h * (0.24 + 0.24 * float(i)) + sin(t * 0.33 + i * 2.6) * 6.0
 		Art.push(ci, Vector2(x, y), sin(t * 0.21 + i * 1.3) * 0.1)
-		Art.line_c(ci, _RIBBONS[i % 2], Color(1.0, 0.78, 0.26, 0.5), 7.0)
+		Art.line_c(ci, _RIBBONS[i % 2], Color(1.0, 0.82, 0.2, 0.42), 7.0)
 		Art.pop(ci)
-	for i in 3:
+	for i in 2:
 		var x := fposmod(-t * (3.0 + i) + i * 211.0, w + 200.0) - 100.0
 		var y := top + h * (0.3 + 0.22 * float(i)) + sin(t * 0.4 + i * 2.3) * 6.0
 		var pulse := snappedf(0.75 + 0.25 * sin(t * 0.9 + i * 2.0), 0.05)
@@ -731,7 +731,7 @@ static func magma_front(ci: CanvasItem, w: float, sy: float, t: float, tint: Col
 			var y := magma_y(x, w, sy, t)
 			var slope := magma_y(x + 10.0, w, sy, t) - magma_y(x - 10.0, w, sy, t)
 			var k := int(pl.y)
-			Art.push(ci, Vector2(x, y + 2.5), slope / 20.0 + sin(t * 0.5 + i * 1.7) * 0.025)
+			Art.push(ci, Vector2(x, y + 2.5 + float(i % 2) * 2.0), slope / 20.0 + sin(t * 0.5 + i * 1.7) * 0.025)
 			Art.toon(ci, _PLATES[k], CRUST, 2.5, 0.7)
 			Art.line_c(ci, _PLATE_CRACKS[k], unlit(CRUST_HOT, tint), 1.6)
 			Art.pop(ci)
@@ -757,8 +757,8 @@ static func magma_y(x: float, w: float, sy: float, t: float) -> float:
 
 
 ## One repeating stretch of plates: x and which plate (they drift right).
-const PLATE_SPAN := 430.0
-const PLATE_ROW: Array[Vector2] = [Vector2(0, 3), Vector2(86, 1), Vector2(140, 0), Vector2(226, 2), Vector2(292, 3), Vector2(372, 1)]
+const PLATE_SPAN := 520.0
+const PLATE_ROW: Array[Vector2] = [Vector2(0, 3), Vector2(104, 1), Vector2(176, 0), Vector2(300, 2), Vector2(420, 1)]
 static var _PLATES: Array[PackedVector2Array] = [
 	Art.smooth_pts(PackedVector2Array([Vector2(-28, 2), Vector2(-24, -4), Vector2(-10, -6.5), Vector2(10, -6), Vector2(24, -3), Vector2(28, 2), Vector2(14, 6), Vector2(-14, 6)]), 2),
 	Art.smooth_pts(PackedVector2Array([Vector2(-20, 2), Vector2(-16, -5), Vector2(0, -7), Vector2(16, -4.5), Vector2(21, 1.5), Vector2(8, 6), Vector2(-12, 5.5)]), 2),
@@ -1073,13 +1073,13 @@ static var _GLINT := Art.star_pts(Vector2.ZERO, 6, 1.4, 4)
 ## The moon's sky (a still layer): a band of the Milky Way with a soft
 ## nebula glow and many small stars, fading near the horizon.
 static func moon_sky(ci: CanvasItem, w: float, sy: float, stars: float) -> void:
-	var a := 0.55 * stars
+	var a := stars
 	if a < 0.02:
 		return
 	Art.push(ci, Vector2(w * 0.5, sy * 0.42), -0.38)
-	Art.flat(ci, _MILKY, Color(0.55, 0.45, 0.95, 0.18 * a))
-	Art.flat(ci, _MILKY_CORE, Color(0.75, 0.7, 1.0, 0.16 * a))
-	Art.flat(ci, _NEBULA, Color(1.0, 0.45, 0.8, 0.12 * a))
+	Art.flat(ci, _MILKY, Color(0.5, 0.42, 0.95, 0.2 * a))
+	Art.flat(ci, _MILKY_CORE, Color(0.78, 0.72, 1.0, 0.18 * a))
+	Art.flat(ci, _NEBULA, Color(1.0, 0.45, 0.8, 0.16 * a))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9
 	for i in 40:

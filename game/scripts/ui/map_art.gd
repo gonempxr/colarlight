@@ -506,6 +506,9 @@ static func _volcano(ci: CanvasItem) -> void:
 	# Lava river for the boat.
 	_medium(ci, "volcano", [[Vector2(-80, 12), Vector2(44, 15)], [Vector2(-10, 20), Vector2(56, 15)], [Vector2(70, 12), Vector2(46, 14)]])
 	Art.line_c(ci, PackedVector2Array([Vector2(-110, 12), Vector2(-40, 20), Vector2(30, 18), Vector2(100, 10)]), hot, 2.5)
+	# Dark crust plates floating on the magma river.
+	for c: Vector3 in [Vector3(-104, 8, 1.0), Vector3(-58, 22, 0.8), Vector3(48, 22, 0.9), Vector3(98, 12, 0.7)]:
+		Art.toon(ci, Art.ellipse_pts(Vector2(c.x, c.y), Vector2(13, 4.5) * c.z, 12, 0.1), Color("3b2a33"), 2.0, 0.6)
 	_mine(ci, spots("volcano")["mine"], 0.95, _c(Color("4d3e55")), Color("ff6a1a"), Color("ffd05a"))
 	_factory(ci, spots("volcano")["factory"], 0.85, _c(Color("8a7a92")), _c(Color("c2410c")), Color("5a5068"))
 	_house(ci, spots("volcano")["office"], 0.75, _c(Color("9a8a9e")), Color("e05a2a"))

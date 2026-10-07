@@ -13,6 +13,9 @@ func _initialize() -> void:
 	for k in gs.stage_keys():
 		gs.managers[k] = true
 	gs.coins = 1e9
+	# PERF_LOC=1..3: the volcano, the swamp or the moon.
+	if OS.get_environment("PERF_LOC") != "":
+		gs.location = int(OS.get_environment("PERF_LOC"))
 	load("res://scripts/ui/main.gd").show_title = false
 	if "phone" in OS.get_cmdline_user_args():
 		load("res://scripts/ui/world.gd").half_rate = true

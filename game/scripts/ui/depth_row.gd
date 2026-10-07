@@ -935,7 +935,6 @@ func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
 				for j in 6:
 					pts.append(pts[j] + Vector2(rng.randf_range(12, 26), rng.randf_range(-9, 9)))
 				var fork := PackedVector2Array([pts[3], pts[3] + Vector2(rng.randf_range(6, 14), 14 if y < h / 2.0 else -14), pts[3] + Vector2(rng.randf_range(14, 24), 22 if y < h / 2.0 else -22)])
-				Art.glow(ci, pts[3], 34.0, Color(1.0, 0.45, 0.15, 0.22), 14)
 				for line: PackedVector2Array in [pts, fork]:
 					Art.line_c(ci, line, Color(1.0, 0.42, 0.12, 0.45), 6.0)
 					Art.line_c(ci, line, VEIN, 3.0)
@@ -990,10 +989,10 @@ func _magma_cave_light(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Arra
 		Art.flat(ci, Art.clipped(colm, cave_poly), col if k % 2 == 0 else col.lightened(0.05))
 		x += cw + 4.0
 		k += 1
-	for i in 5:
-		var y0 := LEDGE_Y + 8.0 - (i + 1) * 30.0
-		var band := Art.clipped(PackedVector2Array([Vector2(cave.position.x, y0), Vector2(cave.end.x, y0), Vector2(cave.end.x, y0 + 30.0), Vector2(cave.position.x, y0 + 30.0)]), cave_poly)
-		Art.flat(ci, band, Color(1.0, 0.42, 0.12, 0.16 - i * 0.03))
+	for i in 3:
+		var y0 := LEDGE_Y + 8.0 - (i + 1) * 40.0
+		var band := Art.clipped(PackedVector2Array([Vector2(cave.position.x, y0), Vector2(cave.end.x, y0), Vector2(cave.end.x, y0 + 40.0), Vector2(cave.position.x, y0 + 40.0)]), cave_poly)
+		Art.flat(ci, band, Color(1.0, 0.42, 0.12, 0.15 - i * 0.045))
 
 
 ## Where the magma channel runs in the cave floor: x of its middle and
@@ -1024,7 +1023,7 @@ func _magma_channel_life() -> void:
 		return
 	var at := Vector2(c.x, LEDGE_Y + 15.0)
 	var pulse := snappedf(0.75 + 0.25 * sin(_t * 1.6 + index), 0.05)
-	Art.glow(self, at + Vector2(0, -10), c.y + 34.0, Color(1.0, 0.55, 0.2, 0.3 * pulse), 16)
+	Art.glow(self, at + Vector2(0, -6), c.y + 16.0, Color(1.0, 0.55, 0.2, 0.32 * pulse), 14)
 	var drift := snappedf(sin(_t * 0.35 + index) * c.y * 0.45, 0.5)
 	Art.push(self, at + Vector2(drift, 0.5), 0.0, Vector2(0.45, 0.6))
 	Art.toon(self, _CHANNEL_CRUST, WorldArt.CRUST, 3.0, 0.6)
