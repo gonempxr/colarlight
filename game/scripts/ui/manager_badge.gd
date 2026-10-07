@@ -132,15 +132,22 @@ func _draw() -> void:
 	Art.t_rect(self, Rect2(-pw / 2.0, 18.0, pw, 17.0), 8.5, Art.GREEN if can else Color("7d86a3"), 2.5, 0.0)
 	Art.text(self, Vector2(0, 27.0 + ws * 0.36), word, ws, Art.WHITE, 4)
 	Art.pop(self)
-	# The price, with a coin, under the button.
+	# The price, with a coin, on a raised pill under the button (the same
+	# face colour, so disc and price read as one button to press).
 	var txt := NumFormat.short(gs.manager_cost(key))
-	var fs := 17
-	while fs > 11 and font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 19.0 > SIZE:
+	var fs := 16
+	while fs > 11 and font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 30.0 > SIZE:
 		fs -= 1
 	var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var x0 := c.x - (tw + 19.0) / 2.0
-	Art.coin(self, Vector2(x0 + 8.0, SIZE + 9.0), 8.0)
-	Art.text(self, Vector2(x0 + 19.0, SIZE + 15.0), txt, fs, Art.GOLD if can else Art.WHITE, 5, false)
+	var pill_w := minf(SIZE, tw + 30.0)
+	var pill := Rect2(c.x - pill_w / 2.0, SIZE + 1.0 + sink * 0.5, pill_w, 18.0)
+	var pill_face := Color("fff1b8") if can else Color("d9dceb")
+	if sink == 0.0:
+		Art.t_rect(self, Rect2(pill.position + Vector2(0, 2.5), pill.size), 9.0, Art.shade_of(pill_face, 0.38), 2.5, 0.0)
+	Art.t_rect(self, pill, 9.0, pill_face, 2.5, 0.0)
+	var x0 := c.x - (tw + 18.0) / 2.0
+	Art.coin(self, Vector2(x0 + 7.0, pill.get_center().y), 7.0)
+	Art.text(self, Vector2(x0 + 17.0, pill.get_center().y + fs * 0.36), txt, fs, Art.INK, 0, false)
 
 
 func _world() -> World:

@@ -341,12 +341,14 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 	var stars := clampi(int(result.get("stars", 0)), 0, 3)
 	var mult := bonus("puzzle")
 	var out := {"coins": 0.0, "pearls": 0, "piece": "", "level": 0}
-	# Coins follow both the economy (minutes of income) and the puzzle level
-	# played (see Content.puzzle_factor): replaying the game's early puzzle
-	# levels late in the game pays less than reaching new ones.
+	# Coins follow the puzzle progress: minutes of income, each minute
+	# capped by the puzzle level (Content.puzzle_minute_cap), times the level
+	# factor. Grinding the main game does not make puzzle level 1 pay millions.
 	var got := int(result.get("fragments", 0))
 	var lv := puzzle_level
-	out["coins"] = coins_for_minutes(Content.puzzle_minutes(lv, won, stars, got)) * mult
+	var minutes := Content.puzzle_minutes(lv, won, stars, got)
+	var per_min := minf(GameState.income_rate() * 60.0, Content.puzzle_minute_cap(lv))
+	out["coins"] = maxf(20.0 + minutes * 4.0, per_min * minutes) * mult
 	out["pearls"] = Content.puzzle_pearls(lv, won, stars, got)
 	if won:
 		var id := str(result.get("artifact", ""))

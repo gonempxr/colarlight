@@ -74,13 +74,16 @@ const LIFT_LOOKS: Array[int] = [1, 10, 25, 75, 150, 250]
 ## trip time is divided by lift_speed(). Its rate (coins/s) does not change,
 ## a faster trip just carries a smaller load, so the economy (and sim.py)
 ## stays the same; the lift only looks and feels quicker.
+## Every level adds LIFT_SPEED_PER_LEVEL on top of the look's speed, so a
+## level 100+ lift is clearly quicker (about 2.6x at 100, 4x at 150, the
+## LIFT_SPEED_MAX at 250).
 const LIFT_LOOK_SPEED: Array[float] = [1.0, 1.2, 1.45, 1.75, 2.1, 2.5]
-const LIFT_SPEED_PER_LEVEL := 0.0015
-const LIFT_SPEED_MAX := 4.0
+const LIFT_SPEED_PER_LEVEL := 0.005
+const LIFT_SPEED_MAX := 6.0
 ## Shortest trip: this many seconds plus this many per depth below the first
 ## (so the cabin can still be seen stopping at every crate).
 const LIFT_MIN_TRIP := 1.2
-const LIFT_MIN_TRIP_STEP := 0.12
+const LIFT_MIN_TRIP_STEP := 0.1
 ## The second boat and plant: bought in each run once the ocean is busy,
 ## bigger per level than the first ones. Provisional numbers (see sim.py).
 const BOAT2 := {"value": 60.0, "cost0": 2.0e4, "manager": 4.0e5, "cycle": 6.0, "unlock": 2.0e5, "growth": CHAIN_GROWTH}

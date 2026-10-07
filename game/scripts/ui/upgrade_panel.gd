@@ -221,7 +221,9 @@ func refresh() -> void:
 		_modes[i].text = tr("BUY_MAX") if m == -1 else "×%d" % m
 		_modes[i].theme_type_variation = &"BlueButton" if i == _mode else &"CreamButton"
 	var cost: float = gs.upgrade_cost(key, n)
-	_buy.set_price(tr("UPGRADE"), NumFormat.short(cost), "coin", "arrow")
+	# x10 / MAX: the button names how many levels the shown total buys.
+	var words := tr("UPGRADE") if n <= 1 else "%s ×%d" % [tr("UPGRADE"), n]
+	_buy.set_price(words, NumFormat.short(cost), "coin", "arrow")
 	_buy.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
 	_close.visible = not docked
 
