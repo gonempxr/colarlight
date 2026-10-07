@@ -708,7 +708,7 @@ static func draw_engine(ci: CanvasItem, look: int, turn: float, busy: bool, t: f
 			Art.t_rect(ci, Rect2(x0, top, w, 32), 5, metal, 2.5, 0.6)
 			Art.t_rect(ci, Rect2(x0 - 1, top + 9, w + 2, 3.5), 1.5, Art.shade_of(metal, 0.25), 1.8, 0.0)
 			Art.t_circle(ci, Vector2(x0 + w * 0.5, top + 20), 4.2, Art.WHITE, 1.8, 0.0)
-			Art.push(ci, Vector2(x0 + w * 0.5, top + 20), snappedf(sin(t * 3.0) * 0.8, 0.2) if busy else -0.6)
+			Art.push(ci, Vector2(x0 + w * 0.5, top + 20), sin(t * 3.0) * 0.8 if busy else -0.6)
 			Art.line(ci, Vector2.ZERO, Vector2(0, -3.0), Art.RED, 1.5)
 			Art.pop(ci)
 			if busy:

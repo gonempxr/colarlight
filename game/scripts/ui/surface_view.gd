@@ -141,6 +141,10 @@ var _rng := RandomNumberGenerator.new()
 
 # The edge prop (palm) and its coconuts.
 var _palm_poke := -99.0
+## The palm's wobble after taps: rises quickly and dies away smoothly, and
+## more taps only keep it up (restarting it made the palm jerk).
+var _palm_amp := 0.0
+var _palm_want := 0.0
 var _coconuts := 2
 var _coconut_back := 0.0
 var _coconut := {}
@@ -561,7 +565,7 @@ func _gui_input(event: InputEvent) -> void:
 		if key.begins_with("sale:"):
 			# A for-sale sign: show the second boat in the upgrade panel.
 			key = key.substr(5)
-			_sign_poke[key] = _t
+			_sign_poke[key] = Motion.repoke(float(_sign_poke.get(key, -99.0)), _t, 0.6)
 			Sfx.play("click")
 			Settings.buzz(12)
 			world.divers.tap_ripple(p)
@@ -662,18 +666,18 @@ func _poke_ambient(p: Vector2) -> bool:
 		return true
 	match best:
 		"sun":
-			world.pokes["sun"] = world.t
+			world.pokes["sun"] = Motion.repoke(float(world.pokes.get("sun", -99.0)), world.t, 1.2)
 			world.divers.sparkle(DayNight.sun_pos(w), 8)
 			Sfx.play("upgrade", 1.3)
 			Sfx.voice("yay", 1.6)
 		"moon":
-			world.pokes["moon"] = world.t
+			world.pokes["moon"] = Motion.repoke(float(world.pokes.get("moon", -99.0)), world.t, 1.4)
 			world.shooting_star(DayNight.moon_pos(w) + Vector2(-40, -30))
 			Sfx.play("upgrade", 0.8)
 			Sfx.voice("ooh", 1.5)
 		"cloud":
 			var c: Dictionary = _clouds[bi]
-			c["poke"] = _t
+			c["poke"] = Motion.repoke(float(c["poke"]), _t, 1.0)
 			c["rain"] = _t + 2.4
 			Sfx.play("pop", 0.6)
 			Sfx.play("dive", 1.35)
@@ -685,6 +689,7 @@ func _poke_ambient(p: Vector2) -> bool:
 			Sfx.play("pop", 1.7)
 		"palm":
 			_palm_poke = _t
+			_palm_want = 1.0
 			Sfx.play("dig", 0.8)
 			if WorldLook.world == "ocean":
 				if _coconuts > 0 and _coconut.is_empty():
@@ -695,12 +700,12 @@ func _poke_ambient(p: Vector2) -> bool:
 			else:
 				world.divers.sparkle(_palm_pos() + Vector2(-30, -90) * _k, 8)
 		"lighthouse":
-			_lighthouse_poke = _t
+			_lighthouse_poke = Motion.repoke(_lighthouse_poke, _t, 2.2)
 			Sfx.play("pop", 0.8)
 			if WorldLook.world == "volcano":
 				Sfx.play("dig", 0.6)
 		"house":
-			_house_poke = _t
+			_house_poke = Motion.repoke(_house_poke, _t, 1.6)
 			_ground.queue_redraw()
 			Sfx.play("click", 0.9)
 			Sfx.voice("hup", 1.5)
@@ -762,6 +767,8 @@ func _process(delta: float) -> void:
 			world.divers.throw_item(th[1], th[2], th[3], _ore(), 0.5)
 			_pending_throws.remove_at(i)
 	_update_turns(delta)
+	_palm_amp = Motion.damp(_palm_amp, _palm_want, 14.0, dt)
+	_palm_want *= exp(-2.4 * dt)
 	var bprog := Motion.progress("boat")
 	if _boat_p < BOAT_BACK_START and bprog >= BOAT_BACK_START:
 		world.react("sailor", "joy", 0.8, true)
@@ -1055,7 +1062,8 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 		var s: float = c["s"]
 		if wl == "moon":
 			# Asteroids drift and tumble instead of clouds.
-			var spin := float(c["seed"]) * 1.3 + snappedf(_t * 0.05, 0.01) + (poke * 3.0 if poke < 1.0 else 0.0)
+			# A tap spins it once round (ending where it started: no snap back).
+			var spin := float(c["seed"]) * 1.3 + _t * 0.05 + Motion.ease_out_cubic(poke) * TAU
 			Art.push(ci, _cloud_pos(c), spin, Vector2(s * (1.0 + puff), s * (1.0 + puff)))
 			WorldArt.asteroid(ci, int(c["seed"]), cf, cl)
 		else:
@@ -1182,12 +1190,11 @@ func _draw() -> void:
 	var sy := World.SURFACE_Y
 	var wl := WorldLook.world
 	var lights := smoothstep(0.3, 0.8, DayNight.night())
-	var palm_age := _t - _palm_poke
 	Art.push(self, _palm_pos(), 0.0, Vector2(_k, _k))
 	if wl == "ocean":
-		Props.palm(self, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0), _coconuts)
+		Props.palm(self, _t, Props.wind, _palm_amp, _coconuts)
 	else:
-		WorldArt.edge_prop(self, wl, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0))
+		WorldArt.edge_prop(self, wl, _t, Props.wind, _palm_amp)
 	Art.pop(self)
 	if second_state("boat2") == "open":
 		_draw_boat("boat2", lights)

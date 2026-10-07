@@ -88,6 +88,13 @@ static func reset() -> void:
 	_shown.clear()
 
 
+## When a tap reaction (`dur` seconds long) starts: a new tap restarts it
+## only once the last one has mostly played out (restarting a spin or a
+## wobble halfway through snaps it back: the twitch of an autoclicker).
+static func repoke(last: float, now: float, dur: float) -> float:
+	return now if now - last >= dur * 0.75 else last
+
+
 # --- Smoothing ----------------------------------------------------------------------
 
 ## Moves `from` toward `to`, closing the same share of the gap per second at
