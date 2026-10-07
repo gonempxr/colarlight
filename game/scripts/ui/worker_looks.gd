@@ -1495,6 +1495,9 @@ static func _clip_moon(c: Vector2, r: float) -> PackedVector2Array:
 ## A pattern skin's motif over a part (`shape` in the part's own space):
 ## small pictures on a jittered grid, each clipped to the part. Drawn
 ## inside cached parts, so the clipping runs once per part.
+static var _mb := Rect2()  # bounds of the shape the motif is clipped to
+
+
 static func _motif(ci: CanvasItem, shape: PackedVector2Array) -> void:
 	var m: String = _sp.get("motif", "")
 	if m == "" or shape.size() < 3:
@@ -1502,8 +1505,9 @@ static func _motif(ci: CanvasItem, shape: PackedVector2Array) -> void:
 	var mc := _c("mc")
 	var mc2 := _c("mc2")
 	var b := Art._bounds(shape)
+	_mb = b
 	var step: float = {"speckle": 6.0, "stars": 8.0, "camo": 10.0, "bubbles": 9.0, "spots": 9.0, "cracks": 13.0,
-			"bands": 7.0, "galaxy": 14.0, "aurora": 9.0}.get(m, 11.0)
+			"bands": 7.0, "galaxy": 14.0, "aurora": 9.0, "circuit": 13.0, "bolts": 13.0}.get(m, 11.0)
 	var i0 := floori(b.position.x / step) - 1
 	var j0 := floori(b.position.y / step) - 1
 	var i1 := ceili(b.end.x / step)
@@ -1518,6 +1522,8 @@ static func _motif(ci: CanvasItem, shape: PackedVector2Array) -> void:
 
 
 static func _mfill(ci: CanvasItem, pts: PackedVector2Array, col: Color, shape: PackedVector2Array) -> void:
+	if not Art._bounds(pts).intersects(_mb):
+		return
 	var c := _clip(pts, shape)
 	if c.size() > 2:
 		Art.flat(ci, c, col)
@@ -1531,9 +1537,8 @@ static func _mline(ci: CanvasItem, pts: PackedVector2Array, col: Color, w: float
 
 ## A glowing line: a soft wide stroke under a bright thin one.
 static func _mglow(ci: CanvasItem, pts: PackedVector2Array, col: Color, core: Color, w: float, shape: PackedVector2Array) -> void:
-	_mline(ci, pts, Color(col, 0.45), w * 2.4, shape)
-	_mline(ci, pts, col, w, shape)
-	_mline(ci, pts, core, w * 0.4, shape)
+	_mline(ci, pts, Color(col, 0.4), w * 2.6, shape)
+	_mline(ci, pts, col.lerp(core, 0.35), w, shape)
 
 
 static func _motif_at(ci: CanvasItem, m: String, p: Vector2, r: float, step: float, shape: PackedVector2Array, mc: Color, mc2: Color) -> void:
@@ -1634,9 +1639,11 @@ static func _motif_at(ci: CanvasItem, m: String, p: Vector2, r: float, step: flo
 			else:
 				_mfill(ci, Art.star_pts(p, 1.8, 0.6, 4, 0.0), mc, shape)
 		"galaxy":
-			_mfill(ci, Art.ellipse_pts(p, Vector2(step * 0.6, step * 0.24), 12, rot * 0.3 - 0.4), Color(mc if r < 0.5 else mc2, 0.5), shape)
-			_mfill(ci, Art.star_pts(p + Vector2(3, -3), 1.8, 0.6, 4, 0.0), Color.WHITE, shape)
-			_mfill(ci, Art.circle_pts(p + Vector2(-4, 3), 0.6, 5), Color.WHITE, shape)
+			_mfill(ci, Art.ellipse_pts(p, Vector2(step * 0.6, step * 0.24), 8, rot * 0.3 - 0.4), Color(mc if r < 0.5 else mc2, 0.5), shape)
+			if r < 0.6:
+				_mfill(ci, Art.star_pts(p + Vector2(3, -3), 1.8, 0.6, 4, 0.0), Color.WHITE, shape)
+			else:
+				_mfill(ci, Art.circle_pts(p + Vector2(-4, 3), 0.6, 4), Color.WHITE, shape)
 		"aurora":
 			var wave := PackedVector2Array()
 			for k in 4:
@@ -1909,11 +1916,14 @@ static func _head(ci: CanvasItem, emotion: String, blink: bool, t: float) -> voi
 	if hs != 1.0:
 		Art.push(ci, NECK, 0.0, Vector2(hs, hs))
 		Art.push(ci, -NECK)
+		# Same outline width as the body (the tester saw lines of mixed widths).
+		Art.ink_mul = 1.0 / pow(hs, 0.65)
 	var key := hash([31, _wf, emotion, blink, Chars._small, dyn, Art.fringe_min])
 	if not Art.cache_begin(ci, key):
 		_head_draw(ci, emotion, blink, dyn)
 		Art.cache_end(ci, key)
 	if hs != 1.0:
+		Art.ink_mul = 1.0
 		Art.pop(ci)
 		Art.pop(ci)
 
@@ -1948,8 +1958,8 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 			_face(ci, fo, 0.6, emotion, blink, skin)
 			if _sp.has("visor"):
 				var vr := Art.ellipse_pts(fo, Vector2(14.6, 15.1), 24)
-				Art.ring(ci, vr, Art.INK, 6.2)
-				Art.ring(ci, vr, _c("visor"), 3.2)
+				Art.ring(ci, vr, Art.INK, 6.2 * Art.ink_mul)
+				Art.ring(ci, vr, _c("visor"), 3.2 * Art.ink_mul)
 				Art.arc_c(ci, fo, 14.6, PI * 1.1, PI * 1.45, 5, Color(1, 1, 1, 0.55), 1.4)
 			if _sp.has("mask"):
 				_swim_mask(ci, fo, 0.6)
@@ -1989,8 +1999,8 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 			Art.flat(ci, v, Color(0.75, 1.0, 0.85, 0.22))
 			Art.flat(ci, _clip(Art.ellipse_pts(c + Vector2(-3, -8), Vector2(4, 7), 10, 0.5), v), Color(1, 1, 1, 0.55))
 			if _sp.has("visor"):
-				Art.ring(ci, v, Art.INK, 5.6)
-				Art.ring(ci, v, _c("visor"), 3.0)
+				Art.ring(ci, v, Art.INK, 5.6 * Art.ink_mul)
+				Art.ring(ci, v, _c("visor"), 3.0 * Art.ink_mul)
 			else:
 				Art.ring(ci, v, _c("hc2"), 2.0)
 			Art.t_circle(ci, c + Vector2(-17, 2), 4.5, _c("hc2"), 1.8, 0.0)
@@ -2082,8 +2092,8 @@ static func _swim_mask(ci: CanvasItem, fc: Vector2, s: float) -> void:
 	Art.line_c(ci, PackedVector2Array([Vector2(-22, 0), Vector2(-14, 1)]), Art.INK, 4.0)
 	Art.line_c(ci, PackedVector2Array([Vector2(14, 1), Vector2(22, 0)]), Art.INK, 4.0)
 	var m := Art.rrect_pts(Rect2(-15, -6.5, 30, 15), 6.5)
-	Art.ring(ci, m, Art.INK, 6.0)
-	Art.ring(ci, m, rim, 3.0)
+	Art.ring(ci, m, Art.INK, 6.0 * Art.ink_mul)
+	Art.ring(ci, m, rim, 3.0 * Art.ink_mul)
 	Art.flat(ci, Art.rrect_pts(Rect2(-13, -4.5, 26, 11), 4.5), Color(0.75, 0.95, 1.0, 0.28))
 	Art.flat(ci, Art.rrect_pts(Rect2(-11, -3.5, 5, 3), 1.5), Color(1, 1, 1, 0.7))
 	if _sp.get("reg", false) or _sp.get("snorkel", false):
