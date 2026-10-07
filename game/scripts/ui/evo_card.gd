@@ -1,10 +1,10 @@
 class_name EvoCard
 extends PanelContainer
-## Card for the workers' evolution next to the lift and boat cards (room 1;
-## the PC side column): the worker's look now and the next one, the income
-## bonus, and a button with the next form's price that opens the evolution
-## panel. Same build as StageCard (name tab, picture, button) so the cards
-## in a row line up.
+## Card for the workers' gear next to the lift and boat cards (room 1; the
+## PC side column): the workers' gear now and the next level, the income
+## bonus, and a button with the next level's price that opens the gear and
+## skins panel. Same build as StageCard (name tab, picture, button) so the
+## cards in a row line up. The pictures stay inside the card (clipped).
 
 signal open_panel
 
@@ -47,6 +47,7 @@ func _ready() -> void:
 	_name.resized.connect(_fit_name)
 	_pic = ArtView.make(_draw_pic, Vector2(0, 170.0 if hero and not narrow else (150.0 if hero else 84.0)), true)
 	_pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pic.clip_contents = true
 	box.add_child(_pic)
 	_rate = Label.new()
 	_rate.theme_type_variation = &"InkLabel"
@@ -109,13 +110,13 @@ func refresh() -> void:
 	var e: int = gs.evo
 	var done := e >= Balance.EVO_FORMS
 	var cost: float = 0.0 if done else gs.evo_cost(e + 1)
-	var sig := [e, gs.coins >= cost, NumFormat.short(cost), TranslationServer.get_locale(), gs.location]
+	var sig := [e, gs.coins >= cost, NumFormat.short(cost), TranslationServer.get_locale(), gs.location, Progress.skin_of(gs.world_id())]
 	if sig == _sig:
 		return
 	_sig = sig
 	_name.text = tr("EVO_BOARD")
 	_fit_name()
-	_rate.text = tr("EVO_CARD_BONUS") % roundi((Balance.evo_mult(e) - 1.0) * 100.0) if e > 0 else tr("EVO_CARD_EACH")
+	_rate.text = tr("GEAR_CARD_NEXT") % EvoPanel._step_pct(e + 1) if not done else tr("EVO_CARD_BONUS") % EvoPanel._pct(Balance.evo_mult(e))
 	if done:
 		_btn.set_price(tr("EVO_ALL"), "", "coin")
 		_btn.theme_type_variation = _v(&"BlueButton")
@@ -146,13 +147,13 @@ func _draw_pic(ci: CanvasItem, s: Vector2, t: float) -> void:
 		return
 	if narrow:
 		# Three cards in a row: just the next look, big.
-		Art.glow(ci, s / 2.0, s.y * 0.5, Color(WorkerLooks.rarity_color(e + 1), 0.45))
+		Art.glow(ci, s / 2.0, s.y * 0.5, Color(WorkerLooks.GEAR_COLORS[e + 1], 0.45))
 		WorkerLooks.draw_card(ci, s / 2.0, minf(s.y - 6.0, s.x - 8.0), w, e + 1, true, t)
 		return
 	var a := Vector2(s.x * 0.27, s.y / 2.0)
 	var b := Vector2(s.x * 0.73, s.y / 2.0)
 	WorkerLooks.draw_card(ci, a, box * 0.86, w, e, true, t)
-	Art.glow(ci, b, box * 0.55, Color(WorkerLooks.rarity_color(e + 1), 0.45))
+	Art.glow(ci, b, box * 0.55, Color(WorkerLooks.GEAR_COLORS[e + 1], 0.45))
 	WorkerLooks.draw_card(ci, b, box, w, e + 1, true, t)
 	var bob := 0.0 if Settings.reduce_motion else sin(t * 4.0) * 2.0
 	var m := Vector2(s.x / 2.0 + bob, s.y / 2.0)

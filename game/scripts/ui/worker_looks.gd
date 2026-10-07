@@ -632,6 +632,9 @@ static func _spec(w: int, form: int) -> Dictionary:
 			d["cap"] = true
 		if d["pattern"] == "stripes":
 			d["pc"] = main.lightened(0.5)
+		if g.has("plate") and not ("plate" in g.get("mk", MAIN_KEYS)):
+			# Armor plates: a lighter shade of the skin, patterned too.
+			d["plate"] = main.lightened(0.28)
 		var extra: Dictionary = art.get("set", {})
 		for key in extra:
 			d[key] = extra[key]
@@ -1341,6 +1344,7 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 	_motif(ci, shape)
 	if kind == "armor":
 		Art.toon(ci, _CUIRASS, _c("plate"), 2.2, 0.6)
+		_motif(ci, _CUIRASS)
 		Art.flat(ci, _clip(Art.rrect_pts(Rect2(-14, -47, 28, 3), 1), _CUIRASS), Color(1, 1, 1, 0.35))
 	if _sp.has("belt"):
 		Art.flat(ci, _clip(Art.rrect_pts(Rect2(-20, -24, 40, 5), 1), shape), _c("belt"))
@@ -1716,6 +1720,7 @@ static func _arm_shape(ci: CanvasItem, front: bool) -> void:
 			_arm_extras(ci, k)
 			Art.t_rect(ci, Rect2(-5, 9, 10, 4), 1.5, Art.shade_of(_c("plate"), k), 0.0, 0.0)
 			Art.toon(ci, Chars._PAULDRON, Art.shade_of(_c("plate"), k), 2.2, 0.4)
+			_motif(ci, Chars._PAULDRON)
 		"spiky":
 			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
 			Art.toon(ci, Chars._PAULDRON, Art.shade_of(_c("plate"), k), 2.2, 0.4)

@@ -213,7 +213,7 @@ func _draw_acct(ci: CanvasItem, s: Vector2, t: float) -> void:
 func _draw_evo(ci: CanvasItem, s: Vector2, t: float) -> void:
 	var w: String = GameState.world_id()
 	var e: int = GameState.evo
-	Art.glow(ci, s / 2.0, s.y * 0.5, Color(WorkerLooks.rarity_color(e), 0.35))
+	Art.glow(ci, s / 2.0, s.y * 0.5, Color(WorkerLooks.rarity_color(e, w), 0.35))
 	WorkerLooks.draw_card(ci, s / 2.0 + Vector2(0, 2), s.y, w, e, true, t)
 	if e > 0:
 		var tag := "+%d%%" % roundi((Balance.evo_mult(e) - 1.0) * 100.0)
