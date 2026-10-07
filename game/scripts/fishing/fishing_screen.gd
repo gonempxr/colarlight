@@ -27,7 +27,7 @@ signal finished(result: Dictionary)
 
 const TOP_H := 96.0
 const BTN_H := 118.0
-const CAST_SEC := 0.7
+const CAST_SEC := 0.85
 const LAND_SEC := 0.95
 const AWAY_SEC := 1.7
 
@@ -87,14 +87,31 @@ var _touch_input := false
 var _acc := 0.0
 ## Pulses the Cast button after a tap on the water (1 -> 0).
 var _cast_nudge := 0.0
+## The place (pier, basalt ledge, swamp boardwalk, crater rim) and its world.
+var _art: FishingScene
+var _world := 0
+## "Perfect!" pulls on this fish (each adds FishData.PERFECT_BONUS to its value).
+var _perfects := 0
+## Surprise turns per second of the fish on the reel bar.
+var _dart := 0.0
+var _dart_flash := 0.0
+## Smoothed line pull (the float glides toward the pier on each hit).
+var _pull_shown := 0.0
+## Springs: the rod tip (kick) and the float (dip), value and speed.
+var _kick := 0.0
+var _kick_v := 0.0
+var _dip := 0.0
+var _dip_v := 0.0
+## Little test nibbles before the real bite (seconds into the wait).
+var _nibbles: Array[float] = []
+var _wait_extra := 0.0
+var _spin := 0.0
 
 var _drops: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
 var _stars: Array[Dictionary] = []
 var _texts: Array[Dictionary] = []
 var _flyers: Array[Dictionary] = []
-var _shadows: Array[Vector3] = []
-var _clouds: Array[Vector3] = []
 var _rng := RandomNumberGenerator.new()
 
 
@@ -104,10 +121,9 @@ func _ready() -> void:
 	theme = UiTheme.build()
 	_touch_input = not bool(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", true))
 	_rng.randomize()
-	for i in 5:
-		_shadows.append(Vector3(_rng.randf(), _rng.randf(), _rng.randf_range(0.6, 1.3)))
-	for i in 4:
-		_clouds.append(Vector3(_rng.randf(), _rng.randf_range(0.2, 0.75), _rng.randf_range(0.8, 1.3)))
+	_world = Fishing.world()
+	_art = FishingScene.new(_world, WorldLook.look_of(_location()))
+	FishArt.world = _world
 	_bg = _layer(_draw_bg)
 	_scene = _layer(_draw_scene)
 	_hud = _layer(_draw_hud)
@@ -136,8 +152,8 @@ func _ready() -> void:
 		FishArt.book(ci, tt)
 		Art.pop(ci))
 	_menu_button("shop", &"Button", func(ci: CanvasItem, s: Vector2, tt: float):
-		Art.push(ci, s / 2.0, 0.0, Vector2.ONE * (s.y / 66.0))
-		FishArt.rod_icon(ci, tt)
+		Art.push(ci, s / 2.0, 0.0, Vector2.ONE * (s.y / 100.0))
+		RodArt.icon(ci, _world, Fishing.rod + 1, tt)
 		Art.pop(ci)
 		if _any_affordable():
 			Art.t_circle(ci, Vector2(s.x / 2.0 + s.y * 0.42, s.y * 0.12), 10.0, Art.RED, 2.2, 0.0))
@@ -160,6 +176,18 @@ func _ready() -> void:
 	var away := Fishing.take_offline_catch()
 	if away > 0:
 		_say(tr("FISHING_OFFLINE") % away, Art.GOLD, 3.5)
+
+
+## The location the colors come from (a test can pick a world).
+func _location() -> int:
+	if Fishing.world_override >= 0:
+		return Fishing.world_override
+	return int(GameState.location)
+
+
+## Rod level 1..20 in this world.
+func _rod_level() -> int:
+	return Fishing.rod + 1
 
 
 func _layer(painter: Callable) -> Control:
@@ -369,6 +397,11 @@ func _on_action() -> void:
 		"cast", "wait":
 			_say(tr("FISHING_TOO_EARLY"), Color("bff3ff"), 1.3)
 			Sfx.play("tap", 0.8)
+			# Patience is part of it: an early tap makes the fish wait a bit.
+			if _state == "wait" and _wait_extra < 2.0:
+				_wait_extra += 0.5
+				_wait_len += 0.5
+				_dip_v += 8.0
 		"bite":
 			_start_reel()
 		"reel":
@@ -391,7 +424,16 @@ func _set_state(s: String) -> void:
 func _cast() -> void:
 	_fish = Fishing.roll_fish()
 	_wait_len = _rng.randf_range(FishData.WAIT_SEC.x, FishData.WAIT_SEC.y)
+	_wait_extra = 0.0
+	_nibbles = []
+	# One to three test nibbles before the real bite.
+	var t := 0.9
+	for i in _rng.randi_range(1, 3):
+		t += _rng.randf_range(0.45, 0.9)
+		if _wait_len - t > 0.5:
+			_nibbles.append(_wait_len - t)
 	_line_pull = 0.0
+	_pull_shown = 0.0
 	_set_state("cast")
 	_say("", Art.WHITE, 0.0)
 	Sfx.play("tap", 0.7)
@@ -405,12 +447,16 @@ func _start_reel() -> void:
 	_marker = 0.0
 	_dir = 1.0
 	_speed = FishData.reel_speed(r, Fishing.rod)
+	_dart = FishData.reel_dart(r, Fishing.rod)
+	_perfects = 0
 	_zone_w = FishData.reel_zone(r, Fishing.rod)
 	_need_hits = FishData.reel_hits(r)
 	_tries = FishData.reel_tries(Fishing.rod)
 	_new_zone()
 	_set_state("reel")
-	_say(tr("FISHING_HINT_REEL"), Color("b6f36a"), 99.0)
+	_say(tr("FISHING_HINT_REEL"), Color("b6f36a") if _world != FishingScene.ACID else Color("fff3b0"), 99.0)
+	_kick_v += 10.0
+	_dip_v += 30.0
 	Sfx.play("upgrade", 0.9)
 	Settings.buzz(30)
 	_splash(_line_end(), 10, 1.2)
@@ -425,16 +471,25 @@ func _new_zone() -> void:
 
 
 func _reel_tap() -> void:
-	var inside := absf(_marker - _zone) <= _zone_w / 2.0 + FishData.REEL_MARGIN
+	var grade := FishData.reel_grade(_marker, _zone, _zone_w)
 	var p := _reel_rect.position + Vector2(_reel_rect.size.x * _marker, _reel_rect.size.y / 2.0)
-	if inside:
+	if grade > 0:
 		_hits += 1
 		_jerk = 1.0
+		_kick_v += 9.0
+		_dip_v -= 25.0
 		_line_pull = float(_hits) / _need_hits
-		_float_text(tr("FISHING_HIT"), p + Vector2(0, -70), Color("b6f36a"), 46)
-		_sparkle(p, 8)
+		if grade == 2:
+			_perfects += 1
+			_float_text(tr("FISHING_PERFECT"), p + Vector2(0, -74), Art.GOLD, 52)
+			_sparkle(p, 16, Art.GOLD)
+			_ring(p, 0.9)
+			Sfx.play("pop", 1.3 + 0.1 * _hits)
+		else:
+			_float_text(tr("FISHING_HIT"), p + Vector2(0, -70), Color("b6f36a"), 46)
+			_sparkle(p, 8)
+			Sfx.play("pop", 1.0 + 0.15 * _hits)
 		_splash(_line_end(), 12, 1.3)
-		Sfx.play("pop", 1.0 + 0.15 * _hits)
 		Settings.buzz(25)
 		if _hits >= _need_hits:
 			_land()
@@ -443,6 +498,7 @@ func _reel_tap() -> void:
 	else:
 		_misses += 1
 		_shake = 1.0
+		_kick_v -= 6.0
 		_float_text(tr("FISHING_MISS"), p + Vector2(0, -70), Color("ffb0b0"), 42)
 		Sfx.play("deny", 1.1)
 		if _misses >= _tries:
@@ -453,6 +509,10 @@ func _reel_tap() -> void:
 
 func _land() -> void:
 	_land_from = _line_end()
+	if _perfects > 0:
+		_fish["value"] = ceilf(float(_fish["value"]) * (1.0 + FishData.PERFECT_BONUS * _perfects))
+		_fish["perfect"] = _perfects
+	_kick_v += 14.0
 	_card_info = Fishing.record(_fish)
 	_visit["caught"] = int(_visit["caught"]) + 1
 	_set_state("land")
@@ -482,13 +542,21 @@ func _process(delta: float) -> void:
 	match _state:
 		"cast":
 			if _st >= CAST_SEC:
-				_splash(_target, 8, 0.8)
+				_splash(_target, 10, 0.9)
 				_ring(_target, 0.8)
+				_ring(_target, 0.5)
+				_dip_v += 55.0
 				Sfx.play("dive", 1.2)
 				_set_state("wait")
 		"wait":
 			if fposmod(_st, 1.1) < delta:
 				_ring(_target, 0.5)
+			for n in _nibbles:
+				if _st >= n and _st - delta < n:
+					# A nibble: a little twitch of the float. Not yet!
+					_dip_v += 28.0
+					_ring(_target, 0.45)
+					Sfx.play("tap", 1.4)
 			if _st >= _wait_len:
 				_set_state("bite")
 				var r := FishData.rarity_of(str(_fish["id"]))
@@ -504,6 +572,10 @@ func _process(delta: float) -> void:
 			if _st >= FishData.BITE_WINDOW:
 				_escape(tr("FISHING_TOO_SLOW"))
 		"reel":
+			# Rare fish dart: they turn around by surprise.
+			if _dart > 0.0 and _speed > 0.0 and _marker > 0.12 and _marker < 0.88 and _rng.randf() < _dart * delta:
+				_dir = -_dir
+				_dart_flash = 1.0
 			_marker += _dir * _speed * delta
 			if _marker >= 1.0:
 				_marker = 1.0
@@ -516,10 +588,23 @@ func _process(delta: float) -> void:
 		"land":
 			if _st >= LAND_SEC:
 				_show_card()
+			elif _st < LAND_SEC * 0.6 and fposmod(_st, 0.06) < delta:
+				# Water dripping off the leaping fish.
+				var lp := _leap_pos(_st / LAND_SEC)
+				_drops.append({"p": lp, "v": Vector2(_rng.randf_range(-60, 60), _rng.randf_range(-40, 40)) * _k, "age": 0.0, "life": 0.5, "s": _rng.randf_range(4.0, 7.0) * _k})
 		"away":
 			if _st >= AWAY_SEC:
 				_set_state("idle")
 	_jerk = maxf(0.0, _jerk - delta * 3.0)
+	_dart_flash = maxf(0.0, _dart_flash - delta * 2.5)
+	# Springs: a stiff rod tip and a bouncy float.
+	var dt := minf(delta, 1.0 / 30.0)
+	_kick_v += (-150.0 * _kick - 8.0 * _kick_v) * dt
+	_kick += _kick_v * dt
+	_dip_v += (-120.0 * _dip - 7.0 * _dip_v) * dt
+	_dip += _dip_v * dt
+	_pull_shown = lerpf(_pull_shown, _line_pull, 1.0 - exp(-delta * 7.0))
+	_spin += delta * (9.0 if _state == "cast" else 0.0)
 	_shake = maxf(0.0, _shake - delta * 3.0)
 	_helper_jerk = maxf(0.0, _helper_jerk - delta * 2.0)
 	_coin_bump = maxf(0.0, _coin_bump - delta * 3.0)
@@ -548,13 +633,22 @@ func _say(text: String, col: Color, sec: float) -> void:
 ## Where the line ends: the float, pulled closer while reeling.
 func _line_end() -> Vector2:
 	var near := Vector2(_deck.end.x + 50.0 * _k, _deck.position.y + 40.0 * _k)
-	var p := _target.lerp(near, _line_pull * 0.55)
+	var p := _target.lerp(near, _pull_shown * 0.55)
 	if _state == "reel":
 		p += Vector2(sin(_t * 9.0) * 10.0, cos(_t * 7.0) * 4.0) * _k
 	return p
 
 
 # --- Effects -------------------------------------------------------------------------------
+
+## The caught fish leaping from the water to the player (f 0..1).
+func _leap_pos(f: float) -> Vector2:
+	var to := _player + Vector2(90.0, -260.0) * _k
+	var e := 1.0 - pow(1.0 - clampf(f, 0.0, 1.0), 2.0)
+	var p := _land_from.lerp(to, e)
+	p.y -= sin(e * PI) * 220.0 * _k
+	return p
+
 
 func _splash(at: Vector2, n: int, power: float) -> void:
 	if Settings.reduce_motion:
@@ -679,6 +773,11 @@ func _show_card() -> void:
 	info.add_child(size_l)
 	info.add_child(Views.chip("coin", NumFormat.short(float(fish["value"])), 32))
 	box.add_child(info)
+	var perfect := int(fish.get("perfect", 0))
+	if perfect > 0:
+		var pl := Views.label(tr("FISHING_PERFECT_BONUS") % roundi(FishData.PERFECT_BONUS * perfect * 100.0), 26, Color("d08a00"), true)
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(pl)
 	if Fishing.is_full():
 		var full := Views.label(tr("FISHING_BUCKET_FULL"), 26, Color("d8363c"), true)
 		full.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -942,71 +1041,225 @@ func _build_book(m: Modal) -> void:
 func _build_shop(m: Modal) -> void:
 	m.title(tr("FISHING_SHOP"))
 	m.add(Views.chip("coin", NumFormat.short(GameState.coins), 30))
-	for kind in Fishing.UPGRADES:
-		var lv: int = Fishing.level(kind)
-		var c := Views.card(Color("fffaf0"))
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 12)
-		c.add_child(h)
-		h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+	_rod_card(m)
+	for kind in ["bucket", "helper"]:
+		_upgrade_card(m, kind)
+
+
+## The rod of this world: now and next, what the next level adds, the
+## numbers it changes, the price, and the ladder of all 20 rods.
+func _rod_card(m: Modal) -> void:
+	var lv: int = Fishing.rod
+	var maxed := Fishing.is_maxed("rod")
+	var world := _world
+	var c := Views.card(Color("fffaf0"))
+	c.name = "RodCard"
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	c.add_child(v)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	var name_l := Views.label(tr(RodArt.name_key(world)), 26, Art.INK, true)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_l.custom_minimum_size.x = 120
+	head.add_child(name_l)
+	var lvl := Views.label("%s / %d" % [tr("FISHING_LEVEL") % (lv + 1), FishData.ROD_LEVELS], 20, Color("1c7fb8"), true)
+	lvl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	head.add_child(lvl)
+	v.add_child(head)
+	# Now -> next.
+	v.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		if maxed:
 			var ctr := s / 2.0
-			Art.t_circle(ci, ctr, 48.0, Color("cfeaff"), 3.0, 0.0)
-			match kind:
-				"rod":
-					Art.push(ci, ctr, 0.0, Vector2.ONE * 1.2)
-					FishArt.rod_icon(ci, tt)
-				"bucket":
-					Art.push(ci, ctr + Vector2(0, 32), 0.0, Vector2.ONE * 1.1)
-					FishArt.bucket(ci, 2 + lv, tt)
-				_:
-					Art.push(ci, ctr + Vector2(0, 42), 0.0, Vector2.ONE * 0.8)
-					Chars.person(ci, Vector2.ZERO, 1.0, 1.0, _helper_look(), {"emotion": "happy" if lv > 0 else "sleepy", "blink": Chars.blinking(tt, 3.0), "arm_r": 0.6})
-			Art.pop(ci), Vector2(110, 110), true))
-		var v := VBoxContainer.new()
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		v.add_theme_constant_override("separation", 4)
-		h.add_child(v)
-		var title_key: String = {"rod": "FISHING_ROD", "bucket": "FISHING_BUCKET_UP", "helper": "FISHING_HELPER"}[kind]
-		v.add_child(Views.label(tr(title_key), 26, Art.INK, true))
-		if lv > 0 or kind != "helper":
-			var ll := Views.label(tr("FISHING_LEVEL") % (lv + (1 if kind != "helper" else 0)), 18, Color("1c7fb8"), true)
-			v.add_child(ll)
-		var desc := ""
-		match kind:
-			"rod":
-				desc = tr("FISHING_ROD_DESC")
-			"bucket":
-				desc = tr("FISHING_BUCKET_DESC") % Fishing.capacity()
-			_:
-				desc = tr("FISHING_HELPER_HIRE_DESC") if lv == 0 else tr("FISHING_HELPER_DESC") % roundi(Fishing.helper_interval())
-		v.add_child(Views.label(desc, 18, Art.INK_SOFT))
-		if kind == "rod":
-			# What the rod does right now, so an upgrade shows its effect.
-			var stats := tr("FISHING_ROD_STATS") % [roundi(FishData.ROD_ZONE * lv * 100.0), roundi((1.0 - FishData.rod_slow(lv)) * 100.0), FishData.reel_tries(lv)]
-			v.add_child(Views.label(stats, 18, Color("2f8f3a"), true))
-		var b := Button.new()
-		b.name = "Buy" + kind.capitalize()
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(0, 70)
-		b.add_theme_font_size_override("font_size", 24)
-		if Fishing.is_maxed(kind):
-			b.text = tr("FISHING_MAX")
-			b.disabled = true
+			FishArt.glow(ci, ctr, s.y * 0.5, FishData.LEGENDARY, tt)
+			Art.push(ci, ctr, 0.0, Vector2.ONE * (s.y / 125.0))
+			RodArt.icon(ci, world, lv + 1, tt)
+			Art.pop(ci)
+			FishArt.sparkles(ci, ctr, s.y * 0.45, tt, 8)
+			return
+		var a := Vector2(s.x * 0.24, s.y / 2.0)
+		var b := Vector2(s.x * 0.76, s.y / 2.0)
+		Art.t_circle(ci, a, s.y * 0.42, Color("e6f2ff"), 2.5, 0.0)
+		Art.t_circle(ci, b, s.y * 0.45, Color("fff0c0"), 3.0, 0.0)
+		FishArt.sparkles(ci, b, s.y * 0.42, tt, 5)
+		Art.push(ci, a, 0.0, Vector2.ONE * (s.y / 150.0))
+		RodArt.icon(ci, world, lv + 1, tt)
+		Art.pop(ci)
+		var bounce := 1.0 + 0.04 * sin(tt * 3.0)
+		Art.push(ci, b, 0.0, Vector2.ONE * (s.y / 138.0) * bounce)
+		RodArt.icon(ci, world, lv + 2, tt)
+		Art.pop(ci)
+		# The arrow between them, nudging forward.
+		var ax := s.x / 2.0 + sin(tt * 4.0) * 4.0
+		Art.push(ci, Vector2(ax, s.y / 2.0))
+		Art.toon(ci, PackedVector2Array([Vector2(-16, -8), Vector2(2, -8), Vector2(2, -18), Vector2(20, 0), Vector2(2, 18), Vector2(2, 8), Vector2(-16, 8)]), Art.GREEN, 3.0, 0.4)
+		Art.pop(ci)
+		_badge(ci, a + Vector2(0, s.y * 0.36), str(lv + 1), Color("3aa6f0"))
+		_badge(ci, b + Vector2(0, s.y * 0.38), str(lv + 2), Art.GOLD_DARK), Vector2(0, 170), true))
+	if maxed:
+		var top := Views.label(tr("FISHING_ROD_MAXED"), 20, Color("b8860b"), true)
+		top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		top.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(top)
+	else:
+		var nx := Views.label(tr("FISHING_ROD_NEXT") % tr(RodArt.level_key(world, lv + 2)), 19, Art.INK, true)
+		nx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		nx.custom_minimum_size.x = 200
+		v.add_child(nx)
+	v.add_child(_rod_stats(lv, maxed))
+	var b := Button.new()
+	b.name = "BuyRod"
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 74)
+	b.add_theme_font_size_override("font_size", 26)
+	if maxed:
+		b.text = tr("FISHING_MAX")
+		b.disabled = true
+	else:
+		b.text = "%s  %s" % [tr("FISHING_BUY"), NumFormat.short(Fishing.upgrade_cost("rod"))]
+		b.icon = Icons.get_icon("coin", 34)
+		b.theme_type_variation = &"GoldButton"
+		b.disabled = not Fishing.can_buy("rod")
+		b.pressed.connect(func():
+			if Fishing.buy("rod"):
+				Sfx.play("upgrade")
+				Sfx.voice("wow", 1.1)
+				_sparkle(b.get_global_rect().get_center(), 16, Art.GOLD)
+				m.rebuild()
+			else:
+				Sfx.play("deny"))
+	v.add_child(b)
+	# The ladder: all 20 rods of this world.
+	var lh := Views.label(tr("FISHING_ROD_LADDER"), 18, Art.INK_SOFT, true)
+	lh.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(lh)
+	var grid := GridContainer.new()
+	grid.name = "RodLadder"
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	for i in FishData.ROD_LEVELS:
+		var owned := i <= lv
+		var is_next := i == lv + 1
+		var cell := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+			var r := Rect2(Vector2(1, 1), s - Vector2(2, 2))
+			var fill := Color("eaf6ff") if owned else (Color("fff0c0") if is_next else Color("e9ecf4"))
+			Art.t_rect(ci, r, 10, fill, 2.2 if not is_next else 3.2, 0.0)
+			if i == lv:
+				Art.t_rect(ci, r.grow(-4), 8, Color(0, 0, 0, 0), 0.0, 0.0)
+				Art.ring(ci, Art.rrect_pts(r.grow(-3), 8), Color("3aa6f0"), 3.0)
+			Art.push(ci, s / 2.0 + Vector2(0, -6), 0.0, Vector2.ONE * minf(s.x, s.y - 14.0) / 120.0)
+			RodArt.icon(ci, world, i + 1, 0.4 + i * 0.3, not owned and not is_next)
+			Art.pop(ci)
+			var tc := Art.INK if owned or is_next else Art.INK_SOFT
+			Art.text(ci, Vector2(s.x / 2.0, s.y - 5.0), str(i + 1), 15, tc if owned or is_next else Color(tc, 0.8), 0)
+			if owned:
+				Art.t_circle(ci, Vector2(s.x - 10, 10), 7.0, Art.GREEN, 1.8, 0.0)
+				Art.line(ci, Vector2(s.x - 13, 10), Vector2(s.x - 10.5, 12.5), Art.WHITE, 2.0)
+				Art.line(ci, Vector2(s.x - 10.5, 12.5), Vector2(s.x - 6.5, 7), Art.WHITE, 2.0), Vector2(0, 76), false)
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(cell)
+	v.add_child(grid)
+	var note := Views.label(tr("FISHING_ROD_WORLD"), 16, Art.INK_SOFT)
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+	m.add(c)
+
+
+func _badge(ci: CanvasItem, at: Vector2, label: String, col: Color) -> void:
+	var w := 18.0 + label.length() * 12.0
+	Art.t_rect(ci, Rect2(at - Vector2(w / 2.0, 14), Vector2(w, 28)), 14, col, 2.6, 0.3)
+	Art.text(ci, at + Vector2(0, 8), label, 20, Art.WHITE, 6)
+
+
+## What the rod does now and what the next level makes of it.
+func _rod_stats(lv: int, maxed: bool) -> Control:
+	var grid := GridContainer.new()
+	grid.name = "RodStats"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 2)
+	var nx := lv + (0 if maxed else 1)
+	var rare := func(l: int) -> float:
+		var o := FishData.odds(l)
+		return (o[2] + o[3] + o[4]) * 100.0
+	var rows := [
+		["FISHING_STAT_ZONE", "+%d%%" % roundi(FishData.ROD_ZONE * lv * 100.0), "+%d%%" % roundi(FishData.ROD_ZONE * nx * 100.0)],
+		["FISHING_STAT_SLOW", "%d%%" % roundi((1.0 - FishData.rod_slow(lv)) * 100.0), "%d%%" % roundi((1.0 - FishData.rod_slow(nx)) * 100.0)],
+		["FISHING_STAT_TRIES", str(FishData.reel_tries(lv)), str(FishData.reel_tries(nx))],
+		["FISHING_STAT_RARE", "%d%%" % roundi(rare.call(lv)), "%d%%" % roundi(rare.call(nx))],
+		["FISHING_STAT_BUCKET", "+%d" % FishData.rod_slots(Fishing.rod_total()), "+%d" % FishData.rod_slots(Fishing.rod_total() + (0 if maxed else 1))],
+	]
+	for r in rows:
+		var name_l := Views.label(tr(r[0]), 17, Art.INK_SOFT, true)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(name_l)
+		var up: bool = r[1] != r[2]
+		var val := Views.label(str(r[1]) if maxed or not up else "%s  →  %s" % [r[1], r[2]], 17, Color("2f8f3a") if up else Art.INK, true)
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		val.autowrap_mode = TextServer.AUTOWRAP_OFF
+		grid.add_child(val)
+	return grid
+
+
+func _upgrade_card(m: Modal, kind: String) -> void:
+	var lv: int = Fishing.level(kind)
+	var c := Views.card(Color("fffaf0"))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	c.add_child(h)
+	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		var ctr := s / 2.0
+		Art.t_circle(ci, ctr, 48.0, Color("cfeaff"), 3.0, 0.0)
+		if kind == "bucket":
+			Art.push(ci, ctr + Vector2(0, 32), 0.0, Vector2.ONE * 1.1)
+			FishArt.bucket(ci, 2 + lv, tt)
 		else:
-			var verb := tr("FISHING_HIRE") if kind == "helper" and lv == 0 else tr("FISHING_BUY")
-			b.text = "%s  %s" % [verb, NumFormat.short(Fishing.upgrade_cost(kind))]
-			b.icon = Icons.get_icon("coin", 32)
-			b.theme_type_variation = &"GoldButton"
-			b.disabled = not Fishing.can_buy(kind)
-			b.pressed.connect(func():
-				if Fishing.buy(kind):
-					Sfx.play("hire" if kind == "helper" and Fishing.helper == 1 else "upgrade")
-					_sparkle(b.get_global_rect().get_center(), 10)
-					m.rebuild()
-				else:
-					Sfx.play("deny"))
-		v.add_child(b)
-		m.add(c)
+			Art.push(ci, ctr + Vector2(0, 42), 0.0, Vector2.ONE * 0.8)
+			Chars.person(ci, Vector2.ZERO, 1.0, 1.0, _helper_look(), {"emotion": "happy" if lv > 0 else "sleepy", "blink": Chars.blinking(tt, 3.0), "arm_r": 0.6})
+		Art.pop(ci), Vector2(110, 110), true))
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 4)
+	h.add_child(v)
+	v.add_child(Views.label(tr("FISHING_BUCKET_UP" if kind == "bucket" else "FISHING_HELPER"), 26, Art.INK, true))
+	if lv > 0 or kind != "helper":
+		v.add_child(Views.label(tr("FISHING_LEVEL") % (lv + (1 if kind != "helper" else 0)), 18, Color("1c7fb8"), true))
+	var desc := ""
+	if kind == "bucket":
+		desc = tr("FISHING_BUCKET_DESC") % Fishing.capacity()
+	else:
+		desc = tr("FISHING_HELPER_HIRE_DESC") if lv == 0 else tr("FISHING_HELPER_DESC") % roundi(Fishing.helper_interval())
+	var dl := Views.label(desc, 18, Art.INK_SOFT)
+	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dl.custom_minimum_size.x = 140
+	v.add_child(dl)
+	var b := Button.new()
+	b.name = "Buy" + kind.capitalize()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 70)
+	b.add_theme_font_size_override("font_size", 24)
+	if Fishing.is_maxed(kind):
+		b.text = tr("FISHING_MAX")
+		b.disabled = true
+	else:
+		var verb := tr("FISHING_HIRE") if kind == "helper" and lv == 0 else tr("FISHING_BUY")
+		b.text = "%s  %s" % [verb, NumFormat.short(Fishing.upgrade_cost(kind))]
+		b.icon = Icons.get_icon("coin", 32)
+		b.theme_type_variation = &"GoldButton"
+		b.disabled = not Fishing.can_buy(kind)
+		b.pressed.connect(func():
+			if Fishing.buy(kind):
+				Sfx.play("hire" if kind == "helper" and Fishing.helper == 1 else "upgrade")
+				_sparkle(b.get_global_rect().get_center(), 10)
+				m.rebuild()
+			else:
+				Sfx.play("deny"))
+	v.add_child(b)
+	m.add(c)
 
 
 static func _helper_look() -> Dictionary:
@@ -1014,6 +1267,10 @@ static func _helper_look() -> Dictionary:
 
 
 # --- Leaving -----------------------------------------------------------------------------------
+
+func _exit_tree() -> void:
+	FishArt.world = 0
+
 
 func close() -> void:
 	if _done:
@@ -1055,8 +1312,13 @@ func debug_state(s: String) -> void:
 			_escape(tr("FISHING_ESCAPED"))
 		_:
 			if s.begins_with("catch:"):
-				var id := s.substr(6)
+				# catch:<fish id>[:<perfect pulls>]
+				var parts := s.split(":")
+				var id := parts[1]
 				_fish = {"id": id, "size": FishData.size_from_roll(id, 0.8), "value": FishData.price(id, FishData.size_from_roll(id, 0.8), Fishing.base_rate())}
+				if parts.size() > 2 and int(parts[2]) > 0:
+					_fish["perfect"] = int(parts[2])
+					_fish["value"] = ceilf(float(_fish["value"]) * (1.0 + FishData.PERFECT_BONUS * int(parts[2])))
 				_card_info = Fishing.record(_fish)
 				_show_card()
 
@@ -1069,93 +1331,8 @@ func state() -> String:
 
 func _draw_bg() -> void:
 	var ci := _bg
-	var v := ci.size
-	var hz := _horizon
-	Art.grad(ci, PackedVector2Array([Vector2.ZERO, Vector2(v.x, 0), Vector2(v.x, hz), Vector2(0, hz)]),
-			PackedColorArray([Art.SKY_TOP, Art.SKY_TOP, Art.SKY_BOTTOM, Art.SKY_BOTTOM]))
-	Art.push(ci, Vector2(v.x * 0.82, hz * 0.42), 0.0, Vector2.ONE * _k)
-	Props.sun(ci, _t)
-	Art.pop(ci)
-	for c in _clouds:
-		var x := fposmod(c.x + _t * 0.006 * c.z, 1.2) * (v.x + 200.0) - 150.0
-		Art.push(ci, Vector2(x, hz * c.y), 0.0, Vector2.ONE * c.z * _k)
-		Props.cloud(ci, int(c.z * 100.0))
-		Art.pop(ci)
-	Art.push(ci, Vector2(v.x * 0.3, hz + 2.0), 0.0, Vector2(1.6, 1.3) * _k)
-	Props.far_island(ci, 260.0, Color("7fb0d8"))
-	Art.pop(ci)
-	Art.push(ci, Vector2(v.x * 0.72, hz + 2.0), 0.0, Vector2(1.0, 0.8) * _k)
-	Props.far_island(ci, 200.0, Color("8fc0e4"))
-	Art.pop(ci)
-	# Sea.
-	var mid := lerpf(hz, v.y, 0.45)
-	Art.grad(ci, PackedVector2Array([Vector2(0, hz), Vector2(v.x, hz), Vector2(v.x, mid), Vector2(0, mid)]),
-			PackedColorArray([Art.SEA_TOP, Art.SEA_TOP, Art.SEA_MID, Art.SEA_MID]))
-	Art.grad(ci, PackedVector2Array([Vector2(0, mid), Vector2(v.x, mid), v, Vector2(0, v.y)]),
-			PackedColorArray([Art.SEA_MID, Art.SEA_MID, Art.SEA_DEEP, Art.SEA_DEEP]))
-	Art.flat(ci, PackedVector2Array([Vector2(0, hz - 2), Vector2(v.x, hz - 2), Vector2(v.x, hz + 4), Vector2(0, hz + 4)]), Color(1, 1, 1, 0.5))
-	# Sun glitter on the water.
-	for i in 14:
-		var gx := v.x * 0.82 + sin(i * 2.3) * 70.0 * (1.0 + i * 0.08)
-		var gy := hz + 14.0 + i * 16.0
-		var a := 0.25 + 0.25 * sin(_t * 3.0 + i * 1.7)
-		Art.flat(ci, PackedVector2Array([Vector2(gx - 16, gy), Vector2(gx, gy - 2.5), Vector2(gx + 16, gy), Vector2(gx, gy + 2.5)]), Color(1, 1, 0.9, snappedf(a, 0.05)))
-	# Gentle wave lines.
-	for row in 7:
-		var y := lerpf(hz + 30.0, v.y - 40.0, row / 6.0)
-		var amp := (4.0 + row * 1.2) * _k
-		var len := (60.0 + row * 14.0) * _k
-		for j in 5:
-			var x0 := fposmod(j * v.x / 4.0 + row * 97.0 + _t * (12.0 + row * 3.0), v.x + len * 2.0) - len
-			var pts := PackedVector2Array()
-			for s in 7:
-				var f := s / 6.0
-				pts.append(Vector2(x0 + f * len, y - sin(f * PI) * amp))
-			Art.polyline(ci, pts, Color(1, 1, 1, 0.18 + 0.03 * (6 - row)), 3.0)
-	# Fish shadows passing by.
-	for sh in _shadows:
-		var dir := 1.0 if sh.x < 0.5 else -1.0
-		var f := fposmod(sh.x * 7.0 + _t * 0.025 * sh.z, 1.0)
-		var x := lerpf(-80.0, v.x + 80.0, f) if dir > 0.0 else lerpf(v.x + 80.0, -80.0, f)
-		var y := lerpf(hz + 80.0, v.y - 160.0, sh.y) + sin(_t + sh.x * 10.0) * 8.0
-		_shadow(ci, Vector2(x, y), 34.0 * sh.z * _k, dir, 0.16)
-	_draw_pier(ci, v)
-
-
-func _shadow(ci: CanvasItem, p: Vector2, len: float, dir: float, alpha: float) -> void:
-	Art.push(ci, p, 0.0, Vector2(dir, 1.0) * (len / 30.0))
-	var col := Color(0.03, 0.12, 0.3, alpha)
-	Art.flat(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(30, 11), 18), col)
-	Art.push(ci, Vector2(-28, 0), sin(_t * 6.0 + p.y) * 0.25)
-	Art.flat(ci, PackedVector2Array([Vector2(2, 0), Vector2(-14, -10), Vector2(-14, 10)]), col)
-	Art.pop(ci)
-	Art.pop(ci)
-
-
-func _draw_pier(ci: CanvasItem, v: Vector2) -> void:
-	var d := _deck
-	var post_h := minf(170.0 * _k, v.y - d.position.y)
-	var n := maxi(3, int(d.size.x / (120.0 * _k)))
-	for i in n:
-		var x := d.position.x + 40.0 + (d.size.x - 70.0) * i / float(n - 1)
-		var r := Rect2(x - 12.0 * _k, d.position.y + 10.0, 24.0 * _k, post_h)
-		Art.t_rect(ci, r, 6.0, Art.WOOD_DARK, 3.0, 0.3)
-		var wy := d.position.y + post_h * 0.55
-		Art.push(ci, Vector2(x, wy), 0.0, Vector2(1.0, 0.3))
-		Art.arc(ci, Vector2.ZERO, (26.0 + 5.0 * sin(_t * 2.0 + i)) * _k, 0.0, TAU, 20, Color(1, 1, 1, 0.45), 4.0)
-		Art.pop(ci)
-		Art.flat(ci, Art.rrect_pts(Rect2(r.position.x, wy - 4.0, r.size.x, r.end.y - wy + 4.0), 4.0), Color(Art.SEA_MID, 0.45))
-	# Deck: planks with a front face.
-	var face := Rect2(d.position.x, d.position.y, d.size.x, d.size.y + 12.0 * _k)
-	Art.t_rect(ci, face, 8.0, Art.WOOD_DARK, 3.5, 0.0)
-	Art.t_rect(ci, Rect2(d.position.x, d.position.y - 14.0 * _k, d.size.x, d.size.y), 8.0, Art.WOOD, 3.5, 0.5)
-	var plank := 46.0 * _k
-	var x := d.position.x + plank
-	while x < d.end.x - 10.0:
-		Art.line(ci, Vector2(x, d.position.y - 12.0 * _k), Vector2(x, d.position.y + d.size.y - 16.0 * _k), Art.WOOD_DARK, 2.0)
-		x += plank
-	for i in int(d.size.x / (plank * 2.0)):
-		Art.flat(ci, Art.circle_pts(Vector2(d.position.x + plank * (2.0 * i + 1.5), d.position.y + d.size.y * 0.5 + 2.0), 2.5 * _k, 8), Art.INK_SOFT)
+	_art.back(ci, ci.size, _horizon, _t, _k)
+	_art.ledge(ci, _deck, ci.size, _t, _k)
 
 
 func _draw_scene() -> void:
@@ -1166,7 +1343,7 @@ func _draw_scene() -> void:
 	for r in _rings:
 		var f: float = r["age"] / r["life"]
 		Art.push(ci, r["p"], 0.0, Vector2(1.0, 0.32))
-		Art.arc(ci, Vector2.ZERO, lerpf(10.0, r["r"], f), 0.0, TAU, 24, Color(1, 1, 1, 0.8 * (1.0 - f)), 4.0 * (1.0 - f * 0.5))
+		Art.arc(ci, Vector2.ZERO, lerpf(10.0, r["r"], f), 0.0, TAU, 24, Color(_art.ring_color(), snappedf(0.8 * (1.0 - f), 0.05)), 4.0 * (1.0 - f * 0.5))
 		Art.pop(ci)
 	# The fish coming to the float.
 	if _state in ["wait", "bite", "reel"] and not _fish.is_empty():
@@ -1178,7 +1355,10 @@ func _draw_scene() -> void:
 			var f := clampf(_st / maxf(0.1, _wait_len), 0.0, 1.0)
 			p += Vector2((1.0 - f) * 260.0 * _k, 60.0 * (1.0 - f) * _k)
 			alpha *= f
-		_shadow(ci, p, len, -1.0, alpha)
+		if _state == "reel":
+			# The fish fights: it thrashes around under the float.
+			p += Vector2(sin(_t * 7.0) * 26.0, absf(sin(_t * 11.0)) * 8.0) * _k
+		_art.shadow(ci, p, len, -1.0 if _state != "reel" or cos(_t * 7.0) < 0.0 else 1.0, alpha, _t)
 	# Fisherman helper.
 	if Fishing.helper > 0:
 		_draw_helper(ci, s * 0.85)
@@ -1192,10 +1372,14 @@ func _draw_scene() -> void:
 	Chars.person(ci, feet, s, 1.0, Settings.avatar, pose)
 	var hand := _hand(feet, s, float(pose["arm_r"]))
 	var ang := _rod_angle()
-	var rod_len := 110.0 * s
+	var lv := _rod_level()
+	var rod_len := 110.0 * s * RodArt.length_mult(_world, lv)
 	var bend := 0.0
 	if _state == "reel" or _state == "bite":
-		bend = (0.18 + 0.12 * sin(_t * 14.0) + _jerk * 0.2) * rod_len
+		bend = (0.2 + 0.1 * sin(_t * 14.0) + 0.15 * _pull_shown) * rod_len
+	elif _state == "wait":
+		bend = 0.05 * rod_len
+	bend += _kick * 0.12 * rod_len
 	var dirv := Vector2(cos(ang), sin(ang))
 	var nrm := dirv.orthogonal()
 	var rod := PackedVector2Array()
@@ -1209,34 +1393,45 @@ func _draw_scene() -> void:
 	match _state:
 		"wait":
 			sag = 60.0 * _k
-		"idle", "away", "card":
-			sag = 0.0
 		"cast":
 			sag = 20.0 * _k
 	var line := PackedVector2Array()
 	for i in 13:
 		var f := i / 12.0
-		line.append(tip.lerp(end, f) + Vector2(0, sin(f * PI) * sag))
-	Art.polyline(ci, line, Color(Art.INK, 0.35), 4.0)
-	Art.polyline(ci, line, Color(1, 1, 1, 0.9), 2.0)
-	Art.stroke(ci, rod, Art.WOOD, 7.0 * _k, 2.5)
-	Art.stroke(ci, PackedVector2Array([rod[0], rod[2]]), Color("3a3f5c"), 8.0 * _k, 2.5)
-	Art.t_circle(ci, hand + dirv * rod_len * 0.05 + nrm * 10.0 * _k, 9.0 * _k, Art.METAL, 2.5, 0.4)
+		var wob := sin(f * PI * 3.0 + _t * 40.0) * 3.0 * _k * f * (1.0 - f) * 4.0 if _state == "reel" else 0.0
+		line.append(tip.lerp(end, f) + Vector2(0, sin(f * PI) * sag) + nrm * wob)
+	RodArt.line(ci, line, _world, lv, _t, 2.2, _state in ["wait", "bite", "reel"])
+	RodArt.rod(ci, rod, _world, lv, _t, 1.0)
 	# The float, or the fish splashing on the line.
 	if _state == "land":
 		var f := clampf(_st / LAND_SEC, 0.0, 1.0)
-		var to := _player + Vector2(90.0, -260.0) * _k
-		var p := _land_from.lerp(to, f)
-		p.y -= sin(f * PI) * 200.0 * _k
-		Art.push(ci, p, sin(f * TAU * 2.0) * 0.4 - 0.3, Vector2.ONE * s * (0.7 + 0.5 * f))
-		FishArt.draw(ci, str(_fish["id"]), _t * 2.0, -1.0 if f < 0.5 else 1.0, true)
+		var p := _leap_pos(f)
+		# Stretch on the way up, squash at the top, a full flip in the air.
+		var vy := cos(f * PI)
+		var stretch := Vector2(1.0 + 0.18 * absf(vy), 1.0 - 0.14 * absf(vy))
+		Art.push(ci, p, -0.6 + f * TAU * 0.9, stretch * s * (0.7 + 0.5 * f))
+		FishArt.draw(ci, str(_fish["id"]), _t * 2.0, 1.0, true)
 		Art.pop(ci)
+		if f < 0.25:
+			_art.shadow(ci, _land_from + Vector2(0, 10.0 * _k), 30.0 * _k, 1.0, 0.25 * (1.0 - f * 4.0), _t)
 	elif _state != "card":
 		var bs := _k * 1.3
-		FishArt.bobber(ci, end, bs)
-		if _state == "bite" or _state == "reel":
-			Art.push(ci, end + Vector2(0, 6.0 * _k), 0.0, Vector2(1.0, 0.3))
-			Art.flat(ci, Art.circle_pts(Vector2.ZERO, 22.0 * _k, 20), Color(1, 1, 1, 0.5))
+		if _state == "cast":
+			# Spinning in flight, with a little trail.
+			var cf := clampf((_st / CAST_SEC - 0.4) / 0.6, 0.0, 1.0)
+			if cf > 0.0 and cf < 1.0:
+				for g in 3:
+					var gp := _cast_point(cf - 0.05 * (g + 1))
+					Art.disc(ci, gp, (5.0 - g) * _k, Color(1, 1, 1, 0.5 - g * 0.15))
+			Art.push(ci, end, sin(_spin) * 0.6 * cf)
+			RodArt.bob(ci, Vector2.ZERO, bs, _world, lv, _t)
+			Art.pop(ci)
+		else:
+			RodArt.bob(ci, end, bs, _world, lv, _t)
+		if _state in ["wait", "bite", "reel"]:
+			# The surface around the float hides its bottom a little.
+			Art.push(ci, end + Vector2(0, 9.0 * _k), 0.0, Vector2(1.0, 0.3))
+			Art.flat(ci, Art.circle_pts(Vector2.ZERO, (17.0 + maxf(0.0, _dip) * 0.3) * _k, 20), Color(_art.ring_color(), 0.55 if _state != "wait" else 0.35))
 			Art.pop(ci)
 	if _state == "bite":
 		var r := FishData.rarity_of(str(_fish["id"]))
@@ -1268,16 +1463,11 @@ func _draw_helper(ci: CanvasItem, s: float) -> void:
 	_helper_float = water
 	Art.polyline(ci, PackedVector2Array([tip, water]), Color(1, 1, 1, 0.85), 1.8)
 	Art.stroke(ci, PackedVector2Array([hand - dirv * 12.0 * s, tip]), Art.WOOD, 5.0 * _k, 2.2)
-	Art.push(ci, base, rock, Vector2.ONE * _k)
-	var hull := Art.smooth_pts(PackedVector2Array([Vector2(-92, -34), Vector2(-40, -26), Vector2(40, -26), Vector2(96, -38), Vector2(70, 8), Vector2(-66, 8)]), 3)
-	Art.toon(ci, hull, Color("e8744a"), 3.5, 0.6)
-	Art.t_rect(ci, Rect2(-88, -36, 180, 11), 5.0, Art.WOOD, 3.0, 0.3)
-	Art.flat(ci, Art.rrect_pts(Rect2(-60, -12, 118, 6), 3.0), Color(1, 1, 1, 0.35))
-	Art.pop(ci)
+	_art.raft(ci, base, rock, _t, _k)
 	Art.push(ci, _helper_pos + Vector2(0, 8.0 * _k), 0.0, Vector2(1.0, 0.3))
-	Art.arc(ci, Vector2.ZERO, (98.0 + 4.0 * sin(_t * 2.0)) * _k, 0.0, TAU, 28, Color(1, 1, 1, 0.4), 5.0)
+	Art.arc(ci, Vector2.ZERO, (98.0 + 4.0 * sin(_t * 2.0)) * _k, 0.0, TAU, 28, Color(_art.ring_color(), 0.4), 5.0)
 	Art.pop(ci)
-	FishArt.bobber(ci, water, _k * 0.8)
+	RodArt.bob(ci, water, _k * 0.8, _world, 1, _t)
 	# How long until his next fish: a little ring, or "Zzz" while the bucket is full.
 	var p := feet + Vector2(-58.0, -150.0) * _k
 	if full:
@@ -1332,41 +1522,63 @@ func _rod_angle() -> float:
 		"cast":
 			var f := _st / CAST_SEC
 			if f < 0.35:
-				return up - 0.9 * sin(f / 0.35 * PI * 0.5)
-			return up - 0.9 + 1.4 * minf((f - 0.35) / 0.25, 1.0)
+				# Wind up: back over the shoulder, easing out.
+				var e := sin(f / 0.35 * PI * 0.5)
+				return up - 0.95 * e
+			# The whip forward, overshooting a little, then settling.
+			var g := minf((f - 0.35) / 0.2, 1.0)
+			var e2 := 1.0 - pow(1.0 - g, 3.0)
+			return up - 0.95 + 1.55 * e2 - 0.15 * clampf((f - 0.55) / 0.45, 0.0, 1.0)
 		"wait":
-			return -0.55 + sin(_t * 1.5) * 0.02
+			return -0.55 + sin(_t * 1.5) * 0.02 - _kick * 0.05
 		"bite":
-			return -0.5 + sin(_t * 20.0) * 0.05
+			return -0.5 + sin(_t * 20.0) * 0.05 - _kick * 0.1
 		"reel":
-			return -0.75 - _jerk * 0.35
-	return up
+			return -0.75 - _jerk * 0.25 - _kick * 0.12
+		"land":
+			return -1.0 - _kick * 0.1
+	return up - _kick * 0.08
 
 
-## Where the float is drawn: on the rod tip, flying, bobbing or dipping.
-func _float_pos() -> Vector2:
+func _rod_tip() -> Vector2:
 	var s := _ps()
 	var feet := _player + Vector2(0, -12.0 * _k)
 	var pose := _player_pose()
 	var hand := _hand(feet, s, float(pose["arm_r"]))
 	var ang := _rod_angle()
-	var tip := hand + Vector2(cos(ang), sin(ang)) * 110.0 * s
+	return hand + Vector2(cos(ang), sin(ang)) * 110.0 * s * RodArt.length_mult(_world, _rod_level())
+
+
+## The float's flight on the cast (f 0..1).
+func _cast_point(f: float) -> Vector2:
+	var from := _rod_tip() + Vector2(0, 80.0 * _k)
+	f = clampf(f, 0.0, 1.0)
+	var p := from.lerp(_target, f)
+	p.y -= sin(f * PI) * 240.0 * _k
+	return p
+
+
+## Where the float is drawn: on the rod tip, flying, bobbing or dipping.
+func _float_pos() -> Vector2:
+	var tip := _rod_tip()
+	var dip := _dip * 0.35 * _k
 	match _state:
 		"idle", "away", "card":
-			return tip + Vector2(0, 80.0 * _k + sin(_t * 2.0) * 4.0)
+			return tip + Vector2(sin(_t * 1.7) * 6.0, 80.0 * _k + sin(_t * 2.0) * 4.0)
 		"cast":
 			var f := clampf((_st / CAST_SEC - 0.4) / 0.6, 0.0, 1.0)
 			if f <= 0.0:
-				return tip + Vector2(0, 80.0 * _k)
-			var p := (tip + Vector2(0, 80.0 * _k)).lerp(_target, f)
-			p.y -= sin(f * PI) * 220.0 * _k
-			return p
+				# Swinging behind the rod during the wind-up.
+				return tip + Vector2(-20.0 * _k * sin(_st / CAST_SEC / 0.4 * PI), 70.0 * _k)
+			return _cast_point(f)
 		"wait":
-			return _target + Vector2(0, sin(_t * 2.6) * 4.0 * _k)
+			return _target + Vector2(0, sin(_t * 2.6) * 4.0 * _k + dip)
 		"bite":
-			return _target + Vector2(sin(_t * 30.0) * 3.0, 14.0 + absf(sin(_t * 9.0)) * 10.0) * _k
-		"reel", "land":
-			return _line_end()
+			return _target + Vector2(sin(_t * 30.0) * 3.0, 14.0 + absf(sin(_t * 9.0)) * 10.0) * _k + Vector2(0, dip)
+		"reel":
+			return _line_end() + Vector2(0, dip)
+		"land":
+			return _leap_pos(_st / LAND_SEC) + Vector2(0, 20.0 * _k)
 	return _target
 
 
@@ -1420,6 +1632,11 @@ func _draw_reel(ci: CanvasItem) -> void:
 	var pulse := 0.85 + 0.15 * sin(_t * 8.0)
 	Art.flat(ci, Art.rrect_pts(zr, 16), Color(Art.GREEN, pulse))
 	Art.flat(ci, Art.rrect_pts(Rect2(zr.position + Vector2(6, 4), Vector2(zr.size.x - 12, 8)), 4), Color(1, 1, 1, 0.45))
+	# The "Perfect!" sweet spot in the middle of the zone.
+	var pw := maxf(6.0, zw * FishData.PERFECT_SHARE)
+	var pr := Rect2(zx + zw / 2.0 - pw / 2.0, zr.position.y + 4.0, pw, zr.size.y - 8.0)
+	Art.flat(ci, Art.rrect_pts(pr, minf(10.0, pw / 2.0)), Color(Art.GOLD, 0.85))
+	Art.flat(ci, Art.star_pts(pr.get_center(), 9.0, 3.6, 4), Color(1, 1, 1, 0.9))
 	# The marker: a little fish swimming back and forth.
 	var mx := bar.position.x + bar.size.x * _marker
 	var my := bar.get_center().y
@@ -1430,6 +1647,11 @@ func _draw_reel(ci: CanvasItem) -> void:
 	Art.push(ci, Vector2(mx, my), 0.0, Vector2.ONE * 0.36)
 	FishArt.draw(ci, "sardine" if _fish.is_empty() else str(_fish["id"]), _t * 2.0, _dir, inside, true)
 	Art.pop(ci)
+	if _dart_flash > 0.0:
+		var pop := snappedf(sin(minf(1.0, (1.0 - _dart_flash) * 4.0) * PI * 0.5) * (0.6 + 0.4 * _dart_flash), 0.05)
+		Art.push(ci, Vector2(mx, bar.position.y - 30.0), 0.0, Vector2.ONE * pop)
+		Art.text(ci, Vector2(0, 12), "!", 44, Color("ff9a3c"), 8)
+		Art.pop(ci)
 	# Hits so far.
 	# Centred, but moved left (and closer) to keep clear of the hearts.
 	var step := 44.0
@@ -1465,7 +1687,7 @@ func _draw_fx() -> void:
 	for d in _drops:
 		var f: float = d["age"] / d["life"]
 		Art.push(ci, d["p"], 0.0, Vector2.ONE * float(d["s"]) / 6.0 * (1.0 - f * 0.5))
-		Art.disc(ci, Vector2.ZERO, 6.0, Color(0.85, 0.97, 1.0, snappedf(1.0 - f * f, 0.1)))
+		Art.disc(ci, Vector2.ZERO, 6.0, Color(_art.drop_color(), snappedf(1.0 - f * f, 0.1)))
 		Art.pop(ci)
 	for s in _stars:
 		var f: float = s["age"] / s["life"]

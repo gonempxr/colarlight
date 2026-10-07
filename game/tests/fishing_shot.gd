@@ -1,16 +1,22 @@
 extends SceneTree
 ## Screenshots of the fishing screen (needs a real renderer, not --headless):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
-##     -s res://tests/fishing_shot.gd -- out.png [lang] [mode]
+##     -s res://tests/fishing_shot.gd -- out.png [lang] [mode] [world 0..3] [rod level 1..20]
 ## modes: sheet (every fish + silhouettes), idle, wait, bite, reel,
 ##   catch:<fish id>, reel:<fish id>:<rod level>, full, escaped, helper, land, bucket, book, shop.
 ## Uses its own save files, never the player's.
+
+var _rod_level := 0
+
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out := args[0] if args.size() > 0 else "user://fishing.png"
 	var lang := args[1] if args.size() > 1 else "en"
 	var mode := args[2] if args.size() > 2 else "idle"
+	var world := int(args[3]) if args.size() > 3 else 0
+	var rod_level := int(args[4]) if args.size() > 4 else 0
+	_rod_level = rod_level
 	await process_frame
 	TranslationServer.set_locale(lang)
 	var gs := root.get_node("GameState")
@@ -24,13 +30,19 @@ func _initialize() -> void:
 	gs.reset()
 	fishing.reset()
 	fishing.rng.seed = 7
+	fishing.world_override = world
+	if rod_level > 0:
+		fishing.rod = rod_level - 1
 	gs.coins = 12500.0
 	var bg := ColorRect.new()
 	bg.color = Art.SEA_DEEP
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	if mode == "sheet":
+		FishArt.world = world
 		await _sheet()
+	elif mode.begins_with("rods:"):
+		await _rods(int(mode.substr(5)))
 	else:
 		await _screen(mode, fishing)
 	await RenderingServer.frame_post_draw
@@ -81,6 +93,29 @@ func _sheet() -> void:
 		await process_frame
 
 
+## The 20 rods of one world on a 4 x 5 sheet (like Mark's rod sheet).
+func _rods(world: int) -> void:
+	var v := ArtView.make(func(ci: CanvasItem, s: Vector2, t: float):
+		Art.flat(ci, Art.rrect_pts(Rect2(Vector2.ZERO, s), 0.0), Color("eef6ff"))
+		var cols := 4 if s.x < s.y else 5
+		var rows := 5 if s.x < s.y else 4
+		var cw := s.x / cols
+		var ch := (s.y - 40.0) / rows
+		var k := minf(cw / 130.0, ch / 150.0)
+		Art.text(ci, Vector2(s.x / 2.0, 30), tr(RodArt.name_key(world)), 24, Art.WHITE, 6)
+		for i in 20:
+			var p := Vector2(cw * (i % cols) + cw / 2.0, 40.0 + ch * (i / cols) + ch / 2.0 - 8.0)
+			Art.t_rect(ci, Rect2(p - Vector2(cw, ch) / 2.0 + Vector2(4, 4), Vector2(cw, ch) - Vector2(8, 0)), 12, Art.CREAM, 2.0, 0.0)
+			Art.push(ci, p, 0.0, Vector2.ONE * k)
+			RodArt.icon(ci, world, i + 1, 0.5 + i * 0.37)
+			Art.pop(ci)
+			Art.text(ci, p + Vector2(0, ch / 2.0 - 4.0), tr("FISHING_LEVEL") % (i + 1), int(14 * maxf(1.0, k)), Art.INK, 0), Vector2.ZERO, false)
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(v)
+	for i in 5:
+		await process_frame
+
+
 func _screen(mode: String, fishing: Node) -> void:
 	var screen: Control = load("res://scripts/fishing/fishing_screen.gd").new()
 	root.add_child(screen)
@@ -101,6 +136,12 @@ func _screen(mode: String, fishing: Node) -> void:
 				fishing.keep(fishing.make_fish(i % 2))
 			fishing.helper_timer = fishing.helper_interval() * 0.6
 			screen.debug_state("wait")
+		"cast":
+			screen._on_action()
+			var tc := Time.get_ticks_msec()
+			while Time.get_ticks_msec() - tc < 560:
+				await process_frame
+			return
 		"land":
 			screen.debug_state("reel")
 			screen._speed = 0.0
@@ -123,7 +164,8 @@ func _screen(mode: String, fishing: Node) -> void:
 			fishing.record({"id": "koi", "size": 60.0, "value": 10.0})
 			screen.open_panel("book")
 		"shop":
-			fishing.rod = 2
+			if _rod_level <= 0:
+				fishing.rod = 2
 			fishing.helper = 1
 			screen.open_panel("shop")
 		_:
