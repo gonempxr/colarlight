@@ -1188,7 +1188,7 @@ func _draw() -> void:
 		wave.append(Vector2(x, sy + sin(_t * 1.6 * speed + u * 0.62) * amp + sin(_t * 2.3 * speed - u * 1.1) * amp * 0.45))
 	WorldArt.surface_front(self, wl, wave, w, sy, _t)
 	# Little glints riding the crests.
-	if wl in ["ocean", "acid"]:
+	if wl == "ocean":
 		var glint := DayNight.glint()
 		for i in 6:
 			var f := fposmod(_t * 0.05 + i / 6.0, 1.0)

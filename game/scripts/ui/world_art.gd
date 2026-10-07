@@ -554,21 +554,9 @@ static func surface_front(ci: CanvasItem, world: String, wave: PackedVector2Arra
 		"volcano":
 			magma_front(ci, w, sy, t, DayNight.scene_tint())
 		"acid":
-			Art.flat_now(ci, front, Color(Art.sea_cols[0], 0.7))
-			Art.polyline(ci, wave, Color("e8ffb0"), 4.0)
-			for i in 4:
-				var x := fposmod(t * 4.0 + i * w / 4.0 + 40.0, w + 60.0) - 30.0
-				Art.push(ci, Vector2(x, sy + 3), sin(t * 0.7 + i) * 0.1)
-				Art.toon(ci, _PAD, Color("5ab84a"), 2.0, 0.4)
-				Art.pop(ci)
-			# Bubbles popping on the swamp.
-			for i in 5:
-				var f := fposmod(t * 0.5 + i * 0.37, 1.0)
-				var x := w * fposmod(i * 0.31 + 0.12, 1.0)
-				Art.arc(ci, Vector2(x, sy + 4 - f * 4.0), 3.0 + f * 5.0, PI, TAU, 10, Color(0.9, 1.0, 0.7, 0.9 * (1.0 - f)), 2.0)
+			goo_front(ci, w, sy, t)
 		"moon":
-			Art.flat_now(ci, front, Color(Art.sea_cols[0], 0.9))
-			Art.polyline(ci, wave, Color("eef0f8"), 3.0)
+			dust_front(ci, w, sy, t)
 		_:
 			Art.flat_now(ci, front, Color(Art.calm(Art.sea_cols[0]), 0.6))
 			Art.polyline(ci, wave, Art.WHITE, 4.0)
@@ -834,3 +822,273 @@ static func _along_line(line: PackedVector2Array, f: float) -> Vector2:
 	var x := f * (line.size() - 1)
 	var i := mini(int(x), line.size() - 2)
 	return line[i].lerp(line[i + 1], x - i)
+
+
+# --- Goo (the acid swamp) ----------------------------------------------------------------
+## Thick bubbling green goo: a glossy skin with slow heavy bulges, glossy
+## bubbles that swell and pop with droplets, lily pads and toadstools on
+## floating logs, glowing specks inside and mist drifting over it.
+
+const GOO_SKIN := Color("b6f04a")
+const GOO_TOP := Color("8fdc3c")
+const GOO_MID := Color("4fae3a")
+const GOO_DEEP := Color("1f5a3a")
+const GOO_SHINE := Color("f0ffc0")
+const GOO_LINE := Color("2f7a2a")
+
+
+## Still part: the goo's body from `top` to `bottom` with darker sludge
+## lumps and pale scum spots, and a green mist over the horizon.
+static func goo_still(ci: CanvasItem, w: float, top: float, bottom: float, light: float) -> void:
+	var tint := Color(0.55, 0.62, 0.86).lerp(Color.WHITE, light)
+	var mid := top + (bottom - top) * 0.45
+	Art.grad(ci, PackedVector2Array([Vector2(0, top - 60), Vector2(w, top - 60), Vector2(w, top), Vector2(0, top)]),
+			PackedColorArray([Color(0.8, 1.0, 0.7, 0.0), Color(0.8, 1.0, 0.7, 0.0), Color(0.8, 1.0, 0.7, 0.35), Color(0.8, 1.0, 0.7, 0.35)]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, top), Vector2(w, top), Vector2(w, mid), Vector2(0, mid)]),
+			PackedColorArray([GOO_TOP * tint, GOO_TOP * tint, GOO_MID * tint, GOO_MID * tint]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, mid), Vector2(w, mid), Vector2(w, bottom), Vector2(0, bottom)]),
+			PackedColorArray([GOO_MID * tint, GOO_MID * tint, GOO_DEEP * tint, GOO_DEEP * tint]))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for i in int(w / 26.0):
+		var p := Vector2(rng.randf_range(0, w), rng.randf_range(top + 16, bottom - 8))
+		var depth := (p.y - top) / (bottom - top)
+		var r := rng.randf_range(10, 22)
+		Art.flat(ci, Art.ellipse_pts(p, Vector2(r, r * 0.62), 16, rng.randf_range(-0.3, 0.3)), Color(0.08, 0.3, 0.12, 0.12 + depth * 0.14))
+	for i in int(w / 40.0):
+		var p := Vector2(rng.randf_range(0, w), rng.randf_range(top + 10, bottom - 20))
+		Art.flat(ci, Art.ellipse_pts(p, Vector2(rng.randf_range(3, 6), 2.2), 10), Color(0.9, 1.0, 0.6, 0.22))
+
+
+## Inside the goo (redrawn with the scene): glowing specks, slow glossy
+## bubbles rising, and lumps of sludge rolling over.
+static func goo_body(ci: CanvasItem, w: float, top: float, bottom: float, t: float) -> void:
+	var h := bottom - top
+	for i in 3:
+		var x := fposmod(t * (3.0 + i) + i * 190.0, w + 200.0) - 100.0
+		var y := top + h * (0.35 + 0.25 * float(i % 2)) + sin(t * 0.3 + i * 2.0) * 6.0
+		Art.push(ci, Vector2(x, y), sin(t * 0.2 + i) * 0.1)
+		Art.flat(ci, _SLUDGE[i % 2], Color(0.06, 0.26, 0.1, 0.3))
+		Art.pop(ci)
+	for i in 8:
+		var p := Vector2(fposmod(i * 0.23 + 0.05, 1.0) * w + sin(t * 0.5 + i * 1.7) * 14.0, top + 20.0 + fposmod(i * 37.0, h - 34.0) + sin(t * 0.7 + i) * 5.0)
+		var tw := snappedf(0.5 + 0.5 * sin(t * 2.2 + i * 1.9), 0.1)
+		Art.dot(ci, p, 1.6 + tw, Color(0.9, 1.0, 0.5, 0.35 + 0.5 * tw))
+	for i in 7:
+		var f := fposmod(t * 0.06 + i * 0.29, 1.0)
+		var x := w * fposmod(i * 0.31 + 0.11, 1.0) + sin(t * 0.9 + i) * 5.0
+		var y := lerpf(bottom - 14.0, top + 14.0, ease(f, 0.8))
+		var r := (3.5 + float(i % 3) * 2.2) * (0.75 + f * 0.45)
+		var sq := snappedf(sin(t * 2.6 + i) * 0.1, 0.02)
+		Art.push(ci, Vector2(x, y), 0.0, Vector2(1.0 + sq, 1.0 - sq) * snappedf(r / 6.0, 0.05))
+		Art.toon(ci, _BUBBLE, Color(0.85, 1.0, 0.55, 0.55), 2.0, 0.0, GOO_LINE)
+		Art.flat(ci, _BUBBLE_SHINE, Color(1, 1, 1, 0.85))
+		Art.pop(ci)
+
+
+## The goo's front at the surface (over the hulls).
+static func goo_front(ci: CanvasItem, w: float, sy: float, t: float) -> void:
+	var crest := PackedVector2Array()
+	for i in 25:
+		crest.append(Vector2(w * i / 24.0, goo_y(w * i / 24.0, w, sy, t)))
+	var front := crest.duplicate()
+	front.append(Vector2(w, sy + 16))
+	front.append(Vector2(0, sy + 16))
+	Art.flat_now(ci, front, GOO_SKIN)
+	Art.polyline(ci, Art.moved(crest, Vector2(0, 4)), Color(GOO_TOP, 0.9), 3.0)
+	Art.polyline(ci, crest, GOO_SHINE, 3.0)
+	# Bubbles swelling on the skin and popping into droplets.
+	for i in 5:
+		var period := 2.6 + i * 0.7
+		var cyc := t / period + i * 0.27
+		var f := fposmod(cyc, 1.0)
+		var x := w * fposmod(i * 0.23 + 0.09 + floorf(cyc) * 0.41, 1.0)
+		var y := goo_y(x, w, sy, t)
+		if f < 0.8:
+			var s := snappedf(ease(f / 0.8, 0.5), 0.05) * (0.7 + 0.15 * float(i % 3))
+			Art.push(ci, Vector2(x, y + 2.0), 0.0, Vector2(s, s))
+			Art.toon(ci, _GOO_DOME, Color(0.8, 1.0, 0.5, 0.92), 2.0, 0.0, GOO_LINE)
+			Art.flat(ci, _GOO_DOME_SHINE, Color(1, 1, 1, 0.9))
+			Art.pop(ci)
+		else:
+			var k := (f - 0.8) / 0.2
+			Art.arc(ci, Vector2(x, y), 6.0 + k * 12.0, PI * 1.05, PI * 1.95, 10, Color(0.9, 1.0, 0.6, 0.9 * (1.0 - k)), 2.5)
+			for j in 4:
+				var a := -PI / 2.0 + (j - 1.5) * 0.55
+				var p := Vector2(x, y) + Vector2(cos(a), sin(a)) * 26.0 * k + Vector2(0, 40.0 * k * k)
+				Art.dot(ci, p, 2.8 * (1.0 - k * 0.5), Color(0.75, 1.0, 0.4, 1.0 - k))
+	# Lily pads and a floating log with toadstools, drifting slowly.
+	for i in 3:
+		var x := fposmod(t * 3.0 + i * w / 3.0 + 40.0, w + 80.0) - 40.0
+		var y := goo_y(x, w, sy, t)
+		Art.push(ci, Vector2(x, y + 2.0), sin(t * 0.6 + i) * 0.06)
+		if i == 1:
+			Art.toon(ci, _LOG, Color("8a6a44"), 2.5, 0.5)
+			Art.t_ellipse(ci, Vector2(22, -1), Vector2(3.5, 4.5), Color("c8a070"), 2.0, 0.0)
+			for m: Vector3 in [Vector3(-12, 0.55, 0), Vector3(2, 0.75, 1), Vector3(12, 0.45, 0)]:
+				Art.push(ci, Vector2(m.x, -5), 0.0, Vector2(m.y, m.y))
+				mushroom(ci, [Color("ff6fae"), Color("c86bff"), Color("ffd23f")][int(m.z) + (1 if m.x > 0 else 0)], 0.0, int(m.z))
+				Art.pop(ci)
+		else:
+			Art.toon(ci, _PAD, Color("5ab84a"), 2.0, 0.4)
+			if i == 2:
+				Art.push(ci, Vector2(-4, -3))
+				Art.toon(ci, _LILY, Color("ff9fd0"), 1.6, 0.3)
+				Art.pop(ci)
+		Art.pop(ci)
+	# Mist banks drifting over the swamp.
+	for k in 3:
+		var x := fposmod(t * (5.0 + k * 2.0) + k * w * 0.4, w + 260.0) - 130.0
+		Art.push(ci, Vector2(x, sy - 6.0 - float(k % 2) * 10.0))
+		Art.flat(ci, _MIST, Color(0.9, 1.0, 0.86, 0.3))
+		Art.pop(ci)
+
+
+## Height of the goo's skin at x: slow thick bulges.
+static func goo_y(x: float, w: float, sy: float, t: float) -> float:
+	var u := x / maxf(w, 1.0) * 24.0
+	return sy + sin(t * 0.6 + u * 0.5) * 1.6 + sin(t * 0.37 - u * 1.1) * 1.0
+
+
+static var _SLUDGE: Array[PackedVector2Array] = [
+	Art.smooth_pts(PackedVector2Array([Vector2(-50, 0), Vector2(-30, -12), Vector2(6, -14), Vector2(40, -8), Vector2(52, 4), Vector2(20, 12), Vector2(-26, 10)]), 3),
+	Art.smooth_pts(PackedVector2Array([Vector2(-40, 2), Vector2(-16, -10), Vector2(24, -12), Vector2(44, 0), Vector2(16, 10), Vector2(-20, 10)]), 3),
+]
+static var _GOO_DOME := _dome_shape(10.0, 9.0)
+static var _GOO_DOME_SHINE := Art.ellipse_pts(Vector2(-3.5, -5), Vector2(2.6, 1.6), 8, -0.5)
+static var _LOG := Art.rrect_pts(Rect2(-26, -6, 52, 10), 5)
+static var _LILY := Art.star_pts(Vector2.ZERO, 5.5, 2.4, 5)
+static var _MIST := Art.union([Art.ellipse_pts(Vector2.ZERO, Vector2(90, 12), 24), Art.ellipse_pts(Vector2(-30, -8), Vector2(40, 12), 18),
+		Art.ellipse_pts(Vector2(34, -6), Vector2(46, 11), 18)])
+
+
+# --- Moon dust plain ---------------------------------------------------------------------
+## The moon's "sea" is a plain of grey dust: layered regolith seen in cut,
+## buried rocks and glinting crystals, craters along the surface, and dust
+## puffs that rise slowly and float down (low gravity).
+
+const DUST_TOP := Color("c9cde0")
+const DUST_MID := Color("9fa5c2")
+const DUST_DEEP := Color("5e6488")
+
+
+## Still part: the regolith from `top` to `bottom` (layers, rocks, crystals).
+static func dust_still(ci: CanvasItem, w: float, top: float, bottom: float, light: float) -> void:
+	var tint := Color(0.7, 0.72, 0.9).lerp(Color.WHITE, light)
+	var mid := top + (bottom - top) * 0.45
+	Art.grad(ci, PackedVector2Array([Vector2(0, top), Vector2(w, top), Vector2(w, mid), Vector2(0, mid)]),
+			PackedColorArray([DUST_TOP * tint, DUST_TOP * tint, DUST_MID * tint, DUST_MID * tint]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, mid), Vector2(w, mid), Vector2(w, bottom), Vector2(0, bottom)]),
+			PackedColorArray([DUST_MID * tint, DUST_MID * tint, DUST_DEEP * tint, DUST_DEEP * tint]))
+	# Layers of dust and gravel.
+	for i in 3:
+		var y := top + 30.0 + i * 36.0
+		var band := PackedVector2Array()
+		for k in 13:
+			band.append(Vector2(lerpf(-10, w + 10, k / 12.0), y + sin(k * 1.7 + i * 2.0) * 5.0))
+		for k in 13:
+			band.append(Vector2(lerpf(w + 10, -10, k / 12.0), y + 9.0 + sin((12 - k) * 1.3 + i) * 4.0))
+		Art.flat(ci, band, Color(0.25, 0.27, 0.45, 0.12 + i * 0.03))
+	# Craters cut through: dark bowls under the surface with bright rims.
+	for c: Vector3 in [Vector3(0.3, 46, 18), Vector3(0.66, 34, 14), Vector3(0.93, 40, 16)]:
+		var cx := w * c.x
+		var bowl := PackedVector2Array()
+		for i in 13:
+			var a := PI * i / 12.0
+			bowl.append(Vector2(cx + cos(a) * c.y, top + 2.0 + sin(a) * c.z))
+		Art.flat(ci, bowl, Art.shade_of(DUST_MID * tint, 0.3))
+		Art.flat(ci, Art.moved(Art.ellipse_pts(Vector2(cx, top + 4.0), Vector2(c.y * 0.7, c.z * 0.35), 14), Vector2(-c.y * 0.15, 0)), Art.shade_of(DUST_MID * tint, 0.45))
+		var rim := PackedVector2Array()
+		for i in 13:
+			var a := PI * i / 12.0
+			rim.append(Vector2(cx + cos(a) * c.y, top + 2.0 + sin(a) * c.z))
+		Art.polyline(ci, rim, (DUST_TOP * tint).lightened(0.2), 2.5)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 13
+	for i in int(w / 60.0):
+		var p := Vector2(rng.randf_range(0, w), rng.randf_range(top + 24, bottom - 10))
+		var r := rng.randf_range(4.0, 9.0)
+		Art.push(ci, p, rng.randf_range(-0.6, 0.6), Vector2(r / 10.0, r / 10.0))
+		Art.toon(ci, _MOON_ROCKS[i % 2], (DUST_MID * tint).darkened(0.15), 2.0, 0.6)
+		Art.pop(ci)
+	for i in 3:
+		var p := Vector2(w * (0.2 + i * 0.3) + rng.randf_range(-20, 20), rng.randf_range(top + 50, bottom - 16))
+		Art.crystal(ci, p, 16, 5, rng.randf_range(-0.4, 0.4), Color("9fe0ff") if i != 1 else Color("c8a0ff"), 2.0)
+
+
+## Glints of the crystals and dust drifting very slowly in the cut.
+static func dust_body(ci: CanvasItem, w: float, top: float, bottom: float, t: float) -> void:
+	for i in 5:
+		var p := Vector2(fposmod(i * 0.21 + 0.08, 1.0) * w, top + 24.0 + fposmod(i * 41.0, bottom - top - 40.0))
+		var tw := snappedf(0.5 + 0.5 * sin(t * 1.8 + i * 2.3), 0.1)
+		if tw > 0.6:
+			Art.push(ci, p, 0.0, Vector2.ONE * (tw - 0.4) * 1.6)
+			Art.toon(ci, _GLINT, Color(1, 1, 1, 0.9), 0.0, 0.0)
+			Art.pop(ci)
+
+
+## The dust plain's surface over the hulls: its edge with crater rims and
+## pebbles, and dust puffs that rise and drift down slowly.
+static func dust_front(ci: CanvasItem, w: float, sy: float, t: float) -> void:
+	var tint := Color.WHITE
+	var edge := PackedVector2Array()
+	for i in 25:
+		var x := w * i / 24.0
+		edge.append(Vector2(x, sy + sin(i * 1.9) * 1.2))
+	var front := edge.duplicate()
+	front.append(Vector2(w, sy + 16))
+	front.append(Vector2(0, sy + 16))
+	Art.flat(ci, front, DUST_TOP * tint)
+	Art.polyline(ci, edge, (DUST_TOP * tint).lightened(0.25), 3.0)
+	for c: Vector3 in [Vector3(0.14, 1.5, 0), Vector3(0.47, 1.0, 1), Vector3(0.8, 1.3, 2)]:
+		Art.push(ci, Vector2(w * c.x, sy + 7.0), 0.0, Vector2(c.z * 0.1 + 0.9, 0.85) * c.y)
+		Art.toon(ci, _CRATER_RIM, (DUST_TOP * tint).lightened(0.1), 2.2, 0.0)
+		Art.flat(ci, _CRATER_IN, Art.shade_of(DUST_MID * tint, 0.25))
+		Art.flat(ci, _CRATER_LIP, Art.shade_of(DUST_MID * tint, 0.1))
+		Art.pop(ci)
+	for i in 6:
+		var x := w * fposmod(i * 0.17 + 0.04, 1.0)
+		Art.t_ellipse(ci, Vector2(x, sy + 3.0), Vector2(4.5, 3.0), (DUST_MID * tint).darkened(0.05), 1.8, 0.4)
+	# Dust puffs: kicked up, they rise slowly and sink back (low gravity).
+	for i in 3:
+		var period := 5.0 + i * 1.3
+		var cyc := t / period + i * 0.37
+		var f := fposmod(cyc, 1.0)
+		var x := w * fposmod(i * 0.29 + 0.18 + floorf(cyc) * 0.43, 1.0)
+		for j in 5:
+			var a := -PI / 2.0 + (j - 2) * 0.45
+			var v := Vector2(cos(a), sin(a)) * 46.0
+			var p := Vector2(x, sy) + v * f + Vector2(0, 46.0 * f * f)
+			var r := 3.0 + f * 6.0
+			Art.dot(ci, p, r, Color(0.92, 0.93, 1.0, 0.55 * (1.0 - f)))
+
+
+static var _MOON_ROCKS: Array[PackedVector2Array] = [
+	PackedVector2Array([Vector2(-12, 3), Vector2(-9, -6), Vector2(1, -9), Vector2(11, -4), Vector2(12, 4), Vector2(3, 8), Vector2(-7, 7)]),
+	PackedVector2Array([Vector2(-10, 4), Vector2(-11, -3), Vector2(-3, -8), Vector2(8, -7), Vector2(13, 1), Vector2(6, 7)]),
+]
+static var _GLINT := Art.star_pts(Vector2.ZERO, 6, 1.4, 4)
+
+
+## The moon's sky (a still layer): a band of the Milky Way with a soft
+## nebula glow and many small stars, fading near the horizon.
+static func moon_sky(ci: CanvasItem, w: float, sy: float, stars: float) -> void:
+	var a := 0.55 * stars
+	if a < 0.02:
+		return
+	Art.push(ci, Vector2(w * 0.5, sy * 0.42), -0.38)
+	Art.flat(ci, _MILKY, Color(0.55, 0.45, 0.95, 0.18 * a))
+	Art.flat(ci, _MILKY_CORE, Color(0.75, 0.7, 1.0, 0.16 * a))
+	Art.flat(ci, _NEBULA, Color(1.0, 0.45, 0.8, 0.12 * a))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	for i in 40:
+		var p := Vector2(rng.randf_range(-w * 0.75, w * 0.75), rng.randf_range(-34, 34) * (1.0 - absf(rng.randf_range(-1, 1)) * 0.5))
+		Art.disc(ci, p, rng.randf_range(0.8, 1.6), Color(1, 1, 1, rng.randf_range(0.4, 0.9) * a))
+	Art.pop(ci)
+
+
+static var _MILKY := Art.union([Art.ellipse_pts(Vector2.ZERO, Vector2(560, 50), 32), Art.ellipse_pts(Vector2(-180, 8), Vector2(200, 62), 24),
+		Art.ellipse_pts(Vector2(200, -6), Vector2(220, 58), 24)])
+static var _MILKY_CORE := Art.ellipse_pts(Vector2(0, 2), Vector2(420, 18), 28)
+static var _NEBULA := Art.union([Art.ellipse_pts(Vector2(120, -10), Vector2(70, 34), 20), Art.ellipse_pts(Vector2(160, 14), Vector2(50, 24), 16)])

@@ -319,7 +319,7 @@ func is_fish_at(p: Vector2) -> bool:
 
 
 func _fish_at(p: Vector2) -> int:
-	if WorldLook.world in ["moon", "volcano"]:
+	if WorldLook.world != "ocean":
 		return -1
 	var best := -1
 	var best_d := 46.0
@@ -488,6 +488,7 @@ func _paint_sky(ci: CanvasItem) -> void:
 			var tw := 0.55 + 0.45 * sin(t * (1.3 + s.z) + s.x * 40.0)
 			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, starlight * tw))
 	if WorldLook.world == "moon":
+		WorldArt.moon_sky(ci, w, sy, maxf(starlight, 0.6))
 		# Phones: small, in the strip of sky under the stage cards.
 		var vp := get_viewport_rect().size
 		var phone := vp.x < vp.y
@@ -547,6 +548,12 @@ func _paint_sea(ci: CanvasItem) -> void:
 		elif band.x < TOP_H and WorldLook.world == "volcano":
 			WorldArt.magma_still(ci, w, band.x, band.y)
 			continue
+		elif band.x < TOP_H and WorldLook.world == "acid":
+			WorldArt.goo_still(ci, w, band.x, band.y, DayNight.daylight())
+			continue
+		elif band.x < TOP_H and WorldLook.world == "moon":
+			WorldArt.dust_still(ci, w, band.x, band.y, DayNight.daylight())
+			continue
 		elif band.x < TOP_H and WorldLook.world != "ocean":
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.75)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
@@ -590,25 +597,17 @@ func _draw_top_water(w: float) -> void:
 		# Thick magma: slow currents, sinking crust, heavy bubbles (no fish).
 		WorldArt.magma_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
 	elif wl == "acid":
-		for i in 6:
-			var f := fposmod(t * 0.1 + i * 0.41, 1.0)
-			var x := w * fposmod(i * 0.23 + 0.1, 1.0) + sin(t * 1.4 + i) * 5.0
-			var y := lerpf(TOP_H - 26.0, SURFACE_Y + 8.0, f)
-			var r := 3.0 + (i % 3) * 1.6
-			Art.arc(self, Vector2(x, y), r, 0, TAU, 10, Color(0.85, 1.0, 0.6, 0.65), 1.6)
-	if wl == "ocean" or wl == "acid":
+		# Thick goo: glowing specks, sludge and slow glossy bubbles.
+		WorldArt.goo_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
+	elif wl == "moon":
+		WorldArt.dust_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
+	if wl == "ocean":
 		for f in _fish:
 			var dart := exp(-(t - float(f["dart"])) * 2.5)
 			var face: float = f["face"]
 			if absf(face) < 0.15:
 				face = 0.15 * signf(face) if face != 0.0 else 0.15
 			Art.fish(self, _fish_pos(f, w), f["size"], _fish_color(f) * tint, face, t * (1.0 + dart * 2.0) + f["y"])
-	else:
-		# Dust motes drifting in the moon's dust sea.
-		for i in 8:
-			var f := fposmod(t * 0.02 + i * 0.13, 1.0)
-			var p := Vector2(f * (w + 40.0) - 20.0, SURFACE_Y + 30.0 + (i * 37 % 110) + sin(t * 0.7 + i) * 6.0)
-			Art.dot(self, p, 2.0, Color(1, 1, 1, 0.35))
 	var weed: Color = WorldLook.color("weed")
 	if wl == "ocean":
 		for i in 5:
