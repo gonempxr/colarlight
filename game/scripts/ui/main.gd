@@ -24,6 +24,13 @@ const OFFICE := 2
 const SLIDE_SEC := 0.34
 ## A finger has to travel this far sideways (and mostly sideways) to swipe.
 const SWIPE_MIN := 70.0
+## Sideways this far (and mostly sideways) and the rooms follow the finger.
+const DRAG_START := 16.0
+## Let go past this share of the width (or flick) and the next room comes.
+const DRAG_COMMIT := 0.22
+const FLICK_SPEED := 700.0
+## Stiffness of the slide between rooms (critically damped spring, 1/s).
+const SLIDE_SPRING := 15.0
 
 var _hud: Hud
 var _tabs: RoomTabs
@@ -86,6 +93,14 @@ var _sheet_tween: Tween
 var _room := MINE
 var _slide := 0.0
 var _slide_tween: Tween
+## The spring that carries the slide to the room shown (see _move_slide).
+var _slide_to := 0.0
+var _slide_v := 0.0
+var _sliding := false
+## The rooms follow a finger dragging sideways.
+var _drag_room := false
+var _drag_slide0 := 0.0
+var _drag_samples: Array[Vector2] = []
 ## Rooms' area on screen.
 var _area := Rect2()
 ## The stage each room last showed in the upgrade panel.
@@ -326,6 +341,8 @@ func _after_title() -> void:
 
 
 func _process(delta: float) -> void:
+	if _sliding and not _drag_room:
+		_move_slide(delta)
 	if _wide:
 		# The lightbulb, the mini-map and the tabs ride below the top bar
 		# while it slides down on PC.
@@ -404,16 +421,37 @@ func show_room(i: int, animate: bool = true) -> void:
 		_panel.show_stage(_room_key[i])
 	if _slide_tween:
 		_slide_tween.kill()
+	_slide_to = float(i)
 	if not animate or Settings.reduce_motion or not is_inside_tree():
 		_slide = float(i)
+		_slide_v = 0.0
+		_sliding = false
+		_drag_room = false
 		_place_rooms()
-	else:
-		_slide_tween = create_tween()
-		_slide_tween.tween_method(func(v: float):
-			_slide = v
-			_place_rooms(), _slide, float(i), SLIDE_SEC).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	elif not _drag_room:
+		# A tab or a key: set off briskly (a swipe keeps its finger's speed).
+		if not _sliding:
+			_slide_v = (_slide_to - _slide) * SLIDE_SPRING * 0.7
+		_sliding = true
 	_layout_side()
 	_refresh()
+
+
+## Carries the slide to the room shown: a critically damped spring, worked
+## out exactly for the frame's time (smooth at any frame rate, keeps the
+## speed a swipe let go with, never overshoots into the next room).
+func _move_slide(delta: float) -> void:
+	var w := SLIDE_SPRING
+	var c1 := _slide - _slide_to
+	var c2 := _slide_v + w * c1
+	var e := exp(-w * delta)
+	_slide = _slide_to + (c1 + c2 * delta) * e
+	_slide_v = (c2 - w * (c1 + c2 * delta)) * e
+	if absf(_slide - _slide_to) < 0.002 and absf(_slide_v) < 0.05:
+		_slide = _slide_to
+		_slide_v = 0.0
+		_sliding = false
+	_place_rooms()
 
 
 ## Rooms side by side, moved by the slide; only the ones on screen show.
@@ -422,7 +460,8 @@ func _place_rooms() -> void:
 	for i in rooms.size():
 		var r := rooms[i]
 		var off := (float(i) - _slide) * (_area.size.x + 24.0)
-		var on := absf(float(i) - _slide) < 0.999
+		# Shown while any of it is on screen (not while it waits in the gap).
+		var on := absf(off) < maxf(1.0, _area.size.x - 0.5)
 		r.visible = on
 		r.position = Vector2(_area.position.x + roundf(off), _area.position.y)
 		if r.size != _area.size:
@@ -435,6 +474,8 @@ func _place_rooms() -> void:
 	var f := m * clampf(1.0 - (_scroller.scroll - 60.0) / 160.0, 0.0, 1.0)
 	_mini_holder.visible = not _wide and f > 0.01
 	_mini_holder.modulate.a = f
+	if _tabs:
+		_tabs.set_slide(_slide)
 
 
 ## Swipe left/right over the room changes it (phones; works with a mouse
@@ -446,27 +487,83 @@ func _track_swipe(event: InputEvent) -> void:
 			_swipe_on = _area.has_point(event.position) and not _blocked()
 			_swipe_from = event.position
 			_swiped = false
+			_drag_room = false
 			_on_release = Callable()
 		else:
 			_swipe_on = false
+			if _drag_room:
+				_end_room_drag(event.position)
 			var f := _on_release
 			_on_release = Callable()
 			if f.is_valid() and not _swiped and not Scroller.is_drag():
 				f.call_deferred()
+	elif event is InputEventMouseMotion and _drag_room:
+		_follow_room_drag(event.position)
 	elif event is InputEventMouseMotion and _swipe_on and not _swiped:
 		var d: Vector2 = event.position - _swipe_from
 		if _scroller._dragging:
 			_swipe_on = false
 			return
-		if absf(d.x) > SWIPE_MIN and absf(d.x) > absf(d.y) * 1.8:
+		if absf(d.x) > DRAG_START and absf(d.x) > absf(d.y) * 1.4:
+			# The rooms take the finger: they follow it until it lets go.
 			_swiped = true
 			_swipe_on = false
-			var to := _room + (1 if d.x < 0.0 else -1)
-			if to >= 0 and to <= 2:
-				show_room(to)
+			_drag_room = true
+			_scroller._pressing = false
+			if _slide_tween:
+				_slide_tween.kill()
+			_drag_slide0 = _slide
+			_drag_samples.clear()
+			# Start from here, so the room doesn't jump by the dead zone.
+			_swipe_from = event.position
+			if _sheet_open and not _wide:
+				_close_sheet()
 			# Buttons ask Scroller.is_drag() and ignore this release.
 			Scroller._dragged_recently = true
-			(func(): Scroller._dragged_recently = false).call_deferred()
+			_follow_room_drag(event.position)
+
+
+## The rooms under a dragging finger (a little stretchy past the first and
+## the last room).
+func _follow_room_drag(at: Vector2) -> void:
+	var width := maxf(1.0, _area.size.x + 24.0)
+	var raw := _drag_slide0 - (at.x - _swipe_from.x) / width
+	var inside := clampf(raw, 0.0, 2.0)
+	var over := raw - inside
+	_slide = inside + signf(over) * minf(absf(over) * 0.3, 0.12)
+	_slide_v = 0.0
+	_drag_samples.append(Vector2(Time.get_ticks_msec(), at.x))
+	while _drag_samples.size() > 8:
+		_drag_samples.pop_front()
+	_place_rooms()
+
+
+## The finger let go: the next room comes if it was dragged far enough or
+## flicked, else the room springs back; the slide keeps the finger's speed.
+func _end_room_drag(at: Vector2) -> void:
+	_drag_room = false
+	(func(): Scroller._dragged_recently = false).call_deferred()
+	var width := maxf(1.0, _area.size.x + 24.0)
+	var speed := 0.0   # px/s, + = finger moving right
+	var now := Time.get_ticks_msec()
+	for smp in _drag_samples:
+		if now - smp.x <= 100.0:
+			var dt := maxf(0.016, (now - smp.x) / 1000.0)
+			speed = (at.x - smp.y) / dt
+			break
+	var moved := _slide - float(_room)
+	var to := _room
+	if moved > DRAG_COMMIT or speed < -FLICK_SPEED:
+		to = _room + 1
+	elif moved < -DRAG_COMMIT or speed > FLICK_SPEED:
+		to = _room - 1
+	to = clampi(to, 0, 2)
+	_slide_v = clampf(-speed / width, -8.0, 8.0)
+	_sliding = true
+	if to != _room:
+		show_room(to)
+	else:
+		_slide_to = float(_room)
 
 
 ## Runs `f` now, or on the release when the finger is still down (and not

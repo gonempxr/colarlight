@@ -30,6 +30,8 @@ static var _KEYS: Array[String] = _make_keys()
 
 var world: World
 var _t := 0.0
+var _kick := 0.0
+var _kick_rate := 1.8
 var _floaters: Array[Dictionary] = []
 var _ripples: Array[Vector3] = []
 var _parts: Array[Dictionary] = []
@@ -96,9 +98,12 @@ func throw_item(kind: String, a: Vector2, b: Vector2, color: Color, seconds: flo
 
 func _process(delta: float) -> void:
 	_t += delta
+	# The flipper kick speeds up in a rush (a phase that adds up, so a rush
+	# starting or ending never jumps the legs).
+	_kick_rate = Motion.damp(_kick_rate, 3.0 if GameState.is_rushing() else 1.8, 4.0, delta)
+	_kick += delta * _kick_rate
 	for i in range(_floaters.size() - 1, -1, -1):
 		_floaters[i]["age"] += delta
-		_floaters[i]["pos"] += Vector2(0, -46.0 * delta)
 		if _floaters[i]["age"] > 1.4:
 			_floaters.remove_at(i)
 	for i in range(_ripples.size() - 1, -1, -1):
@@ -119,7 +124,7 @@ func _process(delta: float) -> void:
 			p["rot"] = f * TAU
 		else:
 			p["vel"] += Vector2(0, 520.0 if p["kind"] == "confetti" else 0.0) * delta
-			p["vel"] *= 0.985
+			p["vel"] *= Motion.drag(0.985, delta)
 			p["pos"] += p["vel"] * delta
 			p["rot"] += delta * 8.0
 		if p["age"] > p["life"]:
@@ -153,7 +158,7 @@ func _draw() -> void:
 		if not gs.is_open(key):
 			continue
 		var n: int = gs.divers(key)
-		var p: float = gs.cycle_progress(key)
+		var p: float = Motion.progress(key)
 		if p < 0.0:
 			if not _idle_since.has(key):
 				_idle_since[key] = _t
@@ -179,9 +184,12 @@ func _draw() -> void:
 		Art.arc(self, Vector2(r.x, r.y), 12.0 + f * 70.0, 0, TAU, 28, Color(1, 1, 1, 0.7 * (1.0 - f)), 5.0 * (1.0 - f) + 1.0)
 	_draw_parts()
 	for fl in _floaters:
-		var a := clampf(1.4 - fl["age"], 0.0, 1.0)
-		var pop := 1.0 + maxf(0.0, 0.25 - fl["age"]) * 2.0
-		Art.push(self, fl["pos"], 0.0, Vector2(pop, pop))
+		# Pops up with a little overshoot, rises and slows, fades at the end.
+		var age: float = fl["age"]
+		var a := clampf((1.4 - age) / 0.4, 0.0, 1.0)
+		var pop := 0.45 + 0.55 * Motion.ease_out_back(age / 0.32, 2.2)
+		var rise := 56.0 * Motion.ease_out_cubic(age / 1.4)
+		Art.push(self, fl["pos"] - Vector2(0, rise), 0.0, Vector2(pop, pop))
 		Art.text(self, Vector2.ZERO, fl["text"], fl["size"], Color(fl["color"], a), 7)
 		Art.pop(self)
 
@@ -471,7 +479,7 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	# Later divers start a little later and catch up, so they never jump.
 	var lag := j * 0.03
 	p = clampf((p - lag) / (1.0 - lag), 0.0, 1.0)
-	var kick := _t * (3.0 if rushing else 1.8) + seed
+	var kick := _kick + seed
 	var swim_bob := sin(_t * 4.2 + seed) * 3.0
 	var st8 := trip_pose(p, home, spot, sp.z, hover, crate, swim_bob, walk)
 	var pos: Vector2 = st8["pos"]

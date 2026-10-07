@@ -400,8 +400,11 @@ func _process(delta: float) -> void:
 			_bubbles.remove_at(i)
 	for f in _fish:
 		var dart := 1.0 + 7.0 * exp(-(t - float(f["dart"])) * 2.5)
-		f["x"] = fposmod(f["x"] + f["speed"] * f["dir"] * dart * delta, 1.3)
-		f["face"] = move_toward(float(f["face"]), float(f["dir"]), delta * 7.0)
+		# A fish turns first and swims the way it faces: while it turns it
+		# slows down, stops and sets off the other way (never backwards).
+		var face := move_toward(float(f["face"]), float(f["dir"]), delta * 7.0)
+		f["face"] = face
+		f["x"] = fposmod(f["x"] + f["speed"] * face * dart * delta, 1.3)
 	_repaint_still(delta)
 	if tick(PEOPLE) and (is_visible_band(0.0, TOP_H) or is_visible_band(height() - BOTTOM_H, height())):
 		queue_redraw()
