@@ -7,6 +7,8 @@ extends Control
 const CAVE_TOP := 26.0
 const CAVE_BOTTOM := 234.0
 const LEDGE_Y := 200.0
+## Middle of the padlock in a far closed site (its "???" sits under it).
+const LOCK_Y := 92.0
 ## Rows this close to the screen count as shown (they refresh and repaint).
 const ROW_MARGIN := 300.0
 
@@ -110,6 +112,7 @@ func refresh() -> void:
 		_open_btn.theme_type_variation = &"GoldButton" if GameState.coins >= GameState.unlock_cost(key()) else &"DarkButton"
 	else:
 		card.refresh()
+	_notification(NOTIFICATION_RESIZED)
 
 
 func _notification(what: int) -> void:
@@ -119,7 +122,8 @@ func _notification(what: int) -> void:
 		if not GameState.is_open(key()):
 			cx = size.x / 2.0
 		_lock_label.size = Vector2(size.x - 80, 40)
-		_lock_label.position = Vector2(cx - _lock_label.size.x / 2.0, 64)
+		var far := not GameState.is_open(key()) and GameState.next_depth() != key()
+		_lock_label.position = Vector2(cx - _lock_label.size.x / 2.0, LOCK_Y + 34.0 if far else 64.0)
 		_open_btn.size = _open_btn.custom_minimum_size
 		_open_btn.position = Vector2(cx - _open_btn.size.x / 2.0, 118)
 
@@ -182,7 +186,9 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var h := World.ROW_H
 	# Rock layer with strata and pebbles.
 	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), rock)
-	for i in 3:
+	if WorldLook.world == "volcano":
+		_basalt(ci, w, h, rock)
+	for i in (0 if WorldLook.world == "volcano" else 3):
 		var y := 40.0 + i * 78.0
 		var band := PackedVector2Array()
 		for k in 9:
@@ -207,16 +213,18 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var cave := cave_rect()
 	var cave_poly := _cave_poly()
 	var inner: Color = Art.calm(st["water"])
-	Art.toon(ci, cave_poly, inner, 5.0, 0.0)
+	Art.toon(ci, cave_poly, inner, WorldLook.EDGE, 0.0)
 	# Soft darker back wall.
 	Art.flat(ci, Art.clipped(Art.ellipse_pts(cave.get_center() + Vector2(0, -20), Vector2(cave.size.x * 0.42, cave.size.y * 0.36), 30), cave_poly), inner.lightened(0.08))
+	if WorldLook.world == "volcano":
+		_magma_cave_light(ci, cave, cave_poly, inner)
 	Art.flat(ci, PackedVector2Array([Vector2(World.SHAFT_L + 4, 120), Vector2(World.SHAFT_R + 2, 120), Vector2(World.SHAFT_R + 2, CAVE_BOTTOM - 2), Vector2(World.SHAFT_L + 4, CAVE_BOTTOM - 2)]), inner)
 	# Shaft walls.
 	for x: float in [World.SHAFT_L, World.SHAFT_R]:
 		var y1 := 118.0 if x == World.SHAFT_R else h + 2.0
-		Art.line(ci, Vector2(x, -2), Vector2(x, y1), Art.INK, 5.0)
+		Art.line(ci, Vector2(x, -2), Vector2(x, y1), Art.INK, WorldLook.EDGE)
 		if x == World.SHAFT_R:
-			Art.line(ci, Vector2(x, CAVE_BOTTOM), Vector2(x, h + 2), Art.INK, 5.0)
+			Art.line(ci, Vector2(x, CAVE_BOTTOM), Vector2(x, h + 2), Art.INK, WorldLook.EDGE)
 	# Wooden brace across the shaft.
 	Art.t_rect(ci, Rect2(World.SHAFT_L - 8, 6, World.SHAFT_R - World.SHAFT_L + 16, 12), 4, Art.WOOD_DARK, 2.5, 0.3)
 	if not GameState.is_open(key()):
@@ -229,6 +237,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 	floor_pts.append(Vector2(cave.end.x + 10, CAVE_BOTTOM + 10))
 	floor_pts.append(Vector2(World.SHAFT_L, CAVE_BOTTOM + 10))
 	Art.flat(ci, Art.clipped(floor_pts, cave_poly), st["floor"])
+	if WorldLook.world == "volcano":
+		_magma_channel(ci)
 	# Mine frame (metal supports on the moon).
 	Art.push(ci, Vector2(World.CAVE_L + 22, LEDGE_Y + 2))
 	if WorldLook.world == "moon":
@@ -280,9 +290,9 @@ func _edge_pts(poly: PackedVector2Array) -> PackedVector2Array:
 func _cave_edge(ci: CanvasItem, poly: PackedVector2Array) -> void:
 	var pts := _edge_pts(poly)
 	if pts == poly:
-		Art.ring(ci, poly, Art.INK, 5.0)
+		Art.ring(ci, poly, Art.INK, WorldLook.EDGE)
 	else:
-		Art.polyline(ci, pts, Art.INK, 5.0)
+		Art.polyline(ci, pts, Art.INK, WorldLook.EDGE)
 
 
 ## The moving parts: lantern, decor, the glowing ore vein.
@@ -293,6 +303,8 @@ func _draw() -> void:
 	var cave := cave_rect()
 	var cave_poly := _cave_poly()
 	_cp = cave_poly
+	if WorldLook.world == "volcano":
+		_magma_channel_life()
 	_draw_lamps(cave)
 	_draw_decor(st, cave)
 	# Ore vein, glowing on each delivery.
@@ -563,7 +575,7 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		_cave_edge(ci, cave_poly)
 		return
 	# Deeper, still unknown: darker towards the floor, dark rocks on the
-	# ledge, a pair of curious eyes in the dark and the lock under the
+	# ledge, a pair of curious eyes in the dark and the lock over the
 	# "???" (drawn after the edge, so it never cuts through it).
 	var deep := Color(0.01, 0.02, 0.08, 0.5)
 	Art.grad(ci, PackedVector2Array([Vector2(cave.position.x, cave.position.y + cave.size.y * 0.4), Vector2(cave.end.x, cave.position.y + cave.size.y * 0.4),
@@ -586,7 +598,7 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		Art.glow(ci, eyes + Vector2(sx, 0), 11.0, Color(1.0, 0.95, 0.55, 0.25), 12)
 		Art.flat(ci, Art.ellipse_pts(eyes + Vector2(sx, 0), Vector2(4.5, 3.2), 12), Color(1.0, 0.96, 0.7, 0.85))
 		Art.flat(ci, Art.ellipse_pts(eyes + Vector2(sx + 1.2, 0.4), Vector2(1.6, 2.2), 8), Color(0.1, 0.06, 0.2, 0.9))
-	Art.lock(ci, Vector2(size.x / 2.0, 150.0), 24)
+	Art.lock(ci, Vector2(size.x / 2.0, LOCK_Y), 22)
 
 
 
@@ -939,14 +951,19 @@ func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
 	rng.seed = index * 31 + 7
 	match WorldLook.world:
 		"volcano":
-			for k in 3:
-				var x := rng.randf_range(20.0, w - 40.0)
-				var y := 20.0 if k % 2 == 0 else h - 20.0
+			# Glowing magma veins branching through the basalt.
+			for k in 4:
+				var x := rng.randf_range(10.0, w - 60.0)
+				var y := rng.randf_range(14.0, 34.0) if k % 2 == 0 else rng.randf_range(h - 30.0, h - 12.0)
 				var pts := PackedVector2Array([Vector2(x, y)])
-				for j in 4:
-					pts.append(pts[j] + Vector2(rng.randf_range(10, 26), rng.randf_range(-8, 8)))
-				Art.line_c(ci, pts, Color("ff7a2a"), 3.0)
-				Art.line_c(ci, pts, Color("ffd45a"), 1.2)
+				for j in 6:
+					pts.append(pts[j] + Vector2(rng.randf_range(12, 26), rng.randf_range(-9, 9)))
+				var fork := PackedVector2Array([pts[3], pts[3] + Vector2(rng.randf_range(6, 14), 14 if y < h / 2.0 else -14), pts[3] + Vector2(rng.randf_range(14, 24), 22 if y < h / 2.0 else -22)])
+				Art.glow(ci, pts[3], 34.0, Color(1.0, 0.45, 0.15, 0.22), 14)
+				for line: PackedVector2Array in [pts, fork]:
+					Art.line_c(ci, line, Color(1.0, 0.42, 0.12, 0.45), 6.0)
+					Art.line_c(ci, line, VEIN, 3.0)
+					Art.line_c(ci, line, Color("ffe08a"), 1.2)
 		"acid":
 			for k in 5:
 				var p := Vector2(rng.randf_range(10, w - 10), 6.0)
@@ -958,6 +975,100 @@ func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
 			for k in 2:
 				var p := Vector2(rng.randf_range(20, w - 20), h - 12.0)
 				Art.crystal(ci, p, 14, 4, rng.randf_range(-0.3, 0.3), Color("9fe0ff"), 1.6)
+
+
+const VEIN := Color("ff7a1e")
+
+
+## Basalt columns in the volcano's rock (a still layer): tall six-sided
+## columns with joints, their tops catching a little light.
+func _basalt(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
+	var seam := Art.shade_of(rock, 0.4)
+	var lit := rock.lightened(0.07)
+	var x := -8.0 + float(index % 3) * 7.0
+	var k := 0
+	while x < w + 10.0:
+		var cw := 24.0 + float((k * 7 + index * 3) % 4) * 3.0
+		Art.flat(ci, PackedVector2Array([Vector2(x + 2, 0), Vector2(x + cw * 0.38, 0), Vector2(x + cw * 0.34, h), Vector2(x + 2, h)]), lit)
+		var line := PackedVector2Array()
+		for j in 6:
+			line.append(Vector2(x + (2.0 if j % 2 == 0 else -2.0), h * j / 5.0))
+		Art.line_c(ci, line, seam, 2.5)
+		for j in 2:
+			var jy := fposmod(float(k * 53 + j * 97 + index * 31), h - 30.0) + 15.0
+			Art.line_c(ci, PackedVector2Array([Vector2(x + 2, jy), Vector2(x + cw - 2, jy + 4.0)]), seam, 2.0)
+		x += cw
+		k += 1
+
+
+## The volcano cave's air: lit warm from the magma below, dark up top,
+## with basalt columns in the back wall.
+func _magma_cave_light(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array, inner: Color) -> void:
+	var col := inner.darkened(0.22)
+	var x := cave.position.x + 54.0
+	var k := 0
+	while x < cave.end.x - 30.0:
+		var cw := 22.0 + float((k + index) % 3) * 6.0
+		var top := cave.position.y + 18.0 + float((k * 5 + index) % 4) * 7.0
+		var colm := PackedVector2Array([Vector2(x, cave.end.y), Vector2(x, top + 6), Vector2(x + cw * 0.5, top), Vector2(x + cw, top + 6), Vector2(x + cw, cave.end.y)])
+		Art.flat(ci, Art.clipped(colm, cave_poly), col if k % 2 == 0 else col.lightened(0.05))
+		x += cw + 4.0
+		k += 1
+	for i in 5:
+		var y0 := LEDGE_Y + 8.0 - (i + 1) * 30.0
+		var band := Art.clipped(PackedVector2Array([Vector2(cave.position.x, y0), Vector2(cave.end.x, y0), Vector2(cave.end.x, y0 + 30.0), Vector2(cave.position.x, y0 + 30.0)]), cave_poly)
+		Art.flat(ci, band, Color(1.0, 0.42, 0.12, 0.16 - i * 0.03))
+
+
+## Where the magma channel runs in the cave floor: x of its middle and
+## its half width (0 = no room for it).
+func _channel() -> Vector2:
+	var a := World.CAVE_L + 112.0
+	var b := deposit_pos().x - 46.0
+	var hw := minf(40.0, (b - a) / 2.0)
+	return Vector2((a + b) / 2.0, hw if hw >= 22.0 else 0.0)
+
+
+## A channel of magma sunk into the front of the floor (still part).
+func _magma_channel(ci: CanvasItem) -> void:
+	var c := _channel()
+	if c.y <= 0.0:
+		return
+	var at := Vector2(c.x, LEDGE_Y + 15.0)
+	Art.t_ellipse(ci, at, Vector2(c.y + 6.0, 10.0), Color("2e2228"), 3.0, 0.0)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(0, 1), Vector2(c.y, 6.5), 24), WorldArt.MAGMA_MID)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(-c.y * 0.15, 0), Vector2(c.y * 0.7, 3.6), 20), WorldArt.MAGMA_SKIN)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(-c.y * 0.25, -1), Vector2(c.y * 0.35, 1.6), 14), WorldArt.MAGMA_HOT)
+
+
+## Its glow, a crust plate drifting on it and a bubble that pops.
+func _magma_channel_life() -> void:
+	var c := _channel()
+	if c.y <= 0.0:
+		return
+	var at := Vector2(c.x, LEDGE_Y + 15.0)
+	var pulse := snappedf(0.75 + 0.25 * sin(_t * 1.6 + index), 0.05)
+	Art.glow(self, at + Vector2(0, -10), c.y + 34.0, Color(1.0, 0.55, 0.2, 0.3 * pulse), 16)
+	var drift := snappedf(sin(_t * 0.35 + index) * c.y * 0.45, 0.5)
+	Art.push(self, at + Vector2(drift, 0.5), 0.0, Vector2(0.45, 0.6))
+	Art.toon(self, _CHANNEL_CRUST, WorldArt.CRUST, 3.0, 0.6)
+	Art.pop(self)
+	var f := fposmod(_t * 0.4 + index * 0.37, 1.0)
+	var bx := at.x - drift * 0.8 + c.y * 0.3
+	if f < 0.75:
+		var s := snappedf(f / 0.75, 0.1)
+		Art.push(self, Vector2(bx, at.y), 0.0, Vector2(0.5 + s * 0.5, s) * 0.7)
+		Art.toon(self, _CHANNEL_DOME, Color("ffd24a"), 2.0, 0.3)
+		Art.pop(self)
+	else:
+		var k := (f - 0.75) / 0.25
+		for j in 3:
+			var d := Vector2(cos(-PI / 2.0 + (j - 1) * 0.5), sin(-PI / 2.0 + (j - 1) * 0.5))
+			Art.dot(self, Vector2(bx, at.y) + d * 22.0 * k + Vector2(0, 26.0 * k * k), 2.2 * (1.0 - k) + 0.6, Color(1.0, 0.8, 0.3, 1.0 - k))
+
+
+static var _CHANNEL_CRUST := Art.smooth_pts(PackedVector2Array([Vector2(-26, 1), Vector2(-20, -5), Vector2(0, -7), Vector2(20, -5), Vector2(26, 1), Vector2(10, 5), Vector2(-12, 5)]), 2)
+static var _CHANNEL_DOME := PackedVector2Array([Vector2(-9, 1), Vector2(-8, -4), Vector2(-4, -7.5), Vector2(0, -8.5), Vector2(4, -7.5), Vector2(8, -4), Vector2(9, 1)])
 
 
 static var _MOSS_TOP := Art.smooth_pts(PackedVector2Array([Vector2(-16, -4), Vector2(16, -4), Vector2(14, 4), Vector2(6, 9), Vector2(0, 5), Vector2(-7, 10), Vector2(-13, 4)]), 2)

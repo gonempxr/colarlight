@@ -60,7 +60,7 @@ func _initialize() -> void:
 		var mm: GDScript = load("res://scripts/ui/mini_map.gd")
 		for i in 8:
 			var m: Control = mm.new()
-			m.set("location_override", i % 4 + (4 if i == 7 else 0))
+			m.set("location_override", i % 4)
 			m.set("big", i >= 4)
 			m.position = Vector2(30 + (i % 4) * 175, 40 + (i / 4) * 220)
 			host.add_child(m)

@@ -91,14 +91,23 @@ static func cur_location() -> int:
 
 
 static func world_of(location: int) -> String:
+	if is_soon(location):
+		return MapArt.SOON_WORLDS[mini(location - Balance.LAST_LOCATION - 1, MapArt.SOON_WORLDS.size() - 1)]
 	return MapArt.world_of(location)
 
 
+## Islands after the last world: not in the game yet ("Soon!").
+static func is_soon(location: int) -> bool:
+	return location > Balance.LAST_LOCATION
+
+
 static func tier_of(location: int) -> int:
-	return maxi(0, location) / MapArt.WORLDS.size()
+	return mini(maxi(0, location), Balance.LAST_LOCATION) / MapArt.WORLDS.size()
 
 
 static func world_name(location: int, with_star: bool = true) -> String:
+	if is_soon(location):
+		return "???"
 	var w := world_of(location).to_upper()
 	var key := "WORLD_" + w
 	var s := TranslationServer.translate(key)
@@ -337,9 +346,9 @@ func _process(delta: float) -> void:
 
 ## Which locations are shown and where (map units).
 func _place() -> void:
-	var cur := cur_location()
-	_first = maxi(0, cur - 3)
-	_last = maxi(cur + 2, _first + 3)
+	# Every world from the ocean to the moon, then the "Soon!" islands.
+	_first = 0
+	_last = Balance.LAST_LOCATION + MapArt.SOON_WORLDS.size()
 	_pos.clear()
 	var view := get_viewport_rect().size
 	_wide = view.x > view.y * 1.05
@@ -471,7 +480,7 @@ func _tap(at: Vector2) -> void:
 	for l in _pos:
 		var d: Vector2 = (m - (_pos[l] as Vector2))
 		if absf(d.x) < MapArt.RX and d.y > -MapArt.RY - 90.0 and d.y < 220.0:
-			if l > cur:
+			if l > cur or is_soon(l):
 				_hint_loc = l
 				_hint_left = HINT_SEC
 				_sfx("pop")
@@ -518,6 +527,9 @@ func _build_panel() -> void:
 		c.queue_free()
 	var cur := cur_location()
 	var nxt := cur + 1
+	if is_soon(nxt):
+		_soon_panel()
+		return
 	var name := world_name(nxt)
 	if _confirm:
 		_box.add_child(_label(t("MAP_CONFIRM") % name, 32, Art.INK, true))
@@ -611,6 +623,28 @@ func _build_panel() -> void:
 	_box.add_child(_carry())
 
 
+## On the last world: no gate, the next islands are still being built.
+func _soon_panel() -> void:
+	_confirm = false
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	var pic := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		var k := minf(s.x, s.y) / 470.0
+		Art.push(ci, s / 2.0 + Vector2(0, 10), 0.0, Vector2(k, k))
+		MapArt.island(ci, MapArt.SOON_WORLDS[0], MapArt.SOON, tt)
+		Art.pop(ci)
+		MapArt.mystery(ci, s / 2.0 + Vector2(-4, 2), tt, true, 0.4), Vector2(104, 104))
+	pic.custom_minimum_size = Vector2(104, 104)
+	head.add_child(pic)
+	var hv := VBoxContainer.new()
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hv.add_theme_constant_override("separation", 4)
+	hv.add_child(_label(t("MAP_SOON_TITLE"), 30, Art.INK, true))
+	hv.add_child(_label(t("MAP_SOON_TEXT"), 21, Art.INK_SOFT))
+	head.add_child(hv)
+	_box.add_child(head)
+
+
 func _goal_row(g: Dictionary) -> Control:
 	var have := int(g["have"])
 	var need := int(g["need"])
@@ -686,6 +720,8 @@ func _do_open() -> void:
 # --- Drawing ----------------------------------------------------------------------------------
 
 func _state(l: int, cur: int) -> int:
+	if is_soon(l):
+		return MapArt.SOON
 	if l < cur:
 		return MapArt.DONE
 	if l == cur:
@@ -731,6 +767,8 @@ func _paint(ci: CanvasItem) -> void:
 		var w := world_of(l)
 		if st == MapArt.CURRENT:
 			Art.glow(ci, p + Vector2(0, 20), 300, Color(1.0, 0.95, 0.6, 0.45))
+		elif st == MapArt.SOON:
+			Art.glow(ci, p + Vector2(0, -10), 280, Color(MapArt.SOON_TEASE[w], 0.3))
 		Art.push(ci, p)
 		MapArt.island(ci, w, st, tm + l * 1.3, tier_of(l))
 		if st == MapArt.DONE or st == MapArt.CURRENT:
@@ -748,6 +786,9 @@ func _paint(ci: CanvasItem) -> void:
 			MapArt.markers(ci, w, tm)
 		elif st == MapArt.DONE:
 			MapArt.done_mark(ci, w, tm)
+		elif st == MapArt.SOON:
+			MapArt.mystery(ci, Vector2(0, -10), tm, false)
+			MapArt.soon_tag(ci, Vector2(110, -150), t("MAP_SOON"), tm + l)
 		else:
 			MapArt.mystery(ci, Vector2(0, -10), tm, st == MapArt.NEXT)
 		var label := world_name(l, false) if st != MapArt.LOCKED else "???"
@@ -766,6 +807,8 @@ func _paint(ci: CanvasItem) -> void:
 
 func _hint_bubble(ci: CanvasItem, at: Vector2, is_next: bool) -> void:
 	var s := t("MAP_HINT_" + world_of(_hint_loc).to_upper()) if is_next else t("MAP_LOCKED_FAR")
+	if is_soon(_hint_loc):
+		s = t("MAP_SOON_HINT")
 	var font := UiTheme.body_font()
 	var size := 24
 	while size > 15 and font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > 480.0:
