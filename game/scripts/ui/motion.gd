@@ -19,6 +19,8 @@ const FOLLOW := 10.0
 const SNAP := 0.6
 ## How fast a finished cycle plays out its last bit before going idle.
 const FINISH_RATE := 1.5
+## A cycle that stops further than this from its end was cut short.
+const FINISH_GAP := 0.35
 
 ## key -> [shown progress, frame it was worked out]
 static var _shown := {}
@@ -44,7 +46,9 @@ static func progress(key: String) -> float:
 	e[1] = frame
 	var shown: float = e[0]
 	if real < 0.0:
-		if shown < 0.0 or frames > 6:
+		# Far from the end it was stopped, not finished (a reset, a new
+		# save): rest at once.
+		if shown < 0.0 or frames > 6 or shown < 1.0 - FINISH_GAP:
 			e[0] = -1.0
 			return -1.0
 		# The cycle ended: play out its end, then rest.
