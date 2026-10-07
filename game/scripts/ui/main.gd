@@ -103,6 +103,8 @@ var _on_release := Callable()
 var _settings_sig := []
 ## Tests and screenshots skip the title screen.
 static var show_title := true
+## An opaque full-screen screen is open over the rooms (see _covering).
+var _covered := false
 
 
 func _ready() -> void:
@@ -346,6 +348,13 @@ func _process(delta: float) -> void:
 		_refresh_left = REFRESH_SEC
 		_refresh()
 	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or _room != MINE
+	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
+	# under it: nothing there needs drawing until it closes.
+	World.calm = _modal.visible or _top.visible
+	var covered := _covering()
+	if covered != _covered:
+		_covered = covered
+		_place_rooms()
 	if _side_fit_frames > 0 and _wide:
 		_side_fit_frames -= 1
 		var view := get_viewport_rect().size
@@ -425,12 +434,20 @@ func show_room(i: int, animate: bool = true) -> void:
 
 
 ## Rooms side by side, moved by the slide; only the ones on screen show.
+## True while an opaque screen covers the whole window (fully faded in).
+func _covering() -> bool:
+	for c in [_puzzle, _fishing]:
+		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
+			return true
+	return _map.visible and _map.modulate.a >= 0.999
+
+
 func _place_rooms() -> void:
 	var rooms: Array[Control] = [_scroller, _factory, _office]
 	for i in rooms.size():
 		var r := rooms[i]
 		var off := (float(i) - _slide) * (_area.size.x + 24.0)
-		var on := absf(float(i) - _slide) < 0.999
+		var on := absf(float(i) - _slide) < 0.999 and not _covered
 		r.visible = on
 		r.position = Vector2(_area.position.x + roundf(off), _area.position.y)
 		if r.size != _area.size:

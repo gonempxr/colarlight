@@ -157,6 +157,9 @@ static var half_rate := Art.low_power
 static var full_rate := false
 ## Rate of each half of the scene; FrameGovernor lowers it on slow devices.
 static var anim_hz := ANIM_HZ
+## A dialog is open over the dimmed scene: it animates slower (CALM_HZ).
+static var calm := false
+const CALM_HZ := 15.0
 static var _frame := -1
 static var _since: Array[float] = [9.0, 9.0]
 static var _fire: Array[bool] = [false, false]
@@ -171,7 +174,7 @@ static func _schedule() -> void:
 	_frame = f
 	var tree := Engine.get_main_loop() as SceneTree
 	var dt := clampf(tree.root.get_process_delta_time(), 0.0, 1.0) if tree else 1.0
-	var period := 1.0 / minf(anim_hz, LOW_HZ if half_rate else ANIM_HZ)
+	var period := 1.0 / minf(minf(anim_hz, CALM_HZ if calm else ANIM_HZ), LOW_HZ if half_rate else ANIM_HZ)
 	for g in 2:
 		_since[g] += dt
 		_fire[g] = _hurry

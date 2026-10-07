@@ -64,6 +64,22 @@ func _initialize() -> void:
 		main.show_room(room, false)
 	if float(opt["scroll"]) > 0.0:
 		main._scroller.scroll_to(float(opt["scroll"]))
+	# open=fishing|puzzle|map|evo|wardrobe|decor|rivals: a screen over the world.
+	match opt.get("open", ""):
+		"fishing":
+			main.open_fishing()
+		"puzzle":
+			main.open_puzzle()
+		"map":
+			main.open_map()
+		"evo":
+			main.open_evolution()
+		"wardrobe":
+			main._open_wardrobe()
+		"decor":
+			main.open_decor("sofa")
+		"rivals":
+			main.open_rivals()
 	for i in 30:
 		await process_frame
 	_vp = root.get_viewport_rid()

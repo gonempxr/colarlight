@@ -100,6 +100,9 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		_sig = []
 		refresh()
+	elif what == NOTIFICATION_VISIBILITY_CHANGED and is_node_ready() and is_visible_in_tree():
+		# Shown again (a room or a full-screen screen was over it).
+		refresh()
 
 
 func refresh() -> void:
