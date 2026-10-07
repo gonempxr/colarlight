@@ -319,7 +319,7 @@ func is_fish_at(p: Vector2) -> bool:
 
 
 func _fish_at(p: Vector2) -> int:
-	if WorldLook.world == "moon":
+	if WorldLook.world in ["moon", "volcano"]:
 		return -1
 	var best := -1
 	var best_d := 46.0
@@ -544,6 +544,9 @@ func _paint_sea(ci: CanvasItem) -> void:
 			# The dry worlds: deep cave air under the last site.
 			c0 = WorldLook.shaft_color(1.0) * DayNight.deep_tint()
 			c1 = c0.darkened(0.3)
+		elif band.x < TOP_H and WorldLook.world == "volcano":
+			WorldArt.magma_still(ci, w, band.x, band.y)
+			continue
 		elif band.x < TOP_H and WorldLook.world != "ocean":
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.75)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
@@ -584,18 +587,8 @@ func _draw_top_water(w: float) -> void:
 			Art.grad(self, PackedVector2Array([Vector2(x - 14, SURFACE_Y), Vector2(x + 14, SURFACE_Y),
 					Vector2(x + 70, TOP_H), Vector2(x + 20, TOP_H)]), PackedColorArray([ray, ray, Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
 	elif wl == "volcano":
-		# Slow bright streaks of flowing lava and magma bubbles.
-		for i in 6:
-			var f := fposmod(t * 0.03 + i / 6.0, 1.0)
-			var x := f * (w + 160.0) - 80.0
-			var y := SURFACE_Y + 26.0 + (i % 3) * 34.0
-			Art.line_c(self, PackedVector2Array([Vector2(x - 40, y), Vector2(x, y - 3), Vector2(x + 40, y)]), Color(1.0, 0.9, 0.45, 0.35), 4.0)
-		for i in 7:
-			var f := fposmod(t * 0.12 + i * 0.37, 1.0)
-			var x := w * fposmod(i * 0.29 + 0.07, 1.0)
-			var y := lerpf(TOP_H - 30.0, SURFACE_Y + 10.0, f)
-			var r := 3.0 + (i % 3) * 2.0
-			Art.t_circle(self, Vector2(x + sin(t + i) * 6.0, y), r * (0.6 + f * 0.6), Color("ffd45a"), 1.6, 0.0)
+		# Thick magma: slow currents, sinking crust, heavy bubbles (no fish).
+		WorldArt.magma_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
 	elif wl == "acid":
 		for i in 6:
 			var f := fposmod(t * 0.1 + i * 0.41, 1.0)
@@ -603,7 +596,7 @@ func _draw_top_water(w: float) -> void:
 			var y := lerpf(TOP_H - 26.0, SURFACE_Y + 8.0, f)
 			var r := 3.0 + (i % 3) * 1.6
 			Art.arc(self, Vector2(x, y), r, 0, TAU, 10, Color(0.85, 1.0, 0.6, 0.65), 1.6)
-	if wl != "moon":
+	if wl == "ocean" or wl == "acid":
 		for f in _fish:
 			var dart := exp(-(t - float(f["dart"])) * 2.5)
 			var face: float = f["face"]

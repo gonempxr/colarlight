@@ -1153,6 +1153,8 @@ func _draw() -> void:
 	var wl := WorldLook.world
 	var lights := smoothstep(0.3, 0.8, DayNight.night())
 	var palm_age := _t - _palm_poke
+	if wl == "volcano":
+		WorldArt.volcano_flow(self, _volcano_pos(), _volcano_h(), _t, _tint)
 	Art.push(self, _palm_pos(), 0.0, Vector2(_k, _k))
 	if wl == "ocean":
 		Props.palm(self, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0), _coconuts)
@@ -1351,6 +1353,10 @@ func _draw_back_water(bp: Vector2, _bs: float) -> void:
 	sea.append(Vector2(x1, World.SURFACE_Y + 2.0))
 	sea.append(Vector2(x0, World.SURFACE_Y + 2.0))
 	var wl := WorldLook.world
+	if wl == "volcano":
+		Art.flat_now(self, sea, WorldArt.unlit(WorldArt.MAGMA_SKIN, _tint))
+		Art.polyline(self, line, WorldArt.unlit(WorldArt.MAGMA_HOT, _tint), 3.0)
+		return
 	Art.flat_now(self, sea, Color(Art.calm(Art.sea_cols[0]), 0.85 if wl == "ocean" else 0.95))
 	Art.polyline(self, line, Color(1, 1, 1, 0.75) if wl == "ocean" else Color(Art.sea_cols[0].lightened(0.4), 0.9), 2.5)
 
