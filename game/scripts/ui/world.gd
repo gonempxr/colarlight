@@ -657,9 +657,9 @@ func _paint_ground(ci: CanvasItem) -> void:
 		top.append(Vector2(x, TOP_H - 22.0 - sin(i * 1.3) * 5.0 - (7.0 if i % 3 == 0 else 0.0)))
 	top.append(Vector2(w + 10, TOP_H + 4))
 	var ground := WorldLook.color("sand") * tint
-	Art.toon(ci, top, ground, 3.0, 0.6)
+	Art.toon(ci, top, ground, WorldLook.EDGE, 0.6)
 	var left := PackedVector2Array([Vector2(-10, TOP_H + 4), Vector2(-10, TOP_H - 26), Vector2(20, TOP_H - 30), Vector2(SHAFT_L, TOP_H - 18), Vector2(SHAFT_L, TOP_H + 4)])
-	Art.toon(ci, left, ground, 3.0, 0.6)
+	Art.toon(ci, left, ground, WorldLook.EDGE, 0.6)
 	var spots: Array[Vector2] = [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26), Vector2(w * 0.82, TOP_H - 24)]
 	for k in spots.size():
 		var p := spots[k]
@@ -694,7 +694,10 @@ func _paint_floor(ci: CanvasItem) -> void:
 	for i in 13:
 		pts.append(Vector2(w * i / 12.0, floor_y + sin(i * 1.7) * 14.0))
 	pts.append(Vector2(w + 10, h + 10))
-	Art.toon(ci, pts, WorldLook.color("seabed"), 3.0, 0.4)
+	var bed: Color = WorldLook.color("seabed")
+	Art.toon(ci, pts, bed, WorldLook.EDGE, 0.4)
+	# A lit top on the floor, so it stands out from the deep water.
+	Art.polyline(ci, Art.moved(pts.slice(1, pts.size() - 1), Vector2(0, 5)), bed.lerp(Color.WHITE, 0.16), 5.0)
 	match WorldLook.world:
 		"ocean":
 			Art.push(ci, Vector2(w * 0.7, floor_y + 20), 0.3)
@@ -726,24 +729,30 @@ func _paint_floor(ci: CanvasItem) -> void:
 
 ## The underside of the last site's rock: an outlined, uneven rock edge and
 ## the dive shaft closed by a rounded stone bottom (the rows cover the top).
+## Deep rock is dark, so a lighter lip runs along both outlines and the
+## shaft's end is lit from inside: the end reads clearly.
 func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	var last := Balance.DEPTHS.size() - 1
 	var rock: Color = Art.calm(WorldLook.room_style(last)["rock"])
+	var lip := rock.lerp(Color.WHITE, 0.28)
 	var edge := PackedVector2Array([Vector2(-10, top - 12)])
 	edge.append(Vector2(w + 10, top - 12))
+	var under := PackedVector2Array()
 	for i in 15:
 		var x := lerpf(w + 10.0, -10.0, i / 14.0)
 		var y := top + 16.0 + sin(i * 2.3 + 1.0) * 5.0 + (6.0 if i % 4 == 1 else 0.0)
 		# Deeper under the shaft, so the shaft's bottom sits in rock.
 		var near := clampf(1.0 - absf(x - (SHAFT_L + SHAFT_R) / 2.0) / 90.0, 0.0, 1.0)
-		edge.append(Vector2(x, y + near * 26.0))
-	Art.toon(ci, edge, rock, 4.0, 0.0)
+		under.append(Vector2(x, y + near * 30.0))
+	edge.append_array(under)
+	Art.toon(ci, edge, rock, OUTLINE, 0.0)
 	Art.flat(ci, Art.clipped(Art.moved(edge, Vector2(0, -9)), edge), Art.shade_of(rock, 0.18))
+	Art.polyline(ci, Art.moved(under, Vector2(0, -5)), Color(lip, 0.55), 2.5)
 	# The shaft's end: water down to a rounded stone floor, walls outlined
 	# like the shaft above.
-	var water: Color = Art.calm(Art.water_color(1.0)).darkened(0.1) if WorldLook.is_water() else WorldLook.shaft_color(1.0)
-	var r := 16.0
-	var floor_y := top + 30.0
+	var water: Color = Art.calm(Art.water_color(0.82)) if WorldLook.is_water() else WorldLook.shaft_color(0.85)
+	var r := 18.0
+	var floor_y := top + 34.0
 	var sump := PackedVector2Array([Vector2(SHAFT_L, top - 12), Vector2(SHAFT_R, top - 12)])
 	for i in 9:
 		var a := lerpf(0.0, PI / 2.0, i / 8.0)
@@ -751,14 +760,21 @@ func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
 	for i in 9:
 		var a := lerpf(PI / 2.0, PI, i / 8.0)
 		sump.append(Vector2(SHAFT_L + r + cos(a) * r, floor_y - r + sin(a) * r))
-	Art.flat(ci, sump, water)
 	var wall := sump.slice(2)
 	wall.insert(0, Vector2(SHAFT_R, top - 12))
 	wall.append(Vector2(SHAFT_L, top - 12))
-	Art.polyline(ci, wall, Art.INK, 5.0)
+	# A stone lip around the end, then the water and its outline.
+	Art.polyline(ci, Art.moved(wall, Vector2(0, 0)), lip, OUTLINE + 6.0)
+	Art.flat(ci, sump, water)
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2((SHAFT_L + SHAFT_R) / 2.0, floor_y - 10.0), Vector2(30, 18), 20), sump), water.lightened(0.12))
+	Art.polyline(ci, wall, Art.INK, OUTLINE)
 	# Pebbles on the shaft floor.
-	for p: Vector3 in [Vector3(SHAFT_L + 16, floor_y - 6, 6), Vector3(SHAFT_L + 31, floor_y - 5, 4.5), Vector3(SHAFT_R - 18, floor_y - 6, 5.5)]:
-		Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(p.z * 1.3, p.z), rock.lightened(0.1), 2.0, 0.4)
+	for p: Vector3 in [Vector3(SHAFT_L + 16, floor_y - 7, 6), Vector3(SHAFT_L + 31, floor_y - 6, 4.5), Vector3(SHAFT_R - 18, floor_y - 7, 5.5)]:
+		Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(p.z * 1.3, p.z), lip, 2.0, 0.4)
+
+
+## Outline width of the big scenery shapes (rock edges, shaft walls).
+const OUTLINE := WorldLook.EDGE
 
 
 # --- New location banner -----------------------------------------------------------------

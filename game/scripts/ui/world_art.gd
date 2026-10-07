@@ -226,7 +226,7 @@ static func island(ci: CanvasItem, world: String, width: float) -> void:
 	var top := WorldLook.color("grass")
 	var ground := Art.smooth_pts(PackedVector2Array([Vector2(-6, 30), Vector2(6, -8), Vector2(30, -34), Vector2(70, -60),
 			Vector2(width * 0.5, -66), Vector2(width + 40, -64), Vector2(width + 40, 30)]), 4)
-	Art.toon(ci, ground, base, 3.2, 0.8)
+	Art.toon(ci, ground, base, WorldLook.EDGE, 0.8)
 	var crust := PackedVector2Array([Vector2(56, -58), Vector2(width * 0.5, -72), Vector2(width + 40, -70), Vector2(width + 40, -52)])
 	for i in 8:
 		var x := width + 30.0 - (width - 40.0) * (i + 0.5) / 8.0
