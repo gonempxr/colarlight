@@ -440,8 +440,8 @@ static func _simplify(ring: PackedVector2Array, tol: float) -> PackedVector2Arra
 ## Shrunk sprites keep more of their ink (no hairlines on phones); big
 ## previews thin it a little less, so lines drawn as outlines (glasses,
 ## brows) stay readable.
-const INK_FOLLOW := 0.4
-const INK_FOLLOW_UP := 0.7
+const INK_FOLLOW := 0.15
+const INK_FOLLOW_UP := 0.5
 const _INK_STEPS := 4.0           # steps per doubling of the scale
 static var _ink_det := -1.0
 static var _ink_step := 0
