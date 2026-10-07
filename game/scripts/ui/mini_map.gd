@@ -41,7 +41,7 @@ func set_big(on: bool) -> void:
 
 
 func _refresh() -> void:
-	_loc = MapView.cur_location() if location_override < 0 else location_override
+	_loc = mini(MapView.cur_location() if location_override < 0 else location_override, Balance.LAST_LOCATION)
 	_name = MapView.world_name(_loc)
 	tooltip_text = TranslationServer.translate("MAP_TITLE")
 	_ready_gate = MapView.can_advance()
@@ -102,7 +102,15 @@ func _draw() -> void:
 	var rr := Rect2(c.x - tw / 2.0, s - RIBBON + 2.0, tw, RIBBON)
 	Art.t_rect(self, rr, 11, Art.GOLD, 3.0, 0.5)
 	Art.text(self, Vector2(c.x, rr.position.y + RIBBON * 0.74), _name, fs, Art.INK, 0)
-	if _ready_gate:
+	if MapView.is_soon(_loc + 1):
+		# The last world: a dark "?" with a lock, new islands are coming.
+		var b := Vector2(s - 18.0, 18.0)
+		var bob := 0.0 if MapArt.still else sin(_t * 2.4) * 1.5
+		Art.t_circle(self, b + Vector2(0, bob), 17, MapArt.SIL_FILL, 3.0, 0.0)
+		Art.arc_c(self, b + Vector2(0, bob), 13.5, PI * 1.05, PI * 1.6, 8, Color(MapArt.SOON_TEASE["ice"], 0.7), 2.0)
+		Art.text(self, b + Vector2(-3, 9 + bob), "?", 26, Art.GOLD, 5)
+		Art.lock(self, b + Vector2(9, 9 + bob), 8)
+	elif _ready_gate:
 		var pulse := 1.0 + 0.1 * sin(_t * 6.0)
 		var b := Vector2(s - 16.0, 16.0)
 		Art.push(self, b, 0.0, Vector2(pulse, pulse))

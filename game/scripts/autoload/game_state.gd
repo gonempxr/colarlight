@@ -67,10 +67,10 @@ var autosave_enabled := true
 
 var coins := 0.0
 var total_earned := 0.0
-## Location index L (world L % 4, tier L / 4).
+## Location index L (world L % 4), 0..Balance.LAST_LOCATION.
 var location := 0:
 	set(value):
-		location = maxi(0, value)
+		location = clampi(value, 0, Balance.LAST_LOCATION)
 		_scale = Balance.loc_scale(location)
 		_gate_scale = Balance.loc_gate_scale(location)
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
@@ -381,9 +381,15 @@ func next_location_cost() -> float:
 	return Balance.location_cost(location)
 
 
-## Ready, and the wallet (with the vault) holds the price.
+## Ready, and the wallet (with the vault) holds the price. Never past the
+## last world (the next ones are "coming soon").
 func can_advance_location() -> bool:
-	return location_ready() and coins + vault >= next_location_cost()
+	return not is_last_location() and location_ready() and coins + vault >= next_location_cost()
+
+
+## The Moon: there is no next world yet.
+func is_last_location() -> bool:
+	return location >= Balance.LAST_LOCATION
 
 
 ## Opens the next location: L + 1, the run starts over (coins, levels,
@@ -902,7 +908,9 @@ func _apply_save(data: Dictionary) -> void:
 			saved_levels = folded[0]
 			saved_managers = folded[1]
 	else:
-		location = clampi(int(_num(data.get("location"), 0.0)), 0, 10000)
+		# Saves from the old repeats (Ocean ★2 and on) stay on the Moon, the
+		# last world, with their levels, coins and helpers.
+		location = clampi(int(_num(data.get("location"), 0.0)), 0, Balance.LAST_LOCATION)
 		legacy_mult = maxf(1.0, _num(data.get("legacy_mult"), 1.0))
 		if data.has("gear"):
 			evo = clampi(int(_num(data.get("gear"), 0.0)), 0, Balance.EVO_FORMS)

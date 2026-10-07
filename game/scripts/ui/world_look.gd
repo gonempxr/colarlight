@@ -36,7 +36,7 @@ const LOOKS := {
 		"night": [Color("0e1440"), Color("1b2862"), Color("33467f")],
 		"dusk": 1.0, "night_tint": Color(0.60, 0.66, 0.90),
 		"sand": Color("f8d898"), "sand_dark": Color("e2aa62"), "grass": Color("72d25a"),
-		"seabed": Color("2a2f5e"), "weed": Color("47c47a"), "water": true, "far": Color("9fd4ee"),
+		"seabed": Color("33407a"), "weed": Color("47c47a"), "water": true, "far": Color("9fd4ee"),
 	},
 	"volcano": {
 		"name": "WORLD_VOLCANO",
@@ -69,6 +69,10 @@ const LOOKS := {
 		"seabed": Color("23263a"), "weed": Color("9fe0ff"), "water": false, "far": Color("5a6288"),
 	},
 }
+
+## Outline width of the big scenery shapes (ground, rock and cave edges,
+## shaft walls), the same everywhere so the art reads as one style.
+const EDGE := 4.0
 
 const TIER_SHIFT: Array[float] = [0.0, 0.045, -0.045, 0.08, -0.08, 0.11, -0.11]
 

@@ -24,3 +24,7 @@ MAP_RESET,Starts again: coins and levels. But the new island pays much more!,Н�
 MAP_CONFIRM,Sail to %s?,Отправляемся? Новый мир: %s,¿Viajamos a %s?,出发去%s吗？
 MAP_YES,Let's go!,Поехали!,¡Vamos!,出发！
 MAP_NO,Not yet,Пока нет,Todavía no,还不要
+MAP_SOON,Soon!,Скоро!,¡Pronto!,即将开放！
+MAP_SOON_TITLE,New worlds are coming!,Скоро новые миры!,¡Llegan mundos nuevos!,新世界即将到来！
+MAP_SOON_TEXT,"You reached the last world for now. Two secret islands are being built: keep mining on the Moon, your levels keep growing!","Ты дошёл до последнего мира. Два тайных острова ещё строятся: копай дальше на Луне, уровни продолжают расти!","Llegaste al último mundo por ahora. Se están construyendo dos islas secretas: sigue minando en la Luna, ¡tus niveles siguen creciendo!",你已到达目前最后一个世界。两座神秘岛屿正在建造中：继续在月球采矿，等级还会不断提升！
+MAP_SOON_HINT,This island is still being built. Coming soon!,Этот остров ещё строится. Скоро!,Esta isla aún se está construyendo. ¡Pronto!,这座岛还在建造中，敬请期待！

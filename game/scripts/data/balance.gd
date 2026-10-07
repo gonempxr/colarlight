@@ -102,6 +102,10 @@ const GATE_GROWTH := 1.4
 const GATE_BUMP := 1.45
 ## Price to open the next location, at location 0.
 const LOCATION_PRICE := 2.4e10
+## The last location there is (the Moon): no repeats with stars after it,
+## the map shows the next worlds as "coming soon". Older saves further on
+## are moved back to it (GameState keeps their levels).
+const LAST_LOCATION := 3
 ## Worker gear: 4 levels per location (level 1 is the base look, levels
 ## 2..4 are bought with coins, in order). GameState.evo counts the levels
 ## bought (0..EVO_FORMS). EVO_PRICES: price of levels 2..4 at location 0;
