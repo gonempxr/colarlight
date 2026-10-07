@@ -39,6 +39,7 @@ func _initialize() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	if mode == "sheet":
+		FishArt.world = world
 		await _sheet()
 	elif mode.begins_with("rods:"):
 		await _rods(int(mode.substr(5)))
@@ -135,6 +136,12 @@ func _screen(mode: String, fishing: Node) -> void:
 				fishing.keep(fishing.make_fish(i % 2))
 			fishing.helper_timer = fishing.helper_interval() * 0.6
 			screen.debug_state("wait")
+		"cast":
+			screen._on_action()
+			var tc := Time.get_ticks_msec()
+			while Time.get_ticks_msec() - tc < 560:
+				await process_frame
+			return
 		"land":
 			screen.debug_state("reel")
 			screen._speed = 0.0

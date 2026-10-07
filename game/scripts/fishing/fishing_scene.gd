@@ -32,7 +32,7 @@ func _init(world_index: int = 0, world_look: Dictionary = {}) -> void:
 	for i in 70:
 		_stars.append(Vector3(rng.randf(), rng.randf(), rng.randf_range(0.5, 1.4)))
 	for i in 40:
-		_plates.append({"x": (i / 8) * 0.21 + rng.randf_range(0.0, 0.08), "row": i % 8, "w": rng.randf_range(0.9, 1.5), "seed": rng.randi() % 1000, "sp": rng.randf_range(0.6, 1.4)})
+		_plates.append({"x": (i / 8) * 0.21 + rng.randf_range(0.0, 0.08), "row": i % 8, "w": rng.randf_range(1.0, 1.6), "seed": rng.randi() % 1000, "sp": rng.randf_range(0.6, 1.4)})
 	for i in 6:
 		_pads.append(Vector3(rng.randf(), rng.randf_range(0.15, 0.85), rng.randf_range(0.8, 1.25)))
 	for i in 7:
@@ -268,9 +268,9 @@ func _magma(ci: CanvasItem, v: Vector2, hz: float, t: float, k: float) -> void:
 		var scale := lerpf(0.3, 1.25, f) * k * float(p["w"])
 		var span := v.x + 260.0 * scale
 		var x := fposmod(float(p["x"]) * span + t * 4.0 * float(p["sp"]) * (0.4 + f), span) - 130.0 * scale
-		Art.push(ci, Vector2(x, y), 0.0, Vector2(scale, scale * 0.42))
+		Art.push(ci, Vector2(x, y), 0.0, Vector2(scale, scale * 0.55))
 		var shape := _plate_shape(int(p["seed"]))
-		Art.push(ci, Vector2(0, -3), 0.0, Vector2.ONE * 1.1)
+		Art.push(ci, Vector2(0, -3), 0.0, Vector2.ONE * 1.08)
 		Art.flat(ci, shape, Color(rim, 0.7))
 		Art.pop(ci)
 		var c := crust.lerp(sea(2), 0.35 * (1.0 - f))

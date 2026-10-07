@@ -16,6 +16,12 @@ const W2 := 2.0
 const SIL := Color("46406e")
 
 static var _sil := false
+## The world the fish live in (0 ocean, 1 volcano: fire fish, 2 acid swamp:
+## slimy greens, 3 moon: space fish). Colors are turned into the world's
+## range and a little world effect is added around them.
+static var world := 0
+## Hue ranges the colors are squeezed into, per world.
+const WORLD_HUES := [Vector2(0.0, 1.0), Vector2(-0.03, 0.13), Vector2(0.17, 0.42), Vector2(0.5, 0.86)]
 
 
 ## facing: 1 = right, -1 = left. silhouette = dark shape without details.
@@ -26,6 +32,8 @@ static func draw(ci: CanvasItem, id: String, t: float, facing: float = 1.0, happ
 	var speed := 11.0 if happy else 5.0
 	var tt := t * speed / 5.0 + sd
 	var bob := sin(t * 2.2 + sd) * 1.5
+	if world != 0 and not silhouette:
+		_world_back(ci, t + sd)
 	Art.push(ci, Vector2(0, bob), sin(t * 1.3 + sd) * 0.03, Vector2(facing, 1.0))
 	match id:
 		"sardine": _sardine(ci, tt, blink, happy)
@@ -47,7 +55,40 @@ static func draw(ci: CanvasItem, id: String, t: float, facing: float = 1.0, happ
 		"golden": _golden(ci, tt, blink, happy)
 		"star_whale": _star_whale(ci, tt, blink, happy)
 	Art.pop(ci)
+	if world != 0 and not silhouette:
+		_world_front(ci, t + sd)
 	_sil = false
+
+
+## A color moved into the current world's palette (greys stay).
+static func _w(col: Color) -> Color:
+	if world == 0 or col.s < 0.12:
+		return col
+	var r: Vector2 = WORLD_HUES[world]
+	var s := minf(1.0, col.s * 1.05 + (0.08 if world == 1 else 0.0))
+	return Color.from_hsv(fposmod(r.x + col.h * (r.y - r.x), 1.0), s, col.v, col.a)
+
+
+static func _world_back(ci: CanvasItem, t: float) -> void:
+	var g: Color = [Color.WHITE, Color(1.0, 0.55, 0.15, 0.12), Color(0.6, 1.0, 0.3, 0.1), Color(0.55, 0.8, 1.0, 0.14)][world]
+	Art.flat(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(56, 32), 20), g)
+
+
+static func _world_front(ci: CanvasItem, t: float) -> void:
+	for i in 3:
+		var f := fposmod(t * 0.6 + i / 3.0, 1.0)
+		var a := snappedf(1.0 - f, 0.1)
+		match world:
+			1:
+				# Embers rising off a fire fish.
+				Art.disc(ci, Vector2(-14.0 + i * 14.0 + sin(f * 6.0 + i) * 4.0, -16.0 - f * 26.0), snappedf(2.6 - f * 1.4, 0.2), Color(1.0, 0.75 - 0.3 * f, 0.2, a))
+			2:
+				# Slime dripping off.
+				Art.disc(ci, Vector2(-10.0 + i * 12.0, 12.0 + f * 18.0), snappedf(2.4 - f, 0.2), Color(0.65, 1.0, 0.3, a))
+			3:
+				# Tiny stars circling a space fish.
+				var ang := t * 1.2 + TAU * i / 3.0
+				Art.flat(ci, Art.star_pts(Vector2(cos(ang) * 46.0, sin(ang) * 22.0), 4.0, 1.4, 4), Color(1.0, 1.0, 0.85, 0.85))
 
 
 ## Soft glow and turning rays behind a fish (catch card, book), in the
@@ -80,7 +121,7 @@ static func sparkles(ci: CanvasItem, c: Vector2, r: float, t: float, n: int, col
 # --- Shared parts ------------------------------------------------------------------------
 
 static func _c(col: Color) -> Color:
-	return Color(SIL, col.a) if _sil else col
+	return Color(SIL, col.a) if _sil else _w(col)
 
 
 ## Closed fish body from nose (L, nose_y) to the tail joint (-B), height 2H.
@@ -114,7 +155,7 @@ static func _tail(ci: CanvasItem, joint: Vector2, kind: String, s: float, col: C
 	Art.toon(ci, _tail_pts(kind, s), _c(col), W, 0.3)
 	if not _sil:
 		for k in [-1.0, 0.0, 1.0]:
-			Art.line(ci, Vector2(-s * 0.15, k * s * 0.12), Vector2(-s * 0.7, k * s * 0.42), Color(Art.shade_of(col, 0.3), 0.5), 1.6)
+			Art.line(ci, Vector2(-s * 0.15, k * s * 0.12), Vector2(-s * 0.7, k * s * 0.42), Color(Art.shade_of(_w(col), 0.3), 0.5), 1.6)
 	Art.pop(ci)
 
 
@@ -126,6 +167,7 @@ static func _fin(ci: CanvasItem, pts: PackedVector2Array, col: Color) -> void:
 static func _pec(ci: CanvasItem, at: Vector2, col: Color, t: float, size: float = 1.0) -> void:
 	if _sil:
 		return
+	col = _w(col)
 	Art.push(ci, at, 0.45 + sin(t * 7.0) * 0.25, Vector2.ONE * size)
 	Art.toon(ci, PackedVector2Array([Vector2(2, -1.5), Vector2(-5, -6), Vector2(-13, -7), Vector2(-11, -2), Vector2(-14, 3), Vector2(-5, 3.5), Vector2(2, 1.5)]), col, W2, 0.0)
 	var ray := Color(Art.shade_of(col, 0.45), 0.7)
@@ -170,7 +212,7 @@ static func _paint(ci: CanvasItem, shape: PackedVector2Array, body: PackedVector
 		return
 	var p := Art.clipped(shape, body)
 	if p.size() >= 3:
-		Art.flat(ci, p, col)
+		Art.flat(ci, p, _w(col))
 
 
 static func _band(x: float, w: float, h: float, tilt: float = 0.0, y0: float = -1.0, y1: float = 1.0) -> PackedVector2Array:

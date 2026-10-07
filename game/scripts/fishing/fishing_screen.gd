@@ -123,6 +123,7 @@ func _ready() -> void:
 	_rng.randomize()
 	_world = Fishing.world()
 	_art = FishingScene.new(_world, WorldLook.look_of(_location()))
+	FishArt.world = _world
 	_bg = _layer(_draw_bg)
 	_scene = _layer(_draw_scene)
 	_hud = _layer(_draw_hud)
@@ -453,7 +454,7 @@ func _start_reel() -> void:
 	_tries = FishData.reel_tries(Fishing.rod)
 	_new_zone()
 	_set_state("reel")
-	_say(tr("FISHING_HINT_REEL"), Color("b6f36a"), 99.0)
+	_say(tr("FISHING_HINT_REEL"), Color("b6f36a") if _world != FishingScene.ACID else Color("fff3b0"), 99.0)
 	_kick_v += 10.0
 	_dip_v += 30.0
 	Sfx.play("upgrade", 0.9)
@@ -772,6 +773,11 @@ func _show_card() -> void:
 	info.add_child(size_l)
 	info.add_child(Views.chip("coin", NumFormat.short(float(fish["value"])), 32))
 	box.add_child(info)
+	var perfect := int(fish.get("perfect", 0))
+	if perfect > 0:
+		var pl := Views.label(tr("FISHING_PERFECT_BONUS") % roundi(FishData.PERFECT_BONUS * perfect * 100.0), 26, Color("d08a00"), true)
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(pl)
 	if Fishing.is_full():
 		var full := Views.label(tr("FISHING_BUCKET_FULL"), 26, Color("d8363c"), true)
 		full.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1262,6 +1268,10 @@ static func _helper_look() -> Dictionary:
 
 # --- Leaving -----------------------------------------------------------------------------------
 
+func _exit_tree() -> void:
+	FishArt.world = 0
+
+
 func close() -> void:
 	if _done:
 		return
@@ -1302,8 +1312,13 @@ func debug_state(s: String) -> void:
 			_escape(tr("FISHING_ESCAPED"))
 		_:
 			if s.begins_with("catch:"):
-				var id := s.substr(6)
+				# catch:<fish id>[:<perfect pulls>]
+				var parts := s.split(":")
+				var id := parts[1]
 				_fish = {"id": id, "size": FishData.size_from_roll(id, 0.8), "value": FishData.price(id, FishData.size_from_roll(id, 0.8), Fishing.base_rate())}
+				if parts.size() > 2 and int(parts[2]) > 0:
+					_fish["perfect"] = int(parts[2])
+					_fish["value"] = ceilf(float(_fish["value"]) * (1.0 + FishData.PERFECT_BONUS * int(parts[2])))
 				_card_info = Fishing.record(_fish)
 				_show_card()
 
@@ -1560,8 +1575,10 @@ func _float_pos() -> Vector2:
 			return _target + Vector2(0, sin(_t * 2.6) * 4.0 * _k + dip)
 		"bite":
 			return _target + Vector2(sin(_t * 30.0) * 3.0, 14.0 + absf(sin(_t * 9.0)) * 10.0) * _k + Vector2(0, dip)
-		"reel", "land":
+		"reel":
 			return _line_end() + Vector2(0, dip)
+		"land":
+			return _leap_pos(_st / LAND_SEC) + Vector2(0, 20.0 * _k)
 	return _target
 
 
