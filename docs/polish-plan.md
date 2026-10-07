@@ -45,3 +45,15 @@ labelled as such).
 
 When two workers must touch the same file, each keeps its edit small and in
 its own functions; the lead merges.
+
+## Added 2026-10-07 evening (Mark: "переделай фабрику и офис, выглядит пусто; поработай над интерфейсом; добавь стрик как в Duolingo")
+| worker   | owns |
+|----------|------|
+| W-Rooms2 | factory_art.gd, factory_room.gd, office_art.gd, office_room.gd, office_bar.gd, i18n/rooms.csv |
+| W-Streak | streak logic in progress.gd (own functions) + content.gd (streak rewards), new streak_view.gd / streak badge, daily gift screen integration, i18n/streak.csv |
+Streak, kids-safe version of Duolingo's: a flame with the count of days in a row the
+player opened the game (and did one small thing), milestone rewards, a weekly
+calendar; no countdown timers or push pressure; a missed day is covered by a free
+"streak freeze" earned by playing, and a broken streak keeps the best record and
+starts again gently (no loss of anything owned).
+A general interface pass (HUD, dock, cards, panels) happens after these merge.
