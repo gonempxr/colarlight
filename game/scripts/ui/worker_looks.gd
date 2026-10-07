@@ -1,29 +1,45 @@
 class_name WorkerLooks
 extends RefCounted
-## The workers of the four worlds and their 13 evolution forms each
-## (0 = the base look, 1..12 bought), drawn with the Art toon kit in the
-## diver's space: feet at 0,0, facing +x, about 80 px tall at scale 1
-## (crowns, wings and ears stick out above that).
+## The workers of the four worlds: 4 gear levels each (bought with coins,
+## GameState.evo) and skins (bought with pearls, Content.SKINS), drawn with
+## the Art toon kit in the diver's space: feet at 0,0, facing +x, about
+## 90 px tall at scale 1 (crowns, wings and ears stick out above that).
+##
+## A look is one int "code" (the "form" in Chars.diver's pose and the
+## `form` argument below): gear (0..3 = level 1..4) + 4 * slot, where slot
+## 0 = whatever skin the world's workers wear now (so passing the bare gear
+## index 0..3 shows the workers as they are), slot 1 = no skin and slot
+## 2.. = skin slot - 2 of Content.skins_of(world). code() builds one.
 ##
 ## Chars.diver hands a worker over to `draw` when its pose has a "form"
-## (or a "world" other than the ocean). Every form is a recipe (FORMS_*):
-## a head, a torso, arms, legs, things on the back and on top of the head,
-## a tool and effects, each picked from the part library below and colored
-## by the recipe. Parts are drawn once into the part cache and pasted.
-##
-## Rarity (rarity()): 0 base (form 0), 1 rare (1-4), 2 epic (5-8),
-## 3 legendary (9-11), 4 mythic (12).
+## (or a "world" other than the ocean). Every look is a recipe: a gear
+## level (GEAR_*), recolored and patterned by a pattern skin (SKIN_ART:
+## main color + a motif drawn over the helmet, suit, sleeves and legs), or
+## a costume skin (one of the old evolution forms, FORMS_*, that keeps the
+## gear's tanks on its back). A recipe picks a head, a torso, arms, legs,
+## things on the back and on top of the head, a tool and effects from the
+## part library below. Parts are drawn once into the part cache and pasted.
 ##
 ## Non-ocean workers never swim: "swim" turns into "walk" (legs step, arms
 ## swing, upright). Workers whose legs are a tail, tentacles, a blob or a
 ## wisp glide instead of stepping.
 
 const WORLDS := ["ocean", "volcano", "acid", "moon"]
+## Gear levels per world.
+const GEARS := 4
+## Look codes per world (gear + 4 * slot, slot 0..15).
+const CODES := 64
+## The old 13 evolution forms (now the costume skins' recipes).
 const FORMS := 13
 const RARITY_KEYS := ["RARITY_BASE", "RARITY_RARE", "RARITY_EPIC", "RARITY_LEGENDARY", "RARITY_MYTHIC"]
 const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b06cf0"), Color("ffc93c"), Color("ff5ab4")]
+## Color of each gear level's badge (level 1..4).
+const GEAR_COLORS: Array[Color] = [Color("8ec9f0"), Color("5cd05f"), Color("ff9a2e"), Color("ffc93c")]
 ## Soft rim light of each world's silhouettes.
 const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff")]
+## Heads of the gear looks are a bit bigger than the old forms' (the
+## reference sheets: big round heads on small bodies).
+const GEAR_HEAD := 1.16
 
 const SHOULDER_F := Vector2(11, -39)
 const SHOULDER_B := Vector2(-11, -39)
@@ -35,41 +51,125 @@ static func world_index(world: String) -> int:
 	return maxi(0, WORLDS.find(world))
 
 
-## i18n key of a form's name: FORM_OCEAN_0 .. FORM_MOON_12.
+## Look code of gear index `gear` (0..3) with skin `skin` (index in
+## Content.skins_of(world); -1 = no skin).
+static func code(gear: int, skin: int = -1) -> int:
+	return clampi(gear, 0, GEARS - 1) + GEARS * (clampi(skin, -1, CODES / GEARS - 3) + 2)
+
+
+## Gear index (0..3) of a look code.
+static func gear_of(form: int) -> int:
+	return posmod(form, GEARS)
+
+
+## Skin index of a resolved look code (-1 = no skin).
+static func skin_of_code(form: int) -> int:
+	return form / GEARS - 2
+
+
+static var _skin_idx := {}
+
+
+## Index of skin `id` in its world's list (-1 if unknown).
+static func skin_index(id: String) -> int:
+	if _skin_idx.is_empty():
+		for w: String in WORLDS:
+			var list := Content.skins_of(w)
+			for i in list.size():
+				_skin_idx[list[i]["id"]] = i
+	return int(_skin_idx.get(id, -1))
+
+
+## Content.SKINS entry of a resolved look code ({} = no skin).
+static func skin_entry(world: String, form: int) -> Dictionary:
+	var i := skin_of_code(form)
+	if i < 0:
+		return {}
+	var list := Content.skins_of(world)
+	return list[i] if i < list.size() else {}
+
+
+## Look code with the skin (if any) `world`'s workers wear now: codes 0..3
+## become gear + that skin; other codes stay as they are.
+static func resolve(world: String, form: int) -> int:
+	form = clampi(form, 0, CODES - 1)
+	if form >= GEARS:
+		return form
+	return code(form, _worn(world))
+
+
+static var _worn_frame := -1
+static var _worn_cache := {}
+
+
+## Index of the skin `world`'s workers wear (-1 none), read from Progress
+## once a frame (no autoload reference, so test scripts can load this).
+static func _worn(world: String) -> int:
+	var f := Engine.get_process_frames()
+	if f != _worn_frame:
+		_worn_frame = f
+		_worn_cache.clear()
+	if _worn_cache.has(world):
+		return _worn_cache[world]
+	var idx := -1
+	var ml := Engine.get_main_loop()
+	var p: Node = ml.root.get_node_or_null("Progress") if ml is SceneTree else null
+	if p != null and p.has_method("skin_of"):
+		idx = skin_index(str(p.call("skin_of", world)))
+	_worn_cache[world] = idx
+	return idx
+
+
+## Forget the cached worn skins (after equipping one in the same frame).
+static func refresh_worn() -> void:
+	_worn_frame = -1
+
+
+## i18n key of a look's name: the gear level (GEAR_OCEAN_1..4) or the skin
+## (SKIN_<ID>, or the old form's FORM_<WORLD>_<n> for a costume).
 static func name_key(world: String, form: int) -> String:
-	return "FORM_%s_%d" % [world.to_upper(), clampi(form, 0, FORMS - 1)]
+	form = resolve(world, form)
+	var sk := skin_entry(world, form)
+	if sk.is_empty():
+		return gear_key(world, gear_of(form))
+	return skin_key(sk)
 
 
-## 0 base, 1 rare (forms 1-4), 2 epic (5-8), 3 legendary (9-11), 4 mythic (12).
-static func rarity(form: int) -> int:
-	if form <= 0:
-		return 0
-	if form <= 4:
-		return 1
-	if form <= 8:
-		return 2
-	if form <= 11:
-		return 3
-	return 4
+## i18n key of gear index 0..3 of a world: GEAR_OCEAN_1 .. GEAR_MOON_4.
+static func gear_key(world: String, gear: int) -> String:
+	return "GEAR_%s_%d" % [world.to_upper(), clampi(gear, 0, GEARS - 1) + 1]
 
 
-static func rarity_color(form: int) -> Color:
-	return RARITY_COLORS[rarity(form)]
+## i18n key of a Content.SKINS entry.
+static func skin_key(sk: Dictionary) -> String:
+	if sk.has("form"):
+		return "FORM_%s_%d" % [str(sk["world"]).to_upper(), int(sk["form"])]
+	return "SKIN_" + str(sk["id"]).to_upper()
 
 
-## The color a locked form's silhouette glows with (its world's rim light).
+## 0 base (no skin), 1 rare, 2 epic, 3 legendary.
+static func rarity(form: int, world: String = "ocean") -> int:
+	return int(skin_entry(world, resolve(world, form)).get("rarity", 0))
+
+
+static func rarity_color(form: int, world: String = "ocean") -> Color:
+	var r := rarity(form, world)
+	return RARITY_COLORS[r] if r > 0 else GEAR_COLORS[gear_of(form)]
+
+
+## The color a locked look's silhouette glows with (its world's rim light).
 static func silhouette_color(world: String) -> Color:
 	return RIM[world_index(world)]
 
 
-## True when the form's tool is swung like a pick (false: pushed in like a drill).
+## True when the look's tool is swung like a pick (false: pushed in like a drill).
 static func swings(world: String, form: int) -> bool:
-	return not (_spec(world_index(world), form).get("tool", "pick") in THRUST)
+	return not (_spec(world_index(world), resolve(world, form)).get("tool", "pick") in THRUST)
 
 
 ## Where the tool meets the deposit in the worker's own space (as Chars.dig_tip).
 static func dig_tip(world: String, form: int) -> Vector2:
-	var sp := _spec(world_index(world), form)
+	var sp := _spec(world_index(world), resolve(world, form))
 	var big: float = sp.get("size", 1.0)
 	match sp.get("tool", "pick"):
 		"drill":
@@ -343,18 +443,198 @@ const FORMS_MOON: Array[Dictionary] = [
 	"orb_shape": "star", "fx": ["sparkles"], "glow": Color("ffd23f")},
 ]
 
+# --- Gear levels (the reference sheets: level 1..4 per world) -------------------------
+#
+# Extra recipe keys of the gear looks:
+#   hs: head scale; visor: a colored ring around the face opening (hood,
+#   miner, hazmat); cuff: bands at the wrists and ankles; pad: elbow and knee
+#   pads; pouch: pouches on the belt; toe: stripes on the boots; tank_c: tank
+#   color (bc stays free for a costume's back parts); mk: the keys a pattern
+#   skin recolors with its main color (default MAIN_KEYS).
+# Back part "hose": a hose from the tank to the helmet.
+# Emblems "panel" (a chest box with lights) and "medal" (a keyhole medal).
+
+const MAIN_KEYS := ["suit", "hc", "arm_c", "leg_c"]
+
+const GEAR_OCEAN: Array[Dictionary] = [
+	# 1 mask and snorkel, striped shirt
+	{"head": "kid", "hair": "bald", "mask": Color("2f6fe0"), "snorkel": true, "suit": Color("f4f7ff"), "pattern": "stripes",
+	"pc": Color("2a4a9a"), "arms": "short", "arm_c": Color("f4f7ff"), "legs": "bare_fins", "leg_c": Color("e8eef8"),
+	"boot": Color("2f6fe0"), "tool": "pick", "tc": Color("b8c4d8"), "th": Color("c98249"), "fx": ["bubbles"],
+	"mk": ["suit", "arm_c", "hc"], "hc": Color("2f6fe0")},
+	# 2 orange suit and a tank
+	{"head": "hood", "hc": Color("ff9a2e"), "suit": Color("ff9a2e"), "belt": Color("2a3a7a"), "glove": Color("2a3a7a"),
+	"legs": "fins", "leg_c": Color("ff9a2e"), "boot": Color("2f6fe0"), "back": ["tank"], "tank_c": Color("c8d4e4"),
+	"tool": "pick", "tc": Color("b8c4d8"), "th": Color("8e552c"), "fx": ["bubbles"]},
+	# 3 helmet suit: a blue visor ring, cuffs and a hose
+	{"head": "hood", "hc": Color("ff9a2e"), "visor": Color("2f6fe0"), "suit": Color("ff9a2e"), "belt": Color("2a3a7a"),
+	"glove": Color("2a3a7a"), "cuff": Color("2f6fe0"), "legs": "fins", "leg_c": Color("ff9a2e"), "boot": Color("2f6fe0"),
+	"back": ["tank", "hose"], "tank_c": Color("c8d4e4"), "tool": "pick", "tc": Color("b8c4d8"), "th": Color("2f6fe0"), "fx": ["bubbles"]},
+	# 4 brass diving helmet and a big pick
+	{"head": "brass", "hc": Color("f5a623"), "suit": Color("ff9a2e"), "belt": Color("2a3a7a"), "glove": Color("2a3a7a"),
+	"cuff": Color("2f6fe0"), "legs": "fins", "leg_c": Color("ff9a2e"), "boot": Color("2f6fe0"), "back": ["tank", "hose"],
+	"tank_c": Color("c8d4e4"), "tool": "pick", "tc": Color("dfe6f0"), "th": Color("f2b632"), "fx": ["bubbles"]},
+]
+
+const GEAR_VOLCANO: Array[Dictionary] = [
+	# 1 dark suit, helmet with a headlamp
+	{"head": "miner", "hc": Color("2a3550"), "hc2": Color("ff9a2e"), "suit": Color("2a3550"), "belt": Color("8a94a8"),
+	"glove": Color("1a1f30"), "legs": "boots", "leg_c": Color("2a3550"), "boot": Color("1a1f30"), "toe": Color("ffcf33"),
+	"tool": "pick", "tc": Color("b8c4d8"), "th": Color("8e552c")},
+	# 2 blue shoulder and chest plates, pouches
+	{"head": "miner", "hc": Color("2a3550"), "hc2": Color("ff9a2e"), "torso": "armor", "suit": Color("2a3550"),
+	"plate": Color("3aa0e8"), "belt": Color("4a5068"), "pouch": Color("5a6078"), "arms": "pauldron", "arm_c": Color("2a3550"),
+	"glove": Color("1a1f30"), "legs": "boots", "leg_c": Color("2a3550"), "boot": Color("1a1f30"), "toe": Color("ffcf33"),
+	"tool": "pick", "tc": Color("b8c4d8"), "th": Color("3a7ad0")},
+	# 3 a blue visor ring, orange elbow pads
+	{"head": "miner", "hc": Color("2a3550"), "hc2": Color("ff9a2e"), "visor": Color("3aa0e8"), "torso": "armor",
+	"suit": Color("2a3550"), "plate": Color("3aa0e8"), "belt": Color("4a5068"), "pouch": Color("5a6078"), "arms": "pauldron",
+	"arm_c": Color("2a3550"), "pad": Color("ff9a2e"), "glove": Color("1a1f30"), "legs": "boots", "leg_c": Color("2a3550"),
+	"boot": Color("1a1f30"), "toe": Color("ffcf33"), "tool": "pick", "tc": Color("dfe6f0"), "th": Color("3a7ad0")},
+	# 4 full blue armor, a keyhole medal, a big lamp
+	{"head": "miner", "hc": Color("2a3a62"), "hc2": Color("ff9a2e"), "visor": Color("3aa0e8"), "big_lamp": true,
+	"torso": "armor", "suit": Color("2a5ab0"), "plate": Color("4ab4f4"), "emblem": "medal", "ec": Color("ff9a2e"),
+	"belt": Color("2a3a62"), "pouch": Color("ff9a2e"), "arms": "pauldron", "arm_c": Color("3a9ae0"), "pad": Color("ff9a2e"),
+	"glove": Color("1a1f30"), "cuff": Color("ff9a2e"), "legs": "boots", "leg_c": Color("6a90c8"), "boot": Color("1a1f30"),
+	"toe": Color("ffcf33"), "tool": "pick", "tc": Color("8ad0ff"), "th": Color("3a7ad0")},
+]
+
+const GEAR_ACID: Array[Dictionary] = [
+	# 1 hazmat hood and goggles
+	{"head": "hazmat", "hc": Color("ffd23f"), "hc2": Color("2a2f45"), "goggles": Color("5cd05f"), "suit": Color("ffd23f"),
+	"belt": Color("2a2f45"), "glove": Color("2a2f45"), "legs": "boots", "leg_c": Color("ffd23f"), "boot": Color("2a2f45"),
+	"tool": "pick", "tc": Color("9cff3a"), "th": Color("2a2f45")},
+	# 2 gas mask, a green tank and a hose
+	{"head": "gasmask", "hc": Color("ffd23f"), "hc2": Color("4a4f3a"), "suit": Color("ffd23f"), "belt": Color("2a2f45"),
+	"glove": Color("2a2f45"), "legs": "boots", "leg_c": Color("ffd23f"), "boot": Color("2a2f45"), "back": ["tank", "hose"],
+	"tank_c": Color("5cd05f"), "tool": "pick", "tc": Color("9cff3a"), "th": Color("2a2f45")},
+	# 3 big visor, twin tanks, hazard stripes, green cuffs
+	{"head": "hazmat", "hc": Color("ffd23f"), "hc2": Color("2a2f45"), "visor": Color("5cd05f"), "suit": Color("ffd23f"),
+	"pattern": "hazard", "pc": Color("2a2f45"), "belt": Color("2a2f45"), "glove": Color("2a2f45"), "cuff": Color("5cd05f"),
+	"legs": "boots", "leg_c": Color("ffd23f"), "boot": Color("2a2f45"), "back": ["twin_tanks", "hose"], "tank_c": Color("5cd05f"),
+	"tool": "pick", "tc": Color("9cff3a"), "th": Color("3a7a3a")},
+	# 4 armored hazmat: plates, a flask badge, a warning light
+	{"head": "hazmat", "hc": Color("ffd23f"), "hc2": Color("2a2f45"), "visor": Color("5cd05f"), "top": ["dome_light"],
+	"torso": "armor", "suit": Color("ffd23f"), "plate": Color("9aa4b8"), "emblem": "flask", "ec": Color("9cff3a"),
+	"belt": Color("2a2f45"), "pouch": Color("4a5068"), "arms": "pauldron", "arm_c": Color("ffd23f"), "glove": Color("2a2f45"),
+	"cuff": Color("5cd05f"), "pad": Color("4a5068"), "legs": "boots", "leg_c": Color("ffd23f"), "boot": Color("2a2f45"),
+	"back": ["twin_tanks", "hose"], "tank_c": Color("5cd05f"), "tool": "pick", "tc": Color("b6ff3c"), "th": Color("4a5068")},
+]
+
+const GEAR_MOON: Array[Dictionary] = [
+	# 1 white suit with a chest light
+	{"head": "astro", "hc": Color("f4f7ff"), "hc2": Color("5af0ff"), "face": "screen", "eye": Color("5af0ff"),
+	"suit": Color("f4f7ff"), "emblem": "panel", "ec": Color("5af0ff"), "glove": Color("f4f7ff"), "cuff": Color("5af0ff"),
+	"legs": "boots", "leg_c": Color("f4f7ff"), "boot": Color("f4f7ff"), "tool": "pick", "tc": Color("8ff0ff"), "th": Color("2a2f45")},
+	# 2 a backpack
+	{"head": "astro", "hc": Color("f4f7ff"), "hc2": Color("5af0ff"), "face": "screen", "eye": Color("5af0ff"),
+	"suit": Color("f4f7ff"), "emblem": "panel", "ec": Color("5af0ff"), "belt": Color("b8c4d8"), "glove": Color("f4f7ff"),
+	"cuff": Color("5af0ff"), "legs": "boots", "leg_c": Color("f4f7ff"), "boot": Color("f4f7ff"), "back": ["astro_pack"],
+	"bc": Color("b8b0e0"), "tool": "pick", "tc": Color("8ff0ff"), "th": Color("2a2f45")},
+	# 3 glowing elbow and knee pads
+	{"head": "astro", "hc": Color("f4f7ff"), "hc2": Color("5af0ff"), "face": "screen", "eye": Color("5af0ff"),
+	"suit": Color("f4f7ff"), "emblem": "panel", "ec": Color("5af0ff"), "belt": Color("8a94a8"), "glove": Color("f4f7ff"),
+	"cuff": Color("5af0ff"), "pad": Color("5af0ff"), "legs": "boots", "leg_c": Color("f4f7ff"), "boot": Color("f4f7ff"),
+	"back": ["astro_pack"], "bc": Color("b8b0e0"), "tool": "pick", "tc": Color("8ff0ff"), "th": Color("2a2f45")},
+	# 4 antenna, armor plates, a planet badge, pouches
+	{"head": "astro", "hc": Color("f4f7ff"), "hc2": Color("5af0ff"), "face": "screen", "eye": Color("5af0ff"), "top": ["antenna"],
+	"torso": "armor", "suit": Color("f4f7ff"), "plate": Color("dfe6f4"), "emblem": "planet", "ec": Color("5a9af0"),
+	"belt": Color("4a5068"), "pouch": Color("5af0ff"), "arms": "pauldron", "arm_c": Color("f4f7ff"), "glove": Color("f4f7ff"),
+	"cuff": Color("5af0ff"), "pad": Color("5af0ff"), "legs": "boots", "leg_c": Color("f4f7ff"), "boot": Color("f4f7ff"),
+	"back": ["astro_pack"], "bc": Color("b8b0e0"), "tool": "pick", "tc": Color("8ff0ff"), "th": Color("2a2f45"),
+	"mk": ["suit", "hc", "arm_c", "leg_c", "plate"]},
+]
+
+# --- Pattern skins ----------------------------------------------------------------------
+# main: the suit color (MAIN_KEYS of the gear); motif + mc / mc2: what is
+# drawn over the helmet, suit, sleeves and legs; set: other keys to change.
+# Motifs: shells, jelly, coral, bolts, circuit, swirl, camo, speckle, cracks,
+# spots, bubbles, crystal, craters, bands, stars, galaxy, aurora, constellation.
+
+const SKIN_ART := {
+	"ocean_shells": {"main": Color("3a8ae8"), "motif": "shells", "mc": Color("eaf6ff"), "mc2": Color("9ad0ff")},
+	"ocean_jelly": {"main": Color("9a5ae8"), "motif": "jelly", "mc": Color("e8d0ff"), "mc2": Color("c8a0ff")},
+	"ocean_coral": {"main": Color("fff4ee"), "motif": "coral", "mc": Color("ff5a4a"), "mc2": Color("ff8a6a"), "set": {"glove": Color("ff5a4a")}},
+	"ocean_storm": {"main": Color("1f3fb8"), "motif": "bolts", "mc": Color("8ff0ff"), "mc2": Color("ffffff")},
+	"ocean_circuit": {"main": Color("1a4a5a"), "motif": "circuit", "mc": Color("5af0ff"), "mc2": Color("bff8ff"), "set": {"glove": Color("1a2a3a")}},
+	"ocean_swirl": {"main": Color("3a3ad0"), "motif": "swirl", "mc": Color("9ab8ff"), "mc2": Color("d8e4ff")},
+	"volcano_smoke": {"main": Color("4a4458"), "motif": "camo", "mc": Color("6a6278"), "mc2": Color("2e2a38")},
+	"volcano_granite": {"main": Color("c8c4c0"), "motif": "speckle", "mc": Color("6a6460"), "mc2": Color("f4f0ea")},
+	"volcano_rust": {"main": Color("6a2a2a"), "motif": "camo", "mc": Color("8a3a32"), "mc2": Color("3a1a1e")},
+	"volcano_magma": {"main": Color("3a2228"), "motif": "cracks", "mc": Color("ff6a1a"), "mc2": Color("ffd23f")},
+	"volcano_toxic": {"main": Color("1e5a2a"), "motif": "cracks", "mc": Color("5cff5a"), "mc2": Color("d8ffb0")},
+	"volcano_amethyst": {"main": Color("3a1e5a"), "motif": "cracks", "mc": Color("c06aff"), "mc2": Color("f0d0ff")},
+	"acid_spots": {"main": Color("7cd04a"), "motif": "spots", "mc": Color("3a8a2a"), "mc2": Color("b8f07a")},
+	"acid_camo": {"main": Color("8a8a4a"), "motif": "camo", "mc": Color("5a6a2a"), "mc2": Color("b8b070")},
+	"acid_bubbles": {"main": Color("2ab8a0"), "motif": "bubbles", "mc": Color("c8fff0"), "mc2": Color("ffffff")},
+	"acid_glow": {"main": Color("23302a"), "motif": "cracks", "mc": Color("9cff3a"), "mc2": Color("f0ffc0")},
+	"acid_neon": {"main": Color("d03ac0"), "motif": "bolts", "mc": Color("b6ff3c"), "mc2": Color("f0ffc0")},
+	"acid_crystal": {"main": Color("3a7ad8"), "motif": "crystal", "mc": Color("8ad8ff"), "mc2": Color("e0f8ff")},
+	"moon_crater": {"main": Color("7a90b8"), "motif": "craters", "mc": Color("5a6a90"), "mc2": Color("a8b8d8")},
+	"moon_mars": {"main": Color("e8b090"), "motif": "bands", "mc": Color("c06a4a"), "mc2": Color("f8d8c0")},
+	"moon_night": {"main": Color("2a2e6a"), "motif": "stars", "mc": Color("ffffff"), "mc2": Color("9ab0ff")},
+	"moon_galaxy": {"main": Color("3a2a9a"), "motif": "galaxy", "mc": Color("ff6ad8"), "mc2": Color("5af0ff")},
+	"moon_aurora": {"main": Color("1a5a4a"), "motif": "aurora", "mc": Color("5affb0"), "mc2": Color("d0fff0")},
+	"moon_gold": {"main": Color("1e1a2e"), "motif": "constellation", "mc": Color("ffc93c"), "mc2": Color("fff0b0")},
+}
+
+## Back parts that are the gear's tanks (costume skins keep them).
+const GEAR_BACK := ["tank", "twin_tanks", "astro_pack", "hose"]
+
+
 static var _specs := {}
 
 
+## The recipe of world `w`'s look code `form` (resolved: 4..63).
 static func _spec(w: int, form: int) -> Dictionary:
-	form = clampi(form, 0, FORMS - 1)
-	var k := w * 16 + form
+	form = clampi(form, 0, CODES - 1)
+	if form < GEARS:
+		form += GEARS
+	var k := w * CODES + form
 	var s = _specs.get(k)
 	if s != null:
 		return s
-	var lists: Array = [FORMS_OCEAN, FORMS_VOLCANO, FORMS_ACID, FORMS_MOON]
+	w = clampi(w, 0, 3)
+	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON]
+	var g: Dictionary = gears[w][gear_of(form)]
 	var d: Dictionary = DEFAULT.duplicate()
-	d.merge(lists[clampi(w, 0, 3)][form], true)
+	d.merge(g, true)
+	d["hs"] = GEAR_HEAD
+	var sk := skin_entry(WORLDS[w], form)
+	if sk.has("form"):
+		# A costume: the old form, with the gear's tanks on its back.
+		var lists: Array = [FORMS_OCEAN, FORMS_VOLCANO, FORMS_ACID, FORMS_MOON]
+		var c: Dictionary = DEFAULT.duplicate()
+		c.merge(lists[w][clampi(int(sk["form"]), 0, FORMS - 1)], true)
+		var own: Array = c["back"]
+		var keep := []
+		for p: String in g.get("back", []):
+			if p in GEAR_BACK:
+				keep.append(p)
+		var has_own := false
+		for p: String in own:
+			if p in GEAR_BACK or p in ["jetpack", "slime_tank", "propeller"]:
+				has_own = true
+		if not has_own and not keep.is_empty() and not (c["torso"] in ["blob", "ghost"]):
+			c["back"] = keep + own
+			c["tank_c"] = g.get("tank_c", g.get("bc", Color("c8d4e4")))
+		c["hs"] = 1.0 if c["torso"] in ["blob", "ghost", "rock"] else GEAR_HEAD
+		d = c
+	elif not sk.is_empty():
+		var art: Dictionary = SKIN_ART.get(sk["id"], {})
+		var main: Color = art.get("main", d["suit"])
+		for key: String in g.get("mk", MAIN_KEYS):
+			d[key] = main
+		d["motif"] = art.get("motif", "")
+		d["mc"] = art.get("mc", Color.WHITE)
+		d["mc2"] = art.get("mc2", Color.WHITE)
+		if d["head"] == "kid":
+			d["cap"] = true
+		if d["pattern"] == "stripes":
+			d["pc"] = main.lightened(0.5)
+		var extra: Dictionary = art.get("set", {})
+		for key in extra:
+			d[key] = extra[key]
 	# Derived defaults.
 	if not d.has("arm_c"):
 		d["arm_c"] = d["suit"]
@@ -380,12 +660,12 @@ static var _wf := 0
 
 static func _use(world: String, form: int) -> void:
 	_w = world_index(world)
-	_form = clampi(form, 0, FORMS - 1)
-	_wf = _w * 16 + _form
+	_form = resolve(world, form)
+	_wf = _w * CODES + _form
 	_sp = _spec(_w, _form)
 
 
-## Part cache key: the part, the form, the drawing size and two small numbers.
+## Part cache key: the part, the look, the drawing size and two small numbers.
 static func _k(part: int, a: int = 0, b: int = 0) -> int:
 	return (part << 56) | (_wf << 48) | (int(Chars._small) << 47) | (int(Art.fringe_min < 1.0) << 46) \
 			| ((a & 0x3FFFFF) << 24) | (b & 0xFFFFFF)
@@ -619,14 +899,20 @@ static func _back_part(ci: CanvasItem, p: String, dyn: int) -> void:
 	var bc2 := _c("bc2")
 	match p:
 		"tank":
+			var tc: Color = _sp.get("tank_c", bc)
 			Art.t_rect(ci, Rect2(-19, -57, 6, 6), 2, Color("5a5f7a"), 1.8, 0.0)
-			Art.t_rect(ci, Rect2(-25, -53, 13, 34), 6.5, bc, 2.2, 0.6)
-			Art.t_rect(ci, Rect2(-25, -44, 13, 3.5), 1, Art.shade_of(bc, 0.35), 0.0, 0.0)
+			Art.t_rect(ci, Rect2(-25, -53, 13, 34), 6.5, tc, 2.2, 0.6)
+			Art.t_rect(ci, Rect2(-25, -44, 13, 3.5), 1, Color("2f6fe0") if _sp.has("tank_c") else Art.shade_of(tc, 0.35), 0.0, 0.0)
+		"hose":
+			var hose := Art.smooth_pts(PackedVector2Array([Vector2(-17, -56), Vector2(-25, -58), Vector2(-28, -66), Vector2(-22, -73), Vector2(-14, -74)]), 3)
+			Art.line_c(ci, hose, Art.INK, 5.6)
+			Art.line_c(ci, hose, Color("3a3f5c"), 3.0)
 		"twin_tanks":
+			var tc: Color = _sp.get("tank_c", bc)
 			for k in 2:
 				var x := -27.0 + k * 7.0
 				Art.t_rect(ci, Rect2(x + 3, -57, 5, 5), 2, Color("5a5f7a"), 1.6, 0.0)
-				Art.t_rect(ci, Rect2(x, -53, 11, 33), 5.5, Art.shade_of(bc, 0.25 - k * 0.25), 2.2, 0.5)
+				Art.t_rect(ci, Rect2(x, -53, 11, 33), 5.5, Art.shade_of(tc, 0.25 - k * 0.25), 2.2, 0.5)
 				Art.t_rect(ci, Rect2(x, -45, 11, 3), 1, Color("2a2f45"), 0.0, 0.0)
 		"slime_tank":
 			Art.t_rect(ci, Rect2(-28, -58, 16, 38), 6, Color("dff8ff"), 2.4, 0.0)
@@ -636,7 +922,7 @@ static func _back_part(ci: CanvasItem, p: String, dyn: int) -> void:
 			Art.flat(ci, Art.rrect_pts(Rect2(-26, -55, 3, 12), 1.5), Color(1, 1, 1, 0.7))
 			Art.t_rect(ci, Rect2(-29, -61, 18, 6), 2.5, bc, 2.0, 0.0)
 		"astro_pack":
-			Art.t_rect(ci, Rect2(-28, -57, 16, 34), 5, bc, 2.4, 0.5)
+			Art.t_rect(ci, Rect2(-28, -57, 16, 34), 5, _sp.get("tank_c", bc), 2.4, 0.5)
 			Art.t_rect(ci, Rect2(-25, -50, 9, 6), 2, _c("hc2"), 1.5, 0.0)
 			Art.disc(ci, Vector2(-20.5, -33), 2.2, Color("5af0ff"))
 		"jetpack":
@@ -867,11 +1153,17 @@ static func _leg(ci: CanvasItem, legs: String, near: bool) -> void:
 		"bare_fins":
 			Art.t_rect(ci, Rect2(-4, -2, 8, 14), 4, Art.shade_of(SKIN, k), 2.2, 0.0)
 			Art.t_rect(ci, Rect2(-5, -3, 10, 7), 3, lc, 2.2, 0.0)
+			_motif(ci, _SHORTS)
 		"roots":
 			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, lc, 2.2, 0.0)
 			Art.flat(ci, Art.rrect_pts(Rect2(-4.5, 4, 9, 3), 1), Art.shade_of(_c("leg_c"), k + 0.3))
 		_:
 			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, lc, 2.2, 0.0)
+			_motif(ci, _LEG)
+			if _sp.has("pad"):
+				Art.t_circle(ci, Vector2(0.5, 4), 3.3, Art.shade_of(_c("pad"), k), 1.6, 0.0)
+			if _sp.has("cuff"):
+				Art.t_rect(ci, Rect2(-5, 7.5, 10, 3.4), 1.5, Art.shade_of(_c("cuff"), k), 1.6, 0.0)
 
 
 static func _foot(ci: CanvasItem, legs: String, near: bool) -> void:
@@ -900,6 +1192,9 @@ static func _foot(ci: CanvasItem, legs: String, near: bool) -> void:
 		_:
 			Art.toon(ci, Chars._BOOT, b, 2.2, 0.0)
 			Art.t_rect(ci, Rect2(-6, 7, 17, 3), 1.5, Art.shade_of(b, 0.35), 0.0, 0.0)
+			if _sp.has("toe"):
+				for x: float in [5.0, 8.0, 11.0]:
+					Art.t_rect(ci, Rect2(x - 0.8, 3.5 + (x - 5.0) * 0.2, 1.8, 3.2), 0.8, Art.shade_of(_c("toe"), k), 0.0, 0.0)
 
 
 static var _PAW := Art.smooth_pts(PackedVector2Array([Vector2(-6, -2), Vector2(6, -2), Vector2(9, 2), Vector2(17, 4), Vector2(17, 10), Vector2(-6, 10)]), 2)
@@ -1043,11 +1338,15 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 	if _sp.has("belly"):
 		Art.flat(ci, _clip(Art.ellipse_pts(Vector2(2, -28), Vector2(9, 13), 16), shape), _c("belly"))
 	_pattern(ci, shape, pulse)
+	_motif(ci, shape)
 	if kind == "armor":
 		Art.toon(ci, _CUIRASS, _c("plate"), 2.2, 0.6)
 		Art.flat(ci, _clip(Art.rrect_pts(Rect2(-14, -47, 28, 3), 1), _CUIRASS), Color(1, 1, 1, 0.35))
 	if _sp.has("belt"):
 		Art.flat(ci, _clip(Art.rrect_pts(Rect2(-20, -24, 40, 5), 1), shape), _c("belt"))
+		if _sp.has("pouch"):
+			for x: float in [-12.5, 6.0]:
+				Art.t_rect(ci, Rect2(x, -26, 7, 8), 2, _c("pouch"), 1.6, 0.3)
 		Art.t_rect(ci, Rect2(-3, -25, 6, 7), 1.5, Art.GOLD, 1.2, 0.0)
 	_emblem(ci, _sp["emblem"], _c("ec"))
 	# Collar: a helmet ring, or a little neck band under a bare head.
@@ -1149,6 +1448,17 @@ static func _clip_line(pts: PackedVector2Array) -> PackedVector2Array:
 static func _emblem(ci: CanvasItem, kind: String, col: Color) -> void:
 	var c := Vector2(1, -36)
 	match kind:
+		"panel":
+			var big: bool = (_sp["back"] as Array).size() > 0
+			var r := Rect2(c.x - 6.5, c.y - 4.5, 13, 8) if not big else Rect2(c.x - 8, c.y - 5.5, 16, 10)
+			Art.t_rect(ci, r, 2.5, Color("dfe6f0"), 1.6, 0.0)
+			Art.flat(ci, Art.rrect_pts(Rect2(r.position.x + 2, r.position.y + 2, r.size.x * 0.45, r.size.y - 4), 1.2), col)
+			Art.disc(ci, r.position + Vector2(r.size.x - 3.5, 3.0), 1.3, Color("ff6a8a"))
+			Art.disc(ci, r.position + Vector2(r.size.x - 3.5, r.size.y - 3.0), 1.3, Color("ffd23f"))
+		"medal":
+			Art.t_circle(ci, c, 5.5, col, 1.8, 0.3)
+			Art.disc(ci, c + Vector2(0, -1.2), 1.6, Art.INK)
+			Art.flat(ci, PackedVector2Array([c + Vector2(-0.9, -0.6), c + Vector2(0.9, -0.6), c + Vector2(1.4, 3), c + Vector2(-1.4, 3)]), Art.INK)
 		"star":
 			Art.toon(ci, Art.star_pts(c, 5.5, 2.4, 5), col, 1.6, 0.0)
 		"shell", "shell2":
@@ -1176,6 +1486,187 @@ static func _clip_moon(c: Vector2, r: float) -> PackedVector2Array:
 	return res[0] if res.size() > 0 else full
 
 
+# --- Skin motifs ------------------------------------------------------------------------
+
+## A pattern skin's motif over a part (`shape` in the part's own space):
+## small pictures on a jittered grid, each clipped to the part. Drawn
+## inside cached parts, so the clipping runs once per part.
+static func _motif(ci: CanvasItem, shape: PackedVector2Array) -> void:
+	var m: String = _sp.get("motif", "")
+	if m == "" or shape.size() < 3:
+		return
+	var mc := _c("mc")
+	var mc2 := _c("mc2")
+	var b := Art._bounds(shape)
+	var step: float = {"speckle": 6.0, "stars": 8.0, "camo": 10.0, "bubbles": 9.0, "spots": 9.0, "cracks": 13.0,
+			"bands": 7.0, "galaxy": 14.0, "aurora": 9.0}.get(m, 11.0)
+	var i0 := floori(b.position.x / step) - 1
+	var j0 := floori(b.position.y / step) - 1
+	var i1 := ceili(b.end.x / step)
+	var j1 := ceili(b.end.y / step)
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			var h := absi(hash(Vector2i(i, j))) 
+			var p := Vector2((i + 0.5 + ((j & 1) * 0.5)) * step, (j + 0.5) * step) \
+					+ Vector2(float(h % 7) - 3.0, float(h / 7 % 7) - 3.0) * step * 0.07
+			var r := float(h / 49 % 100) / 100.0
+			_motif_at(ci, m, p, r, step, shape, mc, mc2)
+
+
+static func _mfill(ci: CanvasItem, pts: PackedVector2Array, col: Color, shape: PackedVector2Array) -> void:
+	var c := _clip(pts, shape)
+	if c.size() > 2:
+		Art.flat(ci, c, col)
+
+
+static func _mline(ci: CanvasItem, pts: PackedVector2Array, col: Color, w: float, shape: PackedVector2Array) -> void:
+	for piece in Geometry2D.intersect_polyline_with_polygon(pts, shape):
+		if piece.size() > 1:
+			Art.line_c(ci, piece, col, w)
+
+
+## A glowing line: a soft wide stroke under a bright thin one.
+static func _mglow(ci: CanvasItem, pts: PackedVector2Array, col: Color, core: Color, w: float, shape: PackedVector2Array) -> void:
+	_mline(ci, pts, Color(col, 0.45), w * 2.4, shape)
+	_mline(ci, pts, col, w, shape)
+	_mline(ci, pts, core, w * 0.4, shape)
+
+
+static func _motif_at(ci: CanvasItem, m: String, p: Vector2, r: float, step: float, shape: PackedVector2Array, mc: Color, mc2: Color) -> void:
+	var rot := r * TAU
+	match m:
+		"shells":
+			if r < 0.25:
+				_mfill(ci, Art.circle_pts(p, 1.0, 6), mc2, shape)
+				return
+			var fan := PackedVector2Array([p + Vector2(0, 2.6)])
+			for k in 7:
+				var a := PI + PI * k / 6.0
+				fan.append(p + Vector2(cos(a) * 3.6, sin(a) * 3.4 - 0.4))
+			_mfill(ci, fan, mc, shape)
+			_mline(ci, PackedVector2Array([p + Vector2(0, 2.2), p + Vector2(0, -2.8)]), mc2, 0.7, shape)
+		"jelly":
+			if r < 0.3:
+				_mfill(ci, Art.circle_pts(p, 1.1, 6), mc2, shape)
+				return
+			var bell := PackedVector2Array()
+			for k in 7:
+				var a := PI + PI * k / 6.0
+				bell.append(p + Vector2(cos(a) * 3.4, sin(a) * 3.0))
+			_mfill(ci, bell, mc, shape)
+			for x: float in [-2.0, 0.0, 2.0]:
+				_mline(ci, PackedVector2Array([p + Vector2(x, 0.5), p + Vector2(x + 0.8, 2.6), p + Vector2(x, 4.6)]), mc, 0.8, shape)
+		"coral":
+			var base := p + Vector2(0, 4)
+			var top := p + Vector2(0, -4)
+			_mline(ci, PackedVector2Array([base, p, top]), mc, 1.5, shape)
+			_mline(ci, PackedVector2Array([p + Vector2(0, 1), p + Vector2(-3, -2), p + Vector2(-3.5, -4.5)]), mc, 1.2, shape)
+			_mline(ci, PackedVector2Array([p + Vector2(0, -1), p + Vector2(3, -3), p + Vector2(3.5, -5)]), mc2, 1.1, shape)
+		"bolts":
+			if r < 0.35:
+				return
+			var d := Vector2.from_angle(rot) * step * 0.45
+			var n := d.orthogonal().normalized() * 1.6
+			_mglow(ci, PackedVector2Array([p - d, p - d * 0.3 + n, p + d * 0.1 - n, p + d]), mc, mc2, 1.0, shape)
+		"circuit":
+			var a := p + Vector2(-step * 0.45, 0)
+			var e := p + Vector2(step * 0.1, 0)
+			var f := e + Vector2(step * 0.3, -step * 0.3 if r < 0.5 else step * 0.3)
+			_mline(ci, PackedVector2Array([a, e, f]), mc, 0.9, shape)
+			_mfill(ci, Art.circle_pts(f, 1.2, 6), mc2, shape)
+			if r > 0.6:
+				_mfill(ci, Art.circle_pts(a, 1.0, 6), mc, shape)
+		"swirl":
+			var pts := PackedVector2Array()
+			for k in 9:
+				var a := rot + k * 0.75
+				pts.append(p + Vector2.from_angle(a) * (0.6 + k * 0.42))
+			_mline(ci, pts, mc, 1.0, shape)
+			if r > 0.7:
+				_mfill(ci, Art.circle_pts(p + Vector2(4, 3), 0.9, 6), mc2, shape)
+		"camo":
+			var blob := Art.ellipse_pts(p, Vector2(step * 0.42, step * 0.3), 10, rot)
+			_mfill(ci, blob, mc if r < 0.5 else mc2, shape)
+		"speckle":
+			_mfill(ci, Art.circle_pts(p, 0.7 + r * 0.9, 6), mc if r < 0.6 else mc2, shape)
+		"cracks":
+			var d := Vector2.from_angle(rot) * step * 0.5
+			var n := d.orthogonal() * 0.25
+			_mglow(ci, PackedVector2Array([p - d, p - d * 0.2 + n, p + d * 0.3 - n, p + d]), mc, mc2, 0.9, shape)
+			_mglow(ci, PackedVector2Array([p - d * 0.2 + n, p - d * 0.2 + n + d.orthogonal() * 0.6]), mc, mc2, 0.7, shape)
+		"spots":
+			if r < 0.2:
+				return
+			_mfill(ci, Art.circle_pts(p, 1.4 + r * 1.6, 8), mc, shape)
+			if r > 0.75:
+				_mfill(ci, Art.circle_pts(p + Vector2(-0.6, -0.6), 0.7, 6), mc2, shape)
+		"bubbles":
+			if r < 0.25:
+				return
+			var br := 1.2 + r * 1.6
+			_mline(ci, Art.circle_pts(p, br, 10) + PackedVector2Array([p + Vector2(br, 0)]), mc, 0.8, shape)
+			_mfill(ci, Art.circle_pts(p + Vector2(-br * 0.4, -br * 0.4), 0.55, 5), mc2, shape)
+		"crystal":
+			var tri := PackedVector2Array([p + Vector2.from_angle(rot) * 4.5, p + Vector2.from_angle(rot + 2.2) * 3.5, p + Vector2.from_angle(rot + 4.1) * 4.0])
+			_mfill(ci, tri, Color(mc, 0.85) if r < 0.5 else Color(mc2, 0.7), shape)
+		"craters":
+			if r < 0.3:
+				return
+			var cr := 1.4 + r * 1.8
+			_mfill(ci, Art.circle_pts(p, cr, 10), mc, shape)
+			_mfill(ci, Art.circle_pts(p + Vector2(0.4, 0.5), cr * 0.65, 8), mc2, shape)
+		"bands":
+			if posmod(floori(p.y / step), 3) != 0:
+				return
+			var y := p.y
+			var wave := PackedVector2Array()
+			for k in 4:
+				var x := p.x - step * 0.6 + k * step * 0.4
+				wave.append(Vector2(x, y + sin(x * 0.5) * 0.8))
+			_mline(ci, wave, mc if r < 0.6 else mc2, 1.8, shape)
+		"stars":
+			if r < 0.35:
+				_mfill(ci, Art.circle_pts(p, 0.5, 5), mc2, shape)
+			else:
+				_mfill(ci, Art.star_pts(p, 1.8, 0.6, 4, 0.0), mc, shape)
+		"galaxy":
+			_mfill(ci, Art.ellipse_pts(p, Vector2(step * 0.6, step * 0.24), 12, rot * 0.3 - 0.4), Color(mc if r < 0.5 else mc2, 0.5), shape)
+			_mfill(ci, Art.star_pts(p + Vector2(3, -3), 1.8, 0.6, 4, 0.0), Color.WHITE, shape)
+			_mfill(ci, Art.circle_pts(p + Vector2(-4, 3), 0.6, 5), Color.WHITE, shape)
+		"aurora":
+			var wave := PackedVector2Array()
+			for k in 4:
+				var x := p.x - step * 0.6 + k * step * 0.4
+				wave.append(Vector2(x, p.y + sin(x * 0.4 + r * 3.0) * 1.8))
+			_mglow(ci, wave, mc if r < 0.6 else mc2, Color(1, 1, 1, 0.8), 0.9, shape)
+		"constellation":
+			var q := p + Vector2.from_angle(rot) * step * 0.7
+			_mline(ci, PackedVector2Array([p, q]), Color(mc, 0.7), 0.6, shape)
+			_mfill(ci, Art.star_pts(p, 1.9, 0.6, 4, 0.0), mc2, shape)
+			_mfill(ci, Art.circle_pts(q, 0.8, 6), mc, shape)
+
+
+# --- Gear details ---------------------------------------------------------------------
+
+## The lava miner's ear piece (the helmet's side, orange with a dark grille).
+static func _miner_ear(ci: CanvasItem, c: Vector2) -> void:
+	var e := c + Vector2(-17, 3)
+	Art.t_circle(ci, e, 6.2, _c("hc2"), 2.2, 0.3)
+	Art.t_circle(ci, e, 3.4, Art.shade_of(_c("hc"), 0.2), 1.4, 0.0)
+	Art.line_c(ci, PackedVector2Array([e + Vector2(-1, -1.8), e + Vector2(-1, 1.8)]), _c("hc2"), 0.9)
+	Art.line_c(ci, PackedVector2Array([e + Vector2(1, -1.8), e + Vector2(1, 1.8)]), _c("hc2"), 0.9)
+
+
+## The lava miner's headlamp on the helmet's crown.
+static func _miner_lamp(ci: CanvasItem, c: Vector2) -> void:
+	var big := 1.25 if _sp.get("big_lamp", false) else 1.0
+	var l := c + Vector2(1, -20 - 2.0 * big)
+	Art.t_rect(ci, Rect2(l.x - 6 * big, l.y + 3 * big, 12 * big, 5), 2, Art.shade_of(_c("hc"), 0.3), 2.0, 0.0)
+	Art.t_circle(ci, l, 7.5 * big, _c("hc2"), 2.2, 0.0)
+	Art.t_circle(ci, l, 5.0 * big, Color("ffe066"), 1.4, 0.0)
+	Art.flat(ci, Art.circle_pts(l + Vector2(-1.6, -1.6) * big, 1.8 * big, 8), Color(1, 1, 1, 0.85))
+
+
 # --- Arms -----------------------------------------------------------------------------
 
 static func _arm(ci: CanvasItem, shoulder: Vector2, angle: float, front: bool) -> void:
@@ -1195,6 +1686,7 @@ static func _arm_shape(ci: CanvasItem, front: bool) -> void:
 		"short":
 			Art.t_rect(ci, Rect2(-4, -3, 8, 19), 4, Art.shade_of(SKIN, k), 2.2, 0.0)
 			Art.t_rect(ci, Rect2(-5, -4, 10, 9), 4, c, 2.2, 0.0)
+			_motif(ci, _SLEEVE_SHORT)
 			g = Art.shade_of(SKIN, k)
 		"bare":
 			Art.t_rect(ci, Rect2(-4, -3, 8, 19), 4, Art.shade_of(SKIN, k), 2.2, 0.0)
@@ -1220,6 +1712,8 @@ static func _arm_shape(ci: CanvasItem, front: bool) -> void:
 			return
 		"pauldron":
 			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
+			_motif(ci, _SLEEVE)
+			_arm_extras(ci, k)
 			Art.t_rect(ci, Rect2(-5, 9, 10, 4), 1.5, Art.shade_of(_c("plate"), k), 0.0, 0.0)
 			Art.toon(ci, Chars._PAULDRON, Art.shade_of(_c("plate"), k), 2.2, 0.4)
 		"spiky":
@@ -1229,9 +1723,25 @@ static func _arm_shape(ci: CanvasItem, front: bool) -> void:
 			Art.crystal(ci, Vector2(3, -4), 8, 2.6, 0.3, Art.shade_of(_c("hc2"), k + 0.1), 1.8)
 		_:
 			Art.t_rect(ci, Rect2(-4.5, -3, 9, 19), 4.5, c, 2.2, 0.0)
+			_motif(ci, _SLEEVE)
+			_arm_extras(ci, k)
 	Art.push(ci, Vector2(0, ARM_LEN))
 	Art.t_circle(ci, Vector2.ZERO, 5.0, g, 2.2, 0.0)
 	Art.pop(ci)
+
+
+static var _SLEEVE := Art.rrect_pts(Rect2(-4.5, -3, 9, 19), 4.5)
+static var _SLEEVE_SHORT := Art.rrect_pts(Rect2(-5, -4, 10, 9), 4)
+static var _LEG := Art.rrect_pts(Rect2(-4.5, -2, 9, 14), 4)
+static var _SHORTS := Art.rrect_pts(Rect2(-5, -3, 10, 7), 3)
+
+
+## Elbow pads and cuffs on a sleeve (`k` = the far arm's shade).
+static func _arm_extras(ci: CanvasItem, k: float) -> void:
+	if _sp.has("pad"):
+		Art.t_circle(ci, Vector2(0, 7), 3.3, Art.shade_of(_c("pad"), k), 1.6, 0.0)
+	if _sp.has("cuff"):
+		Art.t_rect(ci, Rect2(-5, 11, 10, 3.6), 1.5, Art.shade_of(_c("cuff"), k), 1.6, 0.0)
 
 
 static var _CLAW := PackedVector2Array([Vector2(-5, -3), Vector2(5, -3), Vector2(6, 5), Vector2(3, 3), Vector2(1, 6), Vector2(-1, 6), Vector2(-3, 3), Vector2(-6, 5)])
@@ -1362,6 +1872,8 @@ static func _head_box() -> Array:
 	match _sp["head"]:
 		"kid", "lamp":
 			return [Vector2(3, -68), 18.0]
+		"miner":
+			return [Vector2(2, -69), 20.0]
 		"astro", "brass", "heat", "hazmat":
 			return [Vector2(2, -70), 21.0]
 		"robot":
@@ -1388,11 +1900,21 @@ static func _head(ci: CanvasItem, emotion: String, blink: bool, t: float) -> voi
 		dyn = int(fposmod(t * 2.0, 1.0) * 4.0)
 	elif "planet" in (_sp["top"] as Array):
 		dyn = roundi(sin(t * 2.0) * 2.0) + 2
+	var hs: float = _sp.get("hs", 1.0)
+	if hs != 1.0:
+		Art.push(ci, NECK, 0.0, Vector2(hs, hs))
+		Art.push(ci, -NECK)
 	var key := hash([31, _wf, emotion, blink, Chars._small, dyn, Art.fringe_min])
-	if Art.cache_begin(ci, key):
-		return
-	_head_draw(ci, emotion, blink, dyn)
-	Art.cache_end(ci, key)
+	if not Art.cache_begin(ci, key):
+		_head_draw(ci, emotion, blink, dyn)
+		Art.cache_end(ci, key)
+	if hs != 1.0:
+		Art.pop(ci)
+		Art.pop(ci)
+
+
+## Where the head sits on the body (it grows from here, see "hs").
+const NECK := Vector2(2, -49)
 
 
 static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -> void:
@@ -1410,18 +1932,29 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 	match _sp["head"]:
 		"kid", "lamp":
 			_kid_head(ci, c, emotion, blink)
-		"hood", "gasmask":
+		"hood", "gasmask", "miner":
 			Art.t_circle(ci, c, r, hc, 2.6, 0.5)
+			_motif(ci, Art.circle_pts(c, r, 28))
 			var fo := c + Vector2(3, 3)
+			if _sp["head"] == "miner":
+				_miner_ear(ci, c)
 			Art.flat(ci, Art.ellipse_pts(fo, Vector2(15.2, 15.7), 20), Art.shade_of(hc, 0.25) if _sp.get("hc2", hc) == hc or not ("fox_ears" in tops) else _c("hc2"))
 			Art.flat(ci, Art.ellipse_pts(fo, Vector2(13, 13.5), 20), skin)
 			_face(ci, fo, 0.6, emotion, blink, skin)
+			if _sp.has("visor"):
+				var vr := Art.ellipse_pts(fo, Vector2(14.6, 15.1), 24)
+				Art.ring(ci, vr, Art.INK, 6.2)
+				Art.ring(ci, vr, _c("visor"), 3.2)
+				Art.arc_c(ci, fo, 14.6, PI * 1.1, PI * 1.45, 5, Color(1, 1, 1, 0.55), 1.4)
 			if _sp.has("mask"):
 				_swim_mask(ci, fo, 0.6)
 			if _sp["head"] == "gasmask":
 				_gasmask(ci, fo)
+			if _sp["head"] == "miner":
+				_miner_lamp(ci, c)
 		"brass":
 			Art.t_circle(ci, c, 21, hc, 2.8, 0.7)
+			_motif(ci, Art.circle_pts(c, 21, 28))
 			Art.t_rect(ci, Rect2(c.x - 5, c.y - 25, 10, 6), 2, Art.shade_of(hc, 0.25), 2.2, 0.0)
 			Art.t_circle(ci, c + Vector2(-17, -1), 5, Art.shade_of(hc, 0.25), 2.0, 0.0)
 			var pc := c + Vector2(4, 0)
@@ -1442,6 +1975,7 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 			Art.t_rect(ci, Rect2(c.x - 14, c.y - 22, 30, 5), 2, _c("hc2"), 1.6, 0.0)
 		"hazmat":
 			Art.t_circle(ci, c, 21, hc, 2.6, 0.6)
+			_motif(ci, Art.circle_pts(c, 21, 28))
 			var v := Art.rrect_pts(Rect2(c.x - 9, c.y - 12, 28, 25), 10)
 			Art.toon(ci, v, skin, 2.4, 0.0)
 			_face(ci, c + Vector2(5, 1), 0.6, emotion, blink, skin)
@@ -1449,10 +1983,15 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 				_goggles(ci, c + Vector2(5, 1), 0.6)
 			Art.flat(ci, v, Color(0.75, 1.0, 0.85, 0.22))
 			Art.flat(ci, _clip(Art.ellipse_pts(c + Vector2(-3, -8), Vector2(4, 7), 10, 0.5), v), Color(1, 1, 1, 0.55))
-			Art.ring(ci, v, _c("hc2"), 2.0)
+			if _sp.has("visor"):
+				Art.ring(ci, v, Art.INK, 5.6)
+				Art.ring(ci, v, _c("visor"), 3.0)
+			else:
+				Art.ring(ci, v, _c("hc2"), 2.0)
 			Art.t_circle(ci, c + Vector2(-17, 2), 4.5, _c("hc2"), 1.8, 0.0)
 		"astro":
 			Art.t_circle(ci, c, 22, hc, 2.8, 0.6)
+			_motif(ci, Art.circle_pts(c, 22, 28))
 			Art.t_circle(ci, c + Vector2(-18, 1), 5.5, _c("hc2"), 2.0, 0.0)
 			var v := Art.ellipse_pts(c + Vector2(4, 1), Vector2(16, 13.5), 24)
 			Art.toon(ci, v, Color("1a1f3a"), 2.4, 0.0)
@@ -1497,6 +2036,11 @@ static func _kid_head(ci: CanvasItem, c: Vector2, emotion: String, blink: bool) 
 	for sx: float in [-1.0, 1.0]:
 		Art.t_circle(ci, Vector2(19.5 * sx, 3), 5.0, skin, 2.2, 0.0)
 	Art.toon(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(20, 19.5), 32), skin, 2.5, 0.55)
+	if _sp.get("cap", false):
+		var cap := _clip(Art.ellipse_pts(Vector2(0, -0.5), Vector2(20.6, 20.2), 32), PackedVector2Array([Vector2(-30, -40), Vector2(30, -40), Vector2(30, -4), Vector2(-30, -4)]))
+		if cap.size() > 2:
+			Art.toon(ci, cap, _c("hc"), 2.5, 0.5)
+			_motif(ci, cap)
 	Art.pop(ci)
 	_face(ci, c + Vector2(1, 1), 0.82, emotion, blink, skin)
 	if _sp.has("beard"):
@@ -2041,7 +2585,7 @@ const SIL_LINE := Color("1c1534")
 ## box at `center`. revealed = false: a dark silhouette with a soft colored
 ## rim light (its outline still shows the wings, crowns and tentacles).
 static func draw_card(ci: CanvasItem, center: Vector2, size: float, world: String, form: int, revealed: bool, t: float) -> void:
-	form = clampi(form, 0, FORMS - 1)
+	form = resolve(world, form)
 	var fit := _fit(world, form)
 	var r: Rect2 = fit
 	var s := minf(size * 0.9 / maxf(r.size.y, 1.0), size * 0.92 / maxf(r.size.x, 1.0))
@@ -2050,7 +2594,7 @@ static func draw_card(ci: CanvasItem, center: Vector2, size: float, world: Strin
 	if revealed:
 		draw(ci, feet, s, world, form, 1.0, 0.0, 0.0, "show", 0.0, false, Art.GOLD, "happy", Chars.blinking(t, form * 1.7), t, 0, {})
 		return
-	var k := world_index(world) * 16 + form
+	var k := world_index(world) * CODES + form
 	var sil: Array = _sil_cache.get(k, [])
 	if sil.is_empty():
 		sil = _build_silhouette(world, form)
@@ -2072,7 +2616,7 @@ static func draw_card(ci: CanvasItem, center: Vector2, size: float, world: Strin
 
 ## Bounds of the form in its card pose (feet at 0,0, scale 1).
 static func _fit(world: String, form: int) -> Rect2:
-	var k := world_index(world) * 16 + form
+	var k := world_index(world) * CODES + form
 	if _fit_cache.has(k):
 		return _fit_cache[k]
 	Art.measure_begin()

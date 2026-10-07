@@ -73,8 +73,11 @@ var location := 0:
 		location = maxi(0, value)
 		_scale = Balance.loc_scale(location)
 		_gate_scale = Balance.loc_gate_scale(location)
-## Evolution forms bought in this location (0..Balance.EVO_FORMS).
+## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
+## workers wear gear level evo + 1 (1..4).
 var evo := 0
+## Coins given back when an old save's evolution forms became gear (0 if none).
+var gear_refund := 0.0
 ## Finished coins waiting in room 3 to be collected.
 var vault := 0.0
 ## Permanent income multiplier from the old Dive Deeper count (v3 saves).
@@ -166,6 +169,7 @@ func reset() -> void:
 	total_earned = 0.0
 	location = 0
 	legacy_mult = 1.0
+	gear_refund = 0.0
 	boost_end = 0.0
 	_boosted = false
 	managers = {}
@@ -271,7 +275,7 @@ func is_open(key: String) -> bool:
 ## Everything that multiplies every stage: the location's scale, evolution
 ## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
-	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * legacy_mult \
+	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult \
 			* (2.0 if _boosted else 1.0) * float(bonus.get("all", 1.0))
 
 
@@ -295,7 +299,12 @@ func site_id(i: int) -> String:
 	return sites[clampi(i, 0, sites.size() - 1)]
 
 
-## Price of evolution form 1..12 in this location.
+## Gear level the workers wear now (1..4).
+func gear_level() -> int:
+	return evo + 1
+
+
+## Price of gear purchase `form` (1..3 = gear level 2..4) in this location.
 func evo_cost(form: int) -> float:
 	return Balance.evo_cost(location, form)
 
@@ -304,7 +313,7 @@ func can_buy_evo() -> bool:
 	return evo < Balance.EVO_FORMS and coins >= evo_cost(evo + 1)
 
 
-## Buys the next form (evo + 1): x1.10 income for the rest of the location.
+## Buys the next gear level: a big income boost for the rest of the location.
 func buy_evo() -> bool:
 	if not can_buy_evo():
 		return false
@@ -313,6 +322,18 @@ func buy_evo() -> bool:
 	evo_bought.emit(evo)
 	changed.emit()
 	return true
+
+
+## Gear levels for a save from before the gear (12 evolution forms): the
+## coins it paid for forms buy gear levels in order, the rest comes back
+## as coins. Returns [levels bought, coins refunded].
+static func gear_from_old_forms(location: int, forms: int) -> Array:
+	var spent := Balance.old_evo_spent(location, forms)
+	var levels := 0
+	while levels < Balance.EVO_FORMS and spent >= Balance.evo_cost(location, levels + 1) * 0.999:
+		spent -= Balance.evo_cost(location, levels + 1)
+		levels += 1
+	return [levels, maxf(0.0, spent)]
 
 
 ## Moves the vault into the wallet; returns how much.
@@ -789,7 +810,7 @@ func save_game() -> bool:
 		"coins": coins,
 		"total_earned": total_earned,
 		"location": location,
-		"evo": evo,
+		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
 		"levels": levels,
@@ -883,7 +904,15 @@ func _apply_save(data: Dictionary) -> void:
 	else:
 		location = clampi(int(_num(data.get("location"), 0.0)), 0, 10000)
 		legacy_mult = maxf(1.0, _num(data.get("legacy_mult"), 1.0))
-		evo = clampi(int(_num(data.get("evo"), 0.0)), 0, Balance.EVO_FORMS)
+		if data.has("gear"):
+			evo = clampi(int(_num(data.get("gear"), 0.0)), 0, Balance.EVO_FORMS)
+		else:
+			# 3.0 saves had 12 evolution forms: their coins buy gear levels.
+			var old_forms := clampi(int(_num(data.get("evo"), 0.0)), 0, Balance.OLD_EVO_PRICES.size())
+			var g := gear_from_old_forms(location, old_forms)
+			evo = g[0]
+			coins += g[1]
+			gear_refund = g[1]
 		vault = maxf(0.0, _num(data.get("vault"), 0.0))
 	managers[VAULT] = saved_managers.get(VAULT) == true
 	# Saves from before the lift: it gets set up below, after the rest.
