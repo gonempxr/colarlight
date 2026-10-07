@@ -79,6 +79,23 @@ func _initialize() -> void:
 	check(mv.cur_location() == 1, "location advanced")
 	v.call("close")
 	check(closed[0] and not v.visible, "closed signal")
+	# Exactly four worlds, then two "Soon!" islands; no gate on the Moon.
+	check(not mv.is_soon(3) and mv.is_soon(4) and mv.is_soon(5), "islands after the Moon are coming soon")
+	check(mv.world_of(4) == "ice" and mv.world_of(5) == "sky" and mv.world_name(4) == "???", "soon islands: ice castle, sky city, no name")
+	check(mv.tier_of(4) == 0 and not mv.world_name(3).contains("★"), "no ★2 repeats")
+	for w in ma.SOON_WORLDS:
+		check(ma.sil_polys(w).size() >= 8, w + ": soon silhouette shapes")
+	mv.set("demo", {"location": 3, "goals": goals, "cost": 100.0, "coins": 1.0e9, "can": false, "boat": -1.0, "boat2": -2.0})
+	var v3: Control = mv.new()
+	host.add_child(v3)
+	await process_frame
+	check(v3.get("_last") == 5 and v3.get("_first") == 0, "the map shows the four worlds and two soon islands")
+	check(v3.call("_state", 4, 3) == ma.SOON and v3.call("_state", 2, 3) == ma.DONE, "soon state")
+	gold = _buttons(v3).filter(func(b): return b.theme_type_variation == &"GoldButton")
+	check(gold.is_empty(), "no open button on the Moon")
+	var texts := v3.find_children("*", "Label", true, false).map(func(l): return String(l.text))
+	check(texts.has(TranslationServer.translate("MAP_SOON_TITLE")), "the Moon's panel says new worlds are coming")
+	v3.queue_free()
 	# Mini-map tap.
 	var mm: Control = load("res://scripts/ui/mini_map.gd").new()
 	host.add_child(mm)
