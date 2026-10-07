@@ -189,16 +189,23 @@ static func daily(m: Modal, main: Node) -> void:
 	var week := Progress.daily_day / n
 	var today_i := Progress.daily_day % n
 	var ready := Progress.daily_ready()
-	var grid := GridContainer.new()
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
+	# Two rows: days 1-4, then 5-6 and the big last day (twice as wide).
+	var grid := VBoxContainer.new()
+	grid.add_theme_constant_override("separation", 8)
+	var rows: Array[HBoxContainer] = []
+	for r in 2:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		grid.add_child(h)
+		rows.append(h)
 	for i in n:
 		var gift: Dictionary = Content.DAILY[i]
 		var claimed := i < today_i
 		var is_today := i == today_i and ready
-		var c := card(Color("fff1c2") if is_today else (Color("e6e9f2") if claimed else Color("fffaf0")))
+		var last := i == n - 1
+		var c := card(Color("fff1c2") if is_today else (Color("e6e9f2") if claimed else (Color("ffe9b8") if last else Color("fffaf0"))))
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		c.size_flags_stretch_ratio = 2.0 if last else 1.0
 		var v := VBoxContainer.new()
 		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_theme_constant_override("separation", 2)
@@ -206,11 +213,11 @@ static func daily(m: Modal, main: Node) -> void:
 		var day := label(t("DAY") % (i + 1), 18, Art.INK_SOFT, true)
 		day.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(day)
-		v.add_child(icon("check" if claimed else daily_icon(gift["kind"]), 48 if i < n - 1 else 60))
+		v.add_child(icon("check" if claimed else daily_icon(gift["kind"]), 48 if not last else 64))
 		var amt := label(daily_amount(gift, week), 17, Art.INK, true)
 		amt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(amt)
-		grid.add_child(c)
+		rows[0 if i < 4 else 1].add_child(c)
 	m.add(grid)
 	if ready:
 		var b := m.button(t("CLAIM"), func(): pass, &"GoldButton")
