@@ -152,7 +152,7 @@ static func build(m: Modal, main: Node) -> void:
 	if Progress.streak_will_restart():
 		m.text(t("STREAK_WELCOME"), 22, Color("1c7fb8"))
 	m.add(_big_flame(64.0))
-	var big := m.text(days_text(n), 34, Color("e0641c"))
+	var big := m.text(days_text(n) if n > 0 else t("STREAK_NEW_TITLE"), 34, Color("e0641c"))
 	big.add_theme_font_override("font", UiTheme.heavy_font())
 	big.add_theme_constant_override("line_spacing", -6)
 	m.text(t("STREAK_LIT_TODAY") if lit else t("STREAK_HOW"), 20, Art.INK_SOFT)
@@ -206,8 +206,7 @@ static func _milestone_row(ms: Dictionary, n: int, is_next: bool) -> Control:
 	h.add_theme_constant_override("separation", 10)
 	c.add_child(h)
 	var badge := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float):
-		StreakArt.flame(ci, Vector2(s.x / 2.0, s.y - 4.0), 14.0, 3, got or is_next, true)
-		Art.text(ci, Vector2(s.x / 2.0, s.y - 9.0), str(days), 17 if days < 100 else 14, Art.WHITE, 5), Vector2(48, 52))
+		StreakArt.flame(ci, Vector2(s.x / 2.0, s.y - 4.0), 15.0, 3, got or is_next, true), Vector2(46, 52))
 	h.add_child(badge)
 	var mid := VBoxContainer.new()
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -260,7 +259,7 @@ static func today_card(main: Node, m: Modal) -> Control:
 	tv.add_theme_constant_override("separation", 0)
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(tv)
-	tv.add_child(Views.label(days_text(n), 22, Color("e0641c"), true))
+	tv.add_child(Views.label(days_text(n) if n > 0 else t("STREAK_NEW_TITLE"), 22, Color("e0641c"), true))
 	var sub := t("STREAK_LIT_TODAY") if lit else (t("STREAK_WELCOME_SHORT") if Progress.streak_will_restart() else t("STREAK_HOW_SHORT"))
 	tv.add_child(Views.label(sub, 16, Art.INK_SOFT))
 	var more := Views.icon("right", 26)

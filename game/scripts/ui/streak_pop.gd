@@ -8,8 +8,8 @@ extends Control
 signal tapped
 
 const SHOW_SEC := 3.6
-const W := 430.0
-const H := 118.0
+const W := 560.0
+const H := 136.0
 
 ## main.gd: celebrate(r, from, sound) and where the card hangs from the top.
 var main: Node
@@ -47,7 +47,7 @@ func _ready() -> void:
 	h.add_theme_constant_override("separation", 6)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card.add_child(h)
-	_art = ArtView.make(_paint, Vector2(150, 100), true)
+	_art = ArtView.make(_paint, Vector2(190, 124), true)
 	h.add_child(_art)
 	var v := VBoxContainer.new()
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -55,10 +55,10 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(v)
-	_title = Views.label("", 24, Color("e0641c"), true)
+	_title = Views.label("", 30, Color("e0641c"), true)
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(_title)
-	_sub = Views.label("", 17, Art.INK_SOFT)
+	_sub = Views.label("", 21, Art.INK_SOFT)
 	_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(_sub)
 
@@ -122,11 +122,15 @@ func is_showing() -> bool:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	var w := minf(W, view.x - 24.0)
-	_card.custom_minimum_size = Vector2(w, H)
-	_title.custom_minimum_size.x = w - 150.0 - 40.0
-	_sub.custom_minimum_size.x = w - 150.0 - 40.0
-	_card.reset_size()
-	_card.size = Vector2(w, maxf(H, _card.get_combined_minimum_size().y))
+	var lw := w - 190.0 - 6.0 - 26.0
+	# Wrapped labels need their width before they can be measured.
+	var th := 0.0
+	for l: Label in [_title, _sub]:
+		l.custom_minimum_size = Vector2(lw, 0)
+		l.size = Vector2(lw, 0)
+		th += l.get_minimum_size().y
+	_card.custom_minimum_size = Vector2(w, maxf(H, th + 16.0))
+	_card.size = _card.custom_minimum_size
 	_card.position = Vector2(roundf((view.x - w) / 2.0), top_y)
 
 
@@ -146,7 +150,7 @@ func _give() -> void:
 	var r: Dictionary = Progress.take_streak_reward()
 	if r.is_empty() or main == null:
 		return
-	var from := _art.get_global_rect().position + Vector2(48, 60)
+	var from := _art.get_global_rect().get_center()
 	main.celebrate(r, from, false)
 	Sfx.play("coins")
 
@@ -156,27 +160,30 @@ func _paint(ci: CanvasItem, s: Vector2, _tt: float) -> void:
 	# The flame grows from the old size with a little overshoot.
 	var g := clampf(a / 0.6, 0.0, 1.0)
 	var e := 1.0 + 0.25 * sin(g * PI) if not Settings.reduce_motion else 1.0
-	var base := Vector2(48, s.y - 8.0)
+	var base := Vector2(60, s.y - 20.0)
 	if a < 1.2:
 		var k := clampf(1.0 - a / 1.2, 0.0, 1.0)
-		var c := base + Vector2(0, -38)
+		var c := base + Vector2(0, -50)
 		for i in 10:
 			var ang := TAU * i / 10.0 + floorf(a * 10.0) * 0.05
 			var ray := Color(1.0, 0.8, 0.3, 0.45 * k)
-			Art.grad(ci, PackedVector2Array([c, c + Vector2(cos(ang - 0.14), sin(ang - 0.14)) * 70.0, c + Vector2(cos(ang + 0.14), sin(ang + 0.14)) * 70.0]),
+			Art.grad(ci, PackedVector2Array([c, c + Vector2(cos(ang - 0.14), sin(ang - 0.14)) * 95.0, c + Vector2(cos(ang + 0.14), sin(ang + 0.14)) * 95.0]),
 					PackedColorArray([ray, Color(ray, 0.0), Color(ray, 0.0)]))
 	Art.push(ci, base, 0.0, Vector2.ONE * snappedf(e * (0.75 + 0.25 * g), 0.05))
-	StreakArt.flame(ci, Vector2.ZERO, 22.0, StreakArt.phase(a, 8.0), true, true)
+	StreakArt.flame(ci, Vector2.ZERO, 32.0, StreakArt.phase(a, 8.0), true, true)
 	Art.pop(ci)
 	var n := int(_res.get("count", 1))
 	var shown := n if a > 0.45 else maxi(0, int(_res.get("old", 0)) if not _res.get("broken", false) else 0)
 	var bump := 1.0 + 0.3 * sin(clampf((a - 0.45) / 0.3, 0.0, 1.0) * PI)
-	Art.push(ci, Vector2(112, s.y / 2.0 + 4.0), 0.0, Vector2.ONE * snappedf(bump, 0.05))
-	Art.text(ci, Vector2(0, 14), str(shown), 44, Color("ffb347"), 9)
+	Art.push(ci, Vector2(142, s.y / 2.0 + 4.0), 0.0, Vector2.ONE * snappedf(bump, 0.05))
+	Art.text(ci, Vector2(0, 19), str(shown), 58, Color("ffb347"), 10)
 	Art.pop(ci)
 	if a > 0.45 and a < 1.8:
 		var k := (a - 0.45) / 1.35
-		Art.text(ci, Vector2(124, 30 - k * 26.0), "+1", 24, Color(1.0, 0.95, 0.6, 1.0 - k * k), 6)
+		Art.text(ci, Vector2(166, 36 - k * 30.0), "+1", 30, Color("fff27a"), 6)
+	if _res.get("ice_earned", false) and a > 0.9:
+		var k2 := clampf((a - 0.9) / 0.3, 0.0, 1.0)
+		StreakArt.ice(ci, Vector2(178, s.y - 30.0), snappedf(40.0 * (0.6 + 0.4 * k2), 2.0), false, -0.15)
 
 
 static func t(key: String) -> String:

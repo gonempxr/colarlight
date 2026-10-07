@@ -499,6 +499,8 @@ func streak_action(date: String = "") -> Dictionary:
 		return {}
 	if date == "":
 		date = today()
+	if date == streak_last:
+		return {}
 	var t := day_number(date)
 	if t < 0:
 		return {}

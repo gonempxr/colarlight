@@ -2,6 +2,7 @@ keys,en,ru,es,zh
 STREAK,Streak,Огонёк,Racha,小火苗
 STREAK_DAYS_ONE,%d day in a row,%d день подряд,%d día seguido,连续%d天
 STREAK_DAYS_FEW,%d days in a row,%d дня подряд,%d días seguidos,连续%d天
+STREAK_NEW_TITLE,A new flame is waiting!,Новый огонёк ждёт тебя!,¡Una nueva llama te espera!,新的小火苗在等你！
 STREAK_DAYS_MANY,%d days in a row,%d дней подряд,%d días seguidos,连续%d天
 STREAK_DAY_N_ONE,%d day,%d день,%d día,%d天
 STREAK_DAY_N_FEW,%d days,%d дня,%d días,%d天
