@@ -178,6 +178,96 @@ const GOALS := {
 	"prestige_1": ["prestiges", 1],
 }
 
+# --- Worker skins --------------------------------------------------------------------
+## Skins for the workers of each world, bought with pearls (prices shown,
+## nothing random), kept forever. A pattern skin colors the gear level the
+## workers wear; a costume skin ("form": an old evolution form, see
+## WorkerLooks) dresses them up and keeps their gear on the back. Only the
+## equipped skin of the current world counts: +Balance.SKIN_BONUS[rarity]
+## income there. Name keys: SKIN_<ID> for patterns, FORM_<WORLD>_<form> for
+## costumes. Order = the order in the skins tab (and WorkerLooks' codes).
+const SKIN_PRICES: Array[int] = [0, 60, 150, 320]
+const SKINS: Array[Dictionary] = [
+	{"id": "ocean_shells", "world": "ocean", "rarity": 1},
+	{"id": "ocean_jelly", "world": "ocean", "rarity": 1},
+	{"id": "ocean_coral", "world": "ocean", "rarity": 1},
+	{"id": "ocean_storm", "world": "ocean", "rarity": 2},
+	{"id": "ocean_circuit", "world": "ocean", "rarity": 2},
+	{"id": "ocean_swirl", "world": "ocean", "rarity": 2},
+	{"id": "ocean_shark", "world": "ocean", "rarity": 2, "form": 4},
+	{"id": "ocean_octopus", "world": "ocean", "rarity": 2, "form": 5},
+	{"id": "ocean_pirate", "world": "ocean", "rarity": 2, "form": 8},
+	{"id": "ocean_robo", "world": "ocean", "rarity": 3, "form": 3},
+	{"id": "ocean_mermaid", "world": "ocean", "rarity": 3, "form": 9},
+	{"id": "ocean_dragon", "world": "ocean", "rarity": 3, "form": 10},
+	{"id": "ocean_kraken", "world": "ocean", "rarity": 3, "form": 11},
+	{"id": "ocean_poseidon", "world": "ocean", "rarity": 3, "form": 12},
+	{"id": "volcano_smoke", "world": "volcano", "rarity": 1},
+	{"id": "volcano_granite", "world": "volcano", "rarity": 1},
+	{"id": "volcano_rust", "world": "volcano", "rarity": 1},
+	{"id": "volcano_magma", "world": "volcano", "rarity": 2},
+	{"id": "volcano_toxic", "world": "volcano", "rarity": 2},
+	{"id": "volcano_amethyst", "world": "volcano", "rarity": 2},
+	{"id": "volcano_robot", "world": "volcano", "rarity": 2, "form": 3},
+	{"id": "volcano_salamander", "world": "volcano", "rarity": 2, "form": 4},
+	{"id": "volcano_fox", "world": "volcano", "rarity": 2, "form": 7},
+	{"id": "volcano_golem", "world": "volcano", "rarity": 3, "form": 6},
+	{"id": "volcano_phoenix", "world": "volcano", "rarity": 3, "form": 9},
+	{"id": "volcano_dragon", "world": "volcano", "rarity": 3, "form": 10},
+	{"id": "volcano_titan", "world": "volcano", "rarity": 3, "form": 11},
+	{"id": "volcano_lord", "world": "volcano", "rarity": 3, "form": 12},
+	{"id": "acid_spots", "world": "acid", "rarity": 1},
+	{"id": "acid_camo", "world": "acid", "rarity": 1},
+	{"id": "acid_bubbles", "world": "acid", "rarity": 1},
+	{"id": "acid_glow", "world": "acid", "rarity": 2},
+	{"id": "acid_neon", "world": "acid", "rarity": 2},
+	{"id": "acid_crystal", "world": "acid", "rarity": 2},
+	{"id": "acid_frog", "world": "acid", "rarity": 2, "form": 4},
+	{"id": "acid_mushroom", "world": "acid", "rarity": 2, "form": 5},
+	{"id": "acid_beetle", "world": "acid", "rarity": 2, "form": 7},
+	{"id": "acid_slime", "world": "acid", "rarity": 3, "form": 6},
+	{"id": "acid_alchemist", "world": "acid", "rarity": 3, "form": 9},
+	{"id": "acid_spirit", "world": "acid", "rarity": 3, "form": 10},
+	{"id": "acid_hydra", "world": "acid", "rarity": 3, "form": 11},
+	{"id": "acid_wizard", "world": "acid", "rarity": 3, "form": 12},
+	{"id": "moon_crater", "world": "moon", "rarity": 1},
+	{"id": "moon_mars", "world": "moon", "rarity": 1},
+	{"id": "moon_night", "world": "moon", "rarity": 1},
+	{"id": "moon_galaxy", "world": "moon", "rarity": 2},
+	{"id": "moon_aurora", "world": "moon", "rarity": 2},
+	{"id": "moon_gold", "world": "moon", "rarity": 2},
+	{"id": "moon_robot", "world": "moon", "rarity": 2, "form": 3},
+	{"id": "moon_alien", "world": "moon", "rarity": 2, "form": 4},
+	{"id": "moon_octo", "world": "moon", "rarity": 2, "form": 5},
+	{"id": "moon_cat", "world": "moon", "rarity": 3, "form": 9},
+	{"id": "moon_nebula", "world": "moon", "rarity": 3, "form": 8},
+	{"id": "moon_dragon", "world": "moon", "rarity": 3, "form": 11},
+	{"id": "moon_king", "world": "moon", "rarity": 3, "form": 12},
+]
+
+
+static func skin(id: String) -> Dictionary:
+	for c in SKINS:
+		if c["id"] == id:
+			return c
+	return {}
+
+
+## Pearl price of a skin.
+static func skin_price(id: String) -> int:
+	var c := skin(id)
+	return SKIN_PRICES[clampi(int(c.get("rarity", 1)), 1, 3)] if not c.is_empty() else 0
+
+
+## The skins of one world, in tab order.
+static func skins_of(world: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in SKINS:
+		if c["world"] == world:
+			out.append(c)
+	return out
+
+
 # --- Room 3 decor -----------------------------------------------------------------
 ## Eight slots in the office, each with levels 0..DECOR_MAX bought with
 ## pearls (persistent across locations). Every level gives

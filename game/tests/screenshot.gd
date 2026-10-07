@@ -10,7 +10,7 @@ extends SceneTree
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
 ## week's pearls waiting) | room:<0|1|2> (mine, factory, office) | evo (the
-## evolution panel) | decor[:slot] | map (the world map) | tut:<step> (the
+## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
 ## tutorial at that step) | hint:<room> (the lightbulb's hint).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -69,7 +69,7 @@ func _initialize() -> void:
 			gs.coins = 48250.0
 			gs.hold = 1840.0
 			gs.dock = 620.0
-			gs.evo = 2
+			gs.evo = 1
 			gs.vault = 8400.0
 			if scenario == "rich":
 				# Coins for the late tutorial steps (accountant, evolution).
@@ -173,7 +173,19 @@ func _initialize() -> void:
 			root.get_node("Platform").show_rewarded(func(_ok): pass)
 		"rivals", "rivals_reward":
 			main.open_rivals()
-		"evo":
+		"evo", "gear4":
+			load("res://scripts/ui/evo_panel.gd").tab = "gear"
+			if overlay == "gear4":
+				gs.evo = 3
+			main.open_evolution()
+		"skins":
+			# A few skins owned, one worn, pearls for an epic one.
+			pr.pearls = 200
+			for id in ["ocean_shells", "ocean_storm", "ocean_robo"]:
+				pr.skins[id] = true
+			pr.skin_on["ocean"] = "ocean_storm"
+			pr.apply_bonus()
+			load("res://scripts/ui/evo_panel.gd").tab = "skins"
 			main.open_evolution()
 		"map":
 			main.open_map()

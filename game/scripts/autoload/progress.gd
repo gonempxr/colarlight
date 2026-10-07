@@ -14,10 +14,13 @@ signal item_unlocked(id: String)
 signal artifact_leveled(id: String, level: int)
 signal chest_spawned
 signal decor_changed
+signal skins_changed
 
 const SAVE_VERSION := 2
 ## Version 2 added the lift to the tutorial (Tutor.STEPS): old step -> new.
 const TUTORIAL_V1_TO_V2: Array[int] = [0, 1, 1, 1, 5, 7, 8, 9]
+## Old evolution forms seen (0..12) -> gear levels bought (0..3).
+const OLD_FORMS_TO_GEAR: Array[int] = [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
 const CHEST_FIRST_SEC := 120.0
 const CHEST_GAP_SEC := Vector2(150.0, 240.0)
 const TICK_SEC := 1.0
@@ -36,8 +39,12 @@ var owned: Dictionary = {}
 var equipped: Dictionary = {}
 ## Room 3 decor: slot (Content.DECOR_SLOTS) -> level 0..Content.DECOR_MAX.
 var decor: Dictionary = {}
-## World id -> highest evolution form ever owned there (for the codex).
+## World id -> highest gear level bought there so far (0..3, for the codex).
 var looks_seen: Dictionary = {}
+## Worker skins owned (Content.SKINS id -> true) and the one each world's
+## workers wear (world id -> skin id, "" = none).
+var skins: Dictionary = {}
+var skin_on: Dictionary = {}
 var features: Dictionary = {}
 ## Features whose button still shows "NEW".
 var fresh: Dictionary = {}
@@ -73,6 +80,7 @@ func _ready() -> void:
 	GameState.evo_bought.connect(func(_f): _see_looks())
 	GameState.location_changed.connect(func(_l):
 		_see_looks()
+		apply_bonus()
 		_check_goals())
 	GameState.depth_opened.connect(func(k):
 		_count("open", 1)
@@ -97,6 +105,8 @@ func reset() -> void:
 	for slot in Content.DECOR_SLOTS:
 		decor[slot] = 0
 	looks_seen = {}
+	skins = {}
+	skin_on = {}
 	features = {}
 	fresh = {}
 	tutorial_step = 0
@@ -288,6 +298,7 @@ func apply_bonus() -> void:
 	for a in Content.ARTIFACTS:
 		b[a["bonus"]] = bonus(a["bonus"])
 	b["decor"] = decor_bonus()
+	b["skin"] = skin_bonus()
 	GameState.bonus = b
 	GameState.changed.emit()
 
@@ -326,7 +337,52 @@ func decor_bonus() -> float:
 	return 1.0 + Balance.DECOR_BONUS * levels
 
 
-## Remembers the forms owned in the current world (the codex shows them).
+# --- Worker skins -------------------------------------------------------------------
+
+func has_skin(id: String) -> bool:
+	return skins.get(id, false) == true
+
+
+## The skin the workers of `world` wear ("" = none).
+func skin_of(world: String) -> String:
+	var id := str(skin_on.get(world, ""))
+	return id if has_skin(id) else ""
+
+
+## Income multiplier from the skin worn in the current world.
+func skin_bonus() -> float:
+	var id := skin_of(GameState.world_id())
+	if id == "":
+		return 1.0
+	return 1.0 + Balance.SKIN_BONUS[clampi(int(Content.skin(id).get("rarity", 0)), 0, 3)]
+
+
+## Buys a skin with pearls and puts it on. False when owned or too dear.
+func buy_skin(id: String) -> bool:
+	var c := Content.skin(id)
+	if c.is_empty() or has_skin(id):
+		return false
+	if not spend_pearls(Content.skin_price(id)):
+		return false
+	skins[id] = true
+	wear_skin(id)
+	save_game()
+	return true
+
+
+## Puts an owned skin on its world's workers; wearing it again takes it off.
+func wear_skin(id: String) -> void:
+	var c := Content.skin(id)
+	if c.is_empty() or not has_skin(id):
+		return
+	var w: String = c["world"]
+	skin_on[w] = "" if skin_of(w) == id else id
+	apply_bonus()
+	skins_changed.emit()
+	changed.emit()
+
+
+## Remembers the gear bought in the current world (the codex shows it).
 func _see_looks() -> void:
 	var w: String = GameState.world_id()
 	if GameState.evo > int(looks_seen.get(w, 0)):
@@ -609,7 +665,7 @@ func save_game() -> bool:
 		"features": features, "fresh": fresh, "tutorial_step": tutorial_step,
 		"daily_day": daily_day, "daily_last": daily_last, "puzzle_level": puzzle_level,
 		"stats": stats, "chest_ready": chest_ready, "chest_timer": chest_timer,
-		"decor": decor, "looks_seen": looks_seen,
+		"decor": decor, "looks_seen": looks_seen, "skins": skins, "skin_on": skin_on,
 	}
 	var tmp := save_path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -686,8 +742,22 @@ func load_game() -> bool:
 		for slot in Content.DECOR_SLOTS:
 			decor[slot] = clampi(_int(d["decor"].get(slot)), 0, Content.DECOR_MAX)
 	if d.get("looks_seen") is Dictionary:
+		var gear_save := d.get("skins") is Dictionary
 		for w in d["looks_seen"]:
-			looks_seen[str(w)] = clampi(_int(d["looks_seen"][w]), 0, Balance.EVO_FORMS)
+			var n := _int(d["looks_seen"][w])
+			if not gear_save:
+				# 3.0 counted 12 forms: about every fourth one is a gear level.
+				n = OLD_FORMS_TO_GEAR[clampi(n, 0, OLD_FORMS_TO_GEAR.size() - 1)]
+			looks_seen[str(w)] = clampi(n, 0, Balance.EVO_FORMS)
+	if d.get("skins") is Dictionary:
+		for id in d["skins"]:
+			if d["skins"][id] == true and not Content.skin(str(id)).is_empty():
+				skins[str(id)] = true
+	if d.get("skin_on") is Dictionary:
+		for w in d["skin_on"]:
+			var id := str(d["skin_on"][w])
+			if has_skin(id) and Content.skin(id).get("world") == str(w):
+				skin_on[str(w)] = id
 	_see_looks()
 	apply_bonus()
 	_check_goals()

@@ -902,8 +902,8 @@ func open_evolution() -> void:
 ## room 1 wear it at once (they read GameState.evo).
 func on_evo_bought(from: Vector2) -> void:
 	_fx.burst(from, 40)
-	_fx.float_text(from + Vector2(0, -50), tr("EVO_NEW"), Art.GOLD, 36)
-	_show_toast(tr("EVO_BOUGHT") % tr(WorkerLooks.name_key(GameState.world_id(), GameState.evo)))
+	_fx.float_text(from + Vector2(0, -50), tr("GEAR_NEW"), Art.GOLD, 36)
+	_show_toast(tr("GEAR_BOUGHT") % tr(WorkerLooks.gear_key(GameState.world_id(), GameState.evo)))
 	for i in Balance.DEPTHS.size():
 		if GameState.is_open("d%d" % i):
 			_world.react("d%d" % i, "joy", 2.5, true)

@@ -375,6 +375,9 @@ const INK_FOLLOW := 0.4
 const INK_FOLLOW_UP := 0.7
 const _INK_STEPS := 4.0           # steps per doubling of the scale
 static var _ink_det := -1.0
+## Outline widths are multiplied by this while a part drawn bigger than its
+## body (a character's enlarged head) must keep the body's line width.
+static var ink_mul := 1.0
 static var _ink_step := 0
 
 
@@ -392,6 +395,7 @@ static func _scale_step(xf: Transform2D) -> int:
 ## Also notes the scale step for _aa (the soft edge) and the shape keys.
 static func _ink(w: float) -> float:
 	_st = _scale_step(_rec_xf * _xf if _rec else _xf)
+	w *= ink_mul
 	if w <= 0.0 or _st == 0:
 		return w
 	return snappedf(w * pow(2.0, _st / _INK_STEPS * ((INK_FOLLOW if _st < 0 else INK_FOLLOW_UP) - 1.0)), 0.05)

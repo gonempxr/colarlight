@@ -66,3 +66,56 @@ OUTFIT_KNIGHT,Knight,Рыцарь,Caballero,骑士
 OUTFIT_WIZARD,Wizard,Волшебник,Mago,魔法师
 OUTFIT_KING,King,Король,Rey,国王
 OUTFIT_SUPERHERO,Superhero,Супергерой,Superhéroe,超级英雄
+TAB_GEAR,Gear,Снаряжение,Equipo,装备
+TAB_SKINS,Skins,Скины,Aspectos,皮肤
+GEAR_LEVEL,Level %d,Уровень %d,Nivel %d,等级 %d
+GEAR_PERK,+%d%% coins in this world,+%d%% монет в этом мире,+%d%% monedas en este mundo,本世界金币 +%d%%
+GEAR_TOTAL,Gear bonus: +%d%% coins,Бонус снаряжения: +%d%% монет,Bonus de equipo: +%d%% monedas,装备加成：金币 +%d%%
+GEAR_MAX,Best gear in this world!,Лучшее снаряжение в этом мире!,¡El mejor equipo de este mundo!,本世界最强装备！
+GEAR_OPTIONAL,Gear is not needed to open the next world: it just makes every coin come faster. In a new world the workers start again from level 1.,"Снаряжение не нужно, чтобы открыть следующий мир: оно просто ускоряет все монеты. В новом мире работники снова начинают с уровня 1.",El equipo no hace falta para abrir el siguiente mundo: solo hace que las monedas lleguen más rápido. En un mundo nuevo los trabajadores empiezan otra vez en el nivel 1.,开启下一个世界不需要装备：它只是让金币来得更快。到了新世界，工人会从等级 1 重新开始。
+GEAR_NEW,New gear!,Новое снаряжение!,¡Equipo nuevo!,新装备！
+GEAR_BOUGHT,Your workers got new gear: %s!,Новое снаряжение: %s!,¡Equipo nuevo para tus trabajadores: %s!,工人换上了新装备：%s！
+GEAR_CARD_NEXT,Next: +%d%%,Дальше: +%d%%,Siguiente: +%d%%,下一级：+%d%%
+SKINS_HINT,Skins change how your workers look and give a small bonus in this world. Only the skin they wear counts.,"Скины меняют вид работников и дают маленький бонус в этом мире. Считается только надетый скин.",Los aspectos cambian cómo se ven tus trabajadores y dan un pequeño bonus en este mundo. Solo cuenta el que llevan puesto.,皮肤会改变工人的样子，并在本世界提供小加成。只有正在穿的皮肤生效。
+SKIN_BONUS,+%d%% coins,+%d%% монет,+%d%% monedas,金币 +%d%%
+SKIN_BOUGHT,New skin: %s!,Новый скин: %s!,¡Nuevo aspecto: %s!,新皮肤：%s！
+GEAR_OCEAN_1,Snorkeler,Ныряльщик с трубкой,Buceador con tubo,浮潜员
+GEAR_OCEAN_2,Scuba Diver,Аквалангист,Buzo con botella,水肺潜水员
+GEAR_OCEAN_3,Helmet Diver,Водолаз в шлеме,Buzo con casco,头盔潜水员
+GEAR_OCEAN_4,Deep-Sea Diver,Глубоководный водолаз,Buzo de profundidad,深海潜水员
+GEAR_VOLCANO_1,Lava Miner,Лавовый шахтёр,Minero de lava,熔岩矿工
+GEAR_VOLCANO_2,Armored Miner,Шахтёр в броне,Minero blindado,装甲矿工
+GEAR_VOLCANO_3,Heatproof Miner,Жаростойкий шахтёр,Minero antifuego,耐热矿工
+GEAR_VOLCANO_4,Lava Knight,Лавовый рыцарь,Caballero de lava,熔岩骑士
+GEAR_ACID_1,Lab Helper,Лаборант,Ayudante de laboratorio,实验室助手
+GEAR_ACID_2,Gas-Mask Chemist,Химик в противогазе,Químico con máscara,防毒面具化学家
+GEAR_ACID_3,Hazmat Pro,Химик-профи,Experto en peligros,防化专家
+GEAR_ACID_4,Acid Guardian,Страж кислоты,Guardián del ácido,酸液守卫
+GEAR_MOON_1,Space Cadet,Космический кадет,Cadete espacial,太空学员
+GEAR_MOON_2,Astronaut,Космонавт,Astronauta,宇航员
+GEAR_MOON_3,Moonwalker,Лунопроходец,Caminante lunar,月球漫步者
+GEAR_MOON_4,Star Commander,Звёздный командир,Comandante estelar,星际指挥官
+SKIN_OCEAN_SHELLS,Seashells,Ракушки,Conchas,贝壳
+SKIN_OCEAN_JELLY,Jellyfish,Медузы,Medusas,水母
+SKIN_OCEAN_CORAL,Coral,Кораллы,Coral,珊瑚
+SKIN_OCEAN_STORM,Storm,Гроза,Tormenta,雷暴
+SKIN_OCEAN_CIRCUIT,Cyber Diver,Кибер-водолаз,Ciberbuzo,赛博潜水员
+SKIN_OCEAN_SWIRL,Whirlpool,Водоворот,Remolino,漩涡
+SKIN_VOLCANO_SMOKE,Smoke,Дым,Humo,烟雾
+SKIN_VOLCANO_GRANITE,Granite,Гранит,Granito,花岗岩
+SKIN_VOLCANO_RUST,Rust,Ржавчина,Óxido,铁锈
+SKIN_VOLCANO_MAGMA,Magma,Магма,Magma,岩浆
+SKIN_VOLCANO_TOXIC,Toxic Lava,Ядовитая лава,Lava tóxica,毒熔岩
+SKIN_VOLCANO_AMETHYST,Amethyst,Аметист,Amatista,紫水晶
+SKIN_ACID_SPOTS,Frog Spots,Лягушачьи пятна,Manchas de rana,青蛙斑点
+SKIN_ACID_CAMO,Swamp Camo,Болотный камуфляж,Camuflaje de pantano,沼泽迷彩
+SKIN_ACID_BUBBLES,Bubbles,Пузырьки,Burbujas,泡泡
+SKIN_ACID_GLOW,Toxic Glow,Ядовитое свечение,Brillo tóxico,毒荧光
+SKIN_ACID_NEON,Neon,Неон,Neón,霓虹
+SKIN_ACID_CRYSTAL,Crystal,Кристалл,Cristal,水晶
+SKIN_MOON_CRATER,Craters,Кратеры,Cráteres,陨石坑
+SKIN_MOON_MARS,Mars,Марс,Marte,火星
+SKIN_MOON_NIGHT,Night Sky,Ночное небо,Cielo nocturno,夜空
+SKIN_MOON_GALAXY,Galaxy,Галактика,Galaxia,银河
+SKIN_MOON_AURORA,Aurora,Северное сияние,Aurora,极光
+SKIN_MOON_GOLD,Constellations,Созвездия,Constelaciones,星座

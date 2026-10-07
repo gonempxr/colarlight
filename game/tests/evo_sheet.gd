@@ -1,12 +1,13 @@
 extends SceneTree
-## Preview sheets of the evolution forms and the player's outfits (needs a
-## real renderer):
+## Preview sheets of the workers' gear and skins and the player's outfits
+## (needs a real renderer):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 1600x900 \
-##     -s res://tests/evo_sheet.gd -- out.png MODE [world] [zoom] [t] [x] [y]
-## MODE: forms (13 forms of `world`: idle, dig, walk/swim rows) | cards
-## (revealed and silhouette cards of `world`) | small (every world at world
-## size: dig and walk) | poses (one form in every pose) | player (every
-## outfit) | emotions (screen and creature faces).
+##     -s res://tests/evo_sheet.gd -- out.png MODE [world[:code]] [zoom] [t] [x] [y]
+## MODE: gear (the 4 gear levels of every world, big) | skins (every skin
+## of `world` on each gear level) | forms (gear and skins of `world`: idle,
+## dig, walk/swim rows) | cards (revealed and silhouette cards of `world`) |
+## small (every world at world size: dig and walk) | poses (one look code in
+## every pose) | player (every outfit).
 
 class Sheet extends Control:
 	var t := 0.0
@@ -29,6 +30,10 @@ class Sheet extends Control:
 		match mode:
 			"forms":
 				_forms()
+			"gear":
+				_gear()
+			"skins":
+				_skins()
 			"cards":
 				_cards()
 			"small":
@@ -45,9 +50,39 @@ class Sheet extends Control:
 		Chars.diver(self, pos, scale, Color.WHITE, facing, 0.0, t * 1.4, arm, hit, carry, Art.GOLD, emo, Chars.blinking(t, f * 1.3), t + f * 0.3, 0,
 				{"world": ww, "form": f})
 
+	## Look codes shown by "forms" and "cards": the 4 gear levels, then every
+	## skin of the world on gear level 2.
+	func _codes() -> Array[int]:
+		var out: Array[int] = []
+		for g in WorkerLooks.GEARS:
+			out.append(WorkerLooks.code(g))
+		for i in Content.skins_of(world).size():
+			out.append(WorkerLooks.code(1, i))
+		return out
+
+	func _gear() -> void:
+		for wi in 4:
+			var w: String = WorkerLooks.WORLDS[wi]
+			for g in WorkerLooks.GEARS:
+				var x := 110.0 + g * 380.0
+				var y := 200.0 + wi * 215.0
+				_w(Vector2(x, y), 1.9, WorkerLooks.code(g), "idle", 0.0, false, "happy", w)
+				_w(Vector2(x + 170, y), 1.3, WorkerLooks.code(g), "dig", fposmod(t * 0.7 + g * 0.13, 1.0), false, "focus", w)
+
+	func _skins() -> void:
+		var list := Content.skins_of(world)
+		for g in WorkerLooks.GEARS:
+			for i in list.size() + 1:
+				var x := 50.0 + i * 103.0
+				_w(Vector2(x, 200 + g * 215), 1.25, WorkerLooks.code(g, i - 1), "idle", 0.0, false, "happy")
+				if g == 0:
+					Art.text(self, Vector2(x, 40), str(list[i - 1]["id"]).substr(str(list[i - 1]["id"]).find("_") + 1) if i > 0 else "base", 14)
+
 	func _forms() -> void:
-		for f in WorkerLooks.FORMS:
-			var x := 70.0 + f * 118.0
+		var codes := _codes()
+		for n in codes.size():
+			var f: int = codes[n]
+			var x := 70.0 + n * 98.0
 			_w(Vector2(x, 160), 1.0, f, "idle", 0.0, false, "happy")
 			_w(Vector2(x, 330), 1.0, f, "dig", fposmod(t * 0.7 + f * 0.13, 1.0), false, "focus")
 			_w(Vector2(x, 500), 1.0, f, "swim" if world == "ocean" else "walk", 0.0, f % 3 == 1, "joy")
@@ -56,23 +91,32 @@ class Sheet extends Control:
 			Art.text(self, Vector2(x + 10, 30), str(f), 18)
 
 	func _cards() -> void:
-		for f in WorkerLooks.FORMS:
-			var c := Vector2(80 + (f % 7) * 150, 110 + floori(f / 7.0) * 170)
+		var codes := _codes()
+		for n in codes.size():
+			var f: int = codes[n]
+			var c := Vector2(80 + (n % 9) * 150, 110 + floori(n / 9.0) * 170)
 			Art.t_rect(self, Rect2(c - Vector2(66, 66), Vector2(132, 132)), 14, Color(1, 1, 1, 0.35), 3.0, 0.0)
 			WorkerLooks.draw_card(self, c, 132, world, f, true, t)
 			var c2 := c + Vector2(0, 360)
 			Art.t_rect(self, Rect2(c2 - Vector2(66, 66), Vector2(132, 132)), 14, Color("3a3060"), 3.0, 0.0)
 			WorkerLooks.draw_card(self, c2, 132, world, f, false, t)
-		for f in WorkerLooks.FORMS:
-			var c := Vector2(1150 + (f % 4) * 66, 120 + floori(f / 4.0) * 70)
-			Art.t_rect(self, Rect2(c - Vector2(30, 30), Vector2(60, 60)), 8, Color("3a3060") if f > 4 else Color(1, 1, 1, 0.35), 2.0, 0.0)
-			WorkerLooks.draw_card(self, c, 60, world, f, f <= 4, t)
+		for n in codes.size():
+			var f: int = codes[n]
+			var c := Vector2(1380 + (n % 3) * 66, 520 + floori(n / 3.0) * 70)
+			Art.t_rect(self, Rect2(c - Vector2(30, 30), Vector2(60, 60)), 8, Color("3a3060") if n > 4 else Color(1, 1, 1, 0.35), 2.0, 0.0)
+			WorkerLooks.draw_card(self, c, 60, world, f, n <= 4, t)
 
 	func _small() -> void:
 		for wi in 4:
 			var w: String = WorkerLooks.WORLDS[wi]
-			for f in WorkerLooks.FORMS:
-				var x := 40.0 + f * 72.0
+			var codes: Array[int] = []
+			for g in WorkerLooks.GEARS:
+				codes.append(WorkerLooks.code(g))
+			for i in Content.skins_of(w).size():
+				codes.append(WorkerLooks.code(3, i))
+			for n in codes.size():
+				var f: int = codes[n]
+				var x := 40.0 + n * 72.0
 				_w(Vector2(x, 100 + wi * 200), 0.62, f, "dig", fposmod(t * 0.7 + f * 0.13, 1.0), false, "focus", w)
 				_w(Vector2(x + 20, 190 + wi * 200), 0.62, f, "swim" if w == "ocean" else "walk", 0.0, f % 2 == 0, "happy", w, -1.0)
 

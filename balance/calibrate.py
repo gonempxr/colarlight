@@ -2,7 +2,7 @@
 
 Each site's unlock price is SAVE_SEC of the income the greedy player
 (sim.py) has at the target minute, its foreman FOREMAN_X times that; each
-evolution form is EVO_SEC of income at its minute; the accountant and the
+gear level is EVO_SEC of income at its minute; the accountant and the
 location price likewise. Items are calibrated in time order (later ones are
 blocked meanwhile). Prints constants to paste into sim.py and balance.gd.
 
@@ -11,12 +11,12 @@ Run:  python3 calibrate.py
 import sim
 
 SITE_MIN = [None, 2.5, 6, 11, 17, 24, 31, 39, 48, 57]   # site k may open at this minute
-EVO_MIN = [2.5, 5, 9, 14, 20, 27, 34, 42, 50, 59, 68, 76]
+EVO_MIN = [9, 25, 53]      # gear levels 2, 3, 4
 VAULT_MIN = 9
 GATE_MIN = 66            # location price is LOC_SEC of income here
 SAVE_SEC = 120
 FOREMAN_X = 2.0
-EVO_SEC = 60
+EVO_SEC = 240
 VAULT_SEC = 240
 LOC_SEC = 900
 BLOCK = 1e300
@@ -35,7 +35,7 @@ def calibrate():
     for k in range(1, 10):
         sim.DEPTHS[k]["unlock"] = BLOCK
         sim.DEPTHS[k]["manager"] = BLOCK
-    sim.EVO_PRICES = [BLOCK] * 12
+    sim.EVO_PRICES = [BLOCK] * sim.EVO_FORMS
     sim.VAULT_MANAGER = BLOCK
     sim.LOCATION_PRICE = BLOCK
     plan = [(m, "site", k) for k, m in enumerate(SITE_MIN) if m is not None]

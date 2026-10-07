@@ -33,7 +33,7 @@ const WORLDS: Array[Dictionary] = [
 ## price of its foreman; cycle = seconds for one dive (down, 3 hits, up).
 ## Location L multiplies values and level prices by loc_scale(L), and the
 ## gate prices (unlock, foreman) by loc_gate_scale(L). Workers work on their
-## own; a site's foreman doubles its output. sim.py: about 92 min for
+## own; a site's foreman doubles its output. sim.py: about 88 min for
 ## location 0 (calibrate.py), each later one 10-16% longer.
 const DEPTHS: Array[Dictionary] = [
 	{"id": "shells", "value": 0.8, "cost0": 6.0, "unlock": 0.0, "manager": 400.0, "cycle": 4.0},
@@ -102,11 +102,18 @@ const GATE_GROWTH := 1.4
 const GATE_BUMP := 1.45
 ## Price to open the next location, at location 0.
 const LOCATION_PRICE := 2.4e10
-## Worker evolution: 12 forms per location, bought in order, each x EVO_MULT
-## income. Prices of forms 1..12 at location 0.
-const EVO_FORMS := 12
-const EVO_MULT := 1.10
-const EVO_PRICES: Array[float] = [40.0, 200.0, 3.8e5, 1.2e7, 7.2e7, 1.9e8, 2.5e8, 4.0e8, 8.0e8, 1.6e9, 3.0e9, 4.0e9]
+## Worker gear: 4 levels per location (level 1 is the base look, levels
+## 2..4 are bought with coins, in order). GameState.evo counts the levels
+## bought (0..EVO_FORMS). EVO_PRICES: price of levels 2..4 at location 0;
+## GEAR_MULT: income multiplier with 0..3 levels bought (a big jump each).
+const EVO_FORMS := 3
+const EVO_PRICES: Array[float] = [3.0e5, 2.5e8, 3.5e9]
+const GEAR_MULT: Array[float] = [1.0, 1.3, 1.7, 2.5]
+## Old saves (12 forms of x1.10 each): the coins they paid for forms, at location 0.
+const OLD_EVO_PRICES: Array[float] = [40.0, 200.0, 3.8e5, 1.2e7, 7.2e7, 1.9e8, 2.5e8, 4.0e8, 8.0e8, 1.6e9, 3.0e9, 4.0e9]
+## Worker skins (pearls, persistent): the equipped skin of the current world
+## adds this much income by rarity (0 base, 1 rare, 2 epic, 3 legendary).
+const SKIN_BONUS: Array[float] = [0.0, 0.02, 0.04, 0.08]
 ## Room 3 decor: each level of each slot +DECOR_BONUS income.
 const DECOR_BONUS := 0.01
 
@@ -192,13 +199,23 @@ static func loc_gate_scale(location: int) -> float:
 	return loc_scale(l) * pow(GATE_GROWTH, l) * (GATE_BUMP if l > 0 else 1.0)
 
 
-## Price of evolution form 1..EVO_FORMS at location L.
+## Price of gear level `form` + 1 (form = 1..EVO_FORMS: the levels bought
+## so far after this one) at location L.
 static func evo_cost(location: int, form: int) -> float:
 	return EVO_PRICES[clampi(form, 1, EVO_FORMS) - 1] * loc_gate_scale(location)
 
 
+## Income multiplier with `forms` gear levels bought.
 static func evo_mult(forms: int) -> float:
-	return pow(EVO_MULT, clampi(forms, 0, EVO_FORMS))
+	return GEAR_MULT[clampi(forms, 0, EVO_FORMS)]
+
+
+## Coins an old save paid for its first `forms` evolution forms at location L.
+static func old_evo_spent(location: int, forms: int) -> float:
+	var sum := 0.0
+	for i in clampi(forms, 0, OLD_EVO_PRICES.size()):
+		sum += OLD_EVO_PRICES[i]
+	return sum * loc_gate_scale(location)
 
 
 ## Price to leave location L for L + 1.
