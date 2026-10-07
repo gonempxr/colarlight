@@ -283,6 +283,7 @@ func _ready() -> void:
 		Sfx.play("milestone"))
 	_settings_sig = _settings_signature()
 	Settings.changed.connect(_on_settings_changed)
+	LazyAssets.ensure_text_data(self, Settings.language)
 	get_viewport().size_changed.connect(_layout)
 	Wardrobe.apply_looks()
 	Progress.changed.connect(Wardrobe.apply_looks)
@@ -790,6 +791,7 @@ func _settings_signature() -> Array:
 
 
 func _on_settings_changed() -> void:
+	LazyAssets.ensure_text_data(self, Settings.language)
 	if not is_equal_approx(get_tree().root.content_scale_factor, Settings.ui_scale) or Art.low_power != Settings.low_quality():
 		_apply_ui_scale()
 	HandCursor.apply(Settings.hand_cursor)
