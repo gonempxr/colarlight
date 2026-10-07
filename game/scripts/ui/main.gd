@@ -464,6 +464,10 @@ func _place_rooms() -> void:
 		var off := (float(i) - _slide) * (_area.size.x + 24.0)
 		# Shown while any of it is on screen (not while it waits in the gap).
 		var on := absf(off) < maxf(1.0, _area.size.x - 0.5)
+		if on and not r.visible and r == _factory and _factory_card:
+			# Comes into view: its card is up to date from the first frame
+			# (it only refreshes while shown).
+			_factory_card.refresh.call_deferred()
 		r.visible = on
 		r.position = Vector2(_area.position.x + roundf(off), _area.position.y)
 		if r.size != _area.size:
