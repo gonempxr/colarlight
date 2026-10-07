@@ -1,0 +1,84 @@
+Bugs and Notes 
+Visual/Sprite Issues 
+●​ Fish move backwards during the game’s start up loading screen 
+●​ Slightly change the pointing hand sprite, it looks quite weird 
+○​
+ 
+●​ Some sprites look a bit too silly in my opinion, especially the pets. Their mouths look like 
+black lips, the turtle also has an odd hexagon on the top of it’s back. 
+●​ The hat on the top left profile icon is also clipping through the black ring 
+○​
+ 
+●​ When inspecting hats on the “My look” tab, they pop out of the profile outline 
+●​ Miner suits also are outside of their respective “cards” 
+○​
+ 
+●​ The palm to the right of your character keeps twitching a lot 
+●​ Artstyle, or to be precise the thickness of the outlines varies a lot for no apparent reason. 
+●​ Random outline connecting the mining shaft to the box with gems 
+○​
+ 
+●​ The mine shaft on the bottom of the ocean does not have a proper outline showing its 
+end 
+○​
+ 
+UI / Clarity 
+●​ Make some things a bit clearer, the plus button on top of the upgrades didn’t initially 
+seem like a thing you’d be able to click.image 
+○​
+ 
+●​ Some upgrade costs are a bit unclear. You can open a pop up to upgrade someone from 
+level x to level y, and it will presumably show the cost number in coins, but it isn’t really 
+shown. 
+○​ Add a little coin to the left or right of the price 
+●​ Maybe make some ui placements make a bit more sense: 
+○​ Move the lift more left if possible, and the boat as well since right now its over the 
+plant. Then move the plant somewhere above the plant. 
+●​ What's the point of the wardrobe icon if clicking on the profile does the same 
+●​ Make music and sound changers draggable with mouse 
+●​ When changing languages, the bottom set of icons are still titled in english for some time 
+●​ The locks on deeper mineshaft areas  are clipping through some outlines 
+○​
+ 
+Gameplay / Balance 
+●​ Add cooldowns to most tasks, an autoclicker can easily break them (in a sense where 
+they become too good early on and later on) 
+○​ For example such are: 
+■​ The sun/moon vfx, but that doesn’t matter as much 
+■​ Miners and ship 
+●​ The fishing mini game is already so easy to the point of the better rod upgrades not 
+seeming useful 
+●​ Casting your rod doesn’t require the user to even press the cast button. 
+●​ Make the suits for divers give actual buffs to them maybe. They seem to cost more for 
+no apparent reason besides their color changing, so maybe that would be nice 
+○​ In general I just think that such things should give slight side effects 
+●​ Make the speed of the lift scale a bit more with upgrades, it still feels quite slow even on 
+levels 100+ 
+Puzzle Game Mode 
+●​ Make it a bit more clear that the compass shard in the puzzle game mode should read 
+the bottom 
+○​ (or maybe im a dumbass and didnt see a tip) but nevertheless show or write it 
+somewhere 
+●​ MAYBE: Make the rewards in puzzle not scale with progression over all, but in 
+progression in puzzle 
+○​ In short, I might grind the game for hours and do the first level of the puzzle 
+gamemode and still get millions of coins (just a me-complaint tho) 
+Progression / Engagement 
+●​ To make the game more engaging, try to add some type of stats board comparing you to 
+other players. Since atm there aren’t too many people, you can just make them bots so 
+that there is still some drive due to competition. 
+●​ New ocean doesn’t really seem so new 
+Monetization 
+●​ Make a “watch add for a 2x production boost for x minutes” :) 
+○​ Gotta make that money off of kids somehow 
+Personal Notes: 
+●​ I mean the game’s pretty decent, doesn’t have any game breaking bugs or anything like 
+that. If it’s meant for kids, I can see why they might enjoy this, but I think the gameplay 
+loop becomes a bit too repetitive pretty quickly, but this might just be me. The sfx and vfx 
+are satisfying, music seems good, some features seem a bit random, but maybe that 
+may help with keeping the gameplay engaging (puzzle, fishing). Still not my cup of tea 
+tho, but still nice job. 
+●​ If I had to recommend some new feature, I’d say add a decently high level cap, eg.: 100 
+so you actually need to expand deeper. Right now it’s worth it to buy 5 mines and 
+upgrade everything else until you can go to the next ocean. Plus I just think there are 
+way too many mines in general. 
