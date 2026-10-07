@@ -264,22 +264,59 @@ func test_advance_location() -> void:
 
 func test_world_cycling() -> void:
 	_fresh()
-	var want := ["ocean", "volcano", "acid", "moon", "ocean", "volcano", "acid", "moon", "ocean"]
+	var want := ["ocean", "volcano", "acid", "moon"]
 	var ok := true
 	for l in want.size():
 		gs.location = l
-		ok = ok and gs.world_id() == want[l] and gs.world_index() == l % 4 and gs.tier() == l / 4
-	check(ok, "worlds cycle ocean -> volcano -> acid -> moon, tier = L / 4")
-	gs.location = 4
-	check(gs.world_id() == "ocean" and gs.tier() == 1, "L=4 is the ocean, tier 1")
+		ok = ok and gs.world_id() == want[l] and gs.world_index() == l and gs.tier() == 0
+	check(ok, "worlds go ocean -> volcano -> acid -> moon, no stars")
+	check(gs.site_id(9) == "cosmic_heart" and gs.site_id(1) == "meteor", "moon sites")
+	gs.location = 0
 	check(gs.site_id(0) == "shells" and gs.site_id(9) == "heart", "ocean sites")
 	gs.location = 1
 	check(gs.site_id(0) == "ash" and gs.site_id(9) == "dragon", "volcano sites")
 	gs.location = 2
 	check(gs.site_id(2) == "shroom", "acid sites")
-	gs.location = 3
-	check(gs.site_id(9) == "cosmic_heart" and gs.site_id(1) == "meteor", "moon sites")
 	gs.location = 0
+	test_last_location()
+
+
+## Exactly four worlds: the Moon is the last, nothing opens after it, and old
+## saves from the repeats come back to the Moon with their progress.
+func test_last_location() -> void:
+	_fresh()
+	check(Balance.LAST_LOCATION == 3 and Balance.WORLDS.size() == 4, "four worlds, the Moon is the last")
+	gs.location = 7
+	check(gs.location == 3 and gs.world_id() == "moon" and gs.tier() == 0, "no location past the Moon")
+	gs.location = 2
+	check(not gs.is_last_location(), "the swamp is not the last")
+	gs.location = 3
+	check(gs.is_last_location(), "the Moon is the last")
+	_complete_location()
+	gs.coins = gs.next_location_cost() * 10.0
+	check(gs.location_ready(), "a finished Moon")
+	check(not gs.can_advance_location() and not gs.advance_location(), "the Moon's gate stays shut")
+	check(gs.location == 3 and gs.coins > 0.0, "still on the Moon, coins kept")
+	# An old save at Ocean ★2 / Volcano ★2: back to the Moon, levels kept.
+	for old_loc in [4, 5, 9]:
+		_fresh()
+		gs.levels["d0"] = 77
+		for k in ["d1", "d2", "d3"]:
+			gs.levels[k] = 21
+		gs.managers["d0"] = true
+		gs.coins = 1.5e15
+		gs.save_game()
+		var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
+		saved["location"] = old_loc
+		var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+		f.store_string(JSON.stringify(saved))
+		f.close()
+		gs.reset()
+		gs.load_game()
+		check(gs.location == 3, "save at location %d is clamped to the Moon" % old_loc)
+		check(int(gs.levels["d0"]) == 77 and int(gs.levels["d3"]) == 21 and gs.has_manager("d0"), "its levels and foremen stay (%d)" % old_loc)
+		check(gs.coins >= 1.5e15 * 0.99, "its coins stay (%d)" % old_loc)
+	_fresh()
 
 
 func test_v3_migration() -> void:

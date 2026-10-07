@@ -99,6 +99,10 @@ const GATE_GROWTH := 1.4
 const GATE_BUMP := 1.45
 ## Price to open the next location, at location 0.
 const LOCATION_PRICE := 2.4e10
+## The last location there is (the Moon): no repeats with stars after it,
+## the map shows the next worlds as "coming soon". Older saves further on
+## are moved back to it (GameState keeps their levels).
+const LAST_LOCATION := 3
 ## Worker evolution: 12 forms per location, bought in order, each x EVO_MULT
 ## income. Prices of forms 1..12 at location 0.
 const EVO_FORMS := 12

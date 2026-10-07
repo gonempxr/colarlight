@@ -25,7 +25,7 @@ func _initialize() -> void:
 	var mv: GDScript = load("res://scripts/ui/map_view.gd")
 	# World chain and tiers.
 	check(ma.world_of(0) == "ocean" and ma.world_of(1) == "volcano" and ma.world_of(2) == "acid" and ma.world_of(3) == "moon", "world order")
-	check(ma.world_of(5) == "volcano" and mv.tier_of(5) == 1 and mv.tier_of(3) == 0, "repeats and tiers")
+	check(mv.tier_of(3) == 0, "no stars")
 	# Boat: waits at the mine, reaches the factory, comes back.
 	for w in ma.WORLDS:
 		var route: Array = ma.spots(w)["boat"]
