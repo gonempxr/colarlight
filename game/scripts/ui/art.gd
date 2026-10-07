@@ -220,8 +220,9 @@ static func smooth_pts(ctrl: PackedVector2Array, steps: int = 5) -> PackedVector
 ## Merge of several polygons (cached): clouds, bushes, hair.
 static func union(polys: Array) -> PackedVector2Array:
 	var k := hash(["union", polys])
-	if _geo.has(k):
-		return _geo[k]
+	var hit = _gget(k)
+	if hit != null:
+		return hit
 	var acc: PackedVector2Array = polys[0]
 	for i in range(1, polys.size()):
 		var merged := Geometry2D.merge_polygons(acc, polys[i])
@@ -231,15 +232,16 @@ static func union(polys: Array) -> PackedVector2Array:
 			if a > best and not Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(acc) or a > best:
 				best = a
 				acc = p
-	_geo[k] = acc
+	_gset(k, acc)
 	return acc
 
 
 ## Part of `pts` inside `clip` (cached), e.g. shoulders inside a portrait.
 static func clipped(pts: PackedVector2Array, clip: PackedVector2Array) -> PackedVector2Array:
 	var k := hash(["clip", pts, clip])
-	if _geo.has(k):
-		return _geo[k]
+	var hit = _gget(k)
+	if hit != null:
+		return hit
 	var res := PackedVector2Array()
 	var best := 0.0
 	for p in Geometry2D.intersect_polygons(pts, clip):
@@ -247,7 +249,7 @@ static func clipped(pts: PackedVector2Array, clip: PackedVector2Array) -> Packed
 		if a > best:
 			best = a
 			res = p
-	_geo[k] = res
+	_gset(k, res)
 	return res
 
 
@@ -282,10 +284,77 @@ static var _bc := PackedColorArray()
 
 ## Forgets every cached shape (after low_power changes).
 static func clear_cache() -> void:
+	_slots.clear()
 	_geo.clear()
 	_cols.clear()
+	_ready.clear()
+	_geo_old.clear()
+	_cols_old.clear()
+	_ready_old.clear()
 	_pc.clear()
+	_pc_old.clear()
 	_pc_verts = 0
+
+
+# Caches in two generations: when the young one is full it becomes the old
+# one and a new young one starts; a hit in the old one moves back. Shapes
+# used every frame always survive, one-off shapes (animated points, fading
+# colors) fall out, and there is never a moment when everything has to be
+# rebuilt at once (a full clear cost a 70 ms hitch).
+const GEO_GEN := 6000
+const COLS_GEN := 5000
+const READY_GEN := 6000
+static var _geo_old := {}
+static var _cols_old := {}
+static var _ready_old := {}
+
+
+static func _gget(k: int) -> Variant:
+	var v = _geo.get(k)
+	if v == null:
+		v = _geo_old.get(k)
+		if v != null:
+			_gset(k, v)
+	return v
+
+
+static func _gset(k: int, v: Variant) -> void:
+	if _geo.size() >= GEO_GEN:
+		_geo_old = _geo
+		_geo = {}
+	_geo[k] = v
+
+
+static func _cget(k: int) -> Variant:
+	var v = _cols.get(k)
+	if v == null:
+		v = _cols_old.get(k)
+		if v != null:
+			_cset(k, v)
+	return v
+
+
+static func _cset(k: int, v: Variant) -> void:
+	if _cols.size() >= COLS_GEN:
+		_cols_old = _cols
+		_cols = {}
+	_cols[k] = v
+
+
+static func _rget(k: int) -> Variant:
+	var v = _ready.get(k)
+	if v == null:
+		v = _ready_old.get(k)
+		if v != null:
+			_rset(k, v)
+	return v
+
+
+static func _rset(k: int, v: Variant) -> void:
+	if _ready.size() >= READY_GEN:
+		_ready_old = _ready
+		_ready = {}
+	_ready[k] = v
 
 
 static func _area(p: PackedVector2Array) -> float:
@@ -407,23 +476,50 @@ static func _aa() -> float:
 
 
 static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
-	w = _ink(w)
+	return _geo_inked(pts, _ink(w), shade)
+
+
+## _geo_for with the outline width already through _ink.
+static func _geo_inked(pts: PackedVector2Array, w: float, shade: float) -> Array:
 	var k := hash([pts, w, shade, fringe_min, _st])
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g != null:
 		return g
 	g = _build(pts, w, shade)
-	_geo[k] = g
+	_gset(k, g)
 	return g
+
+
+# --- Ready shapes ---------------------------------------------------------------------
+#
+# A drawn shape is its triangles plus a color per vertex. Both are cached
+# together under one key (the shape's points, widths, scale step and
+# colors), so drawing a shape seen before is one hash, one lookup and one
+# paste. Shapes whose colors animate are snapped by the callers (alpha in
+# steps), and the cache is simply dropped when it grows too big.
+
+static var _ready := {}
+
+
+static func _ready_get(k: int) -> Variant:
+	return _rget(k)
+
+
+static func _ready_set(k: int, g: Array, fill: Color, line: Color) -> Array:
+	var e: Array
+	var v: PackedVector2Array = g[0]
+	if v.is_empty():
+		e = [v, PackedColorArray()]
+	else:
+		e = [v, _colors_for(g, fill, line)]
+	_rset(k, e)
+	return e
 
 
 ## Builds a shape once: [vertices, counts] where the vertices are the
 ## outline, its soft edge, the fill, the shadow band and the highlight, in
 ## that order, and counts holds how many vertices each part has.
 static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
-	if _geo.size() > 8000:
-		_geo.clear()
-		_cols.clear()
 	var outer := PackedVector2Array()
 	var fringe := PackedVector2Array()
 	if w > 0.0:
@@ -470,6 +566,17 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 	return [v, PackedInt32Array([outer.size(), fringe.size(), fill.size(), shadow.size(), hi.size()])]
 
 
+## _solid, cached (for shapes drawn again and again in one color).
+static func _solid_c(color: Color, n: int) -> PackedColorArray:
+	var k := hash(["s", color, n])
+	var c = _cget(k)
+	if c != null:
+		return c
+	c = _solid(color, n)
+	_cset(k, c)
+	return c
+
+
 static func _solid(color: Color, n: int) -> PackedColorArray:
 	var c := PackedColorArray()
 	c.resize(n)
@@ -480,7 +587,7 @@ static func _solid(color: Color, n: int) -> PackedColorArray:
 ## Colors for a soft edge band of `n` vertices (see _fringe).
 static func _fringe_cols(color: Color, n: int) -> PackedColorArray:
 	var k := hash(["f", color, n])
-	var c = _cols.get(k)
+	var c = _cget(k)
 	if c != null:
 		return c
 	c = PackedColorArray()
@@ -488,13 +595,13 @@ static func _fringe_cols(color: Color, n: int) -> PackedColorArray:
 	var clear := Color(color, 0.0)
 	for i in n:
 		c[i] = color if _QUAD_ALPHA[i % 6] > 0.5 else clear
-	_cols[k] = c
+	_cset(k, c)
 	return c
 
 
 static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
 	var k := hash([g[1], fill, line])
-	var c = _cols.get(k)
+	var c = _cget(k)
 	if c != null and c.size() == g[0].size():
 		return c
 	var n: PackedInt32Array = g[1]
@@ -504,9 +611,7 @@ static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
 	c.append_array(_solid(fill, n[2]))
 	c.append_array(_solid(shade_of(fill), n[3]))
 	c.append_array(_solid(Color(1, 1, 1, 0.3 * fill.a), n[4]))
-	if _cols.size() > 6000:
-		_cols.clear()
-	_cols[k] = c
+	_cset(k, c)
 	return c
 
 
@@ -569,52 +674,136 @@ static func cache_begin(ci: CanvasItem, key: int) -> bool:
 	# Parts drawn at another scale step have other outline widths.
 	key = hash([key, _scale_step(_rec_xf * _xf if _rec else _xf)])
 	var e = _pc.get(key)
+	if e == null:
+		e = _pc_old.get(key)
+		if e != null:
+			_pc_store(key, e)
 	if e != null:
-		e[2] = _pc_tick
 		_put(ci, e[0], e[1])
 		return true
-	if _rec:
-		# A part inside a part is recorded as a piece of the outer one.
-		return false
+	# A part inside a part (or a slot) is recorded on its own too, then
+	# pasted into the outer one.
+	_rec_start(key)
+	return false
+
+
+## What is being recorded, saved while a part inside it records.
+static var _rec_saves: Array = []
+
+
+static func _rec_start(key: int) -> void:
+	_rec_saves.append([_rec, _rv, _rc, _rec_key, _rec_xf, _rec_stack, _xf, _stack, _slot_stamp])
+	var base := _rec_xf * _xf if _rec else _xf
 	_rec = true
 	_rec_key = key
 	_rv = PackedVector2Array()
 	_rc = PackedColorArray()
-	_rec_xf = _xf
-	_rec_stack = _stack
+	_rec_xf = base
+	_rec_stack = []
 	_xf = Transform2D.IDENTITY
 	_stack = []
-	return false
 
 
-## Drops the parts not used for a couple of seconds; everything when that
-## is not enough.
-static func _evict() -> void:
-	var cutoff := _pc_tick - 2
-	for k in _pc.keys():
-		var e: Array = _pc[k]
-		if e[2] < cutoff:
-			_pc_verts -= (e[0] as PackedVector2Array).size()
-			_pc.erase(k)
-	if _pc_verts > PART_CACHE_VERTS * 0.8:
-		_pc.clear()
+## Ends the innermost recording: returns its [vertices, colors] and goes
+## back to what was being drawn (or recorded) before it.
+static func _rec_finish() -> Array:
+	var out := [_rv, _rc]
+	var st: Array = _rec_saves.pop_back()
+	_rec = st[0]
+	_rv = st[1]
+	_rc = st[2]
+	_rec_key = st[3]
+	_rec_xf = st[4]
+	_rec_stack = st[5]
+	_xf = st[6]
+	_stack = st[7]
+	_slot_stamp = st[8]
+	return out
+
+
+## The part cache has two generations like the shape caches (see _gget):
+## when the young one holds PART_CACHE_VERTS / 2 vertices it becomes the
+## old one. Parts drawn every frame move back on their next use, so they
+## are never all thrown away at once (that cost a big hitch every few
+## seconds while time-stepped parts filled the cache).
+static var _pc_old := {}
+
+
+static func _pc_store(key: int, e: Array) -> void:
+	var n := (e[0] as PackedVector2Array).size()
+	if _pc_verts + n > PART_CACHE_VERTS / 2:
+		_pc_old = _pc
+		_pc = {}
 		_pc_verts = 0
+	_pc[key] = e
+	_pc_verts += n
 
 
 static func cache_end(ci: CanvasItem, key: int) -> void:
 	key = hash([key, _scale_step(_rec_xf)])
 	if not _rec or _rec_key != key:
 		return
-	_rec = false
-	_xf = _rec_xf
-	_stack = _rec_stack
-	if _pc_verts > PART_CACHE_VERTS:
-		_evict()
-	_pc[key] = [_rv, _rc, _pc_tick]
-	_pc_verts += _rv.size()
-	_put(ci, _rv, _rc)
-	_rv = PackedVector2Array()
-	_rc = PackedColorArray()
+	var r := _rec_finish()
+	_pc_store(key, [r[0], r[1]])
+	_put(ci, r[0], r[1])
+
+
+# --- Sprite slots -------------------------------------------------------------------
+#
+# A moving sprite (a diver, a boat) whose shape animates: its look is
+# recorded into its own slot and pasted at the current transform on every
+# frame, so it MOVES at the full frame rate while its SHAPE (limbs, faces)
+# is redrawn only when `stamp` changes (the caller steps it at SHAPE_HZ):
+#
+#   Art.push(ci, pos)
+#   if not Art.slot_begin(ci, id, Art.shape_stamp(phase)):
+#       ...draw the sprite at Vector2.ZERO as usual...
+#       Art.slot_end(ci, id)
+#   Art.pop(ci)
+#
+# One slot per id (the newest shape only), so slots never flood. Like
+# parts, nothing that draws text or uses CanvasItem.draw_* may go inside.
+
+## How often moving sprites change shape (frames per second of their
+## limbs); low power redraws them a bit less often, and FrameGovernor
+## lowers it on slow devices. Movement is not stepped.
+const SHAPE_HZ := 30.0
+const SHAPE_HZ_LOW := 20.0
+static var shape_hz := SHAPE_HZ
+const _SLOT_REC := 0x51074E7
+static var _slots := {}
+static var _slot_stamp := 0
+
+
+## The shape step for a sprite: changes SHAPE_HZ times a second. `phase`
+## (0..1) spreads the sprites over the frames so they don't all redraw at once.
+static func shape_stamp(t: float, phase: float = 0.0) -> int:
+	return floori(t * (minf(shape_hz, SHAPE_HZ_LOW) if low_power else shape_hz) + phase)
+
+
+static func slot_begin(ci: CanvasItem, id: int, stamp: int) -> bool:
+	stamp = hash([stamp, _scale_step(_rec_xf * _xf if _rec else _xf), fringe_min])
+	var e = _slots.get(id)
+	if e != null and e[2] == stamp:
+		e[3] = _pc_tick
+		_put(ci, e[0], e[1])
+		return true
+	_rec_start(id ^ _SLOT_REC)
+	_slot_stamp = stamp
+	return false
+
+
+static func slot_end(ci: CanvasItem, id: int) -> void:
+	if not _rec or _rec_key != id ^ _SLOT_REC:
+		return
+	var stamp := _slot_stamp
+	var r := _rec_finish()
+	if _slots.size() > 300:
+		for k in _slots.keys():
+			if _slots[k][3] < _pc_tick - 2:
+				_slots.erase(k)
+	_slots[id] = [r[0], r[1], stamp, _pc_tick]
+	_put(ci, r[0], r[1])
 
 
 static var _ms: Array = []
@@ -696,49 +885,54 @@ static func fit_recorded(start: int, center: Vector2, radius: float, anchor: Vec
 		if lo < 1.0:
 			for i in range(start, n):
 				_rv[i] = a + (_rv[i] - a) * lo
-	# Clip the triangles against the circle (as a 48-gon, inside it).
+	# Clip the triangles against the circle (as a 48-gon, inside it). The
+	# clipping itself is native (Geometry2D); the colors of the new corners
+	# are blended from the triangle's own (barycentric).
 	var ring := PackedVector2Array()
+	ring.resize(48)
 	for i in 48:
 		var ang := TAU * i / 48.0
-		ring.append(c + Vector2(cos(ang), sin(ang)) * r)
+		ring[i] = c + Vector2(cos(ang), sin(ang)) * r
 	var inner := r * cos(PI / 48.0)
+	var inner2 := inner * inner
 	var ov := _rv.slice(0, start)
 	var oc := _rc.slice(0, start)
 	for i in range(start, n - 2, 3):
 		var p0 := _rv[i]
 		var p1 := _rv[i + 1]
 		var p2 := _rv[i + 2]
-		if p0.distance_to(c) <= inner and p1.distance_to(c) <= inner and p2.distance_to(c) <= inner:
-			ov.append_array([p0, p1, p2])
-			oc.append_array([_rc[i], _rc[i + 1], _rc[i + 2]])
+		if p0.distance_squared_to(c) <= inner2 and p1.distance_squared_to(c) <= inner2 and p2.distance_squared_to(c) <= inner2:
+			ov.append(p0)
+			ov.append(p1)
+			ov.append(p2)
+			oc.append(_rc[i])
+			oc.append(_rc[i + 1])
+			oc.append(_rc[i + 2])
 			continue
-		var pv := PackedVector2Array([p0, p1, p2])
-		var pc := PackedColorArray([_rc[i], _rc[i + 1], _rc[i + 2]])
-		for e in 48:
-			if pv.is_empty():
-				break
-			var e0 := ring[e]
-			var e1 := ring[(e + 1) % 48]
-			var nv := PackedVector2Array()
-			var nc := PackedColorArray()
-			var m := pv.size()
-			for j in m:
-				var q0 := pv[j]
-				var q1 := pv[(j + 1) % m]
-				var d0 := (e1 - e0).cross(q0 - e0)
-				var d1 := (e1 - e0).cross(q1 - e0)
-				if d0 >= 0.0:
-					nv.append(q0)
-					nc.append(pc[j])
-				if (d0 >= 0.0) != (d1 >= 0.0):
-					var f := d0 / (d0 - d1)
-					nv.append(q0.lerp(q1, f))
-					nc.append(pc[j].lerp(pc[(j + 1) % m], f))
-			pv = nv
-			pc = nc
-		for j in range(1, pv.size() - 1):
-			ov.append_array([pv[0], pv[j], pv[j + 1]])
-			oc.append_array([pc[0], pc[j], pc[j + 1]])
+		# Far outside (all corners beyond the circle on one side): dropped.
+		var lo := p0.min(p1).min(p2)
+		var hi := p0.max(p1).max(p2)
+		if lo.x > c.x + r or hi.x < c.x - r or lo.y > c.y + r or hi.y < c.y - r:
+			continue
+		var c0 := _rc[i]
+		var c1 := _rc[i + 1]
+		var c2 := _rc[i + 2]
+		var e1 := p1 - p0
+		var e2 := p2 - p0
+		var den := e1.x * e2.y - e2.x * e1.y
+		if absf(den) < 1e-9:
+			continue
+		for poly in Geometry2D.intersect_polygons(PackedVector2Array([p0, p1, p2]), ring):
+			var pc := PackedColorArray()
+			pc.resize(poly.size())
+			for j in poly.size():
+				var d := poly[j] - p0
+				var u := (d.x * e2.y - e2.x * d.y) / den
+				var v := (e1.x * d.y - d.x * e1.y) / den
+				pc[j] = c0 * (1.0 - u - v) + c1 * u + c2 * v
+			for idx in Geometry2D.triangulate_polygon(poly):
+				ov.append(poly[idx])
+				oc.append(pc[idx])
 	_rv = ov
 	_rc = oc
 
@@ -766,12 +960,25 @@ static func _emit(ci: CanvasItem, g: Array, fill: Color, line: Color) -> void:
 ## The core call: outlined, shaded polygon. w = outline width (0 = none),
 ## shade = strength of the shadow/highlight bands (0 = flat).
 static func toon(ci: CanvasItem, pts: PackedVector2Array, fill: Color, w: float = 3.0, shade: float = 1.0, line: Color = INK) -> void:
-	_emit(ci, _geo_for(pts, w, shade), fill, line)
+	w = _ink(w)
+	var k := hash([pts, w, shade, fringe_min, _st, fill, line])
+	var e = _rget(k)
+	if e == null:
+		e = _ready_set(k, _geo_inked(pts, w, shade), fill, line)
+	_put(ci, e[0], e[1])
 
 
 ## Flat filled polygon without outline, triangulated once.
 static func flat(ci: CanvasItem, pts: PackedVector2Array, color: Color) -> void:
-	_emit(ci, _geo_for(pts, 0.0, 0.0), color, color)
+	# No outline and no bands: the triangles don't depend on the scale.
+	var k := hash([pts, color, 7])
+	var e = _rget(k)
+	if e == null:
+		var st := _st
+		_st = 0
+		e = _ready_set(k, _geo_inked(pts, 0.0, 0.0), color, color)
+		_st = st
+	_put(ci, e[0], e[1])
 
 
 ## Flat polygon that changes every frame (not cached).
@@ -790,50 +997,62 @@ static func grad(ci: CanvasItem, p: PackedVector2Array, c: PackedColorArray) -> 
 
 static func t_circle(ci: CanvasItem, c: Vector2, r: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
 	w = _ink(w)
-	var k := hash(["c", c, r, w, shade, fringe_min, _st])
-	var g = _geo.get(k)
-	if g == null:
-		g = _build(circle_pts(c, r), w, shade)
-		_geo[k] = g
-	_emit(ci, g, fill, INK)
+	var k := hash(["c", c, r, w, shade, fringe_min, _st, fill])
+	var e = _rget(k)
+	if e == null:
+		var gk := hash(["c", c, r, w, shade, fringe_min, _st])
+		var g = _gget(gk)
+		if g == null:
+			g = _build(circle_pts(c, r), w, shade)
+			_gset(gk, g)
+		e = _ready_set(k, g, fill, INK)
+	_put(ci, e[0], e[1])
 
 
 static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: float = 3.0, shade: float = 1.0) -> void:
 	w = _ink(w)
-	var k := hash(["r", r, radius, w, shade, fringe_min, _st])
-	var g = _geo.get(k)
-	if g == null:
-		g = _build(rrect_pts(r, radius), w, shade)
-		_geo[k] = g
-	_emit(ci, g, fill, INK)
+	var k := hash(["r", r, radius, w, shade, fringe_min, _st, fill])
+	var e = _rget(k)
+	if e == null:
+		var gk := hash(["r", r, radius, w, shade, fringe_min, _st])
+		var g = _gget(gk)
+		if g == null:
+			g = _build(rrect_pts(r, radius), w, shade)
+			_gset(gk, g)
+		e = _ready_set(k, g, fill, INK)
+	_put(ci, e[0], e[1])
 
 
 static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w: float = 3.0, shade: float = 1.0, rot: float = 0.0) -> void:
 	w = _ink(w)
-	var k := hash(["e", c, radii, w, shade, rot, fringe_min, _st])
-	var g = _geo.get(k)
-	if g == null:
-		g = _build(ellipse_pts(c, radii, 0, rot), w, shade)
-		_geo[k] = g
-	_emit(ci, g, fill, INK)
+	var k := hash(["e", c, radii, w, shade, rot, fringe_min, _st, fill])
+	var e = _rget(k)
+	if e == null:
+		var gk := hash(["e", c, radii, w, shade, rot, fringe_min, _st])
+		var g = _gget(gk)
+		if g == null:
+			g = _build(ellipse_pts(c, radii, 0, rot), w, shade)
+			_gset(gk, g)
+		e = _ready_set(k, g, fill, INK)
+	_put(ci, e[0], e[1])
 
 
 ## Filled disc with a soft edge (bubbles, dots, rivets).
 static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	_ink(0.0)
 	var k := hash(["d", r, _st])
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g == null:
 		var ring := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
 		var fr := _fringe(ring, _aa())
 		var v := _tris(ring)
 		g = [v, fr]
-		_geo[k] = g
+		_gset(k, g)
 	var fv: PackedVector2Array = g[0]
 	var fr2: PackedVector2Array = g[1]
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
-	_put(ci, fv, _solid(color, fv.size()))
+	_put(ci, fv, _solid_c(color, fv.size()))
 	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
 		_put(ci, fr2, _fringe_cols(color, fr2.size()))
 	_xf = save
@@ -852,10 +1071,10 @@ static func polyline(ci: CanvasItem, pts: PackedVector2Array, color: Color, widt
 static func ring(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float) -> void:
 	_ink(0.0)
 	var k := hash(["ring", pts, color, width, _st])
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g == null:
 		g = _poly_geo(pts, color, width, true)
-		_geo[k] = g
+		_gset(k, g)
 	_put(ci, g[0], g[1])
 
 
@@ -867,46 +1086,85 @@ static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, close
 	var hw := width / 2.0 if soft else (width + aa) / 2.0
 	var edge := hw + aa
 	var left := PackedVector2Array()
-	var dirs := PackedVector2Array()
 	left.resize(n)
-	dirs.resize(n)
 	for i in n:
+		var p := pts[i]
 		var prev: Vector2
 		var next: Vector2
 		if closed:
-			prev = pts[(i - 1 + n) % n]
-			next = pts[(i + 1) % n]
+			prev = pts[i - 1] if i > 0 else pts[n - 1]
+			next = pts[i + 1] if i < n - 1 else pts[0]
 		else:
-			prev = pts[maxi(i - 1, 0)]
-			next = pts[mini(i + 1, n - 1)]
-		var d1 := (pts[i] - prev).normalized() if pts[i] != prev else (next - pts[i]).normalized()
-		var d2 := (next - pts[i]).normalized() if next != pts[i] else d1
+			prev = pts[i - 1] if i > 0 else p
+			next = pts[i + 1] if i < n - 1 else p
+		var d1 := (p - prev).normalized() if p != prev else (next - p).normalized()
+		var d2 := (next - p).normalized() if next != p else d1
 		var nrm := (d1 + d2).orthogonal().normalized()
 		if nrm == Vector2.ZERO:
 			nrm = d1.orthogonal()
-		var s := maxf(0.4, nrm.dot(d2.orthogonal()))
-		left[i] = nrm / s
-	var v := PackedVector2Array()
-	var c := PackedColorArray()
-	var clear := Color(color, 0.0)
+		left[i] = nrm / maxf(0.4, nrm.dot(d2.orthogonal()))
 	var segs := n if closed else n - 1
+	var per := 18 if soft else 6
+	var v := PackedVector2Array()
+	v.resize(segs * per)
+	var o := 0
 	for i in segs:
-		var j := (i + 1) % n
+		var j := i + 1 if i < n - 1 else 0
 		var a := pts[i]
 		var b := pts[j]
 		var la := left[i]
 		var lb := left[j]
 		# core
-		v.append_array([a + la * hw, b + lb * hw, b - lb * hw, a + la * hw, b - lb * hw, a - la * hw])
-		c.append_array([color, color, color, color, color, color])
-		if not soft:
-			continue
-		# soft edges on both sides
-		v.append_array([a + la * hw, b + lb * hw, b + lb * edge, a + la * hw, b + lb * edge, a + la * edge])
-		c.append_array([color, color, clear, color, clear, clear])
-		v.append_array([a - la * hw, b - lb * hw, b - lb * edge, a - la * hw, b - lb * edge, a - la * edge])
-		c.append_array([color, color, clear, color, clear, clear])
-	return [v, c]
+		var a0 := a + la * hw
+		var a1 := a - la * hw
+		var b0 := b + lb * hw
+		var b1 := b - lb * hw
+		v[o] = a0
+		v[o + 1] = b0
+		v[o + 2] = b1
+		v[o + 3] = a0
+		v[o + 4] = b1
+		v[o + 5] = a1
+		if soft:
+			# soft edges on both sides
+			var a2 := a + la * edge
+			var b2 := b + lb * edge
+			var a3 := a - la * edge
+			var b3 := b - lb * edge
+			v[o + 6] = a0
+			v[o + 7] = b0
+			v[o + 8] = b2
+			v[o + 9] = a0
+			v[o + 10] = b2
+			v[o + 11] = a2
+			v[o + 12] = a1
+			v[o + 13] = b1
+			v[o + 14] = b3
+			v[o + 15] = a1
+			v[o + 16] = b3
+			v[o + 17] = a3
+		o += per
+	return [v, _poly_cols(color, segs, soft)]
+
+
+## Vertex colors of a polyline of `segs` segments (see _poly_geo).
+static func _poly_cols(color: Color, segs: int, soft: bool) -> PackedColorArray:
+	var k := hash(["pl", color, segs, soft])
+	var c = _cget(k)
+	if c != null:
+		return c
+	var per := 18 if soft else 6
+	c = PackedColorArray()
+	c.resize(segs * per)
+	c.fill(color)
+	if soft:
+		var clear := Color(color, 0.0)
+		for i in segs:
+			var o := i * per
+			for q in [8, 10, 11, 14, 16, 17]:
+				c[o + q] = clear
+	_cset(k, c)
+	return c
 
 
 static func line(ci: CanvasItem, a: Vector2, b: Vector2, color: Color, width: float = 2.0) -> void:
@@ -1090,17 +1348,34 @@ static func arrow_pts(s: float) -> PackedVector2Array:
 
 ## Soft round glow: `color` in the middle fading to clear at radius `r`.
 static func glow(ci: CanvasItem, c: Vector2, r: float, color: Color, n: int = 18) -> void:
-	var clear := Color(color, 0.0)
-	var v := PackedVector2Array()
-	var cols := PackedColorArray()
-	var prev := c + Vector2(r, 0)
-	for i in n:
-		var a := TAU * (i + 1) / n
-		var p := c + Vector2(cos(a), sin(a)) * r
-		v.append_array([c, prev, p])
-		cols.append_array([color, clear, clear])
-		prev = p
+	# A unit fan (cached per n), scaled to r; colors cached per color.
+	var gk := hash(["glow", n])
+	var v = _gget(gk)
+	if v == null:
+		v = PackedVector2Array()
+		v.resize(n * 3)
+		var prev := Vector2(1, 0)
+		for i in n:
+			var a := TAU * (i + 1) / n
+			var p := Vector2(cos(a), sin(a))
+			v[i * 3] = Vector2.ZERO
+			v[i * 3 + 1] = prev
+			v[i * 3 + 2] = p
+			prev = p
+		_gset(gk, v)
+	var ck := hash(["glow", n, color])
+	var cols = _cget(ck)
+	if cols == null:
+		cols = PackedColorArray()
+		cols.resize(n * 3)
+		cols.fill(Color(color, 0.0))
+		for i in n:
+			cols[i * 3] = color
+		_cset(ck, cols)
+	var save := _xf
+	_xf = _xf * Transform2D(0.0, Vector2(r, r), 0.0, c)
 	_put(ci, v, cols)
+	_xf = save
 
 
 ## Disc whose size or color changes every frame (bubbles, sparks, glows):
@@ -1111,15 +1386,15 @@ static func dot(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	# Alpha in steps of 5%: the colors of the animated dots are cached too.
 	color.a = snappedf(color.a, 0.05)
 	var k := -int(r * 4.0) - 1
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g == null:
 		var ring_pts := circle_pts(Vector2.ZERO, r, clampi(int(r * 1.6), 8, 40))
 		g = [_tris(ring_pts), _fringe(ring_pts, AA)]
-		_geo[k] = g
+		_gset(k, g)
 	var fv: PackedVector2Array = g[0]
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
-	_put(ci, fv, _solid(color, fv.size()))
+	_put(ci, fv, _solid_c(color, fv.size()))
 	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
 		var fr: PackedVector2Array = g[1]
 		_put(ci, fr, _fringe_cols(color, fr.size()))
@@ -1130,17 +1405,17 @@ static func dot(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 ## frame in the same place, like ribs on a shell or facets on a gem.
 static func line_c(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: float) -> void:
 	var k := hash(["lc", pts, color, width])
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g == null:
 		g = _poly_geo(pts, color, width, false)
-		_geo[k] = g
+		_gset(k, g)
 	_put(ci, g[0], g[1])
 
 
 ## Arc that never changes (geometry cached), see arc().
 static func arc_c(ci: CanvasItem, c: Vector2, r: float, a0: float, a1: float, n: int, color: Color, width: float) -> void:
 	var k := hash(["ac", c, r, a0, a1, n, color, width])
-	var g = _geo.get(k)
+	var g = _gget(k)
 	if g == null:
 		var pts := PackedVector2Array()
 		var full := absf(a1 - a0) >= TAU - 0.001
@@ -1149,5 +1424,5 @@ static func arc_c(ci: CanvasItem, c: Vector2, r: float, a0: float, a1: float, n:
 			var a := lerpf(a0, a1, float(i) / n)
 			pts.append(c + Vector2(cos(a), sin(a)) * r)
 		g = _poly_geo(pts, color, width, full)
-		_geo[k] = g
+		_gset(k, g)
 	_put(ci, g[0], g[1])

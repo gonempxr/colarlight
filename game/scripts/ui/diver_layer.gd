@@ -52,6 +52,18 @@ var _s_walk := false
 ## purchase shows at once. "world" + "form" go to Chars.diver's pose.
 var _s_form := 0
 var _rng := RandomNumberGenerator.new()
+## Canvas item the drawing helpers draw on (self, or the effects layer).
+var _ci: CanvasItem
+## Diver sprites by id (site * 10 + diver) and the ones shown this frame.
+var _sprites := {}
+var _frame_used := {}
+## Effects layer over the divers and what it draws this frame.
+var _fx: PaintLayer
+var _fx_busy := false
+var _chips: Array = []
+var _marks: Array = []
+var _hints: Array[Vector2] = []
+var _tint := Color.WHITE
 
 
 static func _make_keys() -> Array[String]:
@@ -63,6 +75,9 @@ static func _make_keys() -> Array[String]:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ci = self
+	_fx = PaintLayer.new(_draw_fx, false)
+	add_child(_fx)
 
 
 func float_text(pos: Vector2, text: String, color: Color, big: bool = false) -> void:
@@ -124,13 +139,50 @@ func _process(delta: float) -> void:
 			p["rot"] += delta * 8.0
 		if p["age"] > p["life"]:
 			_parts.remove_at(i)
-	if World.anim_tick():
+	# Nothing to move while the mine is not shown (another room is open).
+	if not is_visible_in_tree():
+		return
+	_update_divers()
+	# The tint of the night reaches the divers and effects (own canvas items).
+	if not self_modulate.is_equal_approx(_tint):
+		_tint = self_modulate
+		for c in get_children():
+			(c as CanvasItem).self_modulate = _tint
+	# Veins (cached parts, a few steps a second) with the scenery; effects
+	# whenever there are any (and once more to clear them).
+	if World.tick(World.SCENERY):
 		queue_redraw()
+	var busy := not (_floaters.is_empty() and _ripples.is_empty() and _parts.is_empty() and _chips.is_empty() and _marks.is_empty() and _hints.is_empty())
+	if busy or _fx_busy:
+		_fx.queue_redraw()
+	_fx_busy = busy
 
 
-func _draw() -> void:
+## One moving diver: its own canvas item, moved every frame; its shape is
+## drawn again only when its step (Art.shape_stamp) changes.
+class DiverSprite extends Node2D:
+	var id := 0
+	var stamp := -1
+	## Chars.diver arguments after the position.
+	var args := []
+
+	func _draw() -> void:
+		if args.size() < 14:
+			return
+		var a := args
+		Chars.diver(self, Vector2.ZERO, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13])
+
+
+## Works out every diver on screen: moves its sprite, and asks it to redraw
+## when its shape step changed. Also collects the effects to draw on top
+## (chips, marks, the "Tap!" hint).
+func _update_divers() -> void:
 	var gs := GameState
 	var view := world.visible_rect()
+	_frame_used.clear()
+	_chips.clear()
+	_marks.clear()
+	_hints.clear()
 	# Only one "Tap!" bubble at a time, so the screen stays calm.
 	var hinted := false
 	for key in ["lift", "boat", "plant"]:
@@ -147,7 +199,7 @@ func _draw() -> void:
 						at = world.surface.plant_world_pos() + Vector2(70, -185)
 				if not hinted and view.grow(60.0).has_point(at):
 					hinted = true
-					_draw_tap_hint(at)
+					_hints.append(at)
 	for i in Balance.DEPTHS.size():
 		var key: String = _KEYS[i]
 		if not gs.is_open(key):
@@ -165,25 +217,88 @@ func _draw() -> void:
 		if row_top > view.end.y + _SITE_MARGIN or row_top + World.ROW_H < view.position.y - _SITE_MARGIN:
 			continue
 		_begin_site(i, key)
-		_draw_veins(i, n, view)
 		for j in n:
-			_draw_diver(i, j, p, view)
-		
+			_place_diver(i, j, p, view)
 		if p < 0.0 and not gs.has_manager(key):
 			var hint_at := Vector2(world.rows[i].deposit_pos().x - 40, World.row_y(i) + 70)
 			if not hinted and view.has_point(hint_at):
 				hinted = true
-				_draw_tap_hint(hint_at)
+				_hints.append(hint_at)
+	for id in _sprites:
+		var sp: DiverSprite = _sprites[id]
+		if sp.visible and not _frame_used.has(id):
+			sp.visible = false
+			sp.stamp = -1
+
+
+## The sprite of diver `id` (made on first use, kept in diver order so
+## later divers of a site stay in front, as before).
+func _sprite(id: int) -> DiverSprite:
+	var sp: DiverSprite = _sprites.get(id)
+	if sp != null:
+		return sp
+	sp = DiverSprite.new()
+	sp.id = id
+	sp.self_modulate = _tint
+	add_child(sp)
+	_sprites[id] = sp
+	var at := 0
+	for c in get_children():
+		if c is DiverSprite and c != sp and (c as DiverSprite).id < id:
+			at = maxi(at, c.get_index() + 1)
+	move_child(sp, at)
+	move_child(_fx, -1)
+	return sp
+
+
+func _show_diver(id: int, pos: Vector2, args: Array) -> void:
+	var sp := _sprite(id)
+	_frame_used[id] = true
+	sp.position = pos
+	sp.visible = true
+	var stamp := Art.shape_stamp(_t, _slot_phase(id))
+	if stamp != sp.stamp:
+		sp.stamp = stamp
+		sp.args = args
+		sp.queue_redraw()
+
+
+func _draw() -> void:
+	_ci = self
+	var gs := GameState
+	var view := world.visible_rect()
+	for i in Balance.DEPTHS.size():
+		var key: String = _KEYS[i]
+		if not gs.is_open(key):
+			continue
+		var row_top := World.row_y(i)
+		if row_top > view.end.y + _SITE_MARGIN or row_top + World.ROW_H < view.position.y - _SITE_MARGIN:
+			continue
+		_begin_site(i, key)
+		_draw_veins(i, gs.divers(key), view)
+
+
+## Effects over the divers: chips and flashes of digging, marks (zzz, !,
+## sweat), the "Tap!" hint, ripples, confetti, thrown sacks, "+N" texts.
+func _draw_fx(ci: CanvasItem) -> void:
+	_ci = ci
+	for h in _hints:
+		_draw_tap_hint(h)
+	for c in _chips:
+		_draw_chips(c[0], c[1], c[2], c[3], c[4])
+	for m in _marks:
+		Chars.mark(_ci, m[0], m[1], _t)
 	for r in _ripples:
 		var f := r.z / 0.5
-		Art.arc(self, Vector2(r.x, r.y), 12.0 + f * 70.0, 0, TAU, 28, Color(1, 1, 1, 0.7 * (1.0 - f)), 5.0 * (1.0 - f) + 1.0)
+		Art.arc(_ci, Vector2(r.x, r.y), 12.0 + f * 70.0, 0, TAU, 28, Color(1, 1, 1, 0.7 * (1.0 - f)), 5.0 * (1.0 - f) + 1.0)
 	_draw_parts()
 	for fl in _floaters:
 		var a := clampf(1.4 - fl["age"], 0.0, 1.0)
 		var pop := 1.0 + maxf(0.0, 0.25 - fl["age"]) * 2.0
-		Art.push(self, fl["pos"], 0.0, Vector2(pop, pop))
-		Art.text(self, Vector2.ZERO, fl["text"], fl["size"], Color(fl["color"], a), 7)
-		Art.pop(self)
+		Art.push(_ci, fl["pos"], 0.0, Vector2(pop, pop))
+		Art.text(_ci, Vector2.ZERO, fl["text"], fl["size"], Color(fl["color"], a), 7)
+		Art.pop(_ci)
+	_ci = self
 
 
 func _draw_parts() -> void:
@@ -191,20 +306,20 @@ func _draw_parts() -> void:
 		var a: float = snappedf(clampf(1.0 - (p["age"] - p["life"] * 0.7) / (p["life"] * 0.3), 0.0, 1.0), 0.05)
 		match p["kind"]:
 			"confetti":
-				Art.push(self, p["pos"], p["rot"], Vector2(1.0, absf(sin(p["rot"])) + 0.2))
-				Art.flat(self, Art.rrect_pts(Rect2(-5, -3, 10, 6), 1, 1), Color(p["color"], a))
-				Art.pop(self)
+				Art.push(_ci, p["pos"], p["rot"], Vector2(1.0, absf(sin(p["rot"])) + 0.2))
+				Art.flat(_ci, Art.rrect_pts(Rect2(-5, -3, 10, 6), 1, 1), Color(p["color"], a))
+				Art.pop(_ci)
 			"star":
-				Art.push(self, p["pos"], p["rot"])
-				Art.toon(self, Art.star_pts(Vector2.ZERO, 8, 3.5, 4), Color(p["color"], a), 1.5, 0.0)
-				Art.pop(self)
+				Art.push(_ci, p["pos"], p["rot"])
+				Art.toon(_ci, Art.star_pts(Vector2.ZERO, 8, 3.5, 4), Color(p["color"], a), 1.5, 0.0)
+				Art.pop(_ci)
 			"throw":
 				# Stretches a little along the arc, squashes as it lands.
 				var f: float = clampf(p["age"] / p["life"], 0.0, 1.0)
 				var sq := 1.0 + 0.12 * sin(f * PI) - 0.18 * maxf(0.0, f - 0.85) / 0.15
-				Art.push(self, p["pos"], sin(p["rot"]) * 0.4, Vector2(2.0 - sq, sq))
-				Chars.item(self, p["item"], Vector2(0, -12), p["color"], int(p.get("depth", -1)))
-				Art.pop(self)
+				Art.push(_ci, p["pos"], sin(p["rot"]) * 0.4, Vector2(2.0 - sq, sq))
+				Chars.item(_ci, p["item"], Vector2(0, -12), p["color"], int(p.get("depth", -1)))
+				Art.pop(_ci)
 
 
 func _draw_tap_hint(at: Vector2) -> void:
@@ -214,13 +329,13 @@ func _draw_tap_hint(at: Vector2) -> void:
 	var font := UiTheme.heavy_font()
 	var fs := 24
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	Art.push(self, at + Vector2(0, -bob))
+	Art.push(_ci, at + Vector2(0, -bob))
 	var box := Rect2(Vector2(-tw / 2.0 - 16, -44), Vector2(tw + 32, 46))
 	var tail := PackedVector2Array([Vector2(-10, 0), Vector2(10, 0), Vector2(0, 14)])
-	Art.toon(self, Art.union([Art.rrect_pts(box, 16), tail]), Art.WHITE, 3.0, 0.3)
-	Art.text(self, Vector2(0, -12), text, fs, Art.INK, 0)
-	Art.pop(self)
-	PointerArt.draw(self, at + Vector2(10, 40), _t, not Settings.reduce_motion, -0.45, 0.8)
+	Art.toon(_ci, Art.union([Art.rrect_pts(box, 16), tail]), Art.WHITE, 3.0, 0.3)
+	Art.text(_ci, Vector2(0, -12), text, fs, Art.INK, 0)
+	Art.pop(_ci)
+	PointerArt.draw(_ci, at + Vector2(10, 40), _t, not Settings.reduce_motion, -0.45, 0.8)
 
 
 ## Small veins of ore for the third diver on (the first two share the big
@@ -242,18 +357,18 @@ func _draw_veins(site: int, n: int, view: Rect2) -> void:
 		# (each vein on its own beat, so they don't all redraw in one frame)
 		var tq := int(_t * 4.0 + ((site * 5 + j * 3) % 8) / 8.0)
 		var key := hash([40, site, j, tq, walk])
-		Art.push(self, Vector2(at.x, ledge))
-		if not Art.cache_begin(self, key):
+		Art.push(_ci, Vector2(at.x, ledge))
+		if not Art.cache_begin(_ci, key):
 			if high and walk:
 				# Air worlds: a wooden scaffold with a ladder; the worker
 				# climbs up and digs a vein on the walkway.
 				_scaffold(sp.y)
 			elif high:
 				# A rock pillar holds the vein up where the hovering diver works.
-				Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
-			OreArt.deposit(self, Vector2(0, at.y - ledge), 30.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
-			Art.cache_end(self, key)
-		Art.pop(self)
+				Art.toon(_ci, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+			OreArt.deposit(_ci, Vector2(0, at.y - ledge), 30.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
+			Art.cache_end(_ci, key)
+		Art.pop(_ci)
 
 
 ## Scaffold under a high spot of an air world, drawn around its vein (the
@@ -265,19 +380,19 @@ func _scaffold(top: float) -> void:
 		wood = Color("aab4c8")
 		dark = Color("6c7690")
 	for x in [-62.0, 24.0]:
-		Art.t_rect(self, Rect2(x, top, 7.0, -top), 2.0, dark, 2.5, 0.6)
+		Art.t_rect(_ci, Rect2(x, top, 7.0, -top), 2.0, dark, 2.5, 0.6)
 	# Ladder where the worker climbs.
-	Art.line(self, Vector2(-58, 0), Vector2(-58, top), Art.INK, 7.0)
-	Art.line(self, Vector2(-42, 0), Vector2(-42, top), Art.INK, 7.0)
-	Art.line(self, Vector2(-58, 0), Vector2(-58, top), wood, 3.5)
-	Art.line(self, Vector2(-42, 0), Vector2(-42, top), wood, 3.5)
+	Art.line(_ci, Vector2(-58, 0), Vector2(-58, top), Art.INK, 7.0)
+	Art.line(_ci, Vector2(-42, 0), Vector2(-42, top), Art.INK, 7.0)
+	Art.line(_ci, Vector2(-58, 0), Vector2(-58, top), wood, 3.5)
+	Art.line(_ci, Vector2(-42, 0), Vector2(-42, top), wood, 3.5)
 	var y := -10.0
 	while y > top + 4.0:
-		Art.line(self, Vector2(-58, y), Vector2(-42, y), wood, 3.0)
+		Art.line(_ci, Vector2(-58, y), Vector2(-42, y), wood, 3.0)
 		y -= 14.0
 	# Walkway.
-	Art.t_rect(self, Rect2(-74, top, 112, 9), 3.0, wood, 3.0, 0.7)
-	Art.line(self, Vector2(-70, top + 4.5), Vector2(34, top + 4.5), dark, 1.5)
+	Art.t_rect(_ci, Rect2(-74, top, 112, 9), 3.0, wood, 3.0, 0.7)
+	Art.line(_ci, Vector2(-70, top + 4.5), Vector2(34, top + 4.5), dark, 1.5)
 
 
 ## The pose of a diver at point p (0..1) of its trip: where it is, which
@@ -435,7 +550,7 @@ func _begin_site(site: int, key: String) -> void:
 	_s_form = int(evo) if evo != null else 0
 
 
-func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
+func _place_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	var st := _s_style
 	var key := _s_key
 	var suit: Color = st["suit"] if suit_paint.is_empty() else suit_paint[j % suit_paint.size()]
@@ -461,12 +576,12 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 			return
 		var idle: float = _t - float(_idle_since.get(key, _t))
 		var emo := mood if mood != "" else ("sleepy" if idle > 5.0 else "bored")
-		Chars.diver(self, at, DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t + seed, site,
-				{"world": WorldLook.world, "form": _s_form})
+		_show_diver(id, at, [DIVER_SCALE, suit, 1.0, 0.0, 0.0, "cheer" if mood == "joy" else "idle", 0.0, false, ore, emo, blink, _t + seed, site,
+				{"world": WorldLook.world, "form": _s_form}])
 		if emo == "sleepy" and j == 0:
-			Chars.mark(self, "zzz", at + Vector2(20, -80), _t)
+			_marks.append(["zzz", at + Vector2(20, -80)])
 		elif mood == "wow" and j == 0:
-			Chars.mark(self, "!", at + Vector2(0, -92), _t)
+			_marks.append(["!", at + Vector2(0, -92)])
 		return
 	# Later divers start a little later and catch up, so they never jump.
 	var lag := j * 0.03
@@ -499,7 +614,7 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 				Sfx.voice("hup", randf_range(1.0, 1.4))
 		var busy := 0.22 if Chars.swings(Chars.tool_of(tier)) else 0.3
 		if phase >= Chars.DIG_IMPACT and phase < Chars.DIG_IMPACT + busy and view.grow(40.0).has_point(tip):
-			_draw_chips(tip, (phase - Chars.DIG_IMPACT) / busy, site, facing, id)
+			_chips.append([tip, (phase - Chars.DIG_IMPACT) / busy, site, facing, id])
 	elif trip == "drop":
 		var was: String = _trip.get(id, "")
 		if was == "drop_carry" and view.grow(80.0).has_point(pos):
@@ -524,9 +639,16 @@ func _draw_diver(site: int, j: int, p: float, view: Rect2) -> void:
 	if arm_from != "" and blend < 1.0:
 		pose["arm_from"] = arm_from
 		pose["blend"] = blend
-	Chars.diver(self, pos, DIVER_SCALE, suit, facing, tilt, kick, arm, hit, carry, ore, emo, blink, _t + seed, site, pose)
+	# The diver moves every frame; its limbs change shape SHAPE_HZ times a
+	# second (see _show_diver).
+	_show_diver(id, pos, [DIVER_SCALE, suit, facing, tilt, kick, arm, hit, carry, ore, emo, blink, _t + seed, site, pose])
 	if rushing and j == 0:
-		Chars.mark(self, "sweat", pos + Vector2(-16 * facing * turn, -76), _t)
+		_marks.append(["sweat", pos + Vector2(-16 * facing * turn, -76)])
+
+
+## Divers change shape on different frames, so no frame redraws them all.
+static func _slot_phase(id: int) -> float:
+	return fposmod(id * 0.618, 1.0)
 
 
 ## Bits of the site's ore flying off the tool, and a flash where it hits.
@@ -537,27 +659,27 @@ func _draw_chips(at: Vector2, f: float, site: int, facing: float, id: int) -> vo
 		var a := -PI * 0.5 - facing * (0.35 + k * 0.32) + sin(id * 1.7 + k) * 0.15
 		var sp := 30.0 + 8.0 * ((id + k) % 3)
 		var p := at + Vector2(cos(a), sin(a)) * _ease(f) * sp + Vector2(0, f * f * 22.0)
-		OreArt.chip(self, p, 3.4 * (1.0 - f * 0.35), site, f * 6.0 * facing + k)
+		OreArt.chip(_ci, p, 3.4 * (1.0 - f * 0.35), site, f * 6.0 * facing + k)
 	var s := 1.0 - f * 0.6
 	match tool:
 		"laser":
-			Art.glow(self, at, 22.0 * s + 4.0, Color(1, 1, 1, 0.5 * (1.0 - f)), 12)
+			Art.glow(_ci, at, 22.0 * s + 4.0, Color(1, 1, 1, 0.5 * (1.0 - f)), 12)
 		"drill":
-			Art.glow(self, at, 16.0, Color(1, 0.95, 0.8, 0.45 * (1.0 - f)), 12)
+			Art.glow(_ci, at, 16.0, Color(1, 0.95, 0.8, 0.45 * (1.0 - f)), 12)
 		"plasma":
-			Art.glow(self, at, 24.0 * s + 4.0, Color(Chars.PLASMA, 0.5 * (1.0 - f)), 12)
+			Art.glow(_ci, at, 24.0 * s + 4.0, Color(Chars.PLASMA, 0.5 * (1.0 - f)), 12)
 		"trident":
-			Art.glow(self, at, 20.0 * s + 4.0, Color(Chars.AQUA, 0.5 * (1.0 - f)), 12)
-			Art.arc(self, at, 6.0 + f * 22.0, 0, TAU, 16, Color(1, 1, 1, 0.6 * (1.0 - f)), 2.0)
+			Art.glow(_ci, at, 20.0 * s + 4.0, Color(Chars.AQUA, 0.5 * (1.0 - f)), 12)
+			Art.arc(_ci, at, 6.0 + f * 22.0, 0, TAU, 16, Color(1, 1, 1, 0.6 * (1.0 - f)), 2.0)
 		"hammer":
-			Art.glow(self, at, 26.0 * s + 4.0, Color(1, 0.9, 0.5, 0.45 * (1.0 - f)), 12)
-			Art.push(self, at, f * 2.0, Vector2(s, s) * 1.2)
-			Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 0.95, 0.7, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
-			Art.pop(self)
+			Art.glow(_ci, at, 26.0 * s + 4.0, Color(1, 0.9, 0.5, 0.45 * (1.0 - f)), 12)
+			Art.push(_ci, at, f * 2.0, Vector2(s, s) * 1.2)
+			Art.toon(_ci, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 0.95, 0.7, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
+			Art.pop(_ci)
 		_:
-			Art.push(self, at, 0.0, Vector2(s, s))
-			Art.toon(self, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 1, 0.8, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
-			Art.pop(self)
+			Art.push(_ci, at, 0.0, Vector2(s, s))
+			Art.toon(_ci, Art.star_pts(Vector2.ZERO, 14, 4, 4), Color(1, 1, 0.8, snappedf(1.0 - f, 0.05)), 1.2, 0.0)
+			Art.pop(_ci)
 
 
 func pos_hint(x: float, y: float) -> Vector2:

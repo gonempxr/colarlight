@@ -106,6 +106,12 @@ static var show_title := true
 
 
 func _ready() -> void:
+	var bench_room := PerfProbe.attach(self)
+	var governor := FrameGovernor.new()
+	add_child(governor)
+	governor.level_changed.connect(func(_l: int) -> void:
+		if Art.low_power != Settings.low_quality():
+			_apply_ui_scale())
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_apply_ui_scale()
@@ -289,6 +295,8 @@ func _ready() -> void:
 		move_child(_title, _modal.get_index())
 	else:
 		_after_title()
+	if bench_room >= 0:
+		show_room(bench_room, false)
 	_announce_ready()
 
 

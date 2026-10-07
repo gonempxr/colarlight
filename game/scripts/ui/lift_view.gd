@@ -55,6 +55,13 @@ var wide := false
 
 var _t := 0.0
 var _top: PaintLayer
+## The cabin and its cable move on every frame as their own canvas items;
+## the cabin's look is drawn again only when it changes (see _place_cabin).
+var _cab_spr: Node2D
+var _cable_spr: Node2D
+var _cab_sig := 0
+var _cable_look := -1
+var _cab_args := []
 var _hit_top: Control
 var _hit_cab: Control
 ## Ore shown in each depth's crate (their sum follows GameState.pit), what
@@ -84,6 +91,13 @@ func _ready() -> void:
 		_crates.append(0.0)
 		_takes.append(0.0)
 		_taken.append(true)
+	_cable_spr = Node2D.new()
+	_cable_spr.show_behind_parent = true
+	_cable_spr.draw.connect(_draw_cable_sprite)
+	add_child(_cable_spr)
+	_cab_spr = Node2D.new()
+	_cab_spr.draw.connect(_draw_cab_sprite)
+	add_child(_cab_spr)
 	_top = PaintLayer.new(_draw_top, false)
 	add_child(_top)
 	_hit_top = _hit_area()
@@ -311,9 +325,12 @@ func _process(delta: float) -> void:
 		_sync_left = 0.5
 		_sync_crates()
 	var cab := Vector2(CAB_X, float(tp[0]))
+	_place_cabin(p, tp, cab)
 	_hit_cab.position = cab + Vector2(-42.0, -CABIN_H - 26.0)
 	_hit_cab.size = Vector2(84.0, CABIN_H + 40.0)
 	self_modulate = Color.WHITE.lerp(DayNight.deep_tint(), 0.5)
+	_cab_spr.self_modulate = self_modulate
+	_cable_spr.self_modulate = self_modulate
 	_top.self_modulate = DayNight.scene_tint()
 	if World.anim_tick():
 		queue_redraw()
@@ -399,13 +416,7 @@ func _draw() -> void:
 	var p: float = gs.cycle_progress("lift")
 	var tp := trip_at(p, _trip_deep)
 	var cab := Vector2(CAB_X, float(tp[0]))
-	var look := _shown_look()
-	# Cable from the pulley down to the cabin's hook.
-	var top := maxf(PULLEY.y, view.position.y)
-	var bottom := minf(cab.y - CABIN_H - 4.0, view.end.y)
-	if bottom > top:
-		_cable(self, Vector2(CAB_X, top), Vector2(CAB_X, bottom), look)
-	# Crates at every open depth.
+	# Crates at every open depth (the cable and the cabin are sprites).
 	var ratio := _crate_scale()
 	for i in Balance.DEPTHS.size():
 		if not gs.is_open("d%d" % i):
@@ -419,26 +430,66 @@ func _draw() -> void:
 		_draw_crate(i, at, shown * ratio[i])
 		if int(tp[1]) == i:
 			_draw_chips(i, at, cab, float(tp[2]))
-	if view.grow(40.0).has_point(cab + Vector2(0, -CABIN_H * 0.5)):
-		var fill := 0.0
-		if p >= 0.0 and p < UP_END + 0.05:
-			var got := 0.0
-			for i in _trip_deep + 1:
-				if _taken[i]:
-					got += _takes[i]
-				elif int(tp[1]) == i:
-					got += _takes[i] * float(tp[2])
-			fill = got / maxf(_trip_amount, 1e-9) if p < DOWN_END else 1.0
-		elif p >= 0.0:
-			fill = 1.0 - float(tp[2]) * 1.4
-		var sway := 0.0
-		if p >= 0.0 and int(tp[1]) == -1 and not Settings.reduce_motion:
-			sway = sin(_t * 5.0) * 0.025
-		var pop := clampf((_t - _look_fx) / 0.6, 0.0, 1.0)
-		var s := 1.0 + sin(pop * PI) * 0.18
-		Art.push(self, cab, sway, Vector2(s, s))
-		draw_cabin(self, look, _t, fill, p >= 0.0)
-		Art.pop(self)
+
+
+## Moves the cabin and the cable to where the trip is now (every frame);
+## the cabin's picture changes only when its look, load or step does.
+func _place_cabin(p: float, tp: Array, cab: Vector2) -> void:
+	if not is_visible_in_tree():
+		return
+	var view := world.visible_rect().grow(60.0)
+	var look := _shown_look()
+	# Cable from the pulley down to the cabin's hook: a unit line stretched.
+	var top := PULLEY.y
+	var bottom := cab.y - CABIN_H - 4.0
+	_cable_spr.visible = bottom > top and bottom > view.position.y and top < view.end.y
+	if _cable_spr.visible:
+		_cable_spr.position = Vector2(CAB_X, top)
+		_cable_spr.scale = Vector2(1.0, bottom - top)
+		if _cable_look != look:
+			_cable_look = look
+			_cable_spr.queue_redraw()
+	_cab_spr.visible = view.grow(40.0).has_point(cab + Vector2(0, -CABIN_H * 0.5))
+	if not _cab_spr.visible:
+		_cab_sig = 0
+		return
+	var fill := 0.0
+	if p >= 0.0 and p < UP_END + 0.05:
+		var got := 0.0
+		for i in _trip_deep + 1:
+			if _taken[i]:
+				got += _takes[i]
+			elif int(tp[1]) == i:
+				got += _takes[i] * float(tp[2])
+		fill = got / maxf(_trip_amount, 1e-9) if p < DOWN_END else 1.0
+	elif p >= 0.0:
+		fill = 1.0 - float(tp[2]) * 1.4
+	var sway := 0.0
+	if p >= 0.0 and int(tp[1]) == -1 and not Settings.reduce_motion:
+		sway = sin(_t * 5.0) * 0.025
+	var pop := clampf((_t - _look_fx) / 0.6, 0.0, 1.0)
+	var s := 1.0 + sin(pop * PI) * 0.18
+	_cab_spr.position = cab
+	_cab_spr.rotation = sway
+	var busy := p >= 0.0
+	var sig := hash([look, snappedf(clampf(fill, 0.0, 1.0), 0.25), busy, s, Art.shape_stamp(_t) if look >= 6 or pop < 1.0 else 0])
+	if sig != _cab_sig:
+		_cab_sig = sig
+		_cab_args = [look, _t, fill, busy, s]
+		_cab_spr.queue_redraw()
+
+
+func _draw_cab_sprite() -> void:
+	if _cab_args.is_empty():
+		return
+	var a := _cab_args
+	Art.push(_cab_spr, Vector2.ZERO, 0.0, Vector2(a[4], a[4]))
+	draw_cabin(_cab_spr, a[0], a[1], a[2], a[3])
+	Art.pop(_cab_spr)
+
+
+func _draw_cable_sprite() -> void:
+	_cable(_cable_spr, Vector2.ZERO, Vector2(0, 1), _cable_look)
 
 
 ## Visual scale of each crate: 1 = one lift trip's share (full crate).

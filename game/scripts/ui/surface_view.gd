@@ -119,6 +119,32 @@ var _glow_last := []
 var _ground: PaintLayer
 var _ground_sig := []
 var _glow: PaintLayer
+var _l_back: PaintLayer
+var _l_mid: PaintLayer
+var _l_front: PaintLayer
+var _boat_spr := {}
+var _wake_spr := {}
+## Canvas item the scene's drawing helpers draw on right now.
+var _ci: CanvasItem
+
+
+## A moving piece of the scene (a boat, its wake): drawn where it was at
+## `rec` and moved by its transform to where it is now, so it moves on
+## every frame while its picture changes only when `stamp` does.
+class SceneSprite extends Node2D:
+	var painter: Callable
+	var rec := Transform2D.IDENTITY
+	var stamp := -1
+
+	func _draw() -> void:
+		painter.call(self)
+
+	func place(now: Transform2D, new_stamp: int) -> void:
+		if new_stamp != stamp:
+			stamp = new_stamp
+			rec = now
+			queue_redraw()
+		transform = now * rec.affine_inverse()
 var _tint := Color.WHITE
 var _calm := false
 
@@ -169,6 +195,25 @@ func _ready() -> void:
 	add_child(_far)
 	_ground = PaintLayer.new(_paint_ground)
 	add_child(_ground)
+	# The shore scene in front of those, back to front (each layer redraws
+	# with the scenery; the boats and their wakes are sprites that move on
+	# every frame, see _place_boats).
+	_l_back = PaintLayer.new(_paint_back, false)
+	add_child(_l_back)
+	for key in ["boat2", "boat"]:
+		var spr := SceneSprite.new()
+		spr.painter = _paint_boat.bind(key)
+		add_child(spr)
+		_boat_spr[key] = spr
+		var wake := SceneSprite.new()
+		wake.painter = _paint_wake.bind(key)
+		add_child(wake)
+		_wake_spr[key] = wake
+		if key == "boat2":
+			_l_mid = PaintLayer.new(_paint_mid, false)
+			add_child(_l_mid)
+	_l_front = PaintLayer.new(_paint_front, false)
+	add_child(_l_front)
 	_glow = PaintLayer.new(_draw_glow, false)
 	add_child(_glow)
 	boat_card = StageCard.new("boat")
@@ -761,7 +806,7 @@ func _process(delta: float) -> void:
 	# sky life on the others (see World's frame schedule).
 	if world.is_visible_band(0.0, size.y):
 		if World.tick(World.SCENERY):
-			queue_redraw()
+			_redraw_scene()
 			# Night lights flicker; by day only the number tag moves.
 			var sig := _glow_sig()
 			if smoothstep(0.3, 0.8, DayNight.night()) > 0.01 or sig != _glow_last:
@@ -771,6 +816,7 @@ func _process(delta: float) -> void:
 			_sky_fx.queue_redraw()
 			if _t - _lighthouse_poke < 2.4:
 				_far.queue_redraw()
+	_place_boats()
 	var step := DayNight.stepped_phase()
 	if step != _far_step:
 		_far_step = step
@@ -1147,23 +1193,39 @@ func _draw_fireflies(ci: CanvasItem, night: float) -> void:
 		Art.dot(ci, p, 2.4, Color(1.0, 1.0, 0.7, a * (0.5 + 0.5 * tw)))
 
 
-func _draw() -> void:
+func _redraw_scene() -> void:
+	_l_back.queue_redraw()
+	_l_mid.queue_redraw()
+	_l_front.queue_redraw()
+
+
+## The palm (or the world's edge prop) at the end of the shore.
+func _paint_back(ci: CanvasItem) -> void:
+	_ci = ci
+	var wl := WorldLook.world
+	var palm_age := _t - _palm_poke
+	Art.push(_ci, _palm_pos(), 0.0, Vector2(_k, _k))
+	if wl == "ocean":
+		Props.palm(_ci, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0), _coconuts)
+	else:
+		WorldArt.edge_prop(_ci, wl, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0))
+	Art.pop(self)
+
+
+## Between the two boats: the dock and the raft with its loader.
+func _paint_mid(ci: CanvasItem) -> void:
+	_ci = ci
+	var lights := smoothstep(0.3, 0.8, DayNight.night())
+	_draw_pier(lights)
+	_draw_raft(lights)
+
+
+## In front of the boats: the sea's surface, glints, smoke and puffs.
+func _paint_front(ci: CanvasItem) -> void:
+	_ci = ci
 	var w := size.x
 	var sy := World.SURFACE_Y
 	var wl := WorldLook.world
-	var lights := smoothstep(0.3, 0.8, DayNight.night())
-	var palm_age := _t - _palm_poke
-	Art.push(self, _palm_pos(), 0.0, Vector2(_k, _k))
-	if wl == "ocean":
-		Props.palm(self, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0), _coconuts)
-	else:
-		WorldArt.edge_prop(self, wl, _t, Props.wind, clampf(1.0 - palm_age / 1.4, 0.0, 1.0))
-	Art.pop(self)
-	if second_state("boat2") == "open":
-		_draw_boat("boat2", lights)
-	_draw_pier(lights)
-	_draw_raft(lights)
-	_draw_boat("boat", lights)
 	# The sea's surface over the hulls and floats: two waves on top of each
 	# other (lava rolls slowly, moon dust lies still).
 	var calm := 0.5 if _calm else 1.0
@@ -1184,7 +1246,7 @@ func _draw() -> void:
 		var x := w * i / 40.0
 		var u := i * 1.2
 		wave.append(Vector2(x, sy + sin(_t * 1.6 * speed + u * 0.62) * amp + sin(_t * 2.3 * speed - u * 1.1) * amp * 0.45))
-	WorldArt.surface_front(self, wl, wave, w, sy, _t)
+	WorldArt.surface_front(_ci, wl, wave, w, sy, _t)
 	# Little glints riding the crests.
 	if wl in ["ocean", "acid"]:
 		var glint := DayNight.glint()
@@ -1192,20 +1254,75 @@ func _draw() -> void:
 			var f := fposmod(_t * 0.05 + i / 6.0, 1.0)
 			var x := f * w
 			var a := sin(f * PI) * (0.5 + 0.5 * sin(_t * 3.0 + i * 2.0))
-			Art.line(self, Vector2(x - 7, sy + 7 + (i % 3) * 3), Vector2(x + 7, sy + 7 + (i % 3) * 3), Color(glint, a * 0.8), 2.5)
+			Art.line(_ci, Vector2(x - 7, sy + 7 + (i % 3) * 3), Vector2(x + 7, sy + 7 + (i % 3) * 3), Color(glint, a * 0.8), 2.5)
 	for s in _smoke:
 		var a := 0.55 * minf(1.0, s.z * 4.0) * (1.0 - s.z / 2.4)
 		var smoke_c := Color(0.96, 0.96, 1.0, a) if wl != "volcano" else Color(0.55, 0.5, 0.55, a)
-		Art.push(self, Vector2(s.x, s.y), 0.0, Vector2.ONE * (0.55 + ease(minf(1.0, s.z / 2.4), 0.6) * 1.1))
-		Art.disc(self, Vector2.ZERO, 10.0, smoke_c)
+		Art.push(_ci, Vector2(s.x, s.y), 0.0, Vector2.ONE * (0.55 + ease(minf(1.0, s.z / 2.4), 0.6) * 1.1))
+		Art.disc(_ci, Vector2.ZERO, 10.0, smoke_c)
 		Art.pop(self)
 	if not _coconut.is_empty():
-		Art.push(self, _coconut["pos"], _coconut["rot"], Vector2(_k, _k))
-		Art.t_circle(self, Vector2(0, -5), 5, Color("8a5a2c"), 2.0, 0.0)
-		Art.disc(self, Vector2(-1.5, -7), 1.2, Color("5a3a1c"))
+		Art.push(_ci, _coconut["pos"], _coconut["rot"], Vector2(_k, _k))
+		Art.t_circle(_ci, Vector2(0, -5), 5, Color("8a5a2c"), 2.0, 0.0)
+		Art.disc(_ci, Vector2(-1.5, -7), 1.2, Color("5a3a1c"))
 		Art.pop(self)
 	for key in BUILDINGS:
 		_draw_poof(key)
+
+
+
+
+## Moves the boats and their wakes to where they are now (every frame).
+func _place_boats() -> void:
+	var band: bool = world.is_visible_band(0.0, size.y) and is_visible_in_tree()
+	for key in ["boat2", "boat"]:
+		var spr: SceneSprite = _boat_spr[key]
+		var wake: SceneSprite = _wake_spr[key]
+		var bp := _boat_pos(key)
+		var e := _hull(key)
+		var show: bool = band and (key == "boat" or second_state("boat2") == "open") and bp.x - maxf(e.x, e.y) <= size.x + 10.0
+		spr.visible = show
+		wake.visible = show
+		if not show:
+			spr.stamp = -1
+			wake.stamp = -1
+			continue
+		var st := Art.shape_stamp(_t, 0.0 if key == "boat" else 0.5)
+		spr.place(_boat_xf(key), st)
+		wake.place(Transform2D(0.0, bp), st)
+
+
+## The boat's transform as _push_boat sets it (rocking, bobbing, squash).
+func _boat_xf(key: String) -> Transform2D:
+	var b := _bounce(key)
+	var s := _boat_scale(key)
+	var ph := 0.0 if key == "boat" else 1.9
+	var rock := 0.03 if WorldLook.world != "moon" else 0.012
+	return Transform2D(sin(_t * 1.4 + ph) * rock * (0.5 if _calm else 1.0), Vector2(s * _facing(key) * (2.0 - b.x), s * b.x), 0.0, _boat_pos(key) + Vector2(0, -b.y)) \
+			* Transform2D(0.0, Vector2(0, sin(_t * 1.6 + ph) * 3.0))
+
+
+func _paint_boat(ci: CanvasItem, key: String) -> void:
+	_ci = ci
+	_draw_boat(key, smoothstep(0.3, 0.8, DayNight.night()))
+
+
+## Behind a sailing boat: foam (sparks on lava, dust on the moon); the
+## second boat also gets its lane's strip of sea over its waterline.
+func _paint_wake(ci: CanvasItem, key: String) -> void:
+	_ci = ci
+	var bp := _boat_pos(key)
+	var bs := _boat_scale(key)
+	var wl := WorldLook.world
+	if key == "boat2" and wl != "moon":
+		_draw_back_water(bp, bs)
+	if _sailing(key):
+		var facing := _facing(key)
+		var foam := Color(1, 1, 1) if wl in ["ocean", "acid"] else (Color(1.0, 0.8, 0.4) if wl == "volcano" else Color(0.85, 0.87, 0.95))
+		for i in 3:
+			var f := fposmod(_t * 1.5 + i / 3.0, 1.0)
+			var at := bp + Vector2(-facing * (82.0 + f * 47.0) * bs, 2 + (HOVER + 6.0 if wl == "moon" else 0.0))
+			Art.arc(_ci, at, (6.0 + f * 8.0) * bs / BOAT_SCALE, PI, TAU, 10, Color(foam, 0.8 * (1.0 - f)), 3.0)
 
 
 ## White puffs around a boat the moment its look changes.
@@ -1220,7 +1337,7 @@ func _draw_poof(key: String) -> void:
 		var a := TAU * i / 12.0 + i * 0.3
 		var d := r * (0.35 + ease(f, 0.4) * 0.75)
 		var p := c + Vector2(cos(a) * d * 1.2, sin(a) * d * 0.8)
-		Art.disc(self, p, (18.0 + (i % 3) * 5.0) * (1.0 - f * 0.5), Color(1, 1, 1, 0.9 * (1.0 - f)))
+		Art.disc(_ci, p, (18.0 + (i % 3) * 5.0) * (1.0 - f * 0.5), Color(1, 1, 1, 0.9 * (1.0 - f)))
 
 
 ## Squash-and-stretch after a new stage: x = vertical scale, y = hop height.
@@ -1245,9 +1362,9 @@ func _push_boat(ci: CanvasItem, key: String = "boat") -> void:
 
 ## A character mark (zzz, sweat, heart) at the shore's scale.
 func _mark(kind: String, at: Vector2) -> void:
-	Art.push(self, at, 0.0, Vector2(_k, _k))
-	Chars.mark(self, kind, Vector2.ZERO, _t)
-	Art.pop(self)
+	Art.push(_ci, at, 0.0, Vector2(_k, _k))
+	Chars.mark(_ci, kind, Vector2.ZERO, _t)
+	Art.pop(_ci)
 
 
 ## The dock: the second boat's berth at it (its buoy and price board while
@@ -1258,12 +1375,12 @@ func _draw_pier(lights: float) -> void:
 	var h := (World.SURFACE_Y - _pier_y()) / _k
 	if boat2 == "sale":
 		var b := buoy_pos()
-		Art.push(self, b, sin(_t * 1.3) * 0.06, Vector2(_k, _k))
-		Props.buoy(self, lights)
-		Art.pop(self)
-	Art.push(self, tip, 0.0, Vector2(_k, _k))
-	Props.pier(self, PIER_W, h, true)
-	Art.pop(self)
+		Art.push(_ci, b, sin(_t * 1.3) * 0.06, Vector2(_k, _k))
+		Props.buoy(_ci, lights)
+		Art.pop(_ci)
+	Art.push(_ci, tip, 0.0, Vector2(_k, _k))
+	Props.pier(_ci, PIER_W, h, true)
+	Art.pop(_ci)
 	if boat2 == "sale":
 		_draw_sign("boat2")
 
@@ -1271,18 +1388,18 @@ func _draw_pier(lights: float) -> void:
 func _draw_raft(lights: float) -> void:
 	var p := raft_pos()
 	var bob := _raft_bob()
-	Art.push(self, p + Vector2(0, bob))
-	Props.raft(self, _t, 0, _ore(), lights, RAFT_DECK)
-	Art.pop(self)
+	Art.push(_ci, p + Vector2(0, bob))
+	Props.raft(_ci, _t, 0, _ore(), lights, RAFT_DECK)
+	Art.pop(_ci)
 	var rc: Dictionary = _chest["raft"]
-	Art.push(self, _raft_chest_pos(), 0.0, Vector2.ONE * RAFT_CHEST_SCALE)
-	Props.ore_chest(self, _t, _fill(GameState.hold, maxf(1.0, GameState.cycle_capacity("boat") * 2.0)), rc["lid"], _ore(), 11)
-	Art.pop(self)
+	Art.push(_ci, _raft_chest_pos(), 0.0, Vector2.ONE * RAFT_CHEST_SCALE)
+	Props.ore_chest(_ci, _t, _fill(GameState.hold, maxf(1.0, GameState.cycle_capacity("boat") * 2.0)), rc["lid"], _ore(), 11)
+	Art.pop(_ci)
 	# Loader on the raft, between the crane post and the lift cable.
 	var mood := world.mood("raft")
 	var emo := mood if mood != "" else ("happy" if GameState.hold > 0.0 else "bored")
 	var catching := mood == "joy"
-	Chars.person(self, p + Vector2(-22, -15 + bob - world.hop("raft")), 0.8, 1.0, Chars.look(4, "curly", 0, "beanie", "none", 1, "sailor"),
+	Chars.person(_ci, p + Vector2(-22, -15 + bob - world.hop("raft")), 0.8, 1.0, Chars.look(4, "curly", 0, "beanie", "none", 1, "sailor"),
 			{"emotion": emo, "blink": Chars.blinking(_t, 2.0), "arm_r": 2.5 if catching else 0.4, "arm_l": -2.5 if catching else -0.2,
 			"hold": "sack" if catching else "", "hold_color": _ore()})
 
@@ -1307,32 +1424,23 @@ func _draw_boat(key: String, lights: float) -> void:
 	var hop := maxf(world.hop(key), world.hop(sailor))
 	var look := Chars.look(1, "short", 3, "sailor", "freckles", 1, "sailor") if key == "boat" else Chars.look(4, "spiky", 2, "sailor", "none", 7, "sailor")
 	var crew := func():
-		Chars.person(self, Vector2(52, -40 - hop), 0.9, 1.0, look,
+		Chars.person(_ci, Vector2(52, -40 - hop), 0.9, 1.0, look,
 				{"emotion": semo, "blink": Chars.blinking(_t + (0.0 if key == "boat" else 1.7), 5.0),
 				"arm_r": 2.6 if smood == "joy" else (0.9 + sin(_t * 6.0) * 0.5 if sailing else 0.3), "arm_l": -0.3})
 	var wl := WorldLook.world
 	if wl == "moon":
 		# The dust under a hovering boat.
-		Art.flat_now(self, Art.ellipse_pts(Vector2(bp.x, World.SURFACE_Y + 4.0), Vector2((e.x + e.y) * 0.4, 4.0), 16), Color(0.15, 0.17, 0.3, 0.3))
-	_push_boat(self, key)
+		Art.flat_now(_ci, Art.ellipse_pts(Vector2(bp.x, World.SURFACE_Y + 4.0), Vector2((e.x + e.y) * 0.4, 4.0), 16), Color(0.15, 0.17, 0.3, 0.3))
+	_push_boat(_ci, key)
 	var cap_emo := mood if mood != "" else "happy"
 	Props.downwind = facing
-	Props.boat_at_stage(self, _shown_stage(key), _t, _crates(key), _ore(), GameState.has_manager(key), cap_emo, Chars.blinking(_t, 7.0), crew, lights,
+	Props.boat_at_stage(_ci, _shown_stage(key), _t, _crates(key), _ore(), GameState.has_manager(key), cap_emo, Chars.blinking(_t, 7.0), crew, lights,
 			Props.variant_of(key))
 	Props.downwind = 1.0
 	if wl != "ocean":
-		WorldArt.hull_trim(self, wl, BOAT_EXT[clampi(_shown_stage(key), 1, BOAT_EXT.size()) - 1], _t)
-	Art.pop(self)
-	Art.pop(self)
-	if key == "boat2" and wl != "moon":
-		_draw_back_water(bp, bs)
-	if sailing:
-		# Foam behind the boat (sparks on lava, dust on the moon).
-		var foam := Color(1, 1, 1) if wl in ["ocean", "acid"] else (Color(1.0, 0.8, 0.4) if wl == "volcano" else Color(0.85, 0.87, 0.95))
-		for i in 3:
-			var f := fposmod(_t * 1.5 + i / 3.0, 1.0)
-			var at := bp + Vector2(-facing * (82.0 + f * 47.0) * bs, 2 + (HOVER + 6.0 if wl == "moon" else 0.0))
-			Art.arc(self, at, (6.0 + f * 8.0) * bs / BOAT_SCALE, PI, TAU, 10, Color(foam, 0.8 * (1.0 - f)), 3.0)
+		WorldArt.hull_trim(_ci, wl, BOAT_EXT[clampi(_shown_stage(key), 1, BOAT_EXT.size()) - 1], _t)
+	Art.pop(_ci)
+	Art.pop(_ci)
 
 
 ## The farther lane's own strip of sea over the second boat's waterline, so
@@ -1351,8 +1459,8 @@ func _draw_back_water(bp: Vector2, _bs: float) -> void:
 	sea.append(Vector2(x1, World.SURFACE_Y + 2.0))
 	sea.append(Vector2(x0, World.SURFACE_Y + 2.0))
 	var wl := WorldLook.world
-	Art.flat_now(self, sea, Color(Art.calm(Art.sea_cols[0]), 0.85 if wl == "ocean" else 0.95))
-	Art.polyline(self, line, Color(1, 1, 1, 0.75) if wl == "ocean" else Color(Art.sea_cols[0].lightened(0.4), 0.9), 2.5)
+	Art.flat_now(_ci, sea, Color(Art.calm(Art.sea_cols[0]), 0.85 if wl == "ocean" else 0.95))
+	Art.polyline(_ci, line, Color(1, 1, 1, 0.75) if wl == "ocean" else Color(Art.sea_cols[0].lightened(0.4), 0.9), 2.5)
 
 
 func _draw_sign(key: String) -> void:
@@ -1369,11 +1477,11 @@ func _draw_sign(key: String) -> void:
 		var w := Props.sale_sign_width(_price(key)) * sc
 		var top := foot.y - 34.0 * sc
 		for sx: float in [-0.32, 0.32]:
-			Art.line(self, Vector2(foot.x + w * sx, _beam_bottom() - 2.0), Vector2(foot.x + w * sx, top + 3.0), Art.INK, 2.0)
+			Art.line(_ci, Vector2(foot.x + w * sx, _beam_bottom() - 2.0), Vector2(foot.x + w * sx, top + 3.0), Art.INK, 2.0)
 		wob *= 0.4
-	Art.push(self, foot, wob, Vector2(2.0 - sq, sq) * sc)
-	Props.sale_sign(self, _price(key), ready, place[1])
-	Art.pop(self)
+	Art.push(_ci, foot, wob, Vector2(2.0 - sq, sq) * sc)
+	Props.sale_sign(_ci, _price(key), ready, place[1])
+	Art.pop(_ci)
 
 
 ## What the number tag shows and where (the glow layer redraws when it changes).

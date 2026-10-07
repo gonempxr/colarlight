@@ -158,9 +158,10 @@ func _process(delta: float) -> void:
 	var shown := world.is_visible_band(position.y, position.y + size.y)
 	if _stale and shown:
 		refresh()
-	# The cave life moves slowly: each site redraws on every other SCENERY
-	# frame of the world (neighbors alternate), about 15 times a second.
-	if shown and World.tick(World.SCENERY):
+	# The cave life moves slowly: each site redraws on the SCENERY frames of
+	# the world; on low power on every other one (neighbors alternate),
+	# about 15 times a second.
+	if shown and World.tick(World.SCENERY) and (not Art.low_power or (World.tick_count(World.SCENERY) + index) % 2 == 0):
 		queue_redraw()
 	# The still background repaints only when something it shows changes
 	# (checked every few frames, rows taking turns, or right after a site opens).

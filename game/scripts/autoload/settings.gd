@@ -18,6 +18,15 @@ var music_volume := 0.6
 var voices := true
 var vibration := true
 var quality := "auto"
+## Set by FrameGovernor for this session when "auto" found the device slow:
+## low quality as if chosen (not saved).
+var auto_low := false:
+	set(v):
+		if v == auto_low:
+			return
+		auto_low = v
+		if OS.has_feature("web") and quality == "auto":
+			JavaScriptBridge.eval("window.coralightPixelCap = %s; window.dispatchEvent(new Event('resize'));" % ("1.5" if v else "2"), true)
 var reduce_motion := false
 var ui_scale := 1.0
 ## "short" = 1.2K, 3.4M; "sci" = 1.2e3.
@@ -151,7 +160,7 @@ func _sync_web_quality() -> void:
 ## slower (the main screen applies it to Art and World).
 func low_quality() -> bool:
 	var phone := OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
-	return phone if quality == "auto" else quality == "low"
+	return (phone or auto_low) if quality == "auto" else quality == "low"
 
 
 ## A short buzz on phones that support it.
