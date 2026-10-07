@@ -12,8 +12,10 @@ extends Node
 ## Movement (divers, boats, the lift, scrolling) stays at the full frame
 ## rate on every level. It never steps back up during a session, so it
 ## can't flicker between two levels; a new session starts from 0 again.
-## Only the time the game itself spends counts, so a browser that slows
-## all pages down to save battery doesn't lower the quality.
+## Mostly the time the game itself spends counts. Frames that come slowly
+## while the game has little to do mean the graphics chip can't keep up:
+## after a longer wait that steps down to low quality too (fewer pixels and
+## triangles), but no further.
 
 signal level_changed(level: int)
 
@@ -23,6 +25,10 @@ const BUSY_MS := 12.0
 const WINDOW_SEC := 1.0
 ## Slow windows in a row before stepping down.
 const SLOW_WINDOWS := 3
+## Frames slower than this (ms) while the game itself is quick: the
+## graphics chip is the limit; GPU_WINDOWS such windows in a row step down.
+const GPU_FRAME_MS := 25.0
+const GPU_WINDOWS := 6
 ## Seconds to wait after the start and after each step (caches refill).
 const SETTLE_SEC := 4.0
 
@@ -35,6 +41,7 @@ var _busy_us := 0
 var _frames := 0
 var _acc := 0.0
 var _slow := 0
+var _gpu_slow := 0
 var _settle := SETTLE_SEC
 var _last_busy_ms := 0.0
 
@@ -57,7 +64,13 @@ func _process(delta: float) -> void:
 	_acc += delta
 	if _acc < WINDOW_SEC:
 		return
-	var busy_ms := _busy_us / 1000.0 / maxi(_frames, 1)
+	if _frames == 0:
+		# Nothing was drawn (headless, or the page was hidden): no data.
+		_acc = 0.0
+		_busy_us = 0
+		return
+	var busy_ms := _busy_us / 1000.0 / _frames
+	var frame_ms := _acc * 1000.0 / _frames
 	_last_busy_ms = busy_ms
 	busy_now = busy_ms
 	_acc = 0.0
@@ -70,8 +83,10 @@ func _process(delta: float) -> void:
 		_slow = 0
 		return
 	_slow = _slow + 1 if busy_ms > BUSY_MS else 0
-	if _slow >= SLOW_WINDOWS:
+	_gpu_slow = _gpu_slow + 1 if busy_ms <= BUSY_MS and frame_ms > GPU_FRAME_MS and level < 2 else 0
+	if _slow >= SLOW_WINDOWS or _gpu_slow >= GPU_WINDOWS:
 		_slow = 0
+		_gpu_slow = 0
 		_settle = SETTLE_SEC
 		level += 1
 		apply()
