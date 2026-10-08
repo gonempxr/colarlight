@@ -1,0 +1,38 @@
+keys,en,ru,es,zh
+STREAK,Streak,Огонёк,Racha,小火苗
+STREAK_DAYS_ONE,%d day in a row,%d день подряд,%d día seguido,连续%d天
+STREAK_DAYS_FEW,%d days in a row,%d дня подряд,%d días seguidos,连续%d天
+STREAK_NEW_TITLE,A new flame is waiting!,Новый огонёк ждёт тебя!,¡Una nueva llama te espera!,新的小火苗在等你！
+STREAK_DAYS_MANY,%d days in a row,%d дней подряд,%d días seguidos,连续%d天
+STREAK_DAY_N_ONE,%d day,%d день,%d día,%d天
+STREAK_DAY_N_FEW,%d days,%d дня,%d días,%d天
+STREAK_DAY_N_MANY,%d days,%d дней,%d días,%d天
+STREAK_HOW,"Do one small thing today (an upgrade, a tap, a gift) and your flame grows!","Сделай сегодня что-нибудь маленькое: улучшение, тап или подарок, — и огонёк подрастёт!","¡Haz algo pequeño hoy (una mejora, un toque, un regalo) y tu llama crecerá!",今天做一件小事（升级、点一下、领礼物），小火苗就会长大！
+STREAK_HOW_SHORT,Do one small thing and it grows,"Сделай что-нибудь, и он подрастёт",Haz algo pequeño y crecerá,做件小事，它就会长大
+STREAK_LIT_TODAY,Your flame is burning today. See you tomorrow!,Сегодня огонёк горит. До завтра!,¡Hoy tu llama brilla! ¡Hasta mañana!,今天的小火苗已经点亮啦，明天见！
+STREAK_WELCOME,Welcome back! Let's light a new flame today. Your best record stays with you.,С возвращением! Давай зажжём новый огонёк. Твой рекорд остаётся с тобой.,¡Hola de nuevo! Encendamos hoy una nueva llama. Tu récord se queda contigo.,欢迎回来！今天一起点亮新的小火苗吧。你的最佳纪录会一直保留。
+STREAK_WELCOME_SHORT,Welcome back! Let's light a new one,С возвращением! Зажжём новый,¡Hola de nuevo! Enciende una nueva,欢迎回来！点亮新的吧
+STREAK_WELCOME_BACK,Welcome back!,С возвращением!,¡Hola de nuevo!,欢迎回来！
+STREAK_NEW_FLAME,Let's start a new flame! Your best record stays.,Зажжём новый огонёк! Рекорд остаётся с тобой.,¡Encendamos una nueva llama! Tu récord se queda.,点亮新的小火苗吧！最佳纪录会保留。
+STREAK_FIRST,Your first flame!,Твой первый огонёк!,¡Tu primera llama!,你的第一朵小火苗！
+STREAK_FIRST_SUB,Play a little every day and it grows,"Играй понемножку каждый день, и он будет расти",Juega un poquito cada día y crecerá,每天玩一会儿，它就会长大
+STREAK_KEEP_GOING,Your flame grew! Here's a little gift,Огонёк подрос! Держи подарочек,¡Tu llama creció! Toma un regalito,小火苗长大了！送你一份小礼物
+STREAK_MILESTONE,A special reward for you!,Особая награда для тебя!,¡Un premio especial para ti!,给你的特别奖励！
+STREAK_ICE_SAVED,An ice cube kept your flame safe!,Ледяной кубик сберёг твой огонёк!,¡Un cubito de hielo cuidó tu llama!,冰块保护了你的小火苗！
+STREAK_ICE_EARNED,Here's a new ice cube!,Держи новый ледяной кубик!,¡Toma un cubito de hielo nuevo!,送你一块新冰块！
+STREAK_BEST,Best,Рекорд,Récord,最佳纪录
+STREAK_ICE,Ice cubes,Ледяные кубики,Cubitos de hielo,冰块
+STREAK_ICE_HINT,Missed a day? An ice cube keeps your flame burning. Every %d days in a row you get one more (you can keep %d).,Пропустил день? Ледяной кубик сбережёт огонёк. Каждые %d дней подряд — новый кубик (можно хранить %d).,¿Un día sin jugar? Un cubito de hielo cuida tu llama. Cada %d días seguidos ganas otro (puedes guardar %d).,错过了一天？冰块会保护你的小火苗。每连续%d天会得到一块（最多存%d块）。
+STREAK_REWARDS,Flame rewards,Награды огонька,Premios de la llama,火苗奖励
+STREAK_TO_GIFT,Today's gift,Подарок дня,Regalo del día,今日礼物
+WEEKDAY_0,Su,Вс,Do,日
+WEEKDAY_1,Mo,Пн,Lu,一
+WEEKDAY_2,Tu,Вт,Ma,二
+WEEKDAY_3,We,Ср,Mi,三
+WEEKDAY_4,Th,Чт,Ju,四
+WEEKDAY_5,Fr,Пт,Vi,五
+WEEKDAY_6,Sa,Сб,Sá,六
+GOAL_STREAK_14,Keep your flame 14 days in a row,Огонёк 14 дней подряд,Llama 14 días seguidos,小火苗连续14天
+GOAL_STREAK_30,Keep your flame 30 days in a row,Огонёк 30 дней подряд,Llama 30 días seguidos,小火苗连续30天
+ITEM_BOAT_FLAME,Flame,Огненная,Llamas,火焰
+ITEM_HAT_FLAME,Flame Crown,Огненная корона,Corona de fuego,火焰王冠

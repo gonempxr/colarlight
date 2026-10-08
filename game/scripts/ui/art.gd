@@ -55,17 +55,17 @@ const SITE_STYLE := {
 	"kraken": {"rock": Color("1e2a3a"), "floor": Color("3e5068"), "ore": Color("b24aff"), "ore2": Color("e8c8ff"), "suit": Color("ffd23f"), "water": Color("0a0f22"), "deco": "tentacles"},
 	"whale": {"rock": Color("34455a"), "floor": Color("7c8ea0"), "ore": Color("f0e2c0"), "ore2": Color("9fe0ff"), "suit": Color("ff8a3d"), "water": Color("0a2030"), "deco": "whale"},
 	"heart": {"rock": Color("1c2a5a"), "floor": Color("4a64a8"), "ore": Color("4de8ff"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("0a1450"), "deco": "heart"},
-	# Volcano: basalt tunnels lit by torches and lava cracks.
-	"ash": {"rock": Color("6e6470"), "floor": Color("a49aa4"), "ore": Color("c4bcc6"), "ore2": Color("ff9a4a"), "suit": Color("ff8a3d"), "water": Color("5a4a54"), "deco": "ash"},
-	"obsidian": {"rock": Color("564a66"), "floor": Color("8a7e9c"), "ore": Color("3a2e52"), "ore2": Color("c4a8ff"), "suit": Color("ffd23f"), "water": Color("483c58"), "deco": "obsidian"},
-	"sulfur": {"rock": Color("7e6e44"), "floor": Color("cab866"), "ore": Color("ffe03a"), "ore2": Color("fff6a0"), "suit": Color("4fb3ee"), "water": Color("5e5434"), "deco": "sulfur"},
-	"ruby": {"rock": Color("70404a"), "floor": Color("ae7078"), "ore": Color("ff3d6e"), "ore2": Color("ffb0c4"), "suit": Color("2de2c5"), "water": Color("5a3440"), "deco": "crystals"},
-	"magma": {"rock": Color("5a2e28"), "floor": Color("94482e"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("4a2a2c"), "deco": "lava"},
-	"fire_opal": {"rock": Color("664040"), "floor": Color("b8805e"), "ore": Color("ff8a3a"), "ore2": Color("7ae8ff"), "suit": Color("9b72ff"), "water": Color("523236"), "deco": "opal"},
-	"garnet": {"rock": Color("5a3044"), "floor": Color("96586e"), "ore": Color("c8203e"), "ore2": Color("ff8a9a"), "suit": Color("ffd23f"), "water": Color("4a2838"), "deco": "crystals"},
-	"ember": {"rock": Color("4c3230"), "floor": Color("844c34"), "ore": Color("ff5a1a"), "ore2": Color("ffc93c"), "suit": Color("4fb3ee"), "water": Color("3e2628"), "deco": "embers"},
-	"phoenix": {"rock": Color("643224"), "floor": Color("b8603e"), "ore": Color("ffb02e"), "ore2": Color("ff4a2a"), "suit": Color("2de2c5"), "water": Color("4e261e"), "deco": "phoenix"},
-	"dragon": {"rock": Color("54242a"), "floor": Color("8e4a3e"), "ore": Color("ff5a2a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("3e1a20"), "deco": "dragon"},
+	# Volcano: dark basalt tunnels lit by torches, magma veins and channels.
+	"ash": {"rock": Color("4a4450"), "floor": Color("7a7078"), "ore": Color("c4bcc6"), "ore2": Color("ff9a4a"), "suit": Color("ff8a3d"), "water": Color("2e2630"), "deco": "ash"},
+	"obsidian": {"rock": Color("3c3248"), "floor": Color("6a5e78"), "ore": Color("3a2e52"), "ore2": Color("c4a8ff"), "suit": Color("ffd23f"), "water": Color("261e32"), "deco": "obsidian"},
+	"sulfur": {"rock": Color("4c4436"), "floor": Color("8a7c4a"), "ore": Color("ffe03a"), "ore2": Color("fff6a0"), "suit": Color("4fb3ee"), "water": Color("2e2a20"), "deco": "sulfur"},
+	"ruby": {"rock": Color("4a3038"), "floor": Color("7a5058"), "ore": Color("ff3d6e"), "ore2": Color("ffb0c4"), "suit": Color("2de2c5"), "water": Color("2e1c24"), "deco": "crystals"},
+	"magma": {"rock": Color("4a2a26"), "floor": Color("7a4030"), "ore": Color("ff6a1a"), "ore2": Color("ffd05a"), "suit": Color("2de2c5"), "water": Color("2e1a1a"), "deco": "lava"},
+	"fire_opal": {"rock": Color("4c3434"), "floor": Color("845a48"), "ore": Color("ff8a3a"), "ore2": Color("7ae8ff"), "suit": Color("9b72ff"), "water": Color("2e2020"), "deco": "opal"},
+	"garnet": {"rock": Color("46283a"), "floor": Color("744458"), "ore": Color("c8203e"), "ore2": Color("ff8a9a"), "suit": Color("ffd23f"), "water": Color("2a1824"), "deco": "crystals"},
+	"ember": {"rock": Color("3e2a28"), "floor": Color("6e4232"), "ore": Color("ff5a1a"), "ore2": Color("ffc93c"), "suit": Color("4fb3ee"), "water": Color("281a1a"), "deco": "embers"},
+	"phoenix": {"rock": Color("4c2a22"), "floor": Color("84503a"), "ore": Color("ffb02e"), "ore2": Color("ff4a2a"), "suit": Color("2de2c5"), "water": Color("2e1a16"), "deco": "phoenix"},
+	"dragon": {"rock": Color("40202a"), "floor": Color("703c3a"), "ore": Color("ff5a2a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("28141a"), "deco": "dragon"},
 	# Acid swamp: mossy caves with glowing pools and mushrooms.
 	"slime": {"rock": Color("5e6e40"), "floor": Color("a8c86a"), "ore": Color("8aff5a"), "ore2": Color("e0ffb0"), "suit": Color("ffd23f"), "water": Color("44583c"), "deco": "slime"},
 	"moss": {"rock": Color("54643c"), "floor": Color("8eaa5c"), "ore": Color("5ac83a"), "ore2": Color("d2f58e"), "suit": Color("ff8a3d"), "water": Color("3c5034"), "deco": "moss"},
@@ -375,6 +375,9 @@ const INK_FOLLOW := 0.4
 const INK_FOLLOW_UP := 0.7
 const _INK_STEPS := 4.0           # steps per doubling of the scale
 static var _ink_det := -1.0
+## Outline widths are multiplied by this while a part drawn bigger than its
+## body (a character's enlarged head) must keep the body's line width.
+static var ink_mul := 1.0
 static var _ink_step := 0
 
 
@@ -392,6 +395,7 @@ static func _scale_step(xf: Transform2D) -> int:
 ## Also notes the scale step for _aa (the soft edge) and the shape keys.
 static func _ink(w: float) -> float:
 	_st = _scale_step(_rec_xf * _xf if _rec else _xf)
+	w *= ink_mul
 	if w <= 0.0 or _st == 0:
 		return w
 	return snappedf(w * pow(2.0, _st / _INK_STEPS * ((INK_FOLLOW if _st < 0 else INK_FOLLOW_UP) - 1.0)), 0.05)

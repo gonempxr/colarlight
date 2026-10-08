@@ -31,8 +31,8 @@ FISHING_BOOK_HINT,Catch every fish to fill the book!,"Поймай всех ры
 FISHING_CAUGHT_N,Caught: %d,Поймано: %d,Pescados: %d,钓到：%d
 FISHING_BEST,Best: %s,Рекорд: %s,Mejor: %s,最大：%s
 FISHING_SHOP,Upgrades,Улучшения,Mejoras,升级
-FISHING_ROD,Better rod,Удочка получше,Caña mejor,更好的鱼竿
-FISHING_ROD_DESC,Rare fish bite more often and are easier to reel in.,Редкие рыбы клюют чаще и тянутся легче.,Los peces raros pican más y son más fáciles de sacar.,稀有的鱼更常咬钩，也更好拉上来。
+FISHING_ROD,Rod,Удочка,Caña,鱼竿
+FISHING_ROD_DESC,"Wider green zone, slower fish, more rare fish and a bigger bucket.","Шире зелёная зона, рыбы медленнее, больше редких рыб и места в ведре.","Zona verde más ancha, peces más lentos, más peces raros y un cubo mayor.",绿色区域更宽，鱼更慢，稀有鱼更多，桶也更大。
 FISHING_BUCKET_UP,Bigger bucket,Ведро побольше,Cubo más grande,更大的桶
 FISHING_BUCKET_DESC,Room for %d fish,Мест в ведре: %d,Caben %d peces,能装%d条鱼
 FISHING_HELPER,Fisherman,Рыбак,Pescador,渔夫
@@ -70,4 +70,102 @@ FISH_RAINBOW,Rainbow fish,Радужная рыбка,Pez arcoíris,彩虹鱼
 FISH_GOLDEN,Golden fish,Золотая рыбка,Pez dorado,金鱼王
 FISH_STAR_WHALE,Star whale,Звёздный кит,Ballena estelar,星星鲸
 FISHING_PRESS_CAST,Press Cast!,Нажми «Закинуть»!,¡Pulsa Lanzar!,按“抛竿”！
-FISHING_ROD_STATS,"Green zone +%d%%, fish %d%% slower, %d tries","Зелёная зона +%d%%, рыбы медленнее на %d%%, попыток: %d","Zona verde +%d%%, peces %d%% más lentos, %d intentos","绿色区域 +%d%%，鱼慢 %d%%，%d 次机会"
+FISHING_ROD_STATS,"Green zone +%d%%, fish %d%% slower, %d tries","Зелёная зона +%d%%, рыбы медленнее на %d%%, попыток: %d","Zona verde +%d%%, peces %d%% más lentos, %d intentos",绿色区域 +%d%%，鱼慢 %d%%，%d 次机会
+FISHING_ROD_OCEAN,Sea rod,Морская удочка,Caña marina,海洋鱼竿
+FISHING_ROD_VOLCANO,Volcano rod,Вулканическая удочка,Caña volcánica,火山鱼竿
+FISHING_ROD_ACID,Swamp rod,Болотная удочка,Caña del pantano,沼泽鱼竿
+FISHING_ROD_MOON,Gravity rod,Гравитационная удочка,Caña de gravedad,重力鱼竿
+ROD_OCEAN_1,A simple brown rod with a red and white float,Простая коричневая удочка с красно-белым поплавком,Una caña marrón sencilla con flotador rojo y blanco,一根简单的棕色鱼竿，配红白浮漂
+ROD_OCEAN_2,Blue non-slip grip wrap,Синяя нескользящая обмотка на рукояти,Empuñadura azul antideslizante,手柄缠上蓝色防滑带
+ROD_OCEAN_3,A small wooden reel,Небольшая деревянная катушка,Un pequeño carrete de madera,一个小木头卷线器
+ROD_OCEAN_4,A longer rod with line guides,"Удилище длиннее, с направляющими для лески",Caña más larga con guías para el sedal,鱼竿更长，加上导线环
+ROD_OCEAN_5,A little shell on the float,Маленькая ракушка на поплавке,Una conchita en el flotador,浮漂上有个小贝壳
+ROD_OCEAN_6,A strong sea-metal ring on the handle,Прочное кольцо из морского металла на рукояти,Un anillo fuerte de metal marino en el mango,手柄上有坚固的海洋金属环
+ROD_OCEAN_7,"A thinner, stronger light-blue line","Леска тоньше и прочнее, с голубым оттенком","Sedal más fino y fuerte, azul claro",更细更结实的浅蓝色鱼线
+ROD_OCEAN_8,Metal bail and a smooth reel handle,Металлическая скоба и плавная ручка катушки,Arco de metal y manivela suave,金属线杯和顺滑的摇把
+ROD_OCEAN_9,A sea-wave pattern on the butt,Узор из морских волн на комле,Dibujo de olas en el talón,竿尾有海浪花纹
+ROD_OCEAN_10,A pearly float with a blue stripe,Перламутровый поплавок с синей полосой,Flotador nacarado con raya azul,珍珠色浮漂，带蓝色条纹
+ROD_OCEAN_11,A bubble bite indicator,Индикатор поклёвки в виде пузырька,Indicador de picada con burbuja,泡泡咬钩提示器
+ROD_OCEAN_12,A second reinforced ring,Второе усиленное кольцо,Un segundo anillo reforzado,第二个加固环
+ROD_OCEAN_13,Two sections with a joint sleeve,Две секции с соединительной муфтой,Dos tramos con manguito de unión,两节竿身，带连接套
+ROD_OCEAN_14,"A compact, tougher reel with a blue disc","Катушка компактнее и прочнее, с синим диском",Carrete compacto y fuerte con disco azul,更小更结实的卷线器，带蓝色侧盘
+ROD_OCEAN_15,A bendier tip marked with a little fin,Кончик гнётся сильнее и отмечен плавником,Punta más flexible con una aleta,竿梢更有弹性，标着小鱼鳍
+ROD_OCEAN_16,Coral insert and a pearl rivet,Коралловая вставка и жемчужная заклёпка,Pieza de coral y remache de perla,珊瑚镶片和珍珠铆钉
+ROD_OCEAN_17,The line shimmers when the float touches water,"Леска мерцает, когда поплавок касается воды",El sedal brilla al tocar el agua,浮漂碰到水时鱼线会闪光
+ROD_OCEAN_18,Double reel gears and a strong brake,Двойной механизм катушки и усиленный тормоз,Doble mecanismo y freno reforzado,双齿轮卷线器和加强刹车
+ROD_OCEAN_19,"A sea crystal in the reel, a pearl on the tip","Морской кристалл в катушке, жемчужина на кончике",Cristal marino en el carrete y perla en la punta,卷线器嵌海洋水晶，竿梢有珍珠
+ROD_OCEAN_20,Legendary Tide Trident!,Легендарный «Трезубец прилива»!,¡Legendario Tridente de la Marea!,传说：潮汐三叉戟！
+ROD_VOLCANO_1,A dark basalt rod with a ceramic handle,Тёмная удочка из базальта с керамической рукоятью,Caña oscura de basalto con mango de cerámica,深色玄武岩鱼竿，陶瓷手柄
+ROD_VOLCANO_2,Heat-proof wrap on the handle,Жаростойкая обмотка на рукояти,Envoltura resistente al calor,手柄缠上耐热带
+ROD_VOLCANO_3,A small obsidian reel,Небольшая катушка из обсидиана,Un pequeño carrete de obsidiana,一个小黑曜石卷线器
+ROD_VOLCANO_4,A longer rod with a basalt joint,Составная удочка с базальтовой муфтой,Caña más larga con unión de basalto,加长竿身，带玄武岩接头
+ROD_VOLCANO_5,A volcanic glass ring,Кольцо из вулканического стекла,Un anillo de vidrio volcánico,火山玻璃环
+ROD_VOLCANO_6,A temperature gauge,Индикатор температуры,Un medidor de temperatura,温度表
+ROD_VOLCANO_7,Heat-proof basalt fibre line,Термостойкая леска из базальтового волокна,Sedal de fibra de basalto,耐热玄武岩纤维鱼线
+ROD_VOLCANO_8,A ceramic heat cover on the reel,Керамический кожух на катушке,Cubierta de cerámica en el carrete,卷线器加陶瓷隔热罩
+ROD_VOLCANO_9,A heat-proof obsidian hook,Жаростойкий обсидиановый крючок,Anzuelo de obsidiana,耐热黑曜石鱼钩
+ROD_VOLCANO_10,A heat shield behind the reel,Теплозащитный экран за катушкой,Escudo térmico tras el carrete,卷线器后的隔热板
+ROD_VOLCANO_11,A sensor for bubbles and eruptions,Датчик пузырей и вулканических выбросов,Sensor de burbujas y erupciones,气泡和喷发传感器
+ROD_VOLCANO_12,Molten glass inserts on the handle,Вставки из застывшего стекла на рукояти,Piezas de vidrio fundido en el mango,手柄镶熔岩玻璃
+ROD_VOLCANO_13,A double heat-proof hook,Двойной термостойкий крючок,Doble anzuelo resistente al calor,双耐热鱼钩
+ROD_VOLCANO_14,A heat exchanger in the reel,Теплообменник в катушке,Intercambiador de calor en el carrete,卷线器里的热交换器
+ROD_VOLCANO_15,A heat-sink tip,Жароотводящий наконечник,Punta disipadora de calor,散热竿梢
+ROD_VOLCANO_16,A safe heat-flow indicator,Индикатор безопасных потоков,Indicador de corrientes seguras,安全热流指示灯
+ROD_VOLCANO_17,Cooling fins around the reel,Охлаждающие рёбра вокруг катушки,Aletas de enfriamiento en el carrete,卷线器周围的散热片
+ROD_VOLCANO_18,Two protected magma cores,Два защищённых магматических сердечника,Dos núcleos de magma protegidos,两个受保护的岩浆核心
+ROD_VOLCANO_19,A bright obsidian crystal in the reel,Яркий обсидиановый кристалл в катушке,Cristal de obsidiana en el carrete,卷线器中央的黑曜石水晶
+ROD_VOLCANO_20,Legendary Caldera Rod!,Легендарная «Удочка кальдеры»!,¡Legendaria Caña de la Caldera!,传说：火山口鱼竿！
+ROD_ACID_1,A rubber rod with a mushroom float,Резиновая удочка с поплавком-грибком,Caña de goma con flotador de seta,橡胶鱼竿配蘑菇浮漂
+ROD_ACID_2,A ribbed rubber grip,Ребристая резиновая рукоять,Mango de goma con estrías,带棱纹的橡胶手柄
+ROD_ACID_3,A small jar-lid reel,Катушка из крышки банки,Carrete de tapa de frasco,瓶盖做的小卷线器
+ROD_ACID_4,A longer rod with rubber ring guides,"Удилище длиннее, с резиновыми кольцами",Caña más larga con anillas de goma,鱼竿更长，加橡胶导线环
+ROD_ACID_5,Glowing spots on the mushroom float,Светящиеся пятнышки на грибке,Manchas brillantes en la seta,蘑菇浮漂上的发光斑点
+ROD_ACID_6,A glass vial on the handle,Стеклянная пробирка на рукояти,Un frasquito de vidrio en el mango,手柄上挂一支玻璃试管
+ROD_ACID_7,A glowing slime-green line,Светящаяся леска цвета слизи,Sedal verde baba que brilla,发光的黏液绿鱼线
+ROD_ACID_8,A rubber bumper and a crank,Резиновый бампер и ручка катушки,Parachoques de goma y manivela,橡胶护圈和摇把
+ROD_ACID_9,Moss on the butt,Мох на комле,Musgo en el talón,竿尾长了苔藓
+ROD_ACID_10,A glass bubble float with goo,Стеклянный поплавок со слизью внутри,Flotador de cristal con baba,装着黏液的玻璃泡浮漂
+ROD_ACID_11,A bubbling flask bite indicator,Бурлящая колба-индикатор поклёвки,Matraz burbujeante que avisa la picada,冒泡烧瓶咬钩提示器
+ROD_ACID_12,A second vial,Вторая пробирка,Un segundo frasquito,第二支试管
+ROD_ACID_13,Two parts with a rubber joint,Две части с резиновым соединением,Dos partes con unión de goma,两节竿身，橡胶接头
+ROD_ACID_14,A mushroom disc on the reel,Грибной диск на катушке,Disco de seta en el carrete,卷线器上的蘑菇圆盘
+ROD_ACID_15,A tiny mushroom on the tip,Крошечный грибок на кончике,Una setita en la punta,竿梢上的小蘑菇
+ROD_ACID_16,A slime drip and an amber rivet,Капля слизи и янтарная заклёпка,Gota de baba y remache de ámbar,黏液滴和琥珀铆钉
+ROD_ACID_17,Slime drips off the line in the water,"С лески капает слизь, когда она в воде",El sedal gotea baba en el agua,鱼线入水时滴下黏液
+ROD_ACID_18,A double reel with a slime tank,Двойная катушка с баком слизи,Carrete doble con tanque de baba,带黏液罐的双卷线器
+ROD_ACID_19,"A toxic crystal in the reel, a glass bead tip","Ядовитый кристалл в катушке, стеклянная бусина на кончике",Cristal tóxico en el carrete y punta de cristal,卷线器嵌毒水晶，竿梢有玻璃珠
+ROD_ACID_20,Legendary Slime King's Rod!,Легендарная «Удочка Короля Слизи»!,¡Legendaria Caña del Rey Baba!,传说：黏液之王鱼竿！
+ROD_MOON_1,A light metal rod with a magnet hook,Лёгкая металлическая удочка с магнитным крючком,Caña de metal ligero con anzuelo imán,轻金属鱼竿，配磁铁钩
+ROD_MOON_2,A non-slip magnetic grip pad,Нескользящая магнитная накладка,Almohadilla magnética antideslizante,防滑磁力握垫
+ROD_MOON_3,A reel with an orbit disc,Катушка с орбитальным диском,Carrete con disco orbital,带轨道圆盘的卷线器
+ROD_MOON_4,Telescopic segments,Телескопическое удилище из сегментов,Tramos telescópicos,伸缩式竿节
+ROD_MOON_5,A gravity ring on the reel,Гравитационное кольцо на катушке,Anillo de gravedad en el carrete,卷线器上的重力环
+ROD_MOON_6,A glowing line-tracking beacon,Светящийся маячок для лески,Baliza luminosa para el sedal,追踪鱼线的发光信标
+ROD_MOON_7,A thin light-filament line,Тонкая леска из светового филамента,Sedal de filamento de luz,细细的光丝鱼线
+ROD_MOON_8,Small satellite panels on the reel,Спутниковые панели на катушке,Paneles de satélite en el carrete,卷线器上的小卫星板
+ROD_MOON_9,A magnetic claw for creatures,Магнитный захват для существ,Garra magnética para criaturas,抓生物的磁力爪
+ROD_MOON_10,A space-junk shield in front of the reel,Щит от космического мусора,Escudo contra basura espacial,卷线器前的太空垃圾挡板
+ROD_MOON_11,A gyroscope on the rod,Гироскоп на корпусе,Un giroscopio en la caña,竿身上的陀螺仪
+ROD_MOON_12,Stardust inserts on the handle,Вставки из звёздной пыли на рукояти,Polvo de estrellas en el mango,手柄镶星尘
+ROD_MOON_13,Two twin gravity claws,Два парных гравитационных захвата,Dos garras de gravedad gemelas,一对重力爪
+ROD_MOON_14,Overload and radiation guard on the reel,Защита катушки от перегрузок и излучения,Protección contra sobrecarga y radiación,卷线器防过载和辐射
+ROD_MOON_15,A micro thruster on the tip,Микродвигатель на кончике,Microimpulsor en la punta,竿梢的微型推进器
+ROD_MOON_16,An alien creature radar,Радар инопланетных существ,Radar de criaturas alienígenas,外星生物雷达
+ROD_MOON_17,Two orbit rings spin around the reel,Два орбитальных кольца вокруг катушки,Dos anillos orbitales giran en el carrete,两个轨道环绕着卷线器转
+ROD_MOON_18,Double gravity reels,Двойные гравитационные катушки,Carretes de gravedad dobles,双重力卷线器
+ROD_MOON_19,A glowing quantum line,Светящаяся квантовая леска,Sedal cuántico brillante,发光的量子鱼线
+ROD_MOON_20,Legendary Nebula Navigator!,Легендарный «Навигатор туманностей»!,¡Legendario Navegante de Nebulosas!,传说：星云领航者！
+FISHING_ROD_NEXT,Next: %s,Дальше: %s,Siguiente: %s,下一级：%s
+FISHING_ROD_NOW,Your rod,Твоя удочка,Tu caña,你的鱼竿
+FISHING_ROD_LADDER,All rods of this world,Все удочки этого мира,Todas las cañas de este mundo,这个世界的所有鱼竿
+FISHING_ROD_WORLD,Every world has its own rod!,В каждом мире своя удочка!,¡Cada mundo tiene su caña!,每个世界都有自己的鱼竿！
+FISHING_ROD_MAXED,The best rod of this world!,Лучшая удочка этого мира!,¡La mejor caña de este mundo!,这个世界最好的鱼竿！
+FISHING_STAT_ZONE,Green zone,Зелёная зона,Zona verde,绿色区域
+FISHING_STAT_SLOW,Slower fish,Рыбы медленнее,Peces más lentos,鱼变慢
+FISHING_STAT_TRIES,Hearts,Сердечки,Corazones,爱心
+FISHING_STAT_RARE,Rare fish,Редкие рыбы,Peces raros,稀有鱼
+FISHING_STAT_BUCKET,Bucket,Ведро,Cubo,鱼桶
+FISHING_PERFECT,Perfect!,Идеально!,¡Perfecto!,完美！
+FISHING_PERFECT_BONUS,Perfect pulls: +%d%%,Идеальные рывки: +%d%%,Tirones perfectos: +%d%%,完美拉竿：+%d%%
+FISHING_HINT_PERFECT,Hit the middle for Perfect!,Попади в середину — будет «Идеально»!,¡Acierta en el centro para un Perfecto!,点中间就是“完美”！
+FISHING_DART,It dodged!,Увернулась!,¡Se escapó a un lado!,它躲开了！

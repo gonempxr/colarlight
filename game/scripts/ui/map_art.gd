@@ -18,6 +18,15 @@ const DONE := 0
 const CURRENT := 1
 const NEXT := 2
 const LOCKED := 3
+## A world that is not in the game yet ("Soon!"): a dark silhouette after
+## the Moon.
+const SOON := 4
+
+## The "coming soon" islands after the last world, in map order: a frozen
+## castle and a city in the clouds (only their silhouettes exist).
+const SOON_WORLDS: Array[String] = ["ice", "sky"]
+## The glow around their silhouettes, a hint of what they hold.
+const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a")}
 
 const RX := 200.0
 const RY := 100.0
@@ -101,7 +110,10 @@ static func _c(col: Color) -> Color:
 static func top_pts(world: String) -> PackedVector2Array:
 	if _tops.has(world):
 		return _tops[world]
-	var seed := float(WORLDS.find(world)) * 1.7 + 0.5
+	var idx := WORLDS.find(world)
+	if idx < 0:
+		idx = WORLDS.size() + SOON_WORLDS.find(world)
+	var seed := float(idx) * 1.7 + 0.5
 	var pts := PackedVector2Array()
 	for i in 48:
 		var a := TAU * i / 48.0
@@ -494,6 +506,9 @@ static func _volcano(ci: CanvasItem) -> void:
 	# Lava river for the boat.
 	_medium(ci, "volcano", [[Vector2(-80, 12), Vector2(44, 15)], [Vector2(-10, 20), Vector2(56, 15)], [Vector2(70, 12), Vector2(46, 14)]])
 	Art.line_c(ci, PackedVector2Array([Vector2(-110, 12), Vector2(-40, 20), Vector2(30, 18), Vector2(100, 10)]), hot, 2.5)
+	# Dark crust plates floating on the magma river.
+	for c: Vector3 in [Vector3(-104, 8, 1.0), Vector3(-58, 22, 0.8), Vector3(48, 22, 0.9), Vector3(98, 12, 0.7)]:
+		Art.toon(ci, Art.ellipse_pts(Vector2(c.x, c.y), Vector2(13, 4.5) * c.z, 12, 0.1), Color("3b2a33"), 2.0, 0.6)
 	_mine(ci, spots("volcano")["mine"], 0.95, _c(Color("4d3e55")), Color("ff6a1a"), Color("ffd05a"))
 	_factory(ci, spots("volcano")["factory"], 0.85, _c(Color("8a7a92")), _c(Color("c2410c")), Color("5a5068"))
 	_house(ci, spots("volcano")["office"], 0.75, _c(Color("9a8a9e")), Color("e05a2a"))
@@ -604,6 +619,10 @@ static func sil_polys(world: String) -> Array:
 				var up := Vector2(0, -1).rotated(c[1])
 				var rt := Vector2(1, 0).rotated(c[1])
 				polys.append(PackedVector2Array([bb - rt * 10 + up * -2, bb - rt * 10 + up * 20, bb + up * 30, bb + rt * 10 + up * 20, bb + rt * 10 + up * -2]))
+		"ice":
+			_ice_castle(polys)
+		"sky":
+			_sky_city(polys)
 	for d in DEBRIS:
 		var c: Vector2 = d[0]
 		var s: float = d[1]
@@ -611,6 +630,74 @@ static func sil_polys(world: String) -> Array:
 				c + Vector2(s, s * 0.2), c + Vector2(s * 0.2, s), c + Vector2(-s * 0.8, s * 0.6)]))
 	_sil[world] = polys
 	return polys
+
+
+## A tower: a body from the base up to `h`, a pointed roof of `roof` on top.
+static func _tower(base: Vector2, w: float, h: float, roof: float) -> Array:
+	return [PackedVector2Array([base + Vector2(-w / 2.0, 4), base + Vector2(-w / 2.0, -h), base + Vector2(w / 2.0, -h), base + Vector2(w / 2.0, 4)]),
+			PackedVector2Array([base + Vector2(-w / 2.0 - 7, -h + 2), base + Vector2(0, -h - roof), base + Vector2(w / 2.0 + 7, -h + 2)])]
+
+
+## The frozen castle: a tall keep with spires, a crenellated wall, ice
+## spikes around it and icicles hanging under the island.
+static func _ice_castle(polys: Array) -> void:
+	polys.append_array(_tower(Vector2(0, -40), 46, 120, 70))
+	polys.append_array(_tower(Vector2(-70, -26), 34, 84, 50))
+	polys.append_array(_tower(Vector2(72, -22), 34, 74, 46))
+	polys.append_array(_tower(Vector2(-34, -44), 18, 104, 30))
+	# The wall between the towers, with battlements.
+	var wall := PackedVector2Array([Vector2(-96, 0), Vector2(-96, -62)])
+	for k in 9:
+		var x := -96.0 + k * 22.0
+		wall.append_array([Vector2(x, -70), Vector2(x + 11, -70), Vector2(x + 11, -62), Vector2(x + 22, -62)])
+	wall.append(Vector2(102, 0))
+	polys.append(wall)
+	for c in [[Vector2(-160, -20), 28.0, -0.15], [Vector2(-136, -14), 40.0, 0.1], [Vector2(150, -8), 46.0, 0.05], [Vector2(176, 4), 26.0, 0.25], [Vector2(120, -16), 24.0, -0.2]]:
+		var b: Vector2 = c[0]
+		var h: float = c[1]
+		var up := Vector2(0, -1).rotated(c[2])
+		var rt := Vector2(1, 0).rotated(c[2])
+		polys.append(PackedVector2Array([b - rt * h * 0.24, b + up * h, b + rt * h * 0.24]))
+	for k in 7:
+		var x := -130.0 + k * 42.0
+		var d := 150.0 + float((k * 37) % 5) * 14.0 - absf(x) * 0.4
+		polys.append(PackedVector2Array([Vector2(x - 9, d - 30), Vector2(x, d + 30), Vector2(x + 9, d - 30)]))
+
+
+## The sky city: towers with round domes, a spire, a floating balloon and
+## cloud puffs hugging the island.
+static func _sky_city(polys: Array) -> void:
+	for b in [[Vector2(-60, -30), 40.0, 90.0], [Vector2(36, -44), 50.0, 120.0], [Vector2(110, -22), 34.0, 70.0]]:
+		var base: Vector2 = b[0]
+		var w: float = b[1]
+		var h: float = b[2]
+		polys.append(PackedVector2Array([base + Vector2(-w / 2.0, 4), base + Vector2(-w / 2.0, -h), base + Vector2(w / 2.0, -h), base + Vector2(w / 2.0, 4)]))
+		var dome := PackedVector2Array()
+		for i in 17:
+			var a := PI + PI * i / 16.0
+			dome.append(base + Vector2(cos(a) * (w * 0.62), -h + sin(a) * w * 0.7))
+		polys.append(dome)
+		polys.append(PackedVector2Array([base + Vector2(-3, -h - w * 0.6), base + Vector2(0, -h - w * 0.6 - 26), base + Vector2(3, -h - w * 0.6)]))
+	# Arched bridge between two towers.
+	var arch := PackedVector2Array()
+	for i in 13:
+		var f := i / 12.0
+		arch.append(Vector2(lerpf(-40, 12, f), -84 - sin(f * PI) * 14))
+	for i in 13:
+		var f := 1.0 - i / 12.0
+		arch.append(Vector2(lerpf(-40, 12, f), -74 - sin(f * PI) * 14))
+	polys.append(arch)
+	# A balloon floating above the island.
+	polys.append(Art.ellipse_pts(Vector2(-150, -150), Vector2(30, 36), 24))
+	polys.append(PackedVector2Array([Vector2(-162, -112), Vector2(-138, -112), Vector2(-142, -96), Vector2(-158, -96)]))
+	polys.append(PackedVector2Array([Vector2(-172, -132), Vector2(-160, -112), Vector2(-156, -112), Vector2(-168, -132)]))
+	polys.append(PackedVector2Array([Vector2(-128, -132), Vector2(-140, -112), Vector2(-144, -112), Vector2(-132, -132)]))
+	# Clouds around the island's edges.
+	for c in [[Vector2(-190, 40), 1.0], [Vector2(186, 60), 0.9], [Vector2(-40, 190), 1.2], [Vector2(90, 160), 0.8]]:
+		var at: Vector2 = c[0]
+		var k: float = c[1]
+		polys.append(Art.union([Art.ellipse_pts(at, Vector2(44, 18) * k, 18), Art.circle_pts(at + Vector2(-18, -12) * k, 20 * k, 16),
+				Art.circle_pts(at + Vector2(14, -16) * k, 24 * k, 16)]))
 
 
 ## Dark silhouette: one rim pass under all the shapes, then the fill, so the
@@ -636,12 +723,13 @@ static func _silhouette(ci: CanvasItem, world: String, rim: Color) -> void:
 ## One island at the current origin. state: DONE, CURRENT, NEXT or LOCKED.
 ## lit_nodes: how many level nodes glow (current island).
 static func island(ci: CanvasItem, world: String, state: int, t: float, tier: int = 0) -> void:
-	var dark := state == NEXT or state == LOCKED
+	var dark := state == NEXT or state == LOCKED or state == SOON
 	_shift = 0.0 if tier <= 0 else 0.07 * float(tier)
-	var key := hash(["isl", world, dark, state == NEXT, tier])
+	var key := hash(["isl", world, dark, state, tier])
 	if not Art.cache_begin(ci, key):
 		if dark:
-			var rim := SIL_RIM if state == LOCKED else Color(look(world)["tease"], 0.75).lerp(SIL_RIM, 0.35)
+			var tease: Color = SOON_TEASE[world] if SOON_TEASE.has(world) else look(world)["tease"]
+			var rim := SIL_RIM if state == LOCKED else Color(tease, 0.75).lerp(SIL_RIM, 0.35 if state == NEXT else 0.2)
 			_silhouette(ci, world, rim)
 		else:
 			match world:
@@ -715,6 +803,19 @@ static func mystery(ci: CanvasItem, at: Vector2, t: float, pulse: bool, size: fl
 	Art.push(ci, at, 0.0, Vector2(k, k))
 	Art.text(ci, Vector2(-8, 16), "?", 120, Art.GOLD, 16)
 	Art.lock(ci, Vector2(30, 6), 30)
+	Art.pop(ci)
+
+
+## The "Soon!" ribbon on an island that is not in the game yet.
+static func soon_tag(ci: CanvasItem, at: Vector2, label: String, t: float, size: int = 30) -> void:
+	var font := UiTheme.heavy_font()
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 44.0
+	var bob := 0.0 if still else sin(t * 2.2) * 3.0
+	Art.push(ci, at + Vector2(0, bob), -0.06)
+	var h := size * 1.55
+	Art.t_rect(ci, Rect2(-w / 2.0, -h / 2.0, w, h), h * 0.5, Color("ff5a8a"), 3.5, 0.5)
+	Art.t_rect(ci, Rect2(-w / 2.0 + 8, -h / 2.0 + 5, w - 16, h * 0.28), h * 0.14, Color(1, 1, 1, 0.3), 0.0, 0.0)
+	Art.text(ci, Vector2(0, size * 0.36), label, size, Art.WHITE, 7)
 	Art.pop(ci)
 
 
@@ -918,7 +1019,7 @@ static func plate(ci: CanvasItem, at: Vector2, label: String, state: int, tier: 
 		CURRENT: fill = Art.GOLD
 		DONE: fill = Color("bff0b0")
 		NEXT: fill = Color("4a3f7a")
-		LOCKED: fill = Color("2a2342")
+		LOCKED, SOON: fill = Color("2a2342")
 	var r := Rect2(at.x - w / 2.0, at.y - size * 0.95, w, size * 1.6)
 	if state == DONE:
 		w += 34.0
@@ -929,7 +1030,7 @@ static func plate(ci: CanvasItem, at: Vector2, label: String, state: int, tier: 
 		Art.t_circle(ci, cc, size * 0.62, Art.GREEN, 3.0, 0.5)
 		Art.polyline(ci, PackedVector2Array([cc + Vector2(-7, 0), cc + Vector2(-2, 6), cc + Vector2(8, -6)]) , Art.WHITE, 4.5)
 	var tx := at.x - (27.0 if tier > 0 else 0.0) + (17.0 if state == DONE else 0.0)
-	var dark := state == NEXT or state == LOCKED
+	var dark := state == NEXT or state == LOCKED or state == SOON
 	Art.text(ci, Vector2(tx, at.y + size * 0.36), s, size, Art.WHITE if dark else Art.INK, 7 if dark else 0)
 	if tier > 0:
 		var sc := Vector2(r.end.x - 34.0, at.y - size * 0.15)

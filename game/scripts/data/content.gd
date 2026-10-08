@@ -115,12 +115,14 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "hat_unicorn", "slot": "hat", "art": "unicorn", "unlock": "pearls", "price": 300, "rarity": 2},
 	{"id": "hat_pumpkin", "slot": "hat", "art": "pumpkin", "unlock": "goal", "goal": "puzzle_20", "rarity": 2},
 	{"id": "hat_astronaut", "slot": "hat", "art": "astronaut", "unlock": "goal", "goal": "depth_5", "rarity": 3},
+	{"id": "hat_flame", "slot": "hat", "art": "flame", "unlock": "goal", "goal": "streak_30", "rarity": 3},
 	# Boat paint
 	{"id": "boat_classic", "slot": "boat", "art": "classic", "unlock": "free", "rarity": 0},
 	{"id": "boat_sunny", "slot": "boat", "art": "sunny", "unlock": "pearls", "price": 60, "rarity": 0},
 	{"id": "boat_candy", "slot": "boat", "art": "candy", "unlock": "pearls", "price": 120, "rarity": 1},
 	{"id": "boat_pirate", "slot": "boat", "art": "pirate", "unlock": "pearls", "price": 200, "rarity": 2},
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
+	{"id": "boat_flame", "slot": "boat", "art": "flame", "unlock": "goal", "goal": "streak_14", "rarity": 2},
 	# Player outfits (room 3). Pearls or goals only, never real money.
 	{"id": "outfit_casual", "slot": "outfit", "art": "casual", "unlock": "free", "rarity": 0},
 	{"id": "outfit_captain", "slot": "outfit", "art": "captain", "unlock": "pearls", "price": 60, "rarity": 0},
@@ -143,6 +145,7 @@ const BOAT_PAINTS := {
 	"candy": [Color("ff8fc7"), Color("fff0f7"), Color("b07cff"), Color("7be0ff"), Color("b6f36a")],
 	"pirate": [Color("3a3350"), Color("e8c48a"), Color("7a2e3a"), Color("5c5470"), Color("1a1a24")],
 	"royal": [Color("2a4fb8"), Color("ffd84a"), Color("ffd84a"), Color("ffd84a"), Color("d8363c")],
+	"flame": [Color("ff6a2b"), Color("ffd23f"), Color("d8363c"), Color("ffb347"), Color("ffe36b")],
 }
 ## The diver suits are gone (worker evolution replaced them). Pearls spent
 ## on them are refunded once on load (Progress). Old id -> pearl price.
@@ -176,7 +179,99 @@ const GOALS := {
 	"location_4": ["location", 4],
 	"depth_5": ["deepest", 5],
 	"prestige_1": ["prestiges", 1],
+	"streak_14": ["streak_best", 14],
+	"streak_30": ["streak_best", 30],
 }
+
+# --- Worker skins --------------------------------------------------------------------
+## Skins for the workers of each world, bought with pearls (prices shown,
+## nothing random), kept forever. A pattern skin colors the gear level the
+## workers wear; a costume skin ("form": an old evolution form, see
+## WorkerLooks) dresses them up and keeps their gear on the back. Only the
+## equipped skin of the current world counts: +Balance.SKIN_BONUS[rarity]
+## income there. Name keys: SKIN_<ID> for patterns, FORM_<WORLD>_<form> for
+## costumes. Order = the order in the skins tab (and WorkerLooks' codes).
+const SKIN_PRICES: Array[int] = [0, 60, 150, 320]
+const SKINS: Array[Dictionary] = [
+	{"id": "ocean_shells", "world": "ocean", "rarity": 1},
+	{"id": "ocean_jelly", "world": "ocean", "rarity": 1},
+	{"id": "ocean_coral", "world": "ocean", "rarity": 1},
+	{"id": "ocean_storm", "world": "ocean", "rarity": 2},
+	{"id": "ocean_circuit", "world": "ocean", "rarity": 2},
+	{"id": "ocean_swirl", "world": "ocean", "rarity": 2},
+	{"id": "ocean_shark", "world": "ocean", "rarity": 2, "form": 4},
+	{"id": "ocean_octopus", "world": "ocean", "rarity": 2, "form": 5},
+	{"id": "ocean_pirate", "world": "ocean", "rarity": 2, "form": 8},
+	{"id": "ocean_robo", "world": "ocean", "rarity": 3, "form": 3},
+	{"id": "ocean_mermaid", "world": "ocean", "rarity": 3, "form": 9},
+	{"id": "ocean_dragon", "world": "ocean", "rarity": 3, "form": 10},
+	{"id": "ocean_kraken", "world": "ocean", "rarity": 3, "form": 11},
+	{"id": "ocean_poseidon", "world": "ocean", "rarity": 3, "form": 12},
+	{"id": "volcano_smoke", "world": "volcano", "rarity": 1},
+	{"id": "volcano_granite", "world": "volcano", "rarity": 1},
+	{"id": "volcano_rust", "world": "volcano", "rarity": 1},
+	{"id": "volcano_magma", "world": "volcano", "rarity": 2},
+	{"id": "volcano_toxic", "world": "volcano", "rarity": 2},
+	{"id": "volcano_amethyst", "world": "volcano", "rarity": 2},
+	{"id": "volcano_robot", "world": "volcano", "rarity": 2, "form": 3},
+	{"id": "volcano_salamander", "world": "volcano", "rarity": 2, "form": 4},
+	{"id": "volcano_fox", "world": "volcano", "rarity": 2, "form": 7},
+	{"id": "volcano_golem", "world": "volcano", "rarity": 3, "form": 6},
+	{"id": "volcano_phoenix", "world": "volcano", "rarity": 3, "form": 9},
+	{"id": "volcano_dragon", "world": "volcano", "rarity": 3, "form": 10},
+	{"id": "volcano_titan", "world": "volcano", "rarity": 3, "form": 11},
+	{"id": "volcano_lord", "world": "volcano", "rarity": 3, "form": 12},
+	{"id": "acid_spots", "world": "acid", "rarity": 1},
+	{"id": "acid_camo", "world": "acid", "rarity": 1},
+	{"id": "acid_bubbles", "world": "acid", "rarity": 1},
+	{"id": "acid_glow", "world": "acid", "rarity": 2},
+	{"id": "acid_neon", "world": "acid", "rarity": 2},
+	{"id": "acid_crystal", "world": "acid", "rarity": 2},
+	{"id": "acid_frog", "world": "acid", "rarity": 2, "form": 4},
+	{"id": "acid_mushroom", "world": "acid", "rarity": 2, "form": 5},
+	{"id": "acid_beetle", "world": "acid", "rarity": 2, "form": 7},
+	{"id": "acid_slime", "world": "acid", "rarity": 3, "form": 6},
+	{"id": "acid_alchemist", "world": "acid", "rarity": 3, "form": 9},
+	{"id": "acid_spirit", "world": "acid", "rarity": 3, "form": 10},
+	{"id": "acid_hydra", "world": "acid", "rarity": 3, "form": 11},
+	{"id": "acid_wizard", "world": "acid", "rarity": 3, "form": 12},
+	{"id": "moon_crater", "world": "moon", "rarity": 1},
+	{"id": "moon_mars", "world": "moon", "rarity": 1},
+	{"id": "moon_night", "world": "moon", "rarity": 1},
+	{"id": "moon_galaxy", "world": "moon", "rarity": 2},
+	{"id": "moon_aurora", "world": "moon", "rarity": 2},
+	{"id": "moon_gold", "world": "moon", "rarity": 2},
+	{"id": "moon_robot", "world": "moon", "rarity": 2, "form": 3},
+	{"id": "moon_alien", "world": "moon", "rarity": 2, "form": 4},
+	{"id": "moon_octo", "world": "moon", "rarity": 2, "form": 5},
+	{"id": "moon_cat", "world": "moon", "rarity": 3, "form": 9},
+	{"id": "moon_nebula", "world": "moon", "rarity": 3, "form": 8},
+	{"id": "moon_dragon", "world": "moon", "rarity": 3, "form": 11},
+	{"id": "moon_king", "world": "moon", "rarity": 3, "form": 12},
+]
+
+
+static func skin(id: String) -> Dictionary:
+	for c in SKINS:
+		if c["id"] == id:
+			return c
+	return {}
+
+
+## Pearl price of a skin.
+static func skin_price(id: String) -> int:
+	var c := skin(id)
+	return SKIN_PRICES[clampi(int(c.get("rarity", 1)), 1, 3)] if not c.is_empty() else 0
+
+
+## The skins of one world, in tab order.
+static func skins_of(world: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in SKINS:
+		if c["world"] == world:
+			out.append(c)
+	return out
+
 
 # --- Room 3 decor -----------------------------------------------------------------
 ## Eight slots in the office, each with levels 0..DECOR_MAX bought with
@@ -203,6 +298,25 @@ const DAILY: Array[Dictionary] = [
 	{"kind": "coins", "amount": 20},
 	{"kind": "boost", "amount": 30},
 	{"kind": "pearls", "amount": 25},
+]
+
+# --- Streak -------------------------------------------------------------------
+## Days in a row with one small action (Progress.streak_action). Every lit
+## day gives STREAK_DAY_PEARLS; milestones give their reward once ever (shown
+## in advance on the streak screen, never random). Items come through GOALS
+## ("streak_N" uses the best streak, so a new flame never loses them).
+const STREAK_DAY_PEARLS := 2
+const STREAK_FREEZE_START := 1
+const STREAK_FREEZE_EVERY := 7
+const STREAK_FREEZE_MAX := 2
+## days, pearls, coins_min (minutes of income, shown as a chest), item.
+const STREAK_MILESTONES: Array[Dictionary] = [
+	{"days": 3, "pearls": 10},
+	{"days": 7, "pearls": 15, "coins_min": 30.0},
+	{"days": 14, "item": "boat_flame"},
+	{"days": 30, "pearls": 30, "item": "hat_flame"},
+	{"days": 50, "pearls": 50, "coins_min": 60.0},
+	{"days": 100, "pearls": 100, "coins_min": 120.0},
 ]
 
 # --- Pearl shop ------------------------------------------------------------------

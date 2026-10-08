@@ -3,9 +3,9 @@
 Models one location of the tycoon chain: work sites -> lift -> boat -> plant
 -> vault -> wallet. A greedy "reasonable player" buys whatever gives the best
 income gain per coin, opens sites and hires managers when they are a few
-minutes of income away, buys evolution forms (x1.10 income each) and, once
+minutes of income away, buys worker gear levels (x1.4, x2, x3 income) and, once
 the location gate is met (all 10 sites open, 10 foremen, lift + boat + boat2
-+ plant + plant2 managers), saves up for the location price. Forms are an
++ plant + plant2 managers), saves up for the location price. Gear is an
 optional booster, not part of the gate.
 
 Every location scales values and prices by loc_scale(L); the gate prices
@@ -52,10 +52,13 @@ PLANT2 = {"value": 68.0, "cost0": 2.5e4, "manager": 5.0e5, "unlock": 2.5e5, "gro
 FOREMAN_MULT = 2.0
 # The accountant (vault manager): collects the vault by itself. Kept forever.
 VAULT_MANAGER = 1.0e6
-# Evolution forms 1..12 of location 0 (later locations: x loc_gate_scale(L)).
-EVO_PRICES = [40.0, 200.0, 3.8e5, 1.2e7, 7.2e7, 1.9e8, 2.5e8, 4.0e8, 8.0e8, 1.6e9, 3.0e9, 4.0e9]
-EVO_MULT = 1.10
-EVO_FORMS = 12
+# Worker gear: level 1 is the base look, levels 2..4 are bought in order
+# (prices at location 0; later locations: x loc_gate_scale(L)). GEAR_MULT:
+# income multiplier with 0..3 levels bought. Skins (pearls, +2/4/8% for the
+# equipped one) are not modelled: pearls come from play outside this chain.
+EVO_PRICES = [3.0e5, 2.5e8, 3.5e9]
+GEAR_MULT = [1.0, 1.3, 1.7, 2.5]
+EVO_FORMS = 3
 # Price to open the next location (location 0; later: x loc_gate_scale(L)).
 LOCATION_PRICE = 2.4e10
 # Every location: values and prices x LOC_SCALE_STEP ...
@@ -123,7 +126,7 @@ class Game:
 
     @property
     def mult(self) -> float:
-        return EVO_MULT ** self.evo
+        return GEAR_MULT[self.evo]
 
     def stage_rates(self):
         dives = 0.0
@@ -173,7 +176,7 @@ class Game:
         if "vault" not in self.managers:
             opts.append(("accountant (vault manager)", VAULT_MANAGER * s, ("mgr", "vault"), False))
         if self.evo < EVO_FORMS:
-            opts.append((f"evolution form {self.evo + 1}", evo_cost(self.L, self.evo + 1), ("evo",), False))
+            opts.append((f"gear level {self.evo + 2}", evo_cost(self.L, self.evo + 1), ("evo",), False))
         return opts
 
     def apply(self, action):

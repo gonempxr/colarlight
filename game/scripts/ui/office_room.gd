@@ -566,33 +566,30 @@ func _draw_player() -> void:
 		Chars.person(self, at, 0.95 * ps, -1.0, _avatar(), pose)
 
 
-## The worker forms on the evolution board: the current form in color,
-## the next one as a silhouette with a "?", and pips for the 12 forms.
+## The gear board: the workers' gear level now, the next one beside it,
+## and four pips for the four levels.
 func _draw_evo() -> void:
-	var e := clampi(evo(), 0, 12)
+	var gears := 4
+	var e := clampi(evo(), 0, gears - 1)
 	Art.text(self, Vector2(0, -41), tr("EVO_BOARD"), 15, Art.WHITE, 4)
 	var looks := _worker_looks()
 	var w := world_id()
 	if looks:
 		looks.call("draw_card", self, Vector2(-36, 4), 76.0, w, e, true, _t)
-		if e < 12:
-			looks.call("draw_card", self, Vector2(38, 8), 64.0, w, e + 1, false, _t)
+		if e < gears - 1:
+			looks.call("draw_card", self, Vector2(38, 8), 64.0, w, e + 1, true, _t)
 	else:
 		var depth := clampi(e, 0, Art.DEPTH_STYLE.size() - 1)
 		var st: Dictionary = Art.DEPTH_STYLE[depth]
 		Chars.diver(self, Vector2(-36, 40), 0.62, st.get("suit", Art.CORAL), 1.0, 0.0, 0.0, "idle", 0.0, false,
 				st.get("ore", Art.GOLD), "happy", Chars.blinking(_t, 5.0), _t, depth, {"world": w, "form": e})
-		if e < 12:
-			var sil := Art.union([Art.circle_pts(Vector2(38, -6), 15, 16), Art.rrect_pts(Rect2(26, 6, 24, 30), 8)])
-			Art.toon(self, sil, Color("120c22"), 2.0, 0.0, Color("8a7cc0"))
-			Art.text(self, Vector2(38, 0), "?", 20, Art.GOLD, 4)
-	if e < 12:
+	if e < gears - 1:
 		Art.toon(self, PackedVector2Array([Vector2(-4, 0), Vector2(6, 6), Vector2(-4, 12)]), Art.GOLD, 1.8, 0.0)
 	else:
 		Art.toon(self, Art.star_pts(Vector2(38, 10), 18, 8, 5), Art.GOLD, 2.4, 0.4)
-	for i in 12:
-		var c := Vector2(-55 + i * 10, 50)
-		Art.disc(self, c, 3.6, Art.GOLD if i < e else Color(1, 1, 1, 0.25))
+	for i in gears:
+		var c := Vector2(-24 + i * 16, 50)
+		Art.disc(self, c, 4.6, Art.GOLD if i <= e else Color(1, 1, 1, 0.25))
 
 
 static func _worker_looks() -> GDScript:

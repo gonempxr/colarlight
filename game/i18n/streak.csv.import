@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://datwlonsea668"
+
+[deps]
+
+files=["res://i18n/streak.en.translation", "res://i18n/streak.ru.translation", "res://i18n/streak.es.translation", "res://i18n/streak.zh.translation"]
+
+source_file="res://i18n/streak.csv"
+dest_files=["res://i18n/streak.en.translation", "res://i18n/streak.ru.translation", "res://i18n/streak.es.translation", "res://i18n/streak.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

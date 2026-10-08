@@ -14,10 +14,15 @@ signal item_unlocked(id: String)
 signal artifact_leveled(id: String, level: int)
 signal chest_spawned
 signal decor_changed
+signal skins_changed
+## The first small action of a new day lit the streak flame (see streak_action).
+signal streak_lit(result: Dictionary)
 
 const SAVE_VERSION := 2
 ## Version 2 added the lift to the tutorial (Tutor.STEPS): old step -> new.
 const TUTORIAL_V1_TO_V2: Array[int] = [0, 1, 1, 1, 5, 7, 8, 9]
+## Old evolution forms seen (0..12) -> gear levels bought (0..3).
+const OLD_FORMS_TO_GEAR: Array[int] = [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
 const CHEST_FIRST_SEC := 120.0
 const CHEST_GAP_SEC := Vector2(150.0, 240.0)
 const TICK_SEC := 1.0
@@ -36,8 +41,12 @@ var owned: Dictionary = {}
 var equipped: Dictionary = {}
 ## Room 3 decor: slot (Content.DECOR_SLOTS) -> level 0..Content.DECOR_MAX.
 var decor: Dictionary = {}
-## World id -> highest evolution form ever owned there (for the codex).
+## World id -> highest gear level bought there so far (0..3, for the codex).
 var looks_seen: Dictionary = {}
+## Worker skins owned (Content.SKINS id -> true) and the one each world's
+## workers wear (world id -> skin id, "" = none).
+var skins: Dictionary = {}
+var skin_on: Dictionary = {}
 var features: Dictionary = {}
 ## Features whose button still shows "NEW".
 var fresh: Dictionary = {}
@@ -49,6 +58,19 @@ var stats: Dictionary = {}
 ## A chest is floating when > 0 (its reward seed).
 var chest_ready := false
 var chest_timer := CHEST_FIRST_SEC
+## Streak (days in a row with one small action; kids-safe, see streak_action).
+var streak_count := 0
+var streak_best := 0
+## Local date ("YYYY-MM-DD") of the last day that counted.
+var streak_last := ""
+## Ice cubes: each covers one missed day (Content.STREAK_FREEZE_*).
+var streak_freezes := Content.STREAK_FREEZE_START
+## Milestone days already rewarded (once ever): "3" -> true.
+var streak_claimed: Dictionary = {}
+## Recent days: date -> "play" or "ice" (for the week strip).
+var streak_log: Dictionary = {}
+## Rewards waiting for the celebration to hand them out: {"pearls", "coins_min"}.
+var streak_reward: Dictionary = {}
 
 var _tick := TICK_SEC
 var _save_left := 10.0
@@ -73,7 +95,9 @@ func _ready() -> void:
 	GameState.evo_bought.connect(func(_f): _see_looks())
 	GameState.location_changed.connect(func(_l):
 		_see_looks()
+		apply_bonus()
 		_check_goals())
+	_streak_connect()
 	GameState.depth_opened.connect(func(k):
 		_count("open", 1)
 		stats["deepest"] = maxi(int(stats.get("deepest", 0)), GameState.depth_index(k))
@@ -97,6 +121,8 @@ func reset() -> void:
 	for slot in Content.DECOR_SLOTS:
 		decor[slot] = 0
 	looks_seen = {}
+	skins = {}
+	skin_on = {}
 	features = {}
 	fresh = {}
 	tutorial_step = 0
@@ -106,6 +132,7 @@ func reset() -> void:
 	stats = {}
 	chest_ready = false
 	chest_timer = CHEST_FIRST_SEC
+	_streak_reset()
 	apply_bonus()
 
 
@@ -288,6 +315,7 @@ func apply_bonus() -> void:
 	for a in Content.ARTIFACTS:
 		b[a["bonus"]] = bonus(a["bonus"])
 	b["decor"] = decor_bonus()
+	b["skin"] = skin_bonus()
 	GameState.bonus = b
 	GameState.changed.emit()
 
@@ -326,7 +354,52 @@ func decor_bonus() -> float:
 	return 1.0 + Balance.DECOR_BONUS * levels
 
 
-## Remembers the forms owned in the current world (the codex shows them).
+# --- Worker skins -------------------------------------------------------------------
+
+func has_skin(id: String) -> bool:
+	return skins.get(id, false) == true
+
+
+## The skin the workers of `world` wear ("" = none).
+func skin_of(world: String) -> String:
+	var id := str(skin_on.get(world, ""))
+	return id if has_skin(id) else ""
+
+
+## Income multiplier from the skin worn in the current world.
+func skin_bonus() -> float:
+	var id := skin_of(GameState.world_id())
+	if id == "":
+		return 1.0
+	return 1.0 + Balance.SKIN_BONUS[clampi(int(Content.skin(id).get("rarity", 0)), 0, 3)]
+
+
+## Buys a skin with pearls and puts it on. False when owned or too dear.
+func buy_skin(id: String) -> bool:
+	var c := Content.skin(id)
+	if c.is_empty() or has_skin(id):
+		return false
+	if not spend_pearls(Content.skin_price(id)):
+		return false
+	skins[id] = true
+	wear_skin(id)
+	save_game()
+	return true
+
+
+## Puts an owned skin on its world's workers; wearing it again takes it off.
+func wear_skin(id: String) -> void:
+	var c := Content.skin(id)
+	if c.is_empty() or not has_skin(id):
+		return
+	var w: String = c["world"]
+	skin_on[w] = "" if skin_of(w) == id else id
+	apply_bonus()
+	skins_changed.emit()
+	changed.emit()
+
+
+## Remembers the gear bought in the current world (the codex shows it).
 func _see_looks() -> void:
 	var w: String = GameState.world_id()
 	if GameState.evo > int(looks_seen.get(w, 0)):
@@ -362,6 +435,7 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 		_count("puzzle", 1)
 	GameState.add_coins(out["coins"])
 	add_pearls(out["pearls"])
+	streak_action()
 	_check_goals()
 	save_game()
 	return out
@@ -382,6 +456,7 @@ func open_chest() -> Dictionary:
 	GameState.add_coins(out["coins"])
 	add_pearls(out["pearls"])
 	stats["chests"] = int(stats.get("chests", 0)) + 1
+	streak_action()
 	_count("chest", 1)
 	changed.emit()
 	return out
@@ -416,10 +491,221 @@ func claim_daily() -> Dictionary:
 	daily_day += 1
 	daily_last = today()
 	stats["daily_claimed"] = int(stats.get("daily_claimed", 0)) + 1
+	streak_action()
 	_check_goals()
 	changed.emit()
 	save_game()
 	return gift
+
+
+# --- Streak --------------------------------------------------------------------------
+## Days in a row with one small action (an upgrade, a tap, a claim...), not
+## just opening the game. Kind rules for kids: no timers or warnings; a
+## missed day eats an ice cube (start with one, one more every
+## STREAK_FREEZE_EVERY days, at most STREAK_FREEZE_MAX); without enough ice
+## the flame starts again at 1, the best record stays and nothing owned is
+## lost. A local date earlier than the last counted one (a clock moved back)
+## never breaks or extends the streak.
+
+const STREAK_LOG_DAYS := 21
+
+
+func _streak_reset() -> void:
+	streak_count = 0
+	streak_best = 0
+	streak_last = ""
+	streak_freezes = Content.STREAK_FREEZE_START
+	streak_claimed = {}
+	streak_log = {}
+	streak_reward = {}
+
+
+func _streak_connect() -> void:
+	GameState.upgraded.connect(func(_k, _c): streak_action())
+	GameState.manager_hired.connect(func(_k): streak_action())
+	GameState.tapped.connect(func(_k): streak_action())
+	# Fishing is loaded after Progress.
+	(func():
+		var f := get_node_or_null("/root/Fishing")
+		if f and f.has_signal("caught"):
+			f.caught.connect(func(_fish): streak_action())).call_deferred()
+
+
+## Day number of a "YYYY-MM-DD" date (-1 when it is not a date).
+static func day_number(date: String) -> int:
+	if date.length() < 10:
+		return -1
+	var u := Time.get_unix_time_from_datetime_string(date.substr(0, 10) + "T12:00:00")
+	if u == 0 and not date.begins_with("1970-01-01"):
+		return -1
+	return int(floor(float(u) / 86400.0))
+
+
+static func date_of(day: int) -> String:
+	return Time.get_date_string_from_unix_time(day * 86400 + 43200)
+
+
+## Counts the day of a small action. Returns {} when nothing changed (the
+## day already counted, the feature is not open yet, or the clock went back),
+## else {"count", "old", "best", "ice_used", "ice_earned", "broken",
+## "milestone" (days or 0), "reward": {"pearls", "coins_min"}} and emits
+## streak_lit. The reward waits in streak_reward until take_streak_reward.
+func streak_action(date: String = "") -> Dictionary:
+	if not has_feature("daily"):
+		return {}
+	if date == "":
+		date = today()
+	if date == streak_last:
+		return {}
+	var t := day_number(date)
+	if t < 0:
+		return {}
+	var l := day_number(streak_last)
+	if l >= 0 and t <= l:
+		return {}
+	var old := streak_count
+	var out := {"old": old, "ice_used": 0, "ice_earned": false, "broken": false, "milestone": 0}
+	if l < 0 or old <= 0:
+		streak_count = 1
+	elif t == l + 1:
+		streak_count += 1
+	else:
+		var missed := t - l - 1
+		if missed <= streak_freezes:
+			streak_freezes -= missed
+			out["ice_used"] = missed
+			for i in missed:
+				streak_log[date_of(l + 1 + i)] = "ice"
+			streak_count += 1
+		else:
+			# Too long away: a new flame. The best record and the ice stay.
+			out["broken"] = true
+			streak_count = 1
+	streak_last = date
+	streak_log[date] = "play"
+	_streak_trim_log(t)
+	streak_best = maxi(streak_best, streak_count)
+	stats["streak_best"] = streak_best
+	if streak_count % Content.STREAK_FREEZE_EVERY == 0 and streak_freezes < Content.STREAK_FREEZE_MAX:
+		streak_freezes += 1
+		out["ice_earned"] = true
+	var reward := {"pearls": Content.STREAK_DAY_PEARLS, "coins_min": 0.0}
+	for m in Content.STREAK_MILESTONES:
+		var days := int(m["days"])
+		if streak_count >= days and not streak_claimed.has(str(days)):
+			streak_claimed[str(days)] = true
+			out["milestone"] = days
+			reward["pearls"] += int(m.get("pearls", 0))
+			reward["coins_min"] += float(m.get("coins_min", 0.0))
+	streak_reward = {"pearls": int(streak_reward.get("pearls", 0)) + reward["pearls"],
+			"coins_min": float(streak_reward.get("coins_min", 0.0)) + reward["coins_min"]}
+	out["count"] = streak_count
+	out["best"] = streak_best
+	out["reward"] = reward
+	_check_goals()
+	streak_lit.emit(out)
+	changed.emit()
+	return out
+
+
+## Hands out the rewards the celebration shows: {"pearls", "coins"}.
+func take_streak_reward() -> Dictionary:
+	if streak_reward.is_empty():
+		return {}
+	var out := {"pearls": int(streak_reward.get("pearls", 0)), "coins": 0.0}
+	var minutes := float(streak_reward.get("coins_min", 0.0))
+	if minutes > 0.0:
+		out["coins"] = coins_for_minutes(minutes)
+		GameState.add_coins(out["coins"])
+	streak_reward = {}
+	add_pearls(out["pearls"])
+	changed.emit()
+	return out
+
+
+## The flame as it stands today: the count while it can still go on (today
+## or yesterday counted, or the ice covers the gap), else 0.
+func streak_shown(date: String = "") -> int:
+	if streak_count <= 0:
+		return 0
+	var t := day_number(today() if date == "" else date)
+	var l := day_number(streak_last)
+	if t < 0 or l < 0 or t <= l + 1:
+		return streak_count
+	return streak_count if t - l - 1 <= streak_freezes else 0
+
+
+## Today already counted (the flame burns bright).
+func streak_today(date: String = "") -> bool:
+	var t := day_number(today() if date == "" else date)
+	var l := day_number(streak_last)
+	return l >= 0 and t <= l
+
+
+## The streak would start again at the next action (shown as a warm welcome).
+func streak_will_restart(date: String = "") -> bool:
+	return streak_count > 0 and streak_shown(date) == 0
+
+
+## The last `n` days up to `date`: [{"date", "state": "play" | "ice" | "today" | ""}].
+func streak_week(date: String = "", n: int = 7) -> Array:
+	var t := day_number(today() if date == "" else date)
+	var out := []
+	for i in n:
+		var d := date_of(t - n + 1 + i)
+		var st := str(streak_log.get(d, ""))
+		if st == "" and i == n - 1:
+			st = "today"
+		out.append({"date": d, "state": st})
+	return out
+
+
+## The next milestone not reached yet (Content.STREAK_MILESTONES entry), or {}.
+func streak_next_milestone() -> Dictionary:
+	for m in Content.STREAK_MILESTONES:
+		if not streak_claimed.has(str(int(m["days"]))):
+			return m
+	return {}
+
+
+func _streak_trim_log(t: int) -> void:
+	for d in streak_log.keys():
+		var n := day_number(str(d))
+		if n < 0 or n <= t - STREAK_LOG_DAYS or n > t + 1:
+			streak_log.erase(d)
+
+
+func _streak_save() -> Dictionary:
+	return {"version": 1, "count": streak_count, "best": streak_best, "last": streak_last,
+			"freezes": streak_freezes, "claimed": streak_claimed, "log": streak_log, "reward": streak_reward}
+
+
+func _streak_load(s) -> void:
+	_streak_reset()
+	if not s is Dictionary:
+		return
+	streak_count = maxi(0, _int(s.get("count")))
+	streak_best = maxi(streak_count, _int(s.get("best")))
+	streak_last = str(s.get("last", ""))
+	if day_number(streak_last) < 0:
+		streak_last = ""
+		streak_count = 0
+	streak_freezes = clampi(_int(s.get("freezes")), 0, Content.STREAK_FREEZE_MAX) if s.has("freezes") else Content.STREAK_FREEZE_START
+	if s.get("claimed") is Dictionary:
+		for k in s["claimed"]:
+			if s["claimed"][k] == true:
+				streak_claimed[str(k)] = true
+	if s.get("log") is Dictionary:
+		for k in s["log"]:
+			var v := str(s["log"][k])
+			if day_number(str(k)) >= 0 and v in ["play", "ice"]:
+				streak_log[str(k)] = v
+	if s.get("reward") is Dictionary:
+		var p := clampi(_int(s["reward"].get("pearls")), 0, 1000)
+		var c := clampf(_f(s["reward"].get("coins_min")), 0.0, 600.0)
+		if p > 0 or c > 0.0:
+			streak_reward = {"pearls": p, "coins_min": c}
+	stats["streak_best"] = maxi(int(stats.get("streak_best", 0)), streak_best)
 
 
 # --- Quests ---------------------------------------------------------------------
@@ -517,6 +803,7 @@ func claim_quest(i: int) -> Dictionary:
 	var q: Dictionary = quests[i]
 	var out := {"coins": coins_for_minutes(1.0), "pearls": int(q["pearls"])}
 	quests.remove_at(i)
+	streak_action()
 	stats["quests_done"] = int(stats.get("quests_done", 0)) + 1
 	GameState.add_coins(out["coins"])
 	add_pearls(out["pearls"])
@@ -609,7 +896,8 @@ func save_game() -> bool:
 		"features": features, "fresh": fresh, "tutorial_step": tutorial_step,
 		"daily_day": daily_day, "daily_last": daily_last, "puzzle_level": puzzle_level,
 		"stats": stats, "chest_ready": chest_ready, "chest_timer": chest_timer,
-		"decor": decor, "looks_seen": looks_seen,
+		"decor": decor, "looks_seen": looks_seen, "skins": skins, "skin_on": skin_on,
+		"streak": _streak_save(),
 	}
 	var tmp := save_path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -686,8 +974,23 @@ func load_game() -> bool:
 		for slot in Content.DECOR_SLOTS:
 			decor[slot] = clampi(_int(d["decor"].get(slot)), 0, Content.DECOR_MAX)
 	if d.get("looks_seen") is Dictionary:
+		var gear_save := d.get("skins") is Dictionary
 		for w in d["looks_seen"]:
-			looks_seen[str(w)] = clampi(_int(d["looks_seen"][w]), 0, Balance.EVO_FORMS)
+			var n := _int(d["looks_seen"][w])
+			if not gear_save:
+				# 3.0 counted 12 forms: about every fourth one is a gear level.
+				n = OLD_FORMS_TO_GEAR[clampi(n, 0, OLD_FORMS_TO_GEAR.size() - 1)]
+			looks_seen[str(w)] = clampi(n, 0, Balance.EVO_FORMS)
+	if d.get("skins") is Dictionary:
+		for id in d["skins"]:
+			if d["skins"][id] == true and not Content.skin(str(id)).is_empty():
+				skins[str(id)] = true
+	if d.get("skin_on") is Dictionary:
+		for w in d["skin_on"]:
+			var id := str(d["skin_on"][w])
+			if has_skin(id) and Content.skin(id).get("world") == str(w):
+				skin_on[str(w)] = id
+	_streak_load(d.get("streak"))
 	_see_looks()
 	apply_bonus()
 	_check_goals()

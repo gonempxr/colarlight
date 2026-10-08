@@ -259,25 +259,24 @@ func test_evolution() -> void:
 	await _frames(2)
 	await _click(_center(card.button()))
 	await _settle()
-	check(main._modal.visible, "the evolution card opens the panel")
+	check(main._modal.visible, "the gear card opens the panel")
 	var texts := []
 	for l in _find(main._modal, "Label", []):
 		texts.append(l.text)
-	check(TranslationServer.translate("EVO_OPTIONAL") in texts, "the panel says forms are optional for the next world")
-	check(texts.count("???") == 13 - 1 - 3, "owned + next three shown, the rest hidden (%d hidden)" % texts.count("???"))
+	check(TranslationServer.translate("GEAR_OPTIONAL") in texts, "the panel says gear is optional for the next world")
+	for g in 4:
+		check(TranslationServer.translate("GEAR_LEVEL") % (g + 1) in texts, "level %d is shown" % (g + 1))
+	check(not "???" in texts, "no gear level is hidden")
+	check(NumFormat.short(gs.evo_cost(3)) in texts, "the price of the last level is shown")
 	var buy := _button_with(main._modal, TranslationServer.translate("EVO_BUY"))
 	check(buy != null, "a Buy button with the price")
 	var mult0: float = gs.income_mult()
 	if buy:
 		await _click(_center(buy))
 	await _frames(3)
-	check(gs.evo == 1, "Buy buys the next form (evo %d)" % gs.evo)
-	check(gs.income_mult() > mult0 * 1.09, "the form adds about +10% income")
-	check(main._toast.visible, "a toast names the new look")
-	texts.clear()
-	for l in _find(main._modal, "Label", []):
-		texts.append(l.text)
-	check(texts.count("???") == 13 - 2 - 3, "the panel shows one more form (%d hidden)" % texts.count("???"))
+	check(gs.evo == 1, "Buy buys the next gear level (evo %d)" % gs.evo)
+	check(absf(gs.income_mult() / mult0 - Balance.GEAR_MULT[1]) < 0.001, "gear level 2 adds its income boost")
+	check(main._toast.visible, "a toast names the new gear")
 	# Too dear: nothing happens.
 	gs.coins = 0.0
 	main._modal.rebuild()
@@ -285,7 +284,36 @@ func test_evolution() -> void:
 	buy = _button_with(main._modal, TranslationServer.translate("EVO_BUY"))
 	if buy:
 		await _click(_center(buy))
-	check(gs.evo == 1, "no coins, no form")
+	check(gs.evo == 1, "no coins, no gear")
+	# The skins tab.
+	pr.pearls = 100
+	var tab := _button_with(main._modal, TranslationServer.translate("TAB_SKINS"))
+	check(tab != null, "a Skins tab")
+	if tab:
+		await _click(_center(tab))
+	await _frames(3)
+	texts.clear()
+	for l in _find(main._modal, "Label", []):
+		texts.append(l.text)
+	check(texts.count("???") == 5, "legendary skins are a surprise until there are pearls for them (%d)" % texts.count("???"))
+	check(TranslationServer.translate("SKIN_OCEAN_SHELLS") in texts, "rare skins are shown with their names")
+	var price_btn: Button = null
+	for b: Button in _find(main._modal, "Button", []):
+		if b is PriceButton and (b as PriceButton).full_text == str(Content.skin_price("ocean_shells")):
+			price_btn = b
+			break
+	check(price_btn != null, "the first rare skin shows its pearl price")
+	var mult1: float = gs.income_mult()
+	if price_btn:
+		await _frames(2)
+		await _click(_center(price_btn))
+	await _frames(3)
+	check(pr.has_skin("ocean_shells") and pr.skin_of("ocean") == "ocean_shells", "buying a skin puts it on")
+	check(pr.pearls == 100 - Content.skin_price("ocean_shells"), "it costs its price in pearls")
+	check(absf(gs.income_mult() / mult1 - 1.02) < 0.001, "a rare skin: +2% income")
+	pr.wear_skin("ocean_shells")
+	check(pr.skin_of("ocean") == "", "wearing it again takes it off")
+	load("res://scripts/ui/evo_panel.gd").tab = "gear"
 	# The office board opens the same panel.
 	await _close_dialogs()
 	main.show_room(2, false)
@@ -293,7 +321,7 @@ func test_evolution() -> void:
 	var office: OfficeRoom = main._office
 	await _click(office.get_global_transform_with_canvas() * office.slot_rect("board").get_center())
 	await _settle()
-	check(main._modal.visible and TranslationServer.translate("EVO_BOARD") in _titles(), "the office board opens the evolution panel")
+	check(main._modal.visible and TranslationServer.translate("EVO_BOARD") in _titles(), "the office board opens the gear panel")
 	await _close_dialogs()
 
 
@@ -453,6 +481,8 @@ func test_plant2_offer() -> void:
 	await _close_dialogs()
 	gs.reset()
 	gs.coins = 1e9
+	# Opening site 3 opens fishing: its intro must not pop up over the offer.
+	pr.features["fishing"] = true
 	gs.levels["d1"] = 1
 	gs.levels["d2"] = 1
 	await _frames(2)

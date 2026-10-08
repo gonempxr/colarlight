@@ -10,7 +10,7 @@ extends SceneTree
 ## button) | boost (its offer) | adtest (the pretend ad) | boosted (x2 on,
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
 ## week's pearls waiting) | room:<0|1|2> (mine, factory, office) | evo (the
-## evolution panel) | decor[:slot] | map (the world map) | tut:<step> (the
+## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
 ## tutorial at that step) | hint:<room> (the lightbulb's hint).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -61,6 +61,7 @@ func _initialize() -> void:
 		pr.apply_bonus()
 		pr._fill_quests()
 		pr.quests[0]["count"] = pr.quests[0]["goal"]
+		_streak_setup(pr, overlay)
 	match scenario:
 		"mid", "rich":
 			gs.levels.merge({"d0": 34, "d1": 27, "d2": 12, "lift": 40, "boat": 45, "plant": 41}, true)
@@ -69,7 +70,7 @@ func _initialize() -> void:
 			gs.coins = 48250.0
 			gs.hold = 1840.0
 			gs.dock = 620.0
-			gs.evo = 2
+			gs.evo = 1
 			gs.vault = 8400.0
 			if scenario == "rich":
 				# Coins for the late tutorial steps (accountant, evolution).
@@ -173,10 +174,34 @@ func _initialize() -> void:
 			root.get_node("Platform").show_rewarded(func(_ok): pass)
 		"rivals", "rivals_reward":
 			main.open_rivals()
-		"evo":
+		"evo", "gear4":
+			load("res://scripts/ui/evo_panel.gd").tab = "gear"
+			if overlay == "gear4":
+				gs.evo = 3
+			main.open_evolution()
+		"skins":
+			# A few skins owned, one worn, pearls for an epic one.
+			pr.pearls = 200
+			for id in ["ocean_shells", "ocean_storm", "ocean_robo"]:
+				pr.skins[id] = true
+			pr.skin_on["ocean"] = "ocean_storm"
+			pr.apply_bonus()
+			load("res://scripts/ui/evo_panel.gd").tab = "skins"
 			main.open_evolution()
 		"map":
 			main.open_map()
+		"streak", "streak_back":
+			main.open_streak()
+		"streakpop":
+			pr.streak_action()
+			await create_timer(0.9).timeout
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png(out)
+			quit()
+			return
+		"streakwear":
+			load("res://scripts/ui/wardrobe.gd").tab = "hat"
+			main.open_feature("shop")
 		_:
 			if overlay.begins_with("room:"):
 				main.show_room(int(overlay.split(":")[1]), false)
@@ -223,3 +248,36 @@ func _initialize() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out)
 	quit()
+
+
+## Streak overlays: streak (the screen), streakpop (the party of a new day),
+## streak_back (a long break: the warm welcome), streakwear (flame items).
+## Elsewhere a 5-day flame lit today (not yet today under "daily").
+func _streak_setup(pr: Node, overlay: String) -> void:
+	var t0: int = pr.day_number(pr.today())
+	var lit := overlay not in ["daily", "streakpop"]
+	var end := t0 if lit else t0 - 1
+	pr.streak_log = {}
+	var count := 0
+	for i in range(end - 5, end + 1):
+		if i == end - 3:
+			pr.streak_log[pr.date_of(i)] = "ice"
+		else:
+			pr.streak_log[pr.date_of(i)] = "play"
+			count += 1
+	pr.streak_count = count
+	pr.streak_best = 12
+	pr.streak_last = pr.date_of(end)
+	pr.streak_freezes = 1
+	pr.streak_claimed = {"3": true}
+	if overlay == "streakpop":
+		pr.streak_count = 6
+	if overlay == "streak_back":
+		pr.streak_last = pr.date_of(t0 - 6)
+		pr.streak_count = 9
+		pr.streak_log = {}
+		pr.streak_freezes = 0
+	if overlay == "streakwear":
+		pr.owned["hat_flame"] = true
+		pr.owned["boat_flame"] = true
+		pr.equipped["hat"] = "hat_flame"

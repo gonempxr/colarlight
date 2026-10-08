@@ -1331,7 +1331,7 @@ static func _boat_throne(ci: CanvasItem, o: Dictionary) -> void:
 static func island(ci: CanvasItem, width: float) -> void:
 	var sand := Art.smooth_pts(PackedVector2Array([Vector2(-6, 30), Vector2(6, -8), Vector2(30, -34), Vector2(70, -60),
 			Vector2(width * 0.5, -66), Vector2(width + 40, -64), Vector2(width + 40, 30)]), 4)
-	Art.toon(ci, sand, WorldLook.color("sand"), 3.2, 0.8)
+	Art.toon(ci, sand, WorldLook.color("sand"), WorldLook.EDGE, 0.8)
 	var grass_ctrl := PackedVector2Array()
 	grass_ctrl.append(Vector2(56, -58))
 	grass_ctrl.append(Vector2(width * 0.5, -72))

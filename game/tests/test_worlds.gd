@@ -36,6 +36,8 @@ func _initialize() -> void:
 	test_balance_tables()
 	test_location_gate()
 	test_evolution()
+	test_skins()
+	test_gear_migration()
 	test_income_mult()
 	test_vault()
 	test_advance_location()
@@ -77,13 +79,18 @@ func test_balance_tables() -> void:
 		var b: Dictionary = Balance.DEPTHS[i]
 		rising = rising and b["value"] > a["value"] and b["cost0"] > a["cost0"] and b["unlock"] > a["unlock"] and b["manager"] >= a["manager"]
 	check(rising, "deeper sites are worth more and cost more")
-	check(Balance.EVO_PRICES.size() == Balance.EVO_FORMS and Balance.EVO_FORMS == 12, "12 forms")
+	check(Balance.EVO_PRICES.size() == Balance.EVO_FORMS and Balance.EVO_FORMS == 3, "3 gear levels to buy (levels 2..4)")
+	check(Balance.GEAR_MULT.size() == 4 and Balance.GEAR_MULT[0] == 1.0, "gear level 1 is the base")
 	var up := true
-	for i in range(1, 12):
-		up = up and Balance.EVO_PRICES[i] > Balance.EVO_PRICES[i - 1]
-	check(up, "each form costs more than the one before")
-	check(Balance.EVO_PRICES[0] <= 100.0, "the first form is cheap (a few minutes in)")
-	check(Balance.LOCATION_PRICE > Balance.EVO_PRICES[11] and Balance.LOCATION_PRICE > Balance.DEPTHS[9]["manager"], "the location price is the biggest one")
+	for i in range(1, 3):
+		up = up and Balance.EVO_PRICES[i] > Balance.EVO_PRICES[i - 1] * 5.0
+	var boost := true
+	for i in range(1, 4):
+		boost = boost and Balance.GEAR_MULT[i] >= Balance.GEAR_MULT[i - 1] * 1.25
+	check(up, "each gear level costs much more than the one before")
+	check(boost, "each gear level is a big income boost (25%+)")
+	check(Balance.LOCATION_PRICE > Balance.EVO_PRICES[2] and Balance.LOCATION_PRICE > Balance.DEPTHS[9]["manager"], "the location price is the biggest one")
+	check(Balance.SKIN_BONUS == [0.0, 0.02, 0.04, 0.08], "skins: rare +2%, epic +4%, legendary +8%")
 	check(near(Balance.loc_scale(0), 1.0) and near(Balance.loc_gate_scale(0), 1.0), "location 0 is the base")
 	var longer := true
 	for l in range(1, 12):
@@ -110,7 +117,7 @@ func test_location_gate() -> void:
 	check(not gs.location_ready(), "every foreman is needed")
 	gs.managers["d9"] = true
 	check(gs.location_ready(), "all goals met")
-	check(gs.evo == 0, "no forms needed for the gate")
+	check(gs.evo == 0, "no gear needed for the gate")
 	var cost: float = gs.next_location_cost()
 	check(near(cost, Balance.LOCATION_PRICE), "location 0 price")
 	gs.coins = cost * 0.5
@@ -124,26 +131,108 @@ func test_location_gate() -> void:
 
 func test_evolution() -> void:
 	_fresh()
-	check(not gs.can_buy_evo() and not gs.buy_evo(), "forms cost coins")
+	check(gs.gear_level() == 1, "workers start in gear level 1")
+	check(not gs.can_buy_evo() and not gs.buy_evo(), "gear costs coins")
 	var bought := []
 	gs.evo_bought.connect(func(f): bought.append(f))
 	var mult0: float = gs.income_mult()
 	gs.coins = 1e12
-	var spent := 0.0
-	for form in range(1, 13):
+	for form in range(1, 4):
 		var price: float = gs.evo_cost(form)
-		check(near(price, Balance.EVO_PRICES[form - 1]), "form %d price" % form)
+		check(near(price, Balance.EVO_PRICES[form - 1]), "gear level %d price" % (form + 1))
 		var before: float = gs.coins
-		check(gs.buy_evo(), "buy form %d" % form)
-		spent += before - gs.coins
-		check(gs.evo == form and near(before - gs.coins, price), "form %d bought in order at its price" % form)
-	check(bought == range(1, 13), "evo_bought(form) for every form %s" % str(bought))
-	check(not gs.can_buy_evo() and not gs.buy_evo() and gs.evo == 12, "no 13th form")
-	check(near(gs.income_mult(), mult0 * pow(1.1, 12)), "each form x1.10 income (%.3f)" % (gs.income_mult() / mult0))
-	check(int(pr.looks_seen.get("ocean", 0)) == 12, "the codex remembers the forms seen")
+		check(gs.buy_evo(), "buy gear level %d" % (form + 1))
+		check(gs.evo == form and gs.gear_level() == form + 1 and near(before - gs.coins, price), "level %d bought in order at its price" % (form + 1))
+		check(near(gs.income_mult(), mult0 * Balance.GEAR_MULT[form]), "level %d: x%.2f income" % [form + 1, Balance.GEAR_MULT[form]])
+	check(bought == [1, 2, 3], "evo_bought for every level %s" % str(bought))
+	check(not gs.can_buy_evo() and not gs.buy_evo() and gs.evo == 3, "no fifth level")
+	check(int(pr.looks_seen.get("ocean", 0)) == 3, "the codex remembers the gear seen")
 	gs.location = 2
 	gs.evo = 0
-	check(near(gs.evo_cost(1), Balance.EVO_PRICES[0] * Balance.loc_gate_scale(2)), "forms cost more in later locations")
+	check(near(gs.evo_cost(1), Balance.EVO_PRICES[0] * Balance.loc_gate_scale(2)), "gear costs more in later locations")
+
+
+func test_skins() -> void:
+	_fresh()
+	var ids := {}
+	for w: String in ["ocean", "volcano", "acid", "moon"]:
+		var list: Array = Content.skins_of(w)
+		var rar := [0, 0, 0, 0]
+		for c: Dictionary in list:
+			rar[int(c["rarity"])] += 1
+			ids[c["id"]] = true
+		check(list.size() >= 9 and list.size() <= 14, "%s: 9..14 skins (%d)" % [w, list.size()])
+		check(rar[1] >= 3 and rar[2] >= 3 and rar[3] >= 2, "%s: rare, epic and legendary skins %s" % [w, str(rar)])
+	check(ids.size() == Content.SKINS.size(), "skin ids are unique")
+	check(Content.skin_price("ocean_shells") < Content.skin_price("ocean_storm") and Content.skin_price("ocean_storm") < Content.skin_price("ocean_poseidon"), "prices go up with rarity")
+	var mult0: float = gs.income_mult()
+	pr.pearls = 10
+	check(not pr.buy_skin("ocean_storm") and not pr.has_skin("ocean_storm") and pr.pearls == 10, "not enough pearls: nothing happens")
+	pr.pearls = 1000
+	check(pr.buy_skin("ocean_storm"), "buy an epic skin")
+	check(pr.pearls == 1000 - Content.skin_price("ocean_storm"), "it costs its shown price")
+	check(pr.skin_of("ocean") == "ocean_storm", "a bought skin is put on")
+	check(near(gs.income_mult(), mult0 * 1.04), "epic skin: +4%% income (%.4f)" % (gs.income_mult() / mult0))
+	check(not pr.buy_skin("ocean_storm"), "a skin is bought once")
+	check(pr.buy_skin("ocean_poseidon") and pr.skin_of("ocean") == "ocean_poseidon", "buying another puts it on")
+	check(near(gs.income_mult(), mult0 * 1.08), "only the worn skin counts: legendary +8%")
+	pr.wear_skin("ocean_poseidon")
+	check(pr.skin_of("ocean") == "" and near(gs.income_mult(), mult0), "wearing it again takes it off")
+	pr.wear_skin("ocean_shells")
+	check(pr.skin_of("ocean") == "", "a skin not owned can't be worn")
+	pr.wear_skin("ocean_storm")
+	check(pr.buy_skin("moon_galaxy") and pr.skin_of("moon") == "moon_galaxy" and pr.skin_of("ocean") == "ocean_storm", "each world wears its own skin")
+	check(near(gs.income_mult(), mult0 * 1.04), "the moon skin does nothing in the ocean")
+	pr.save_game()
+	pr.reset()
+	check(pr.skin_of("ocean") == "", "reset forgets skins")
+	pr.load_game()
+	check(pr.has_skin("ocean_poseidon") and pr.skin_of("ocean") == "ocean_storm" and pr.skin_of("moon") == "moon_galaxy", "skins saved and loaded")
+	check(near(gs.income_mult(), mult0 * 1.04), "the skin bonus is back after loading")
+	gs.location = 3
+	pr.apply_bonus()
+	check(near(gs.income_mult() / Balance.loc_scale(3), mult0 * 1.04), "in the moon world the moon skin counts")
+
+
+## 3.0 saves had 12 evolution forms: the coins they paid buy gear levels
+## in order and the rest comes back as coins.
+func test_gear_migration() -> void:
+	for case: Array in [[0, 0, 0], [2, 0, 240.0], [3, 1, 3.8e5 + 240.0 - 3.0e5], [7, 2, -1.0], [12, 3, -1.0]]:
+		var forms: int = case[0]
+		_fresh()
+		var spent := Balance.old_evo_spent(0, forms)
+		var data := {"version": 4, "coins": 100.0, "location": 0, "evo": forms, "levels": {"d0": 1, "lift": 1, "boat": 1, "plant": 1}, "managers": {}}
+		var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+		f.store_string(JSON.stringify(data))
+		f.close()
+		gs.load_game()
+		check(gs.evo == case[1], "%d old forms -> gear level %d (got %d)" % [forms, case[1] + 1, gs.evo + 1])
+		var paid := 0.0
+		for i in gs.evo:
+			paid += Balance.evo_cost(0, i + 1)
+		check(near(gs.coins, 100.0 + spent - paid, 1e-6), "%d forms: the rest of the coins comes back (%.0f)" % [forms, gs.coins - 100.0])
+		check(near(gs.gear_refund, spent - paid, 1e-6), "the refund is remembered")
+		if case[2] >= 0.0:
+			check(near(gs.coins - 100.0, case[2], 1e-6), "%d forms: refund %.0f" % [forms, case[2]])
+	# A later location pays its own (bigger) prices.
+	_fresh()
+	var f2 := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+	f2.store_string(JSON.stringify({"version": 4, "coins": 0.0, "location": 2, "evo": 12, "levels": {"d0": 1, "lift": 1, "boat": 1, "plant": 1}, "managers": {}}))
+	f2.close()
+	gs.load_game()
+	check(gs.location == 2 and gs.evo == 3, "a full set of forms in location 2 is full gear")
+	# New saves keep the gear as it is.
+	gs.save_game()
+	gs.reset()
+	gs.load_game()
+	check(gs.evo == 3 and near(gs.gear_refund, 0.0), "gear saved and loaded without a refund")
+	# The codex: 12 forms seen -> gear level 4.
+	_fresh()
+	var p := FileAccess.open(PROGRESS_SAVE, FileAccess.WRITE)
+	p.store_string(JSON.stringify({"version": 2, "looks_seen": {"ocean": 12, "volcano": 5, "acid": 1}}))
+	p.close()
+	pr.load_game()
+	check(int(pr.looks_seen["ocean"]) == 3 and int(pr.looks_seen["volcano"]) == 1 and int(pr.looks_seen["acid"]) == 0, "old codex forms map to gear levels %s" % str(pr.looks_seen))
 
 
 func test_income_mult() -> void:
@@ -242,7 +331,7 @@ func test_advance_location() -> void:
 	gs.location_changed.connect(func(l): changed.append(l))
 	check(gs.advance_location(), "advance")
 	check(changed == [1] and gs.location == 1, "location_changed(1)")
-	check(gs.coins == 0.0 and gs.vault == 0.0 and gs.evo == 0, "coins, vault and forms reset")
+	check(gs.coins == 0.0 and gs.vault == 0.0 and gs.evo == 0, "coins, vault and gear reset")
 	check(gs.get_level("d0") == 1 and gs.get_level("d1") == 0 and gs.get_level("lift") == 1 and gs.get_level("boat2") == 0, "levels reset (second boat closed again)")
 	check(not gs.has_manager("d0") and not gs.has_manager("d9"), "foremen are hired again")
 	var kept := true
@@ -251,7 +340,7 @@ func test_advance_location() -> void:
 	check(kept, "lift, boat, plant, second boat/plant and the accountant stay")
 	check(near(gs.legacy_mult, 3.0) and gs.total_earned >= total, "legacy and lifetime earnings stay")
 	check(pr.decor["desk"] == 2 and near(float(gs.bonus.get("decor", 1.0)), 1.02), "decor stays")
-	check(int(pr.looks_seen.get("ocean", 0)) == 4, "seen forms stay in the codex")
+	check(int(pr.looks_seen.get("ocean", 0)) == 3, "seen gear stays in the codex")
 	check(int(pr.stats.get("location", 0)) == 1, "the highest location reached is a stat")
 	var goals: Array = gs.location_goals()
 	check(goals[2]["have"] == 3, "kept managers count once the second boat/plant reopen (%d)" % goals[2]["have"])
@@ -264,22 +353,59 @@ func test_advance_location() -> void:
 
 func test_world_cycling() -> void:
 	_fresh()
-	var want := ["ocean", "volcano", "acid", "moon", "ocean", "volcano", "acid", "moon", "ocean"]
+	var want := ["ocean", "volcano", "acid", "moon"]
 	var ok := true
 	for l in want.size():
 		gs.location = l
-		ok = ok and gs.world_id() == want[l] and gs.world_index() == l % 4 and gs.tier() == l / 4
-	check(ok, "worlds cycle ocean -> volcano -> acid -> moon, tier = L / 4")
-	gs.location = 4
-	check(gs.world_id() == "ocean" and gs.tier() == 1, "L=4 is the ocean, tier 1")
+		ok = ok and gs.world_id() == want[l] and gs.world_index() == l and gs.tier() == 0
+	check(ok, "worlds go ocean -> volcano -> acid -> moon, no stars")
+	check(gs.site_id(9) == "cosmic_heart" and gs.site_id(1) == "meteor", "moon sites")
+	gs.location = 0
 	check(gs.site_id(0) == "shells" and gs.site_id(9) == "heart", "ocean sites")
 	gs.location = 1
 	check(gs.site_id(0) == "ash" and gs.site_id(9) == "dragon", "volcano sites")
 	gs.location = 2
 	check(gs.site_id(2) == "shroom", "acid sites")
-	gs.location = 3
-	check(gs.site_id(9) == "cosmic_heart" and gs.site_id(1) == "meteor", "moon sites")
 	gs.location = 0
+	test_last_location()
+
+
+## Exactly four worlds: the Moon is the last, nothing opens after it, and old
+## saves from the repeats come back to the Moon with their progress.
+func test_last_location() -> void:
+	_fresh()
+	check(Balance.LAST_LOCATION == 3 and Balance.WORLDS.size() == 4, "four worlds, the Moon is the last")
+	gs.location = 7
+	check(gs.location == 3 and gs.world_id() == "moon" and gs.tier() == 0, "no location past the Moon")
+	gs.location = 2
+	check(not gs.is_last_location(), "the swamp is not the last")
+	gs.location = 3
+	check(gs.is_last_location(), "the Moon is the last")
+	_complete_location()
+	gs.coins = gs.next_location_cost() * 10.0
+	check(gs.location_ready(), "a finished Moon")
+	check(not gs.can_advance_location() and not gs.advance_location(), "the Moon's gate stays shut")
+	check(gs.location == 3 and gs.coins > 0.0, "still on the Moon, coins kept")
+	# An old save at Ocean ★2 / Volcano ★2: back to the Moon, levels kept.
+	for old_loc in [4, 5, 9]:
+		_fresh()
+		gs.levels["d0"] = 77
+		for k in ["d1", "d2", "d3"]:
+			gs.levels[k] = 21
+		gs.managers["d0"] = true
+		gs.coins = 1.5e15
+		gs.save_game()
+		var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
+		saved["location"] = old_loc
+		var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+		f.store_string(JSON.stringify(saved))
+		f.close()
+		gs.reset()
+		gs.load_game()
+		check(gs.location == 3, "save at location %d is clamped to the Moon" % old_loc)
+		check(int(gs.levels["d0"]) == 77 and int(gs.levels["d3"]) == 21 and gs.has_manager("d0"), "its levels and foremen stay (%d)" % old_loc)
+		check(gs.coins >= 1.5e15 * 0.99, "its coins stay (%d)" % old_loc)
+	_fresh()
 
 
 func test_v3_migration() -> void:
