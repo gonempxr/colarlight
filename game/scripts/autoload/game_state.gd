@@ -508,8 +508,13 @@ func world_coins(l: int) -> float:
 	return maxf(0.0, _num(snap.get("coins"), 0.0)) if snap is Dictionary else 0.0
 
 
+## Less than a second away pays nothing (a quick back-and-forth is free of
+## any rounding gain).
+const AWAY_MIN_SEC := 1.0
+
+
 func _pay_away(seconds: float) -> float:
-	if seconds <= 0.0:
+	if seconds < AWAY_MIN_SEC:
 		return 0.0
 	_boosted = false
 	var earned := simulate_offline(seconds)
@@ -568,6 +573,7 @@ func _apply_run(d: Dictionary) -> void:
 ## the gate is only on the highest world.
 func _fresh_world_run() -> void:
 	_reset_run(false)
+	coins = 0.0
 	for k in AUTOMATED:
 		managers[k] = true
 	managers[VAULT] = true
