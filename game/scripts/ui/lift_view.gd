@@ -201,7 +201,10 @@ static func trip_at(p: float, deep: int) -> Array:
 
 
 func _trip() -> Array:
-	return trip_at(Motion.progress("lift"), _trip_deep)
+	var p: float = Motion.progress("lift")
+	# Asked before this frame's _process began the waiting trip: use its depth.
+	var deep := _pending_deep if _pending and p >= 0.0 and (_last_p < 0.0 or p < _last_p - 0.5) else _trip_deep
+	return trip_at(p, deep)
 
 
 ## Bottom centre of the cabin now.

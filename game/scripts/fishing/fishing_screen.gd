@@ -689,7 +689,7 @@ func _update_fx(delta: float) -> void:
 	_drops = _drops.filter(func(d): return d["age"] < d["life"])
 	for s in _stars:
 		s["age"] += delta
-		s["v"] *= 0.94
+		s["v"] *= Motion.drag(0.94, delta)
 		s["p"] += s["v"] * delta
 	_stars = _stars.filter(func(s): return s["age"] < s["life"])
 	for arr: Array in [_rings, _texts]:

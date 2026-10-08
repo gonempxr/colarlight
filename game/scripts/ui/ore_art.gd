@@ -776,7 +776,7 @@ static func centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, s
 			Art.toon(ci, _HOARD, Color("ffc93c"), 2.0, 0.4)
 			for p: Vector2 in [Vector2(-16, -8), Vector2(12, -9), Vector2(-4, -14), Vector2(22, -4)]:
 				Art.flat(ci, Art.ellipse_pts(p, Vector2(4, 1.8), 10), Color("fff1a8"))
-			var wob := snappedf(sin(t * 9.0) * 0.1 * maxf(0.0, sin(t * 0.9 + seed)), 0.02)
+			var wob := sin(t * 9.0) * 0.1 * maxf(0.0, sin(t * 0.9 + seed))
 			Art.push(ci, Vector2(2, -12), wob)
 			dragon_egg(ci, c, c2, t)
 			Art.pop(ci)
@@ -798,7 +798,7 @@ static func centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, s
 			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 0.95)
 			Art.toon(ci, _PEDESTAL, Color("2b2340"), 2.0, 0.4)
 			Art.flat(ci, _PEDESTAL_TOP, Color(c, 0.55))
-			Art.push(ci, Vector2(0, -34 + snappedf(sin(t * 1.3 + seed) * 3.0, 0.5)), 0.0)
+			Art.push(ci, Vector2(0, -34 + sin(t * 1.3 + seed) * 3.0), 0.0)
 			void_orb(ci, c, c2, t, 1.6, true)
 			Art.pop(ci)
 			Art.pop(ci)
@@ -843,8 +843,8 @@ static func centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, s
 			for k in range(1, 7):
 				var a := lerpf(PI + 0.45, TAU - 0.45, k / 7.0)
 				Art.line_c(ci, PackedVector2Array([Vector2(0, -3), Vector2(cos(a) * 17.0, -8.0 + sin(a) * 17.0)]), Color("e0921c"), 1.6)
-			var bob := snappedf(sin(t * 1.8 + seed) * 2.0, 0.5)
-			heart_rays(ci, Vector2(0, -30 + bob), 34.0, c, t)
+			var bob := sin(t * 1.8 + seed) * 2.0
+			heart_rays(ci, Vector2(0, -30 + snappedf(bob, 0.5)), 34.0, c, t)
 			Art.push(ci, Vector2(0, -14 + bob), 0.0, Vector2(1.05, 1.05))
 			_heart_gem(ci, c, c2, t, 0)
 			Art.pop(ci)
@@ -1132,7 +1132,7 @@ static var _CUP := Art.smooth_pts(PackedVector2Array([Vector2(-12, -36), Vector2
 
 static func _orb(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
 	Art.flat(ci, _ORB_SHADOW, Color(0, 0, 0, 0.3))
-	Art.push(ci, Vector2(0, -16 + snappedf(sin(t * 1.6 + i * 1.1) * 2.5, 0.5)))
+	Art.push(ci, Vector2(0, -16 + sin(t * 1.6 + i * 1.1) * 2.5))
 	void_orb(ci, c, c2, t, 1.0, i % 2 == 1)
 	Art.pop(ci)
 

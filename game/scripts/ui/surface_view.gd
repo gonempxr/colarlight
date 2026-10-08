@@ -291,9 +291,14 @@ func _hull(key: String) -> Vector2:
 
 ## x of the boat at the raft (stern to the raft) and off the screen's right edge.
 func boat_x_range() -> Vector2:
-	var e := _hull("boat")
-	var r := RAFT_RIGHT + BERTH_GAP + e.x
-	return Vector2(r, size.x + e.x + 30.0)
+	var ex := _hull("boat").x if is_nan(_boat_ex) else _boat_ex
+	var r := RAFT_RIGHT + BERTH_GAP + ex
+	return Vector2(r, size.x + ex + 30.0)
+
+
+## The boat's half length as shown: eases to a bigger hull after an upgrade
+## instead of moving the boat at once.
+var _boat_ex := NAN
 
 
 func _water_y() -> float:
@@ -740,6 +745,8 @@ func _process(delta: float) -> void:
 	var wind := DayNight.wind * (0.5 if _calm else 1.0)
 	Props.wind = wind
 	_update_stages()
+	var ex := _hull("boat").x
+	_boat_ex = ex if is_nan(_boat_ex) else Motion.damp(_boat_ex, ex, 6.0, delta)
 	for key in ["boat", "boat2"]:
 		if GameState.cycle_progress(key) >= 0.0 and randf() < delta * 3.0 and (key == "boat" or second_state(key) == "open"):
 			var bp := _boat_pos(key)
