@@ -11,12 +11,19 @@ extends Control
 ## Landscape and PC: islands in a row, the panel on the right. The map pans
 ## by dragging (and the mouse wheel) when it does not fit.
 ##
+## Switching: every opened island can be tapped; a picked island that is
+## not the active one shows a "Go to <world>" panel (switch_location), the
+## active island wears a "You are here" tag. The gate to the next world is
+## only on the highest opened world (GameState.max_location).
+##
 ## Reads GameState through has_method/get so it also runs before the
 ## location API exists; MapView.demo (a Dictionary) overrides every value
 ## for preview sheets.
 
 signal closed
 signal location_opened(location: int)
+## The player went to another opened world (GameState.switch_location).
+signal location_switched(location: int)
 
 const TITLE_H := 110.0
 const PANEL_W := 600.0
@@ -28,7 +35,8 @@ const DRAG_MIN := 14.0
 const HINT_SEC := 3.2
 
 ## Test override: "location", "goals", "cost", "coins", "can", "boat",
-## "boat2" (cycle progress, -2 = no second boat). Empty = live GameState.
+## "boat2" (cycle progress, -2 = no second boat), "max" (highest opened,
+## default = location). Empty = live GameState.
 static var demo: Dictionary = {}
 
 var _canvas: Canvas
@@ -55,6 +63,8 @@ var _drag_pan := Vector2.ZERO
 var _dragging := false
 var _pressed := false
 var _hint_loc := -1
+## Opened island picked by a tap (-1 = the active one).
+var _sel := -1
 var _hint_left := 0.0
 var _pan_tween: Tween
 ## Frames left to fit the panel again (wrapped labels know their height
@@ -88,6 +98,47 @@ static func cur_location() -> int:
 		if l != null:
 			return int(l)
 	return 0
+
+
+## Highest opened location (the gate is there).
+static func max_location() -> int:
+	if demo.has("max"):
+		return maxi(int(demo["max"]), cur_location())
+	if demo.has("location"):
+		return cur_location()
+	var gs := _gs()
+	if gs:
+		var m = gs.get("max_location")
+		if m != null:
+			return maxi(int(m), cur_location())
+	return cur_location()
+
+
+static func is_opened(location: int) -> bool:
+	return location >= 0 and location <= max_location() and not is_soon(location)
+
+
+static func _switch(location: int) -> bool:
+	if demo.has("location"):
+		if not is_opened(location):
+			return false
+		demo["max"] = max_location()
+		demo["location"] = location
+		return true
+	var gs := _gs()
+	if gs and gs.has_method("switch_location"):
+		return bool(gs.switch_location(location))
+	return false
+
+
+## Coins waiting in an opened world (demo: "wallets" {L: coins}).
+static func world_coins(location: int) -> float:
+	if demo.has("wallets"):
+		return float((demo["wallets"] as Dictionary).get(location, 0.0))
+	var gs := _gs()
+	if gs and gs.has_method("world_coins"):
+		return float(gs.world_coins(location))
+	return 0.0
 
 
 static func world_of(location: int) -> String:
@@ -211,6 +262,7 @@ static func lit_nodes() -> int:
 static func _advance() -> bool:
 	if demo.has("location"):
 		demo["location"] = int(demo["location"]) + 1
+		demo["max"] = int(demo["location"])
 		demo["can"] = false
 		return true
 	var gs := _gs()
@@ -283,6 +335,7 @@ func _ready() -> void:
 func open() -> void:
 	visible = true
 	_confirm = false
+	_sel = -1
 	refresh()
 	modulate.a = 0.0
 	var tw := create_tween()
@@ -480,7 +533,17 @@ func _tap(at: Vector2) -> void:
 	for l in _pos:
 		var d: Vector2 = (m - (_pos[l] as Vector2))
 		if absf(d.x) < MapArt.RX and d.y > -MapArt.RY - 90.0 and d.y < 220.0:
-			if l > cur or is_soon(l):
+			if is_opened(l):
+				# An opened world: pick it (the panel offers to go there).
+				var want: int = -1 if l == cur else l
+				if want != _sel:
+					_sel = want
+					_confirm = false
+					_sfx("pop")
+					_build_panel()
+					_layout()
+					_center_on(l, true)
+			elif l > cur or is_soon(l):
 				_hint_loc = l
 				_hint_left = HINT_SEC
 				_sfx("pop")
@@ -490,7 +553,7 @@ func _tap(at: Vector2) -> void:
 # --- Panel ---------------------------------------------------------------------------------------
 
 func _sig() -> int:
-	return hash([cur_location(), goals(), can_advance(), int(next_cost()), _confirm, coins() >= next_cost(), TranslationServer.get_locale()])
+	return hash([cur_location(), max_location(), _sel, goals(), can_advance(), int(next_cost()), _confirm, coins() >= next_cost(), TranslationServer.get_locale()])
 
 
 static func t(key: String) -> String:
@@ -526,6 +589,16 @@ func _build_panel() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	var cur := cur_location()
+	var top := max_location()
+	if _sel == cur or not is_opened(_sel):
+		_sel = -1
+	if _sel >= 0:
+		_go_panel(_sel, false)
+		return
+	if cur < top:
+		# Not the newest world: the gate waits there.
+		_go_panel(top, true)
+		return
 	var nxt := cur + 1
 	if is_soon(nxt):
 		_soon_panel()
@@ -623,6 +696,68 @@ func _build_panel() -> void:
 	_box.add_child(_carry())
 
 
+## A picked opened world (or, from an older world, the newest one): its
+## island, what waits there and the big "Go to <world>" button.
+func _go_panel(l: int, from_old: bool) -> void:
+	_confirm = false
+	var name := world_name(l)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	var w := world_of(l)
+	var pic := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		var k := minf(s.x, s.y) / 470.0
+		Art.push(ci, s / 2.0 + Vector2(0, 8), 0.0, Vector2(k, k))
+		MapArt.island(ci, w, MapArt.DONE, tt, tier_of(l))
+		Art.pop(ci), Vector2(96, 96))
+	pic.custom_minimum_size = Vector2(96, 96)
+	head.add_child(pic)
+	var hv := VBoxContainer.new()
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hv.add_theme_constant_override("separation", 2)
+	if from_old:
+		hv.add_child(_label(t("MAP_HERE") + ": " + world_name(cur_location()), 28, Art.INK, true))
+		hv.add_child(_label(t("MAP_GATE_FAR") % name, 21, Art.INK_SOFT))
+	else:
+		hv.add_child(_label(name, 30, Art.INK, true))
+		hv.add_child(_label(t("MAP_WAITING"), 21, Art.INK_SOFT))
+	head.add_child(hv)
+	_box.add_child(head)
+	var wallet := HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 8)
+	var wl := _label(t("MAP_WALLET"), 21 if not _wide else 23, Art.INK, true)
+	wl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	wallet.add_child(wl)
+	wallet.add_child(_icon("coin", 32))
+	var wv := _label(NumFormat.short(world_coins(l)), 28, Art.INK, true)
+	wv.autowrap_mode = TextServer.AUTOWRAP_OFF
+	wv.custom_minimum_size.x = 0
+	wv.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	wallet.add_child(wv)
+	_box.add_child(wallet)
+	var go := Button.new()
+	go.theme_type_variation = &"GoldButton"
+	go.text = t("MAP_GO") % name
+	go.custom_minimum_size = Vector2(0, 92 if _wide else 84)
+	go.add_theme_font_size_override("font_size", 32 if _wide else 30)
+	go.pressed.connect(func(): _do_switch(l))
+	_box.add_child(go)
+
+
+func _do_switch(l: int) -> void:
+	if not _switch(l):
+		_sfx("deny")
+		_sel = -1
+		_build_panel()
+		return
+	_sfx("unlock")
+	_sel = -1
+	_build_panel()
+	_layout()
+	_center_on(l, true)
+	location_switched.emit(l)
+
+
 ## On the last world: no gate, the next islands are still being built.
 func _soon_panel() -> void:
 	_confirm = false
@@ -682,7 +817,7 @@ func _goal_row(g: Dictionary) -> Control:
 func _carry() -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
-	for row in [["check", "MAP_KEEP", Art.GREEN_DARK], ["arrow", "MAP_RESET", Color("c56a1c")]]:
+	for row in [["check", "MAP_KEEP", Art.GREEN_DARK], ["check", "MAP_KEEP_WORLD", Art.GREEN_DARK], ["arrow", "MAP_RESET", Color("c56a1c")]]:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		var ic := _icon(row[0], 28)
@@ -722,11 +857,12 @@ func _do_open() -> void:
 func _state(l: int, cur: int) -> int:
 	if is_soon(l):
 		return MapArt.SOON
-	if l < cur:
-		return MapArt.DONE
 	if l == cur:
 		return MapArt.CURRENT
-	if l == cur + 1:
+	var top := max_location()
+	if l <= top:
+		return MapArt.DONE
+	if l == top + 1:
 		return MapArt.NEXT
 	return MapArt.LOCKED
 
@@ -744,6 +880,7 @@ func _paint(ci: CanvasItem) -> void:
 	Art.grad(ci, PackedVector2Array([Vector2.ZERO, Vector2(s.x, 0), s, Vector2(0, s.y)]),
 			PackedColorArray([Color("3fa9ec"), Color("3fa9ec"), Color("bfe9ff"), Color("bfe9ff")]))
 	var cur := cur_location()
+	var high := max_location()
 	var tm := _t
 	Art.push(ci, _pan, 0.0, Vector2(_zoom, _zoom))
 	var i := 0
@@ -758,7 +895,7 @@ func _paint(ci: CanvasItem) -> void:
 	for l in range(_first, _last):
 		var a: Vector2 = _pos[l]
 		var b: Vector2 = _pos[l + 1]
-		var lit := l + 1 <= cur
+		var lit := l + 1 <= high
 		var glowing := world_of(l) == "moon" or world_of(l + 1) == "moon"
 		MapArt.bridge(ci, a + (_ends(l)[1] as Vector2), b + (_ends(l + 1)[0] as Vector2), lit, glowing, tm)
 	for l in range(_first, _last + 1):
@@ -767,6 +904,8 @@ func _paint(ci: CanvasItem) -> void:
 		var w := world_of(l)
 		if st == MapArt.CURRENT:
 			Art.glow(ci, p + Vector2(0, 20), 300, Color(1.0, 0.95, 0.6, 0.45))
+		elif l == _sel:
+			Art.glow(ci, p + Vector2(0, 20), 300, Color(0.6, 1.0, 0.7, 0.4))
 		elif st == MapArt.SOON:
 			Art.glow(ci, p + Vector2(0, -10), 280, Color(MapArt.SOON_TEASE[w], 0.3))
 		Art.push(ci, p)
@@ -793,9 +932,13 @@ func _paint(ci: CanvasItem) -> void:
 			MapArt.mystery(ci, Vector2(0, -10), tm, st == MapArt.NEXT)
 		var label := world_name(l, false) if st != MapArt.LOCKED else "???"
 		MapArt.plate(ci, Vector2(0, 150), label, st, tier_of(l), 28)
+		if st == MapArt.CURRENT:
+			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_HERE"), tm)
+		elif l == _sel:
+			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_GO_TAG"), tm, Color("5fd27a"))
 		Art.pop(ci)
 	if _hint_left > 0.0 and _pos.has(_hint_loc):
-		_hint_bubble(ci, (_pos[_hint_loc] as Vector2) + Vector2(0, -150), _hint_loc == cur + 1)
+		_hint_bubble(ci, (_pos[_hint_loc] as Vector2) + Vector2(0, -150), _hint_loc == high + 1)
 	Art.pop(ci)
 	# Sky band behind the title, so the map scrolls away under it.
 	var top := Color("3fa9ec")

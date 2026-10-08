@@ -34,8 +34,13 @@ var pearls := 0
 var pearls_total := 0
 ## artifact id -> {"level": int, "pieces": int}
 var artifacts: Dictionary = {}
-## [{"kind", "key", "goal", "count", "pearls", "coins_min"}]
+## Quests of the active world: [{"kind", "key", "goal", "count", "pearls"}].
+## Quests belong to the world they were made in: the other worlds' lists
+## wait in world_quests (str(L) -> Array) and come back on a switch.
 var quests: Array = []
+## Location the `quests` list belongs to.
+var quest_loc := 0
+var world_quests: Dictionary = {}
 var owned: Dictionary = {}
 ## slot -> cosmetic id ("" = none)
 var equipped: Dictionary = {}
@@ -91,9 +96,13 @@ func _ready() -> void:
 		stats["taps"] = int(stats.get("taps", 0)) + 1
 		_count("tap", 1))
 	GameState.coins_earned.connect(func(a): _count("earn", a))
+	GameState.cycle_finished.connect(func(k, _a):
+		if k.begins_with("d"):
+			_count("mine", 1, k))
 	GameState.manager_hired.connect(func(_k): _count("hire", 1))
 	GameState.evo_bought.connect(func(_f): _see_looks())
-	GameState.location_changed.connect(func(_l):
+	GameState.location_changed.connect(func(l):
+		_swap_quests(l)
 		_see_looks()
 		apply_bonus()
 		_check_goals())
@@ -112,6 +121,8 @@ func reset() -> void:
 	for a in Content.ARTIFACTS:
 		artifacts[a["id"]] = {"level": 0, "pieces": 0}
 	quests = []
+	quest_loc = 0
+	world_quests = {}
 	owned = {}
 	for c in Content.COSMETICS:
 		if c["unlock"] == "free":
@@ -719,6 +730,25 @@ func _fill_quests() -> void:
 		changed.emit()
 
 
+## The active world changed: its own quests come back, the old ones wait.
+func _swap_quests(l: int) -> void:
+	if l == quest_loc:
+		return
+	world_quests[str(quest_loc)] = quests
+	var back = world_quests.get(str(l), [])
+	world_quests.erase(str(l))
+	quests = back if back is Array else []
+	quest_loc = l
+	if has_feature("quests"):
+		_fill_quests()
+	changed.emit()
+
+
+## Open dive sites of the active world ("d0".."d9").
+static func _open_sites() -> Array:
+	return GameState.stage_keys().filter(func(k): return GameState.depth_index(k) >= 0 and GameState.is_open(k))
+
+
 func _new_quest() -> Dictionary:
 	var kinds: Array[String] = ["upgrade", "tap", "earn", "upgrade_stage"]
 	if has_feature("chests"):
@@ -733,6 +763,8 @@ func _new_quest() -> Dictionary:
 		kinds.append("hire")
 	if GameState.next_depth() != "":
 		kinds.append("open")
+	# World flavour: bring up the ore of one of this world's sites.
+	kinds.append("mine")
 	var taken := quests.map(func(q): return q["kind"])
 	var options := kinds.filter(func(k): return k not in taken)
 	if options.is_empty():
@@ -750,6 +782,14 @@ func _new_quest() -> Dictionary:
 			q["goal"] = roundf(3.0 * step)
 		"tap":
 			q["goal"] = roundf(20.0 * step / 5.0) * 5.0
+		"mine":
+			# One of the deeper open sites (this world's best ores), about
+			# a minute or two of its trips.
+			var sites := _open_sites()
+			var pick: int = maxi(0, sites.size() - 1 - _rng.randi() % mini(3, sites.size()))
+			q["key"] = sites[pick]
+			var cycle := float(GameState.stage_data(q["key"])["cycle"])
+			q["goal"] = maxf(5.0, roundf(75.0 / cycle * step / 5.0) * 5.0)
 		"earn":
 			q["goal"] = _nice(coins_for_minutes(2.0 + minf(done, 20.0) * 0.1))
 		"hire", "open":
@@ -863,8 +903,8 @@ func suit_bonus() -> float:
 ## "prestiges" (old Dives, now locations left) and "location" (the highest
 ## reached) never go down: a migrated save starts at location 0.
 func _sync_location_stats() -> void:
-	stats["prestiges"] = maxi(int(stats.get("prestiges", 0)), GameState.location)
-	stats["location"] = maxi(int(stats.get("location", 0)), GameState.location)
+	stats["prestiges"] = maxi(int(stats.get("prestiges", 0)), GameState.max_location)
+	stats["location"] = maxi(int(stats.get("location", 0)), GameState.max_location)
 
 
 func equip(id: String) -> void:
@@ -892,7 +932,8 @@ func save_game() -> bool:
 	var data := {
 		"version": SAVE_VERSION,
 		"pearls": pearls, "pearls_total": pearls_total,
-		"artifacts": artifacts, "quests": quests, "owned": owned, "equipped": equipped,
+		"artifacts": artifacts, "quests": quests, "quest_loc": quest_loc, "world_quests": world_quests,
+		"owned": owned, "equipped": equipped,
 		"features": features, "fresh": fresh, "tutorial_step": tutorial_step,
 		"daily_day": daily_day, "daily_last": daily_last, "puzzle_level": puzzle_level,
 		"stats": stats, "chest_ready": chest_ready, "chest_timer": chest_timer,
@@ -923,16 +964,17 @@ func load_game() -> bool:
 			var a = d["artifacts"].get(id)
 			if a is Dictionary:
 				artifacts[id] = {"level": clampi(_int(a.get("level")), 0, Content.ARTIFACT_MAX), "pieces": maxi(0, _int(a.get("pieces")))}
-	if d.get("quests") is Array:
-		for q in d["quests"]:
-			# A quest for a dive site that no longer exists (saves from the
-			# 30-site version) is dropped; a new one fills its slot.
-			var qkey := str(q.get("key", "")) if q is Dictionary else ""
-			if qkey != "" and not qkey in GameState.stage_keys():
-				continue
-			if q is Dictionary and str(q.get("kind", "")) in Content.QUEST_KINDS and quests.size() < Content.QUEST_SLOTS:
-				quests.append({"kind": str(q["kind"]), "key": str(q.get("key", "")), "goal": maxf(1.0, _f(q.get("goal"))),
-						"count": maxf(0.0, _f(q.get("count"))), "pearls": clampi(_int(q.get("pearls")), 1, 10)})
+	quests = _parse_quests(d.get("quests"))
+	# Saves from before per-world quests: the list belongs to the world
+	# being played.
+	quest_loc = clampi(_int(d.get("quest_loc")), 0, Balance.LAST_LOCATION) if d.has("quest_loc") else int(GameState.location)
+	if d.get("world_quests") is Dictionary:
+		for k in d["world_quests"]:
+			var l: int = str(k).to_int() if str(k).is_valid_int() else -1
+			if l >= 0 and l <= Balance.LAST_LOCATION and l != quest_loc:
+				world_quests[str(l)] = _parse_quests(d["world_quests"][k])
+	if quest_loc != int(GameState.location):
+		_swap_quests(int(GameState.location))
 	# The diver suits are gone: pearls spent on them come back (once: the
 	# suits are not kept in `owned`, so the next save has none).
 	var refund := 0
@@ -995,6 +1037,22 @@ func load_game() -> bool:
 	apply_bonus()
 	_check_goals()
 	return true
+
+
+static func _parse_quests(list) -> Array:
+	var out := []
+	if not list is Array:
+		return out
+	for q in list:
+		# A quest for a dive site that no longer exists (saves from the
+		# 30-site version) is dropped; a new one fills its slot.
+		var qkey := str(q.get("key", "")) if q is Dictionary else ""
+		if qkey != "" and not qkey in GameState.stage_keys():
+			continue
+		if q is Dictionary and str(q.get("kind", "")) in Content.QUEST_KINDS and out.size() < Content.QUEST_SLOTS:
+			out.append({"kind": str(q["kind"]), "key": qkey, "goal": maxf(1.0, _f(q.get("goal"))),
+					"count": maxf(0.0, _f(q.get("count"))), "pearls": clampi(_int(q.get("pearls")), 1, 10)})
+	return out
 
 
 func reset_progress() -> void:

@@ -22,6 +22,14 @@ extends Node
 ## lift, boats and plants have managers; then a big price opens the next one
 ## (advance_location: the run resets, automation is kept). Worker evolution
 ## forms (12 per location) each give x1.10 income in this location.
+##
+## Every opened world keeps its own run (Idle Miner style): coins, vault,
+## site and building levels, foremen and managers, gear and the ore piles.
+## The active world lives in the plain variables; the others wait in
+## `worlds_runs` (one snapshot each) and earn "while you were away" for the
+## time they sat inactive when the player comes back (switch_location).
+## `max_location` is the highest world opened; the gate to the next world
+## is only there.
 
 signal changed
 signal cycle_started(key: String, amount: float)
@@ -37,6 +45,9 @@ signal tapped(key: String)
 signal location_changed(L: int)
 signal evo_bought(form: int)
 signal vault_changed
+## switch_location() moved to another opened world; `away` = coins its
+## automation earned while it waited (0 if none).
+signal location_switched(L: int, away: float)
 
 ## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
 ## 4: worlds and locations, 10 sites (v3 saves fold with V3_SITE_FOLD into
@@ -73,6 +84,14 @@ var location := 0:
 		location = clampi(value, 0, Balance.LAST_LOCATION)
 		_scale = Balance.loc_scale(location)
 		_gate_scale = Balance.loc_gate_scale(location)
+## Highest location opened so far (>= location). The gate lives there.
+var max_location := 0:
+	set(value):
+		max_location = clampi(value, 0, Balance.LAST_LOCATION)
+## Runs of the opened worlds that are not active: str(L) -> snapshot
+## (_run_snapshot). A world opened before this existed (old saves) has none
+## and starts a fresh run on its first visit (see _fresh_world_run).
+var worlds_runs: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -125,6 +144,10 @@ var tap_clock := 0.0
 var _taps := TapLimiter.new(Balance.TAP_CAP, Balance.TAP_WINDOW)
 var _autosave_left := Balance.AUTOSAVE_SEC
 var _offline_report: Dictionary = {}
+## While true, _earn doesn't emit coins_earned (away pay-outs).
+var _quiet_earn := false
+## Last switch_location() pay-out: {"location", "seconds", "coins"}.
+var _away_report: Dictionary = {}
 ## Deepest site the running lift trip goes to (-1 while the lift waits).
 var lift_trip_depth := -1
 ## Level of a stage right before its last upgrade (for look changes).
@@ -168,6 +191,9 @@ func reset() -> void:
 	coins = 0.0
 	total_earned = 0.0
 	location = 0
+	max_location = 0
+	worlds_runs = {}
+	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
 	boost_end = 0.0
@@ -384,7 +410,7 @@ func next_location_cost() -> float:
 ## Ready, and the wallet (with the vault) holds the price. Never past the
 ## last world (the next ones are "coming soon").
 func can_advance_location() -> bool:
-	return not is_last_location() and location_ready() and coins + vault >= next_location_cost()
+	return is_max_location() and not is_last_location() and location_ready() and coins + vault >= next_location_cost()
 
 
 ## The Moon: there is no next world yet.
@@ -392,19 +418,192 @@ func is_last_location() -> bool:
 	return location >= Balance.LAST_LOCATION
 
 
-## Opens the next location: L + 1, the run starts over (coins, levels,
-## foremen, forms); the lift, boat, plant and vault managers stay.
+## Opens the next location: L + 1 with a fresh run (coins, levels, foremen,
+## gear); the lift, boat, plant and vault managers come along. The world
+## left behind keeps its run (minus the price) for switch_location().
 func advance_location() -> bool:
 	if not can_advance_location():
 		return false
 	collect_vault()
-	coins = 0.0
+	coins = maxf(0.0, coins - next_location_cost())
+	_flush_cycles()
+	worlds_runs[str(location)] = _run_snapshot()
 	location += 1
+	max_location = maxi(max_location, location)
+	worlds_runs.erase(str(location))
 	_reset_run(true)
+	coins = 0.0
 	location_changed.emit(location)
 	changed.emit()
 	save_game()
 	return true
+
+
+# --- Switching between opened worlds -------------------------------------------------
+
+## The active world is the highest one opened (only there the gate works).
+func is_max_location() -> bool:
+	return location >= max_location
+
+
+func is_opened(l: int) -> bool:
+	return l >= 0 and l <= max_location
+
+
+func can_switch_location(l: int) -> bool:
+	return is_opened(l) and l != location
+
+
+## Goes to another opened world: this run is put aside (a snapshot), the
+## target's run comes back and pays what its automation made while it
+## waited, with the offline rules: only automated parts work, at most
+## Balance.OFFLINE_CAP_SEC, no x2 boost (the boost ran for the world being
+## played) and no rush. A switch back and forth pays at most the seconds
+## that really passed, so it never beats staying.
+func switch_location(l: int) -> bool:
+	if not can_switch_location(l):
+		return false
+	_flush_cycles()
+	worlds_runs[str(location)] = _run_snapshot()
+	var snap = worlds_runs.get(str(l))
+	worlds_runs.erase(str(l))
+	location = l
+	if snap is Dictionary:
+		_apply_run(snap)
+	else:
+		_fresh_world_run()
+	# Progress swaps the quests and the skin bonus on this signal, so the
+	# pay-out below already counts for this world.
+	location_changed.emit(location)
+	var away := 0.0
+	var secs := 0.0
+	if snap is Dictionary:
+		secs = clampf(now() - _num(snap.get("left_at"), now()), 0.0, Balance.OFFLINE_CAP_SEC)
+		away = _pay_away(secs)
+	_away_report = {"location": l, "seconds": secs, "coins": away}
+	location_switched.emit(l, away)
+	changed.emit()
+	save_game()
+	return true
+
+
+## What the last switch paid ({"location", "seconds", "coins"}); given once.
+func take_away_report() -> Dictionary:
+	var r := _away_report
+	_away_report = {}
+	return r
+
+
+## Seconds the world has been waiting (0 for the active one or none).
+func away_seconds(l: int) -> float:
+	var snap = worlds_runs.get(str(l))
+	if l == location or not snap is Dictionary:
+		return 0.0
+	return clampf(now() - _num(snap.get("left_at"), now()), 0.0, Balance.OFFLINE_CAP_SEC)
+
+
+## Coins waiting in an opened world (its wallet; the active one: coins).
+func world_coins(l: int) -> float:
+	if l == location:
+		return coins
+	var snap = worlds_runs.get(str(l))
+	return maxf(0.0, _num(snap.get("coins"), 0.0)) if snap is Dictionary else 0.0
+
+
+## Less than a second away pays nothing (a quick back-and-forth is free of
+## any rounding gain).
+const AWAY_MIN_SEC := 1.0
+
+
+func _pay_away(seconds: float) -> float:
+	if seconds < AWAY_MIN_SEC:
+		return 0.0
+	_boosted = false
+	# Like the offline pay at start-up, it doesn't count for "earn" quests.
+	_quiet_earn = true
+	var earned := simulate_offline(seconds)
+	_quiet_earn = false
+	_boosted = boost_end > now()
+	return earned
+
+
+## Cycles in flight give their load back to where it came from (the
+## crates, the raft, the shore), so nothing is lost or made twice.
+func _flush_cycles() -> void:
+	for key in stage_keys():
+		var amount: float = _load.get(key, 0.0)
+		if float(_timer.get(key, -1.0)) >= 0.0 and amount > 0.0:
+			if key == "lift":
+				pit += amount
+			elif is_boat(key):
+				hold += amount
+			elif is_plant(key):
+				dock += amount
+		_timer[key] = -1.0
+		_load[key] = 0.0
+	lift_trip_depth = -1
+
+
+## The run of the active world, for worlds_runs and the save.
+func _run_snapshot() -> Dictionary:
+	return {
+		"coins": coins, "vault": vault, "gear": evo,
+		"levels": levels.duplicate(), "managers": managers.duplicate(),
+		"pit": pit, "hold": hold, "dock": dock, "left_at": now(),
+	}
+
+
+## Puts a snapshot back as the active run (values checked like a save).
+func _apply_run(d: Dictionary) -> void:
+	_reset_run(false)
+	coins = maxf(0.0, _num(d.get("coins"), 0.0))
+	vault = maxf(0.0, _num(d.get("vault"), 0.0))
+	evo = clampi(int(_num(d.get("gear"), 0.0)), 0, Balance.EVO_FORMS)
+	var lv = d.get("levels", {})
+	var mg = d.get("managers", {})
+	_apply_levels(lv if lv is Dictionary else {}, mg if mg is Dictionary else {})
+	pit = maxf(0.0, _num(d.get("pit"), 0.0))
+	hold = maxf(0.0, _num(d.get("hold"), 0.0))
+	dock = maxf(0.0, _num(d.get("dock"), 0.0))
+	if has_manager(VAULT) and vault > 0.0:
+		coins += vault
+		vault = 0.0
+	upgraded_from = {}
+
+
+## A world opened before per-world runs existed (an old save): the player
+## finished it once, so it starts like a newly opened world, from scratch
+## but with the lift, boat, plant and vault managers already hired (they
+## earned those there; the gate needed them). Its gate goals don't matter:
+## the gate is only on the highest world.
+func _fresh_world_run() -> void:
+	_reset_run(false)
+	coins = 0.0
+	for k in AUTOMATED:
+		managers[k] = true
+	managers[VAULT] = true
+	upgraded_from = {}
+
+
+## Levels and managers from a save or a snapshot, cleaned up.
+func _apply_levels(saved_levels: Dictionary, saved_managers: Dictionary) -> void:
+	managers[VAULT] = saved_managers.get(VAULT) == true
+	for key in stage_keys():
+		var minimum := 0 if depth_index(key) > 0 or is_second(key) else 1
+		levels[key] = maxi(minimum, int(_num(saved_levels.get(key), minimum)))
+		# Automation stays hired while its building is closed (the second
+		# boat and plant reopen in every location).
+		managers[key] = saved_managers.get(key) == true and (is_open(key) or key in AUTOMATED)
+	# A deeper site can't be open while a shallower one is closed.
+	var closed := false
+	for key in stage_keys():
+		if depth_index(key) < 0:
+			continue
+		if closed:
+			levels[key] = 0
+			managers[key] = false
+		elif levels[key] == 0:
+			closed = true
 
 
 ## Real time (Unix seconds); the boost runs on it.
@@ -758,7 +957,8 @@ func _earn(amount: float, to_vault: bool = false) -> void:
 		vault_changed.emit()
 	else:
 		coins += amount
-	coins_earned.emit(amount)
+	if not _quiet_earn:
+		coins_earned.emit(amount)
 
 
 func _add_rush() -> void:
@@ -816,6 +1016,8 @@ func save_game() -> bool:
 		"coins": coins,
 		"total_earned": total_earned,
 		"location": location,
+		"max_location": max_location,
+		"worlds_runs": worlds_runs,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -922,27 +1124,12 @@ func _apply_save(data: Dictionary) -> void:
 			coins += g[1]
 			gear_refund = g[1]
 		vault = maxf(0.0, _num(data.get("vault"), 0.0))
-	managers[VAULT] = saved_managers.get(VAULT) == true
 	# Saves from before the lift: it gets set up below, after the rest.
 	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
-	for key in stage_keys():
-		if saved_levels is Dictionary:
-			var minimum := 0 if depth_index(key) > 0 or is_second(key) else 1
-			levels[key] = maxi(minimum, int(_num(saved_levels.get(key), minimum)))
-		if saved_managers is Dictionary:
-			# Automation stays hired while its building is closed (the second
-			# boat and plant reopen in every location).
-			managers[key] = saved_managers.get(key) == true and (is_open(key) or key in AUTOMATED)
-	# A deeper site can't be open while a shallower one is closed.
-	var closed := false
-	for key in stage_keys():
-		if depth_index(key) < 0:
-			continue
-		if closed:
-			levels[key] = 0
-			managers[key] = false
-		elif levels[key] == 0:
-			closed = true
+	if saved_levels is Dictionary:
+		_apply_levels(saved_levels, saved_managers)
+	else:
+		managers[VAULT] = saved_managers.get(VAULT) == true
 	pit = maxf(0.0, _num(data.get("pit"), 0.0))
 	hold = maxf(0.0, _num(data.get("hold"), 0.0))
 	dock = maxf(0.0, _num(data.get("dock"), 0.0))
@@ -960,6 +1147,25 @@ func _apply_save(data: Dictionary) -> void:
 	if has_manager(VAULT) and vault > 0.0:
 		coins += vault
 		vault = 0.0
+	_load_worlds(data, version)
+
+
+## max_location and the other worlds' runs. Saves from before the switch
+## have neither: the worlds below the current one count as opened (with no
+## run yet, see _fresh_world_run).
+func _load_worlds(data: Dictionary, version: int) -> void:
+	max_location = location
+	worlds_runs = {}
+	if version < 4:
+		return
+	max_location = maxi(location, int(_num(data.get("max_location"), float(location))))
+	var runs = data.get("worlds_runs")
+	if not runs is Dictionary:
+		return
+	for k in runs:
+		var l: int = str(k).to_int() if str(k).is_valid_int() else -1
+		if l >= 0 and l <= max_location and l != location and runs[k] is Dictionary:
+			worlds_runs[str(l)] = runs[k]
 
 
 ## Levels and managers of a 30-site save mapped onto the 15 sites: d0..d6

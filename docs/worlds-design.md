@@ -189,3 +189,41 @@ sized for HiDPI. Settings get a toggle (on by default).
 New i18n CSVs must be added to `locale/translations` in project.godot
 (conflicts there are merged by hand). After adding strings run
 `python3 tools/subset_fonts.py` then `godot --headless --path . --import`.
+
+## 7. Switching worlds (branch p-switch, 2026-10-08)
+
+Mark: "switch between worlds, and quests change with the location".
+
+- Every opened world keeps its own run: coins, vault, site/building levels,
+  foremen and managers, gear, the ore piles. The active one lives in the
+  usual GameState variables; the others are snapshots in
+  `GameState.worlds_runs` (str(L) -> {coins, vault, gear, levels, managers,
+  pit, hold, dock, left_at}), saved in game.json. Pearls, artifacts, decor,
+  wardrobe, skins (per world already), streak and fishing stay global.
+- `max_location` = highest opened world; the gate (can_advance_location)
+  only works there. advance_location() pays the price, snapshots the world
+  it leaves (with its leftover coins) and starts the next one fresh as before.
+- `switch_location(L)` (any opened L): loads in flight go back to their
+  piles, the current run is snapshotted, the target restored, then
+  `location_changed`, `location_switched(L, away)`, `changed`, save.
+- Away pay on return: the offline simulation for min(now - left_at,
+  OFFLINE_CAP_SEC), automated parts only, without the x2 boost (it ran for
+  the world being played), no rush, nothing under 1 s, and it does not count
+  for "earn" quests (like the start-up offline pay). Each waiting interval
+  pays at most its own seconds, so quick switching never beats staying.
+- Old saves: max_location = location; the worlds below it are opened but
+  have no snapshot. Decision: on the first visit such a world starts a
+  fresh run (0 coins, level-1 start) with the lift, boat, plant and vault
+  managers already hired (the player earned them there), like a newly
+  opened world. Their gate goals don't matter (gate only on the highest).
+- Quests belong to their world: `Progress.quests` is the active world's
+  list, `Progress.world_quests` holds the others, `quest_loc` names the
+  owner; they swap on location_changed. Old saves: the list goes to the
+  active world. New world-flavoured kind "mine": bring up one of this
+  world's deeper open sites N times (its ore drawn as the quest icon).
+- Map: tap an opened island -> "Go to <world>" panel; the active island has
+  a "You are here" tag; from an older world the panel offers the newest
+  world (where the gate is). main.gd fades the screen softly, shows the
+  world banner, then a calm toast with what the helpers earned.
+- Strings: i18n/switch.csv. Tests: tests/test_switch.gd; screenshots:
+  tests/switch_shot.gd.

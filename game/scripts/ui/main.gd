@@ -264,6 +264,7 @@ func _ready() -> void:
 	_map.visible = false
 	add_child(_map)
 	_map.location_opened.connect(_on_location_opened)
+	_map.location_switched.connect(_on_location_switched)
 	_map.closed.connect(_on_map_closed)
 
 	_modal = Modal.new()
@@ -1022,6 +1023,54 @@ func _on_location_opened(location: int) -> void:
 	_show_toast(tr("WORLD_WELCOME") % WorldLook.name_of(location))
 	if _world.has_method("show_ocean_name"):
 		_world.show_ocean_name(location)
+
+
+## The map went to another opened world (GameState.switch_location): the
+## map shows the "You are here" tag move for a moment, then a soft fade
+## carries the player into that world's rooms, with a calm welcome and what
+## its helpers earned while it waited (no timers, nothing to hurry).
+func _on_location_switched(location: int) -> void:
+	var cover := ColorRect.new()
+	cover.color = Color("bfe9ff")
+	cover.mouse_filter = Control.MOUSE_FILTER_STOP
+	cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cover.modulate.a = 0.0
+	add_child(cover)
+	var fast := Settings.reduce_motion
+	var tw := create_tween()
+	tw.tween_interval(0.1 if fast else 0.55)
+	tw.tween_property(cover, "modulate:a", 1.0, 0.08 if fast else 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_callback(_settle_switch.bind(location))
+	tw.tween_interval(0.05 if fast else 0.12)
+	tw.tween_property(cover, "modulate:a", 0.0, 0.12 if fast else 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(cover.queue_free)
+
+
+func _settle_switch(location: int) -> void:
+	_map.close()
+	_room_key = ["d0", "plant", ""]
+	show_room(MINE, false)
+	_scroller.scroll_to(0.0)
+	if _sheet_open:
+		_close_sheet()
+	_panel.show_stage("d0")
+	for c in [_side_lift, _side_boat, _side_plant, _factory_card, _world.surface.boat_card]:
+		c.show_unit(c.base)
+	_refresh()
+	# The world view shows the name banner itself for every world but the first.
+	if location == 0 and _world.has_method("show_world_name"):
+		_world.show_world_name(location)
+	# The name banner comes first; what the helpers earned follows once it
+	# has faded (still only if the player stayed in this world).
+	var r := GameState.take_away_report()
+	var earned := float(r.get("coins", 0.0))
+	if earned < 1.0:
+		return
+	await get_tree().create_timer(0.6 if Settings.reduce_motion else 4.4).timeout
+	if GameState.location != location or _map.visible:
+		return
+	_show_toast(tr("SWITCH_WELCOME") % WorldLook.name_of(location) + "\n" + tr("SWITCH_EARNED") % NumFormat.short(earned))
+	Sfx.play("coins")
 
 
 func open_evolution() -> void:
