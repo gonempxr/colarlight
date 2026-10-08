@@ -832,7 +832,13 @@ func _draw_board() -> void:
 					if sel:
 						Art.ring(_board, Art.circle_pts(Vector2.ZERO, 28.0, 32), Color(1, 1, 1, 0.95), 3.0)
 				elif k >= 0 and k < TileArt.KINDS.size():
-					TileArt.draw(_board, TileArt.KINDS[k], _t + i * 0.37, sel)
+					# Pieces of a kind share their look: five phases of the idle
+					# animation, 15 steps a second, recorded once and pasted.
+					var tt := snappedf(_t + (i % 5) * 0.37, 1.0 / 15.0)
+					var key := hash([77, k, sel, tt])
+					if not Art.cache_begin(_board, key):
+						TileArt.draw(_board, TileArt.KINDS[k], tt, sel)
+						Art.cache_end(_board, key)
 				if bubs[i] > 0:
 					TileArt.blocker(_board, "bubble", bubs[i])
 			Art.pop(_board)

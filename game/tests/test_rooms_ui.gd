@@ -429,6 +429,10 @@ func test_location_advance() -> void:
 	check(main.current_room() == 0, "back in the mine of the new world")
 	check(pr.pearls >= pearls0 + 25, "with a pearl gift")
 	check(load("res://scripts/ui/world_look.gd").location_now() == gs.location, "the world look follows")
+	# The map covers the rooms (they stop drawing under it): close it to
+	# see the card, which checks its numbers as it shows up again.
+	main._map.close()
+	await _frames(3)
 	check(main.evo_card()._sig.size() > 0 and int(main.evo_card()._sig[4]) == gs.location, "the evolution card follows the new world")
 	await _click(_center(main._map._x))
 	await _frames(3)
@@ -478,6 +482,10 @@ func test_tutorial() -> void:
 ## The second plant is sold from the factory's closed line: tapping it
 ## (FactoryRoom.stage_selected("plant2")) shows the offer in the panel.
 func test_plant2_offer() -> void:
+	# Rich enough to unlock every feature: mark them seen, or a "Something
+	# new!" dialog may pop up over the factory right before the tap.
+	for f in Content.FEATURES:
+		pr.features[f] = true
 	await _close_dialogs()
 	gs.reset()
 	gs.coins = 1e9

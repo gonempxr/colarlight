@@ -64,14 +64,18 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
   - Arguments: out, lang, scenario (start / mid / late / deep), scroll, overlay (`-`, `toast`, `hint`, `daily`, `sheet:lift`, `second`), ui_scale.
   - Use 1920x1080 or 1440x900 for PC.
 - **Preview sheets:** `tests/lift_sheet.gd` (the 6 lift cabins), `tests/stage_sheet.gd`, `daynight_shot.gd`, `diver_sheet.gd`, `fishing_shot.gd`, `depths_shot.gd`.
-- **Web export:** `godot --headless --path . --export-release Web build/web/index.html`
-  - It uses the slim single-thread template in `tools/web_template/`.
-  - The wasm is about 30 MB.
+- **Web export:** `tools/export_web.sh [out] [beta]` (from the repo root).
+  - It uses the slim single-thread template in `tools/web_template/` (custom_template path in export_presets.cfg is absolute; tools/setup.sh fixes it).
+  - Lazy files (scripts/util/lazy_assets.gd): `music.ogg` (fetched after the start) and `icudt_godot.dat` (line breaking, fetched only for Chinese) sit next to index.html, not in index.pck. The script strips the pack (tools/pck_strip.py) and fixes the pck size in index.html.
+  - `beta` builds with the coralight-beta save folder without editing project.godot in git.
+  - The wasm is about 30 MB (about 7.7 MB gzipped), index.pck about 2.3 MB.
 - **Publish:**
-  1. Commit and push `main`.
-  2. Check out `gh-pages` and copy the build files **by name**: index.html, .js, .wasm, .pck, .png, the two worklet .js files, apple-touch-icon and icon. Never copy `*.import`, and keep `.nojekyll`.
+  1. Commit and push the source branch.
+  2. Check out `gh-pages` and copy the build files **by name**: index.html, .js, .wasm, .pck, the two worklet .js files, **music.ogg and icudt_godot.dat**. Keep the site's own icons (index.png, index.icon.png, index.apple-touch-icon.png) unless they changed on purpose. Never copy `*.import`, and keep `.nojekyll`.
   3. Commit and push `gh-pages`.
   4. Rebuild the itch zip from the same files.
+- **Speed checks:** `tools/perf_matrix.sh` (frame cost per world/room, phone and PC), `tests/perf_attr.gd` (`prof`, `spikes`, `attr`, `open=puzzle|map|...`), `tools/perf_instrument.py` (timed copy), `tools/bench_web.py` (the web build in Chromium). On any page `?fps=1` shows a counter; `?bench=late` a busy throwaway save.
+- **Frame rate:** divers, boats and the lift cabin are their own canvas items that move every frame and change shape at Art.shape_hz; the rest animates in two alternating halves (World._schedule). FrameGovernor lowers rates/quality on slow devices (graphics "auto").
 - **After adding strings:** run `python3 tools/subset_fonts.py` so Chinese and symbol glyphs (★ ♪ → ×) exist in the web build. On the web there are no system fallback fonts, and a missing glyph shows as a box.
 
 ## Code map
