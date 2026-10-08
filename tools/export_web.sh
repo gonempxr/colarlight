@@ -7,22 +7,28 @@
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${1:-$ROOT/game/build/web}
-SRC=$ROOT/game
-if [ "$2" = "beta" ]; then
-	TMP=$(mktemp -d)
-	cp -r "$ROOT/game/." "$TMP/"
-	rm -rf "$TMP/build"
-	python3 - "$TMP/project.godot" <<'PY'
-import sys
-p = sys.argv[1]
+# Always export from a scratch copy: the preset's template path is fixed
+# to this checkout and "beta" gets its own save folder, without touching
+# the files in git.
+TMP=$(mktemp -d)
+cp -r "$ROOT/game/." "$TMP/"
+rm -rf "$TMP/build"
+python3 - "$TMP" "$ROOT/tools/web_template/godot-4.7.2-slim-web-nothreads.zip" "$2" <<'PY'
+import re, sys
+tmp, tpl, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+p = tmp + "/export_presets.cfg"
 s = open(p).read()
-if 'use_custom_user_dir' not in s:
-    s = s.replace('config/icon="res://icon.svg"\n', 'config/icon="res://icon.svg"\nconfig/use_custom_user_dir=true\nconfig/custom_user_dir_name="coralight-beta"\n', 1)
-open(p, 'w').write(s)
+s = re.sub(r'custom_template/release="[^"]*"', 'custom_template/release="%s"' % tpl, s)
+open(p, "w").write(s)
+if mode == "beta":
+    p = tmp + "/project.godot"
+    s = open(p).read()
+    if 'use_custom_user_dir' not in s:
+        s = s.replace('config/icon="res://icon.svg"\n', 'config/icon="res://icon.svg"\nconfig/use_custom_user_dir=true\nconfig/custom_user_dir_name="coralight-beta"\n', 1)
+    open(p, "w").write(s)
 PY
-	SRC=$TMP
-	godot --headless --path "$SRC" --import >/dev/null 2>&1 || true
-fi
+SRC=$TMP
+godot --headless --path "$SRC" --import >/dev/null 2>&1 || true
 mkdir -p "$OUT"
 rm -f "$OUT"/index.* "$OUT"/music.ogg "$OUT"/icudt_godot.dat
 godot --headless --path "$SRC" --export-release Web "$OUT/index.html" 2>&1 | grep -E "^ERROR" || true
