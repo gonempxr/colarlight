@@ -94,7 +94,9 @@ func _layout() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	_intro = minf(1.0, _intro + delta / 1.1)
+	# (The first frames load the world and can be long: the intro never
+	# skips ahead by more than a 30 fps frame.)
+	_intro = minf(1.0, _intro + minf(delta, 1.0 / 30.0) / 1.1)
 	_play.text = tr("PLAY")
 	_switch.text = tr("SWITCH_PLAYER")
 	_name.placeholder_text = tr("NAME_PLACEHOLDER")
@@ -107,7 +109,8 @@ func _process(delta: float) -> void:
 		_logo.scale = Vector2.ONE * (1.0 + sin(_t * 2.0) * 0.015)
 		_logo.position.y = get_viewport_rect().size.y * 0.14 - drop * 520.0
 		var pop := clampf((_intro - 0.55) / 0.45, 0.0, 1.0)
-		_play.scale = Vector2.ONE * _ease_back(pop) * (1.0 + absf(sin(_t * 3.0)) * 0.05 * pop)
+		# A soft breath (|sin| had a kink at the bottom that looked like a twitch).
+		_play.scale = Vector2.ONE * _ease_back(pop) * (1.0 + (0.5 - 0.5 * cos(_t * 3.0)) * 0.05 * pop)
 		_hello.modulate.a = pop
 		_name.modulate.a = pop
 		_switch.modulate.a = pop

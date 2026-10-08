@@ -20,6 +20,9 @@ const PILL_H := 76.0
 const PILL_W := 560.0
 
 var current := 0
+## Where the rooms are (main.gd's slide: 0.5 = halfway from the mine to the
+## factory). The lit tab rides along with it, under a dragging finger too.
+var slide := 0.0
 ## PC: a floating pill instead of a full-width strip.
 var floating := false
 var _t := 0.0
@@ -61,6 +64,12 @@ func set_current(i: int) -> void:
 	if i != current:
 		current = i
 		_bump[i] = 1.0
+		queue_redraw()
+
+
+func set_slide(v: float) -> void:
+	if not is_equal_approx(v, slide):
+		slide = v
 		queue_redraw()
 
 
@@ -155,19 +164,43 @@ func _draw() -> void:
 		var pts := Art.rrect_pts(Rect2(0, -40, size.x, size.y + 40), 26.0)
 		Art.toon(self, pts, STRIP, 4.0, 0.0)
 	var font := UiTheme.heavy_font()
+	var lit := clampf(slide, 0.0, 2.0)
+	var lit_i := clampi(roundi(lit), 0, 2)
 	for i in 3:
 		var r := tab_rect(i)
-		var on := i == current
 		var sink := _press[i] * 3.0
 		var pop := 1.0 + _bump[i] * 0.08 * sin(_bump[i] * PI)
-		Art.push(self, r.get_center() + Vector2(0, sink), 0.0, Vector2(pop, pop))
+		# A pressed tab squashes a little (wider, lower).
+		var squash := Vector2(1.0 + _press[i] * 0.04, 1.0 - _press[i] * 0.06)
+		Art.push(self, r.get_center() + Vector2(0, sink), 0.0, Vector2(pop, pop) * squash)
 		var rr := Rect2(-r.size / 2.0, r.size)
-		var face := COLORS[i] if on else IDLE
-		if on:
-			Art.t_rect(self, Rect2(rr.position + Vector2(0, 5 - sink), rr.size), 18.0, Art.shade_of(face, 0.4), 3.0, 0.0)
-		Art.t_rect(self, rr, 18.0, face, 3.0 if on else 0.0, 0.0)
-		if on:
-			Art.flat(self, Art.rrect_pts(Rect2(rr.position + Vector2(8, 5), Vector2(rr.size.x - 16, rr.size.y * 0.32)), 10.0), Color(1, 1, 1, 0.22))
+		Art.t_rect(self, rr, 18.0, IDLE, 0.0, 0.0)
+		Art.pop(self)
+	# The lit tab: one raised button sliding between the tabs with the rooms
+	# (its color blends from one room's to the next).
+	var i0 := clampi(floori(lit), 0, 1)
+	var between := lit - i0
+	var ra := tab_rect(i0)
+	var rb := tab_rect(i0 + 1)
+	var lr := Rect2(ra.position.lerp(rb.position, between), ra.size)
+	var face_lit := COLORS[i0].lerp(COLORS[i0 + 1], between)
+	var lsink := lerpf(_press[i0], _press[i0 + 1], between) * 3.0
+	var lpop := 1.0 + _bump[lit_i] * 0.08 * sin(_bump[lit_i] * PI)
+	var lsq := Vector2(1.0 + lsink * 0.013, 1.0 - lsink * 0.02)
+	Art.push(self, lr.get_center() + Vector2(0, lsink), 0.0, Vector2(lpop, lpop) * lsq)
+	var lrr := Rect2(-lr.size / 2.0, lr.size)
+	Art.t_rect(self, Rect2(lrr.position + Vector2(0, 5 - lsink), lrr.size), 18.0, Art.shade_of(face_lit, 0.4), 3.0, 0.0)
+	Art.t_rect(self, lrr, 18.0, face_lit, 3.0, 0.0)
+	Art.flat(self, Art.rrect_pts(Rect2(lrr.position + Vector2(8, 5), Vector2(lrr.size.x - 16, lrr.size.y * 0.32)), 10.0), Color(1, 1, 1, 0.22))
+	Art.pop(self)
+	for i in 3:
+		var r := tab_rect(i)
+		var on := i == lit_i
+		var sink := _press[i] * 3.0
+		var pop := 1.0 + _bump[i] * 0.08 * sin(_bump[i] * PI)
+		var squash := Vector2(1.0 + _press[i] * 0.04, 1.0 - _press[i] * 0.06)
+		Art.push(self, r.get_center() + Vector2(0, sink), 0.0, Vector2(pop, pop) * squash)
+		var rr := Rect2(-r.size / 2.0, r.size)
 		# Icon on the left, the name on the right (the name shrinks to fit).
 		var ic := minf(rr.size.y * 0.42, 26.0)
 		var label := tr(KEYS[i])

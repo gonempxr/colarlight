@@ -312,7 +312,7 @@ static func aquarium(ci: CanvasItem, level: int, t: float) -> void:
 		Art.flat(ci, Art.circle_pts(c, 34, 28), Color(0.75, 0.93, 1.0, 0.45))
 		Art.flat(ci, PackedVector2Array([c + Vector2(-31, -6), c + Vector2(31, -6), c + Vector2(24, 22), c + Vector2(-24, 22)]), Color(0.35, 0.75, 0.95, 0.55))
 		if lv == 1:
-			Art.fish(ci, c + Vector2(sin(t * 0.9) * 14.0, 6), 10, Color("ff9a3c"), 1.0 if cos(t * 0.9) > 0 else -1.0, t)
+			Art.fish(ci, c + Vector2(sin(t * 0.9) * 14.0, 6), 10, Color("ff9a3c"), clampf(cos(t * 0.9) * 3.0, -1.0, 1.0), t)
 		Art.arc_c(ci, c, 34, -PI * 0.15, PI * 1.15, 24, Art.INK, 3.0)
 		Art.arc_c(ci, c, 26, PI * 1.15, PI * 1.4, 6, Color(1, 1, 1, 0.8), 3.0)
 		Art.line_c(ci, PackedVector2Array([c + Vector2(-18, -28), c + Vector2(18, -28)]), Art.INK, 3.0)
@@ -351,7 +351,7 @@ static func aquarium(ci: CanvasItem, level: int, t: float) -> void:
 		var sp := 0.5 + i * 0.13
 		var ph := t * sp + i * 1.7
 		var p := r.get_center() + Vector2(sin(ph) * (hw - 16), -th * 0.25 + fmod(i * 23.0, th * 0.55))
-		Art.fish(ci, p, 9 + (i % 2) * 3, cols[i], 1.0 if cos(ph) > 0 else -1.0, t + i)
+		Art.fish(ci, p, 9 + (i % 2) * 3, cols[i], clampf(cos(ph) * 3.0, -1.0, 1.0), t + i)
 	if lv >= 5:
 		# A jellyfish bobbing.
 		var jp := r.position + Vector2(r.size.x * 0.3, th * 0.35 + sin(t * 1.3) * 6.0)

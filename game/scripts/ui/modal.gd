@@ -78,12 +78,18 @@ func close() -> void:
 	if _tween:
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
-	var quick := 0.08 if Settings.reduce_motion else 0.14
-	_tween.tween_property(_panel, "scale", Vector2(0.92, 0.92), quick)
-	_tween.tween_property(self, "modulate:a", 0.0, quick)
+	var quick := 0.08 if Settings.reduce_motion else 0.16
+	_panel.pivot_offset = _panel.size / 2.0
+	_x.pivot_offset = _x.size / 2.0
+	# The panel ducks away (a quick shrink with a hint of a dip first), the
+	# X goes with it, the dim fades.
+	_tween.tween_property(_panel, "scale", Vector2(0.88, 0.88), quick).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_tween.tween_property(_x, "scale", Vector2(0.6, 0.6), quick).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_tween.tween_property(self, "modulate:a", 0.0, quick).set_ease(Tween.EASE_IN)
 	_tween.chain().tween_callback(func():
 		visible = false
 		modulate.a = 1.0
+		_x.scale = Vector2.ONE
 		_closing = false
 		closed.emit())
 
@@ -96,10 +102,22 @@ func _animate_in() -> void:
 	if _tween:
 		_tween.kill()
 	modulate.a = 0.0
+	# Wait for the layout (wrapped text settles a frame late), so the panel
+	# pops from its own centre and doesn't jump when it gets its real size.
 	_panel.scale = Vector2(0.8, 0.8) if not Settings.reduce_motion else Vector2.ONE
+	_x.scale = Vector2.ZERO if not Settings.reduce_motion else Vector2.ONE
+	await get_tree().process_frame
+	if _closing or not visible:
+		return
+	_layout()
+	_x.pivot_offset = _x.size / 2.0
+	if _tween:
+		_tween.kill()
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.16)
-	_tween.tween_property(_panel, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_tween.tween_property(_panel, "scale", Vector2.ONE, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# The X pops in last, with a little spring.
+	_tween.tween_property(_x, "scale", Vector2.ONE, 0.32).set_delay(0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Wrapped labels only know their real height once they have a width, so

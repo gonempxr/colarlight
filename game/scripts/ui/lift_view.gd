@@ -71,9 +71,14 @@ var _look_old := 1
 var _look_fx := -99.0
 var _idle_since := 0.0
 var _crank := 0.0
+var _crank_v := 0.0
 ## Tests and preview sheets: keep the crank where they put it.
 var freeze_crank := false
 var _sync_left := 0.0
+## A trip GameState started that the cabin shown hasn't begun yet.
+var _pending := false
+var _pending_deep := 0
+var _pending_amount := 0.0
 var _ratio: Array[float] = []
 var _ratio_at := -99.0
 
@@ -196,7 +201,7 @@ static func trip_at(p: float, deep: int) -> Array:
 
 
 func _trip() -> Array:
-	return trip_at(GameState.cycle_progress("lift"), _trip_deep)
+	return trip_at(Motion.progress("lift"), _trip_deep)
 
 
 ## Bottom centre of the cabin now.
@@ -224,8 +229,17 @@ func _on_cycle_finished(key: String, amount: float) -> void:
 func _on_cycle_started(key: String, amount: float) -> void:
 	if key != "lift":
 		return
+	# The cabin shown may still be finishing the last trip (Motion.progress
+	# trails the real one a little): the new trip begins when it does.
+	_pending_deep = GameState.lift_trip_depth if GameState.lift_trip_depth >= 0 else GameState.deepest_open()
+	_pending_amount = amount
+	_pending = true
+
+
+func _begin_trip(deep: int, amount: float) -> void:
+	_pending = false
 	# Shallow crates first, as far as the cabin's share of the pit goes.
-	_trip_deep = GameState.lift_trip_depth if GameState.lift_trip_depth >= 0 else GameState.deepest_open()
+	_trip_deep = deep
 	_trip_amount = amount
 	_thrown = 0
 	var rem := amount
@@ -257,7 +271,7 @@ func _shares() -> Array[float]:
 ## Crates always add up to the real pit plus what the cabin has yet to pick
 ## up (loads, time away and Dives change the pit without cycles).
 func _sync_crates(force: bool = false) -> void:
-	var want: float = GameState.pit
+	var want: float = GameState.pit + (_pending_amount if _pending else 0.0)
 	var have := 0.0
 	for i in _crates.size():
 		if not _taken[i]:
@@ -283,8 +297,9 @@ func _sync_crates(force: bool = false) -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_place_card()
-	var gs := GameState
-	var p: float = gs.cycle_progress("lift")
+	var p: float = Motion.progress("lift")
+	if _pending and p >= 0.0 and (_last_p < 0.0 or p < _last_p - 0.5):
+		_begin_trip(_pending_deep, _pending_amount)
 	if p < 0.0 and _last_p >= 0.0:
 		_idle_since = _t
 	var tp := trip_at(p, _trip_deep)
@@ -299,7 +314,9 @@ func _process(delta: float) -> void:
 			_unload_sack()
 		var moving := stop == -1 and p < UP_END
 		if not freeze_crank:
-			_crank += delta * (9.0 if moving else 1.5) * (-1.0 if p >= DOWN_END else 1.0)
+			# The crank speeds up and slows down instead of switching speed.
+			_crank_v = Motion.damp(_crank_v, (9.0 if moving else 1.5) * (-1.0 if p >= DOWN_END else 1.0), 6.0, delta)
+			_crank += delta * _crank_v
 	elif _last_p >= 0.0:
 		for i in _crates.size():
 			if not _taken[i]:
@@ -396,7 +413,7 @@ func refresh() -> void:
 func _draw() -> void:
 	var view := world.visible_rect().grow(60.0)
 	var gs := GameState
-	var p: float = gs.cycle_progress("lift")
+	var p: float = Motion.progress("lift")
 	var tp := trip_at(p, _trip_deep)
 	var cab := Vector2(CAB_X, float(tp[0]))
 	var look := _shown_look()
@@ -646,11 +663,9 @@ static func cable_color(look: int) -> Color:
 	return Color("e8c48a") if look <= 2 else (Color("b9c3d6") if look <= 4 else Color("ffd86b"))
 
 
-## The crank's angle now, snapped to CRANK_STEPS (0 = handle straight up,
-## growing clockwise).
+## The crank's angle now (0 = handle straight up, growing clockwise).
 func crank_angle() -> float:
-	var step := TAU / CRANK_STEPS
-	return fposmod(roundf(_crank / step) * step, TAU)
+	return fposmod(_crank, TAU)
 
 
 ## Where the crank's handle is, relative to the axle.
@@ -693,7 +708,7 @@ static func draw_engine(ci: CanvasItem, look: int, turn: float, busy: bool, t: f
 			Art.t_rect(ci, Rect2(x0, top, w, 32), 5, metal, 2.5, 0.6)
 			Art.t_rect(ci, Rect2(x0 - 1, top + 9, w + 2, 3.5), 1.5, Art.shade_of(metal, 0.25), 1.8, 0.0)
 			Art.t_circle(ci, Vector2(x0 + w * 0.5, top + 20), 4.2, Art.WHITE, 1.8, 0.0)
-			Art.push(ci, Vector2(x0 + w * 0.5, top + 20), snappedf(sin(t * 3.0) * 0.8, 0.2) if busy else -0.6)
+			Art.push(ci, Vector2(x0 + w * 0.5, top + 20), sin(t * 3.0) * 0.8 if busy else -0.6)
 			Art.line(ci, Vector2.ZERO, Vector2(0, -3.0), Art.RED, 1.5)
 			Art.pop(ci)
 			if busy:
@@ -734,12 +749,14 @@ static func draw_winch(ci: CanvasItem, look: int, turn: float, busy: bool, _t: f
 	var drum := Art.WOOD if wood else (Color("8a94b8") if look == 3 else (Art.BRASS if look == 4 else (Color("3a3f5c") if look == 5 else Art.GOLD)))
 	Art.t_circle(ci, Vector2.ZERO, DRUM_R, drum, 2.5, 0.4)
 	Art.arc(ci, Vector2.ZERO, DRUM_R - 3.5, 0, TAU, 20, cable_color(look), 3.0)
+	# Everything that turns is drawn in the drum's turning frame (the same
+	# shapes at any angle: the crank can turn smoothly, not in steps).
+	Art.push(ci, Vector2.ZERO, turn)
 	if look == 2 or look == 3:
 		# Iron teeth round the rim.
 		for k in 8:
-			var a := turn + k * TAU / 8.0
+			var a := k * TAU / 8.0
 			Art.disc(ci, Vector2(cos(a), sin(a)) * (DRUM_R + 0.5), 1.8, Art.INK_SOFT)
-	Art.push(ci, Vector2.ZERO, turn)
 	for k in 3:
 		Art.line(ci, Vector2.ZERO, Vector2(0, -DRUM_R + 5.0).rotated(k * TAU / 3.0), Art.shade_of(drum, 0.45), 2.0)
 	Art.pop(ci)
@@ -748,13 +765,17 @@ static func draw_winch(ci: CanvasItem, look: int, turn: float, busy: bool, _t: f
 	# Crank: the arm from the axle to the handle, and its grip bar.
 	var h := handle_at(turn)
 	var arm := Art.METAL if look < 6 else Art.GOLD
-	Art.stroke(ci, PackedVector2Array([Vector2.ZERO, h]), arm, 4.0, 1.8)
-	Art.t_circle(ci, Vector2.ZERO, 3.2, arm, 1.8, 0.0)
-	Art.stroke(ci, PackedVector2Array([h - Vector2(GRIP, 0), h + Vector2(GRIP, 0)]), Art.CORAL if look < 6 else Art.WHITE, 4.5, 1.8)
+	Art.push(ci, Vector2.ZERO, turn)
+	Art.stroke(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, -CRANK_R)]), arm, 4.0, 1.8)
 	if busy:
 		# Motion lines behind the handle: it sweeps round.
-		var a1 := turn - PI * 0.5
+		var a1 := -PI * 0.5
 		Art.arc(ci, Vector2.ZERO, CRANK_R + 5.0, a1 - 1.1, a1 - 0.2, 6, Color(1, 1, 1, 0.85), 1.8)
+	Art.pop(ci)
+	Art.t_circle(ci, Vector2.ZERO, 3.2, arm, 1.8, 0.0)
+	Art.push(ci, h)
+	Art.stroke(ci, PackedVector2Array([Vector2(-GRIP, 0), Vector2(GRIP, 0)]), Art.CORAL if look < 6 else Art.WHITE, 4.5, 1.8)
+	Art.pop(ci)
 
 
 var _op_sleepy := false
@@ -770,7 +791,7 @@ func _draw_operator(ci: CanvasItem, off: Vector2, turn: float) -> Dictionary:
 	var gs := GameState
 	var hired: bool = gs.has_manager("lift")
 	_op_look = Chars.manager_look("lift") if hired else Chars.look(2, "short", 1, "hardhat", "none", 0, "overalls")
-	var p: float = gs.cycle_progress("lift")
+	var p: float = Motion.progress("lift")
 	var mood := world.mood("lift")
 	var pose := {"blink": Chars.blinking(_t, 3.3), "no_arms": true}
 	var feet := OPERATOR + off + Vector2(0, -world.hop("lift"))
@@ -788,10 +809,11 @@ func _draw_operator(ci: CanvasItem, off: Vector2, turn: float) -> Dictionary:
 		var h := handle_at(turn)
 		# Leans into the handle as it goes down and sways after it (his legs
 		# are behind the winch).
-		var dip := snappedf(0.5 - 0.5 * cos(turn), 0.125)
-		feet += Vector2(snappedf(h.x * 0.25, 0.5), dip * 5.0)
+		# (Smooth values: a body moved in steps twitches.)
+		var dip := 0.5 - 0.5 * cos(turn)
+		feet += Vector2(h.x * 0.25, dip * 5.0)
 		pose["bob"] = dip * 0.5
-		pose["tilt"] = snappedf(sin(turn), 0.5) * 0.08
+		pose["tilt"] = sin(turn) * 0.08
 		hl = axle + h + Vector2(-GRIP * 0.55, 0)
 		hr = axle + h + Vector2(GRIP * 0.55, 0)
 	else:

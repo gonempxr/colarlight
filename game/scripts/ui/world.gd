@@ -250,7 +250,13 @@ func stage_anchor(key: String) -> Vector2:
 # --- Moods --------------------------------------------------------------------------
 
 func react(key: String, emotion: String, seconds: float, jump: bool = false) -> void:
-	_moods[key] = {"emotion": emotion, "until": t + seconds, "jump_at": t if jump else -99.0}
+	# A hop still in the air finishes (starting it over would snap the
+	# characters back down to the ground).
+	var was: Dictionary = _moods.get(key, {})
+	var jump_at := t if jump else -99.0
+	if not was.is_empty() and t - float(was["jump_at"]) < 1.4:
+		jump_at = float(was["jump_at"])
+	_moods[key] = {"emotion": emotion, "until": t + seconds, "jump_at": jump_at}
 
 
 func mood(key: String) -> String:
@@ -400,8 +406,11 @@ func _process(delta: float) -> void:
 			_bubbles.remove_at(i)
 	for f in _fish:
 		var dart := 1.0 + 7.0 * exp(-(t - float(f["dart"])) * 2.5)
-		f["x"] = fposmod(f["x"] + f["speed"] * f["dir"] * dart * delta, 1.3)
-		f["face"] = move_toward(float(f["face"]), float(f["dir"]), delta * 7.0)
+		# A fish turns first and swims the way it faces: while it turns it
+		# slows down, stops and sets off the other way (never backwards).
+		var face := move_toward(float(f["face"]), float(f["dir"]), delta * 7.0)
+		f["face"] = face
+		f["x"] = fposmod(f["x"] + f["speed"] * face * dart * delta, 1.3)
 	_repaint_still(delta)
 	if tick(PEOPLE) and (is_visible_band(0.0, TOP_H) or is_visible_band(height() - BOTTOM_H, height())):
 		queue_redraw()

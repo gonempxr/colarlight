@@ -103,10 +103,11 @@ body {
 	animation: rise linear infinite;
 }
 .fish { position: absolute; animation: swim linear infinite; }
-/* The fish art faces left: flip the ones swimming to the right. */
-.fish svg { display: block; width: 100%; transform: scaleX(-1); animation: bob-flip 1.6s ease-in-out infinite alternate; }
+/* Each fish faces the way it swims in its own SVG (the ones swimming right
+   flip their art inside the SVG with a <g transform>), so no browser can
+   show one swimming backwards; CSS only bobs it. */
+.fish svg { display: block; width: 100%; animation: bob 1.6s ease-in-out infinite alternate; }
 .fish.left { animation-name: swim-left; }
-.fish.left svg { transform: none; animation-name: bob; }
 
 .floor {
 	position: absolute;
@@ -236,7 +237,6 @@ body {
 @keyframes swim { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
 @keyframes swim-left { from { transform: translateX(120vw); } to { transform: translateX(-20vw); } }
 @keyframes bob { from { transform: translateY(-3px) rotate(-3deg); } to { transform: translateY(3px) rotate(3deg); } }
-@keyframes bob-flip { from { transform: scaleX(-1) translateY(-3px) rotate(-3deg); } to { transform: scaleX(-1) translateY(3px) rotate(3deg); } }
 @keyframes sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
 @keyframes logo-in { from { transform: scale(0.6) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes float { from { transform: translateY(-4px) rotate(-1deg); } to { transform: translateY(5px) rotate(1deg); } }
@@ -271,9 +271,9 @@ body {
 			<div class="sea" id="sea">
 				<div class="shine"></div>
 				<svg class="waves" viewBox="0 0 800 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q50 2 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14 V30 H0 Z" fill="#35c9d2"/><path d="M0 14 Q50 2 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14" fill="none" stroke="#241a3a" stroke-width="4"/><path d="M0 20 Q50 10 100 20 T200 20 T300 20 T400 20 T500 20 T600 20 T700 20 T800 20" fill="none" stroke="#bff3ff" stroke-width="3" opacity="0.8"/></svg>
-				<div class="fish" style="top:24%;width:clamp(46px,6vw,70px);animation-duration:17s;animation-delay:-4s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#ff7a59" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#ff7a59" stroke="#241a3a" stroke-width="4"/><path d="M18 30 q10 6 22 0" fill="none" stroke="#ffd0a8" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
+				<div class="fish" style="top:24%;width:clamp(46px,6vw,70px);animation-duration:17s;animation-delay:-4s"><svg viewBox="0 0 70 44"><g transform="translate(70 0) scale(-1 1)"><path d="M50 22 L68 8 L66 36 Z" fill="#ff7a59" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#ff7a59" stroke="#241a3a" stroke-width="4"/><path d="M18 30 q10 6 22 0" fill="none" stroke="#ffd0a8" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></g></svg></div>
 				<div class="fish left" style="top:52%;width:clamp(38px,5vw,58px);animation-duration:22s;animation-delay:-13s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#ffc93c" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#ffc93c" stroke="#241a3a" stroke-width="4"/><path d="M30 6 v32" stroke="#e0921c" stroke-width="5"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
-				<div class="fish" style="top:74%;width:clamp(34px,4.4vw,52px);animation-duration:26s;animation-delay:-9s"><svg viewBox="0 0 70 44"><path d="M50 22 L68 8 L66 36 Z" fill="#8a6cf0" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#8a6cf0" stroke="#241a3a" stroke-width="4"/><path d="M22 10 q6 12 0 24 M34 8 q6 14 0 28" fill="none" stroke="#b9a6ff" stroke-width="4"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></svg></div>
+				<div class="fish" style="top:74%;width:clamp(34px,4.4vw,52px);animation-duration:26s;animation-delay:-9s"><svg viewBox="0 0 70 44"><g transform="translate(70 0) scale(-1 1)"><path d="M50 22 L68 8 L66 36 Z" fill="#8a6cf0" stroke="#241a3a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="30" cy="22" rx="24" ry="17" fill="#8a6cf0" stroke="#241a3a" stroke-width="4"/><path d="M22 10 q6 12 0 24 M34 8 q6 14 0 28" fill="none" stroke="#b9a6ff" stroke-width="4"/><circle cx="16" cy="18" r="5" fill="#fff" stroke="#241a3a" stroke-width="3"/><circle cx="15" cy="18" r="2.2" fill="#241a3a"/></g></svg></div>
 				<div class="floor"></div>
 				<svg class="weed" style="left:4%" viewBox="0 0 40 90" aria-hidden="true"><path d="M20 88 C4 70 34 56 16 40 C4 28 24 16 18 2" fill="none" stroke="#241a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 88 C4 70 34 56 16 40 C4 28 24 16 18 2" fill="none" stroke="#5cd05f" stroke-width="6" stroke-linecap="round"/></svg>
 				<svg class="weed" style="left:9%;height:9%;animation-delay:-1.4s" viewBox="0 0 40 90" aria-hidden="true"><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#241a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 88 C34 70 8 56 22 40 C34 26 14 16 22 2" fill="none" stroke="#2bc8b4" stroke-width="6" stroke-linecap="round"/></svg>
