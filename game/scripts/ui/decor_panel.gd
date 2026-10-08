@@ -24,7 +24,7 @@ static func build(m: Modal, main: Node) -> void:
 	how.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	how.custom_minimum_size.x = 160
 	top.add_child(how)
-	top.add_child(Views.chip("pearl", str(Progress.pearls), 30))
+	top.add_child(Views.pearl_counter(28))
 	var lv := Progress.decor_level(slot)
 	var maxed := lv >= Content.DECOR_MAX
 	var cost := Progress.decor_cost(slot)

@@ -2,7 +2,8 @@ class_name PriceButton
 extends Button
 ## A button that shows what a price is paid in: [icon] [words] [coin] [amount]
 ## (or a pearl for pearl prices). The row shrinks to fit narrow buttons:
-## first the leading icon goes, then the text gets smaller.
+## first the text gets a little smaller, then the leading icon goes, then
+## the text gets smaller still.
 ## `full_text` holds the plain words and amount ("Upgrade 1.2K").
 
 ## Plain text of the label, for tests and tooltips (Button.text stays empty).
@@ -157,7 +158,16 @@ func _fit() -> void:
 	var with_lead := _lead_name != ""
 	if room > 1.0:
 		if with_lead and _row_w(fs, true) > room:
-			with_lead = false
+			# A slightly smaller font keeps the icon (rows of cards then all
+			# show it); only a much smaller one drops it.
+			var least := maxi(12, floori(want * 0.8))
+			var f2 := fs
+			while f2 > least and _row_w(f2, true) > room:
+				f2 -= 1
+			if _row_w(f2, true) <= room:
+				fs = f2
+			else:
+				with_lead = false
 		while fs > 12 and _row_w(fs, with_lead) > room:
 			fs -= 1
 	_lead.visible = with_lead

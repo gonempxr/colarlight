@@ -193,9 +193,7 @@ static func _skins(m: Modal, main: Node) -> void:
 	_wrap(hint, 180)
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(hint)
-	var pearls := Views.chip("pearl", str(Progress.pearls), 30)
-	pearls.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	top.add_child(pearls)
+	top.add_child(Views.pearl_counter(28))
 	var list := Content.skins_of(w)
 	var v := m.get_viewport_rect().size
 	var cols := 4 if v.x >= 600.0 else 3

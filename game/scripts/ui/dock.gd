@@ -111,15 +111,29 @@ func count() -> int:
 
 
 ## Shrinks the buttons so every one fits in the given width (the PC side
-## column is narrower than a phone screen).
+## column is narrower than a phone screen); the labels share one font size,
+## the biggest at which the longest of them fits (no clipped words).
 func fit(width: float) -> void:
 	_fit_w = width
 	var n := maxi(1, count())
 	var w := floorf(minf(118.0, (width - 20.0 - 8.0 * (n - 1)) / n))
+	var room := w - 18.0
+	var fs := 20
+	var font := UiTheme.heavy_font()
+	while fs > 12:
+		var fits := true
+		for id in _buttons:
+			var b: Button = _buttons[id]
+			if b.visible and font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
+				fits = false
+				break
+		if fits:
+			break
+		fs -= 1
 	for id in _buttons:
 		var b: Button = _buttons[id]
 		b.custom_minimum_size.x = w
-		b.add_theme_font_size_override("font_size", 19 if w >= 110.0 else (15 if w >= 84.0 else 13))
+		b.add_theme_font_size_override("font_size", fs)
 
 
 func button(id: String) -> Button:

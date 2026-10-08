@@ -66,13 +66,8 @@ func _ready() -> void:
 	_btn.add_theme_font_size_override("font_size", 22 if narrow else 24)
 	_btn.pressed.connect(_on_press)
 	box.add_child(_btn)
-	if narrow:
-		# The stage cards keep a line for "Bottleneck" under their button.
-		var tag := Label.new()
-		tag.theme_type_variation = &"InkLabel"
-		tag.add_theme_font_size_override("font_size", 16)
-		tag.text = " "
-		box.add_child(tag)
+	# (The stage cards' "Bottleneck" tag hangs off their button and takes no
+	# line, so the three buttons line up with nothing under this one.)
 	gui_input.connect(func(e: InputEvent):
 		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed and not Scroller.is_drag():
 			_on_press())

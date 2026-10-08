@@ -21,6 +21,14 @@ const BUTTON_COLORS := {
 	"CreamButton": Color("fff6e4"),
 }
 
+## Shared look of the small parts so every panel matches: inner boxes
+## (stat lists, rows inside cards) and pills (badges, tags, chips).
+const R_INSET := 16.0
+const R_PILL := 14.0
+const LINE_THIN := 2.5
+const INSET_FILL := Color("f6ead0")
+const INSET_LINE := Color(0.14, 0.1, 0.23, 0.22)
+
 static var _body: Font
 static var _heavy: Font
 
@@ -55,6 +63,32 @@ static func panel_box(color: Color, radius: float = 24.0, depth: float = 6.0) ->
 	b.content_margin_right = 20
 	b.content_margin_top = 16
 	b.content_margin_bottom = 16 + depth
+	return b
+
+
+## A flat inner box on a cream panel: a slightly darker cream with a soft
+## line, no 3D base (the panel around it already has one).
+static func inset_box(color: Color = INSET_FILL, radius: float = R_INSET) -> ToonBox:
+	var b := ToonBox.make(color, radius, 0)
+	b.line = INSET_LINE
+	b.line_w = 2.0
+	b.gloss = 0.0
+	b.content_margin_left = 14
+	b.content_margin_right = 14
+	b.content_margin_top = 8
+	b.content_margin_bottom = 10
+	return b
+
+
+## A small outlined pill for badges and tags (ink outline like the buttons).
+static func pill_box(color: Color, radius: float = R_PILL) -> ToonBox:
+	var b := ToonBox.make(color, radius, 0)
+	b.line_w = LINE_THIN
+	b.gloss = 0.2
+	b.content_margin_left = 10
+	b.content_margin_right = 10
+	b.content_margin_top = 1
+	b.content_margin_bottom = 2
 	return b
 
 

@@ -252,12 +252,68 @@ func _layout() -> void:
 			"plant": [Vector2(X + maxf(W * 0.06, 36.0 * big), wb + front + 18.0 * big), big * 0.85],
 			"collect": [Vector2(X + W * 0.63, wb + 74 * big), big],
 		}
+		_unclutter_tall(X, W)
 		var wtop := 74.0
 		var ww := minf(W * 0.16, 150.0)
 		var wx := X + W - ww - 42.0
 		_window = Rect2(wx, wtop, ww, clampf(wb - 175.0 * big - wtop, 70.0, 190.0))
 	_bg_sig = ""
 	queue_redraw()
+
+
+## Widest drawing of each back-row piece (at its biggest level), in its own
+## units: [left, right] of its origin. Measured once.
+static var _extent := {}
+
+
+static func _piece_extent(name: String) -> Vector2:
+	if _extent.has(name):
+		return _extent[name]
+	Art.measure_begin()
+	match name:
+		"sofa":
+			OfficeArt.sofa(null, 5)
+		"aquarium":
+			OfficeArt.aquarium(null, 5, 0.0)
+		"wardrobe":
+			OfficeArt.wardrobe(null, 0.0, Chars.OUTFITS[0])
+	var r := Art.measure_end()
+	_extent[name] = Vector2(-r.position.x, r.end.x)
+	return _extent[name]
+
+
+## Narrow phones: the sofa and the aquarium stand clear of the vault (its
+## open door on the left, the full vault's coin stacks on both sides). When
+## the back wall is too short for all three they shrink together (to 72% at
+## most) and the vault, its pipe and the Collect button slide to make room.
+func _unclutter_tall(X: float, W: float) -> void:
+	const GAP := 8.0
+	# The door reaches ~126 left of the vault's middle, the coin stacks ~124
+	# right of it (OfficeArt.vault, vault_coins).
+	const DOOR := 126.0
+	const STACKS := 124.0
+	var lo := _p("wardrobe").x + _piece_extent("wardrobe").y * _s("wardrobe") + GAP
+	var hi := X + W - 6.0
+	var es := _piece_extent("sofa")
+	var ea := _piece_extent("aquarium")
+	var ss := _s("sofa")
+	var sa := _s("aquarium")
+	var vs := _s("pile")
+	var need := (es.x + es.y) * ss + (DOOR + STACKS) * vs + (ea.x + ea.y) * sa + 2.0 * GAP
+	var k := clampf((hi - lo) / need, 0.72, 1.0)
+	ss *= k
+	sa *= k
+	vs *= k
+	var vx := clampf(_p("pile").x, lo + (es.x + es.y) * ss + GAP + DOOR * vs, hi - (ea.x + ea.y) * sa - GAP - STACKS * vs)
+	var sx := minf(_p("sofa").x, vx - DOOR * vs - GAP - es.y * ss)
+	sx = maxf(sx, lo + es.x * ss)
+	var ax := maxf(_p("aquarium").x, vx + STACKS * vs + GAP + ea.x * sa)
+	ax = minf(ax, hi - ea.y * sa)
+	_at["sofa"] = [Vector2(sx, _p("sofa").y), ss]
+	_at["aquarium"] = [Vector2(ax, _p("aquarium").y), sa]
+	_at["pile"] = [Vector2(vx, _p("pile").y), vs]
+	_at["chute"] = [Vector2(vx, _p("chute").y), _s("chute")]
+	_at["collect"] = [Vector2(vx, _p("collect").y), _s("collect")]
 
 
 func _p(name: String) -> Vector2:

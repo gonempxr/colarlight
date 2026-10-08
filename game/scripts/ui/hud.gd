@@ -24,6 +24,8 @@ var _pearl_icon: TextureRect
 var _pearl_bump := 0.0
 var _rush: ProgressBar
 var _rush_label: Label
+var _hang: PanelContainer
+var _hang_box: StyleBox
 var _avatar: Control
 var _shown_coins := 0.0
 var _t := 0.0
@@ -129,19 +131,38 @@ func _ready() -> void:
 	_pearls.add_theme_constant_override("outline_size", 6)
 	sub.add_child(_pearls)
 	_add_streak(sub)
+	# The rush meter and the rush / x2 timer hang under the pill as a small
+	# tag: they come and go, and the bar must not grow over the room tabs.
+	_hang = PanelContainer.new()
+	_hang.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hsb := UiTheme.pill_box(Color("122850"), 12)
+	hsb.gloss = 0.0
+	hsb.content_margin_left = 12
+	hsb.content_margin_right = 12
+	hsb.content_margin_top = 4
+	hsb.content_margin_bottom = 5
+	_hang_box = hsb
+	_hang.add_theme_stylebox_override("panel", hsb)
+	_hang.visible = false
+	add_child(_hang)
+	var hang_box := VBoxContainer.new()
+	hang_box.add_theme_constant_override("separation", 0)
+	_hang.add_child(hang_box)
 	_rush = ProgressBar.new()
 	_rush.show_percentage = false
 	_rush.max_value = 1.0
-	_rush.custom_minimum_size = Vector2(0, 12)
+	_rush.custom_minimum_size = Vector2(150, 12)
 	_rush.add_theme_stylebox_override("fill", _rush_fill())
-	mid.add_child(_rush)
+	_rush.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hang_box.add_child(_rush)
 	_rush_label = Label.new()
 	_rush_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rush_label.add_theme_font_override("font", UiTheme.heavy_font())
 	_rush_label.add_theme_font_size_override("font_size", 19)
 	_rush_label.add_theme_color_override("font_color", Color("ff9fd0"))
+	_rush_label.add_theme_constant_override("outline_size", 5)
 	_rush_label.visible = false
-	mid.add_child(_rush_label)
+	hang_box.add_child(_rush_label)
 
 	var settings := Button.new()
 	settings.theme_type_variation = &"BlueButton"
@@ -203,6 +224,7 @@ func set_notch(on: bool) -> void:
 		_reveal = 1.0
 	_pill_slot.visible = on
 	_style_pill(on)
+	_seat_hang()
 	_place()
 
 
@@ -334,6 +356,37 @@ func _process(delta: float) -> void:
 	elif boosted:
 		_rush_label.text = "×2  %s" % NumFormat.duration(GameState.boost_left)
 		_rush_label.add_theme_color_override("font_color", Art.GOLD)
+	_place_hang(_rush.visible or _rush_label.visible)
+
+
+## Phone: the tag hangs under the bar. PC: it sits inside the notch (the
+## tabs follow the notch's height there every frame).
+func _seat_hang() -> void:
+	if _hang == null:
+		return
+	var inside := _hang.get_parent() != self
+	if _notch == inside:
+		return
+	_hang.get_parent().remove_child(_hang)
+	if _notch:
+		_pill.get_child(0).add_child(_hang)
+		_hang.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	else:
+		add_child(_hang)
+		_hang.add_theme_stylebox_override("panel", _hang_box)
+
+
+## The hanging tag: centred under the coin pill, over the bar's lower edge.
+func _place_hang(on: bool) -> void:
+	_hang.visible = on
+	if not on or _notch:
+		return
+	_hang.reset_size()
+	var pr := _pill.get_global_rect()
+	var origin := get_global_rect().position
+	var at := Vector2(roundf(pr.get_center().x - origin.x - _hang.size.x / 2.0), roundf(pr.end.y - origin.y - (10.0 if _notch else 8.0)))
+	if _hang.position != at:
+		_hang.position = at
 
 
 ## Scales a label about its middle, touching it only when something changed

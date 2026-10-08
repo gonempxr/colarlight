@@ -24,6 +24,7 @@ var _bar: ProgressBar
 var _upgrade: PriceButton
 var _manager: ManagerBadge
 var _tag: Label
+var _tag_pill: PanelContainer
 var _head: PanelContainer
 var _stage: Label
 var _pic: ArtView
@@ -164,16 +165,22 @@ func _ready() -> void:
 	_upgrade.pressed.connect(_on_upgrade)
 	box.add_child(_upgrade)
 
+	# "Bottleneck": a red tag hanging from the button's lower edge (it takes
+	# no row of its own, so the cards keep their size and line up).
 	_tag = Label.new()
-	_tag.theme_type_variation = &"InkLabel"
+	_tag.add_theme_font_override("font", UiTheme.heavy_font())
 	_tag.add_theme_font_size_override("font_size", 16)
-	_tag.add_theme_color_override("font_color", Color("d8363c"))
+	_tag.add_theme_constant_override("outline_size", 5)
 	_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if narrow:
-		_tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_tag.custom_minimum_size.x = 80
-	_tag.visible = false
-	box.add_child(_tag)
+	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tag_pill = PanelContainer.new()
+	_tag_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tag_pill.add_theme_stylebox_override("panel", UiTheme.pill_box(Color("e8454b"), 12))
+	_tag_pill.visible = false
+	_tag_pill.add_child(_tag)
+	_upgrade.add_child(_tag_pill)
+	_upgrade.resized.connect(_place_tag)
+	_tag_pill.resized.connect(_place_tag)
 	for l: Label in [_name, _level, _rate]:
 		l.resized.connect(_fit_text)
 	if _stage:
@@ -292,7 +299,7 @@ func refresh() -> void:
 	if not _unit_btns.is_empty():
 		var tabs: bool = gs.is_open("d2") or gs.is_open(base + "2")
 		_name.custom_minimum_size.x = (40.0 if narrow else 60.0) if tabs or narrow else 150.0
-		_name_fs = 16 if tabs and not hero else 19
+		_name_fs = 17 if tabs and not hero else 19
 		_name.autowrap_mode = TextServer.AUTOWRAP_OFF if tabs or narrow else TextServer.AUTOWRAP_WORD_SMART
 		for i in 2:
 			var on := (i == 1) == gs.is_second(key)
@@ -339,11 +346,22 @@ func refresh() -> void:
 	_fit_text()
 
 
-## Narrow cards keep the tag's line (see-through) so the three upgrade
-## buttons stay in a row.
 func _show_tag(on: bool) -> void:
-	_tag.visible = on or narrow
-	_tag.self_modulate.a = 1.0 if on else 0.0
+	if _tag_pill == null:
+		_tag.visible = on
+		return
+	_tag_pill.visible = on
+	if on:
+		_place_tag.call_deferred()
+
+
+## The tag hangs centred under the button, over the card's lower edge.
+func _place_tag() -> void:
+	if _tag_pill == null or not _tag_pill.visible:
+		return
+	_tag_pill.reset_size()
+	var w := minf(_tag_pill.size.x, _upgrade.size.x + 8.0)
+	_tag_pill.position = Vector2(roundf((_upgrade.size.x - w) / 2.0), _upgrade.size.y - 6.0)
 
 
 ## A button style, slim (narrow side margins) on narrow cards.

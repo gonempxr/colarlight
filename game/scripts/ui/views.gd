@@ -79,6 +79,71 @@ static func chip(icon_name: String, value: String, px: int = 26) -> HBoxContaine
 	return h
 
 
+## A small outlined pill with one word or number (badges, "Playing").
+static func pill(text: String, fill: Color, font_color: Color = Art.WHITE, px: int = 20) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_theme_stylebox_override("panel", UiTheme.pill_box(fill))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var l := label(text, px, font_color, true)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if font_color == Art.WHITE:
+		l.theme_type_variation = &""
+		l.add_theme_constant_override("outline_size", 5)
+	p.add_child(l)
+	return p
+
+
+## Pearls the player has, as a counter pill (wardrobe, shops).
+static func pearl_counter(px: int = 28) -> PanelContainer:
+	var p := PanelContainer.new()
+	var sb := UiTheme.pill_box(Color("efe6ff"), 20)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 14
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	p.add_theme_stylebox_override("panel", sb)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.add_child(chip("pearl", str(Progress.pearls), px))
+	return p
+
+
+## One font size for a row of buttons: the biggest (up to `want`) at which
+## every label fits its button, so tabs stay on one line in every language.
+## Call it again when the row changes size (it hooks itself to `resized`).
+static func fit_button_row(row: BoxContainer, want: int, least: int = 13) -> void:
+	var fit := func() -> void:
+		var buttons: Array[Button] = []
+		for b in row.get_children():
+			if b is Button and b.visible:
+				buttons.append(b)
+		if buttons.is_empty() or row.size.x < 2.0:
+			return
+		# Equal tabs: the children's own sizes are stale until the row
+		# sorts them, so work from the row's width.
+		var each := (row.size.x - row.get_theme_constant("separation") * (buttons.size() - 1)) / buttons.size()
+		var font: Font = buttons[0].get_theme_font("font")
+		var fs := want
+		while fs > least:
+			var ok := true
+			for b in buttons:
+				var sb: StyleBox = b.get_theme_stylebox("normal")
+				var room: float = each - (sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT) if sb else 16.0) - 4.0
+				if b.icon:
+					room -= b.icon.get_width() + 6.0
+				if font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
+					ok = false
+					break
+			if ok:
+				break
+			fs -= 1
+		for b in buttons:
+			if b.get_theme_font_size("font_size") != fs:
+				b.add_theme_font_size_override("font_size", fs)
+	row.resized.connect(fit)
+
+
 static func bar(value: float, max_value: float, text: String = "") -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(0, 26)
@@ -142,18 +207,19 @@ static func quests(m: Modal, main: Node) -> void:
 		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mid.add_theme_constant_override("separation", 6)
 		h.add_child(mid)
+		mid.alignment = BoxContainer.ALIGNMENT_CENTER
 		mid.add_child(label(quest_text(q), 22, Art.INK, true))
 		var shown := NumFormat.short(q["count"]) + " / " + NumFormat.short(q["goal"])
 		mid.add_child(bar(q["count"], q["goal"], shown))
 		var right := VBoxContainer.new()
 		right.alignment = BoxContainer.ALIGNMENT_CENTER
 		h.add_child(right)
-		right.add_child(chip("pearl", "+%d" % int(q["pearls"]), 22))
 		if done:
-			var b := Button.new()
-			b.text = t("CLAIM")
-			b.custom_minimum_size = Vector2(130, 64)
+			# The reward rides on the button: "Claim (pearl) +2".
+			var b := PriceButton.new()
+			b.custom_minimum_size = Vector2(196, 64)
 			b.add_theme_font_size_override("font_size", 22)
+			b.set_price(t("CLAIM"), "+%d" % int(q["pearls"]), "pearl")
 			var idx := i
 			b.pressed.connect(func():
 				var from := b.get_global_rect().get_center()
@@ -162,6 +228,14 @@ static func quests(m: Modal, main: Node) -> void:
 					main.celebrate(r, from)
 					m.rebuild())
 			right.add_child(b)
+		else:
+			var reward := PanelContainer.new()
+			var rsb := UiTheme.pill_box(Color("efe6ff"), 18)
+			rsb.content_margin_left = 4
+			rsb.content_margin_right = 12
+			reward.add_theme_stylebox_override("panel", rsb)
+			reward.add_child(chip("pearl", "+%d" % int(q["pearls"]), 22))
+			right.add_child(reward)
 		m.add(c)
 
 
@@ -190,29 +264,38 @@ static func daily(m: Modal, main: Node) -> void:
 	var week := Progress.daily_day / n
 	var today_i := Progress.daily_day % n
 	var ready := Progress.daily_ready()
-	var grid := GridContainer.new()
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
+	# Days 1-4 on top, 5-6 and a double-wide day 7 (the big one) below.
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 8)
+	var row: HBoxContainer
 	for i in n:
+		if i == 0 or i == 4:
+			row = HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			rows.add_child(row)
 		var gift: Dictionary = Content.DAILY[i]
 		var claimed := i < today_i
 		var is_today := i == today_i and ready
-		var c := card(Color("fff1c2") if is_today else (Color("e6e9f2") if claimed else Color("fffaf0")))
+		var last := i == n - 1
+		var c := card(Color("fff1c2") if is_today else (Color("e6e9f2") if claimed else (Color("fff6dc") if last else Color("fffaf0"))))
+		if is_today:
+			(c.get_theme_stylebox("panel") as ToonBox).line = Color("d98a00")
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		c.size_flags_stretch_ratio = 2.0 if last and n == 7 else 1.0
 		var v := VBoxContainer.new()
 		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_theme_constant_override("separation", 2)
 		c.add_child(v)
 		var day := label(t("DAY") % (i + 1), 18, Art.INK_SOFT, true)
 		day.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		day.autowrap_mode = TextServer.AUTOWRAP_OFF
 		v.add_child(day)
-		v.add_child(icon("check" if claimed else daily_icon(gift["kind"]), 48 if i < n - 1 else 60))
+		v.add_child(icon("check" if claimed else daily_icon(gift["kind"]), 48 if not last else 60))
 		var amt := label(daily_amount(gift, week), 17, Art.INK, true)
 		amt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(amt)
-		grid.add_child(c)
-	m.add(grid)
+		row.add_child(c)
+	m.add(rows)
 	if ready:
 		var b := m.button(t("CLAIM"), func(): pass, &"GoldButton")
 		b.pressed.connect(func():

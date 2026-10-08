@@ -14,8 +14,13 @@ var docked := false
 
 var _title: Label
 var _desc: Label
+## Plain text of the stat rows (tests read it; the rows show it).
 var _stats: Label
+var _stat_box: PanelContainer
+var _stat_rows: VBoxContainer
 var _gain: Label
+var _gain_box: PanelContainer
+var _compact := false
 var _modes: Array[Button] = []
 var _buy: PriceButton
 var _hire: PriceButton
@@ -59,21 +64,38 @@ func _ready() -> void:
 	_desc.add_theme_font_size_override("font_size", 22)
 	box.add_child(_desc)
 	_stats = Label.new()
-	_stats.theme_type_variation = &"InkLabel"
-	_stats.add_theme_font_size_override("font_size", 24)
+	_stats.visible = false
 	box.add_child(_stats)
+	# The numbers as a tidy list: name on the left, value on the right.
+	_stat_box = PanelContainer.new()
+	_stat_box.add_theme_stylebox_override("panel", UiTheme.inset_box())
+	box.add_child(_stat_box)
+	_stat_rows = VBoxContainer.new()
+	_stat_rows.add_theme_constant_override("separation", 2)
+	_stat_box.add_child(_stat_rows)
 	_hire = PriceButton.new()
 	_hire.theme_type_variation = &"GoldButton"
 	_hire.custom_minimum_size.y = 64
 	_hire.add_theme_font_size_override("font_size", 23)
 	_hire.pressed.connect(_on_hire)
 	box.add_child(_hire)
+	# What the purchase adds, in a soft green pill.
+	_gain_box = PanelContainer.new()
+	var gsb := UiTheme.inset_box(Color("dcf7d6"))
+	gsb.line = Color(Art.GREEN_DARK, 0.35)
+	gsb.content_margin_top = 4
+	gsb.content_margin_bottom = 6
+	_gain_box.add_theme_stylebox_override("panel", gsb)
+	box.add_child(_gain_box)
 	_gain = Label.new()
 	_gain.theme_type_variation = &"InkLabel"
 	_gain.add_theme_font_override("font", UiTheme.heavy_font())
 	_gain.add_theme_font_size_override("font_size", 28)
 	_gain.add_theme_color_override("font_color", Art.GREEN_DARK)
-	box.add_child(_gain)
+	_gain.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gain.clip_text = true
+	_gain.resized.connect(_fit_gain)
+	_gain_box.add_child(_gain)
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 10)
 	box.add_child(modes)
@@ -97,6 +119,27 @@ func show_stage(stage_key: String) -> void:
 	refresh()
 
 
+## Short PC/landscape screens: no description and no stat list (the gain
+## line stays), so the buttons fit.
+func set_compact(on: bool) -> void:
+	_compact = on
+	if _desc:
+		_desc.visible = not on
+		_stat_box.visible = not on
+		_buy.custom_minimum_size.y = 72 if on else 88
+		(_desc.get_parent() as VBoxContainer).add_theme_constant_override("separation", 8 if on else 12)
+
+
+## Wrapped text measures itself at its final width (an autowrapped label's
+## height is stale until it has one), so a column can fit itself at once.
+func fit_width(w: float) -> void:
+	if _desc == null:
+		return
+	var sb := get_theme_stylebox("panel")
+	var inner := w - (sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT) if sb else 40.0)
+	_desc.custom_minimum_size.x = maxf(0.0, inner)
+
+
 ## PC column: the stage picture's height (0 hides it) so the panel fits.
 func set_hero_height(h: float) -> void:
 	if _hero:
@@ -111,6 +154,9 @@ func set_docked(value: bool) -> void:
 	if _hero:
 		_hero.visible = docked
 	theme_type_variation = &"PanelContainer" if docked else &"SheetPanel"
+	if _desc and not docked:
+		_desc.custom_minimum_size.x = 0.0
+		set_compact(false)
 
 
 func _set_mode(i: int) -> void:
@@ -173,8 +219,9 @@ func refresh() -> void:
 		var price: float = gs.unlock_cost(key)
 		_title.text = tr("BUY_%s" % key.to_upper())
 		_desc.text = tr("BUY_%s_DESC" % key.to_upper())
-		_stats.text = "%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(Balance.output(data["value"], 1) * gs.income_mult())]
+		_set_stats(["%s: %s" % [what, tr("PER_SEC") % NumFormat.rate(Balance.output(data["value"], 1) * gs.income_mult())]])
 		_gain.text = ""
+		_gain_box.visible = false
 		for b in _modes:
 			b.visible = false
 		_buy.set_price_fmt(tr("BUY_FOR"), NumFormat.short(price))
@@ -210,12 +257,14 @@ func refresh() -> void:
 		lines.append(tr("STAT_TRIP") % [NumFormat.short(gs.cycle_capacity(key)), "%.1f" % gs.cycle_time(key)])
 		lines.append(tr("STAT_WAITING") % NumFormat.short(gs.pit))
 	lines.append(tr("STAT_MILESTONE") % next_ms)
-	_stats.text = "\n".join(lines)
+	_set_stats(lines)
+	_gain_box.visible = true
 	var n := _count()
 	# Same multipliers as now (prestige, boost, foreman, artifacts), next level's output.
 	var now_out := Balance.output(data["value"], level)
 	var after := gs.rate(key) * Balance.output(data["value"], level + n) / now_out if now_out > 0.0 else 0.0
 	_gain.text = "+%s  →  %s" % [tr("PER_SEC") % NumFormat.rate(after - gs.rate(key)), tr("LEVEL") % (level + n)]
+	_fit_gain()
 	for i in _modes.size():
 		var m: int = MODES[i]
 		_modes[i].text = tr("BUY_MAX") if m == -1 else "×%d" % m
@@ -226,6 +275,73 @@ func refresh() -> void:
 	_buy.set_price(words, NumFormat.short(cost), "coin", "arrow")
 	_buy.theme_type_variation = &"" if gs.coins >= cost else &"DarkButton"
 	_close.visible = not docked
+
+
+## Fills the stat list: "Name: value" lines become two columns, the rest
+## (the next ×2 level) a centred gold line.
+func _set_stats(lines: Array) -> void:
+	_stats.text = "\n".join(lines)
+	var rows := _stat_rows.get_children()
+	for i in maxi(rows.size(), lines.size()):
+		if i >= lines.size():
+			rows[i].visible = false
+			continue
+		var row: HBoxContainer
+		if i < rows.size():
+			row = rows[i]
+		else:
+			row = _stat_row()
+			_stat_rows.add_child(row)
+		row.visible = true
+		var line: String = lines[i]
+		var cut := line.find(": ")
+		var cut_w := 2
+		if cut < 0:
+			cut = line.find("：")
+			cut_w = 1
+		var name_l: Label = row.get_child(0)
+		var value_l: Label = row.get_child(1)
+		if cut > 0:
+			name_l.text = line.substr(0, cut)
+			value_l.text = line.substr(cut + cut_w).strip_edges()
+			name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			name_l.add_theme_color_override("font_color", Art.INK_SOFT)
+			value_l.visible = true
+		else:
+			name_l.text = line
+			name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_l.add_theme_color_override("font_color", Color("b5650b"))
+			value_l.visible = false
+
+
+func _stat_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var name_l := Label.new()
+	name_l.theme_type_variation = &"InkLabel"
+	name_l.add_theme_font_override("font", UiTheme.heavy_font())
+	name_l.add_theme_font_size_override("font_size", 22)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_l.clip_text = true
+	name_l.custom_minimum_size.x = 60
+	row.add_child(name_l)
+	var value_l := Label.new()
+	value_l.theme_type_variation = &"InkLabel"
+	value_l.add_theme_font_override("font", UiTheme.heavy_font())
+	value_l.add_theme_font_size_override("font_size", 24)
+	value_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(value_l)
+	return row
+
+
+## The gain line shrinks (never wraps) on narrow columns.
+func _fit_gain() -> void:
+	if _gain == null or _gain.size.x < 2.0:
+		return
+	var fs := StageCard._fit_size(_gain, 28, _gain.size.x)
+	if _gain.get_theme_font_size("font_size") != fs:
+		_gain.add_theme_font_size_override("font_size", fs)
 
 
 func _process(delta: float) -> void:

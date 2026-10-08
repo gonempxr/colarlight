@@ -185,9 +185,7 @@ static func players(m: Modal, main: Node) -> void:
 		rename.pressed.connect(func(): main.ask_name(id, func(): m.rebuild()))
 		h.add_child(rename)
 		if is_current:
-			var b := Views.label(t("PLAYING_NOW"), 20, Color("1f8a4c"), true)
-			b.autowrap_mode = TextServer.AUTOWRAP_OFF
-			h.add_child(b)
+			h.add_child(Views.pill(t("PLAYING_NOW"), Art.GREEN_DARK, Art.WHITE, 19))
 		else:
 			var play := Button.new()
 			play.text = t("PLAY")

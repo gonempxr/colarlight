@@ -37,18 +37,17 @@ static func build(m: Modal, main: Node) -> void:
 	look.custom_minimum_size.y = 68
 	look.pressed.connect(func(): Sfx.play("click"); main.open_avatar_editor())
 	top.add_child(look)
-	var pearls := Views.chip("pearl", str(Progress.pearls), 30)
-	top.add_child(pearls)
-	# Tabs.
-	var tabs := HFlowContainer.new()
-	tabs.add_theme_constant_override("h_separation", 6)
-	tabs.add_theme_constant_override("v_separation", 6)
-	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
+	top.add_child(Views.pearl_counter(28))
+	# Tabs: one row of equal tabs in every language (the words shrink).
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
 	for tb in TABS:
 		var b := Button.new()
 		b.text = t(tb[1])
-		b.theme_type_variation = &"PurpleButton" if tab == tb[0] else &"CreamButton"
-		b.custom_minimum_size = Vector2(118, 60)
+		b.theme_type_variation = &"SlimPurpleButton" if tab == tb[0] else &"SlimCreamButton"
+		b.custom_minimum_size = Vector2(0, 60)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 21)
 		var id: String = tb[0]
 		b.pressed.connect(func():
@@ -56,6 +55,7 @@ static func build(m: Modal, main: Node) -> void:
 			tab = id
 			m.rebuild())
 		tabs.add_child(b)
+	Views.fit_button_row(tabs, 21)
 	m.add(tabs)
 	if tab == "shop":
 		_shop(m, main)

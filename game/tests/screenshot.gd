@@ -11,7 +11,7 @@ extends SceneTree
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
 ## week's pearls waiting) | room:<0|1|2> (mine, factory, office) | evo (the
 ## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
-## tutorial at that step) | hint:<room> (the lightbulb's hint).
+## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -204,6 +204,9 @@ func _initialize() -> void:
 			main.open_feature("shop")
 		_:
 			if overlay.begins_with("room:"):
+				if overlay.ends_with(":full"):
+					# room:2:full - the office with an overflowing vault.
+					gs.vault = gs.income_rate() * 400.0
 				main.show_room(int(overlay.split(":")[1]), false)
 			elif overlay.begins_with("decor"):
 				main.open_decor(overlay.split(":")[1] if ":" in overlay else "sofa")

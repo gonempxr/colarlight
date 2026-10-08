@@ -12,6 +12,8 @@ extends Control
 const WIDE_ASPECT := 1.05
 const REFRESH_SEC := 0.1
 const SIDE_W := 540.0
+## Smallest on-screen scale of the 720x1280 design on short landscape screens.
+const SHORT_SCREEN_SCALE := 0.46
 const TOAST_SEC := 3.0
 const HUD_H := 112.0
 const DOCK_H := 128.0
@@ -621,7 +623,7 @@ func is_busy() -> bool:
 
 
 func _apply_ui_scale() -> void:
-	get_tree().root.content_scale_factor = Settings.ui_scale
+	get_tree().root.content_scale_factor = _ui_factor()
 	var low := Settings.low_quality()
 	if low != Art.low_power:
 		# Shapes are cached with or without soft edges: rebuild them.
@@ -630,6 +632,18 @@ func _apply_ui_scale() -> void:
 		if _world:
 			_world.repaint_still()
 	World.half_rate = Art.low_power
+
+
+## The UI size from the settings, made bigger on short landscape windows
+## (a phone held sideways): the 720x1280 design is fitted by height there
+## and would come out tiny.
+func _ui_factor() -> float:
+	var win := Vector2(get_tree().root.size)
+	if win.x <= 0.0 or win.y <= 0.0 or win.x <= win.y * WIDE_ASPECT:
+		return Settings.ui_scale
+	var fit := minf(win.x / 720.0, win.y / 1280.0)
+	var boost := clampf(SHORT_SCREEN_SCALE / fit, 1.0, 1.6) if fit > 0.0 else 1.0
+	return Settings.ui_scale * snappedf(boost, 0.05)
 
 
 ## Room the dock takes at the bottom: its real height (icon + label + margins
@@ -641,6 +655,11 @@ func _dock_height() -> float:
 
 
 func _layout() -> void:
+	if not is_equal_approx(get_tree().root.content_scale_factor, _ui_factor()):
+		# A short landscape window: bigger UI (this resizes the view and
+		# lays out again).
+		_apply_ui_scale()
+		return
 	var view := get_viewport_rect().size
 	_wide = view.x > view.y * WIDE_ASPECT
 	var dock_h := _dock_height()
@@ -762,11 +781,16 @@ func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
 	var bottom := view.y - dock_h - 8.0
 	var panel_hero := 190.0
 	var card_pics := true
-	for attempt in 3:
+	var compact := false
+	for attempt in 5:
 		for c in [_side_lift, _side_boat, _side_plant]:
 			if c._pic:
 				c._pic.visible = card_pics
+			if c._stage:
+				c._stage.visible = not compact
 		_side_evo._pic.visible = card_pics
+		_panel.set_compact(compact)
+		_panel.fit_width(side)
 		_side_cards.position = Vector2(x, 12.0)
 		_side_cards.size = Vector2(side, 0)
 		_side_cards.reset_size()
@@ -779,8 +803,11 @@ func _fit_side_column(view: Vector2, side: float, dock_h: float) -> void:
 			return
 		if panel_hero > 0.0:
 			panel_hero = 0.0 if panel_hero - over < 70.0 else panel_hero - over
-		else:
+		elif card_pics:
 			card_pics = false
+		else:
+			# Short landscape screens: no stage lines and no description.
+			compact = true
 
 
 func _place_sheet() -> void:
@@ -869,7 +896,7 @@ func _settings_signature() -> Array:
 
 
 func _on_settings_changed() -> void:
-	if not is_equal_approx(get_tree().root.content_scale_factor, Settings.ui_scale) or Art.low_power != Settings.low_quality():
+	if not is_equal_approx(get_tree().root.content_scale_factor, _ui_factor()) or Art.low_power != Settings.low_quality():
 		_apply_ui_scale()
 	HandCursor.apply(Settings.hand_cursor)
 	var sig := _settings_signature()
