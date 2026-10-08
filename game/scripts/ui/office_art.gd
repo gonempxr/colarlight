@@ -18,7 +18,7 @@ const BOX := {
 	"trophy": Rect2(-74, -70, 148, 100),
 	"wardrobe": Rect2(-50, -200, 100, 202),
 	"board": Rect2(-80, -66, 160, 132),
-	"pile": Rect2(-74, -120, 148, 124),
+	"pile": Rect2(-96, -170, 192, 196),
 }
 
 const WALLS := [
@@ -263,6 +263,9 @@ static func _papers(ci: CanvasItem, at: Vector2) -> void:
 
 ## Sofa: 0 a bench, 1 a small couch, 2 cushions, 3 big, 4 chesterfield, 5 royal.
 static func sofa(ci: CanvasItem, level: int) -> void:
+	if clampi(level, 0, 5) == 0:
+		spot(ci, "sofa")
+		return
 	var lv := clampi(level, 0, 5)
 	if lv == 0:
 		Art.t_rect(ci, Rect2(-64, -40, 128, 12), 3, Art.WOOD, 2.8, 0.4)
@@ -297,6 +300,9 @@ static func sofa(ci: CanvasItem, level: int) -> void:
 
 ## Aquarium: 0 an empty bowl ... 5 a grand glowing tank. `t` swims the fish.
 static func aquarium(ci: CanvasItem, level: int, t: float) -> void:
+	if clampi(level, 0, 5) == 0:
+		spot(ci, "aquarium")
+		return
 	var lv := clampi(level, 0, 5)
 	if lv <= 1:
 		# Stool and a round bowl.
@@ -368,6 +374,9 @@ static func aquarium(ci: CanvasItem, level: int, t: float) -> void:
 
 ## Lamp hanging from the ceiling (origin): 0 a bare bulb ... 5 a crystal chandelier.
 static func lamp(ci: CanvasItem, level: int, t: float, light: bool = true) -> void:
+	if clampi(level, 0, 5) == 0:
+		spot(ci, "lamp")
+		return
 	var lv := clampi(level, 0, 5)
 	var cord: float = [70.0, 62.0, 56.0, 50.0, 40.0, 36.0][lv]
 	Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, cord)]), Art.INK, 2.5)
@@ -408,6 +417,9 @@ static func lamp(ci: CanvasItem, level: int, t: float, light: bool = true) -> vo
 ## Trophy shelf on the wall (origin at its middle): 0 an empty plank ... 5 a
 ## glass cabinet of gold.
 static func trophy(ci: CanvasItem, level: int, t: float) -> void:
+	if clampi(level, 0, 5) == 0:
+		spot(ci, "trophy")
+		return
 	var lv := clampi(level, 0, 5)
 	var wood := Art.WOOD if lv < 4 else Color("6a3a22")
 	if lv == 5:
@@ -475,6 +487,9 @@ static func _books(ci: CanvasItem, base: Vector2) -> void:
 
 ## Potted plant: 0 an empty pot ... 5 a flowering tree in a gold pot.
 static func plant(ci: CanvasItem, level: int, t: float) -> void:
+	if clampi(level, 0, 5) == 0:
+		spot(ci, "plant")
+		return
 	var lv := clampi(level, 0, 5)
 	var sway := sin(t * 1.3) * 0.04
 	var pot: Color = [Color("c8704a"), Color("c8704a"), Color("e8e0d0"), Color("3aa6f0"), Color("2bb8b4"), Art.GOLD][lv]
@@ -670,3 +685,216 @@ static func collect_button(ci: CanvasItem, size: Vector2, label: String, amount:
 	else:
 		Art.text(ci, Vector2(0, fs * 0.36), label, fs, Art.WHITE, 5)
 	Art.pop(ci)
+
+
+# --- Build spots ------------------------------------------------------------------------------
+
+## An empty decor slot (level 0): a dashed outline of the piece to come
+## and a green "+" badge, so it reads as "build something here".
+static func spot(ci: CanvasItem, slot: String) -> void:
+	var b: Rect2 = BOX.get(slot, Rect2(-40, -80, 80, 80))
+	if slot == "lamp":
+		# A hook on the ceiling and a dashed shade under it.
+		Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, 40)]), Art.INK_SOFT, 2.5)
+		b = Rect2(-34, 44, 68, 44)
+	elif slot != "trophy":
+		Art.flat(ci, Art.ellipse_pts(Vector2(0, 0), Vector2(b.size.x * 0.42, 7), 18), Color(0, 0, 0, 0.12))
+	b = b.grow(-6.0)
+	var dash := Color(1, 1, 1, 0.75)
+	var x := b.position.x
+	while x < b.end.x - 4.0:
+		var w := minf(10.0, b.end.x - x)
+		Art.flat(ci, Art.rrect_pts(Rect2(x, b.position.y - 1.5, w, 3), 1.5), dash)
+		Art.flat(ci, Art.rrect_pts(Rect2(x, b.end.y - 1.5, w, 3), 1.5), dash)
+		x += 18.0
+	var y := b.position.y
+	while y < b.end.y - 4.0:
+		var h := minf(10.0, b.end.y - y)
+		Art.flat(ci, Art.rrect_pts(Rect2(b.position.x - 1.5, y, 3, h), 1.5), dash)
+		Art.flat(ci, Art.rrect_pts(Rect2(b.end.x - 1.5, y, 3, h), 1.5), dash)
+		y += 18.0
+	Art.flat(ci, Art.rrect_pts(b, 8), Color(1, 1, 1, 0.12))
+	plus_badge(ci, b.get_center(), 15.0)
+
+
+static func plus_badge(ci: CanvasItem, c: Vector2, r: float) -> void:
+	Art.t_circle(ci, c, r, Art.GREEN, 2.6, 0.5)
+	Art.flat(ci, Art.rrect_pts(Rect2(c.x - r * 0.55, c.y - r * 0.15, r * 1.1, r * 0.3), r * 0.12), Art.WHITE)
+	Art.flat(ci, Art.rrect_pts(Rect2(c.x - r * 0.15, c.y - r * 0.55, r * 0.3, r * 1.1), r * 0.12), Art.WHITE)
+
+
+## The accountant's empty chair before he is hired: a ghost in the seat.
+static func ghost(ci: CanvasItem) -> void:
+	var sil := Art.union([Art.circle_pts(Vector2(0, -66), 15, 18), Art.rrect_pts(Rect2(-14, -50, 28, 34), 10)])
+	Art.toon(ci, sil, Color(1, 1, 1, 0.35), 0.0, 0.0)
+	Art.polyline(ci, sil, Color(1, 1, 1, 0.8), 2.0, true)
+	Art.text(ci, Vector2(0, -58), "?", 18, Art.WHITE, 4)
+
+
+# --- Vault ------------------------------------------------------------------------------------
+
+const VAULT_R := 64.0
+const VAULT_C := Vector2(0, -74)
+
+
+## The round vault in the wall (origin on the floor under its middle): a
+## steel frame with bolts, the dark inside with shelves, the heavy door
+## swung open to the left and a brass name plate. The coins inside are
+## vault_coins (they change).
+static func vault(ci: CanvasItem, label: String) -> void:
+	var c := VAULT_C
+	Art.flat(ci, Art.circle_pts(c + Vector2(6, 8), VAULT_R + 20, 40), Color(Art.SHADE, 0.22))
+	Art.t_circle(ci, c, VAULT_R + 16, Color("8d94a6"), 3.0, 0.6)
+	Art.t_circle(ci, c, VAULT_R + 4, Color("5a5f7a"), 2.6, 0.0)
+	for k in 12:
+		Art.disc(ci, c + Vector2(VAULT_R + 10, 0).rotated(k * TAU / 12.0), 3.0, Color("cbd5e1"))
+	var inside := Art.circle_pts(c, VAULT_R, 40)
+	Art.flat(ci, inside, Color("2a2440"))
+	for y: float in [-34.0, 8.0]:
+		var sh := Art.clipped(Art.rrect_pts(Rect2(-VAULT_R, c.y + y, VAULT_R * 2.0, 6), 1), inside)
+		if not sh.is_empty():
+			Art.flat(ci, sh, Color("4a4560"))
+	Art.ring(ci, inside, Art.INK, 3.0)
+	# The open door, seen edge-on at the left.
+	var d := c + Vector2(-VAULT_R - 34, 2)
+	Art.t_rect(ci, Rect2(c.x - VAULT_R - 18, c.y - 30, 20, 12), 3, Color("5a5f7a"), 2.2, 0.2)
+	Art.t_rect(ci, Rect2(c.x - VAULT_R - 18, c.y + 18, 20, 12), 3, Color("5a5f7a"), 2.2, 0.2)
+	Art.t_ellipse(ci, d, Vector2(26, VAULT_R + 10), Color("aab4c6"), 3.0, 0.7)
+	Art.t_ellipse(ci, d + Vector2(4, 0), Vector2(18, VAULT_R - 4), Color("cbd5e1"), 2.2, 0.3)
+	Art.push(ci, d + Vector2(4, 0), 0.0, Vector2(0.4, 1.0))
+	Art.t_circle(ci, Vector2.ZERO, 22, Art.BRASS, 2.6, 0.4)
+	for k in 4:
+		Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(28, 0).rotated(k * PI / 4.0)]), Art.INK, 3.0)
+		Art.line_c(ci, PackedVector2Array([Vector2.ZERO, Vector2(-28, 0).rotated(k * PI / 4.0)]), Art.INK, 3.0)
+	Art.t_circle(ci, Vector2.ZERO, 7, Art.GOLD, 2.0, 0.3)
+	Art.pop(ci)
+	# Name plate.
+	var pr := Rect2(c.x - 48, c.y - VAULT_R - 46, 96, 26)
+	Art.t_rect(ci, pr, 8, Art.GOLD, 2.8, 0.5)
+	Art.coin(ci, Vector2(pr.position.x + 14, pr.get_center().y), 8)
+	if label != "":
+		Art.text(ci, Vector2(pr.get_center().x + 8, pr.end.y - 7), label, 16, Art.INK, 0, true)
+
+
+## Coins inside the vault for fill 0..1: a heap rising in the round
+## opening; from 0.55 the coins spill out over the sill.
+static func vault_coins(ci: CanvasItem, fill: float, t: float) -> void:
+	var f := Props._q(fill, 12)
+	var c := VAULT_C
+	if f <= 0.0:
+		return
+	var key := hash(["vault_coins", f])
+	if not Art.cache_begin(ci, key):
+		var inside := Art.circle_pts(c, VAULT_R - 2, 40)
+		var h := lerpf(10.0, VAULT_R * 1.85, minf(1.0, f * 1.25))
+		var base := c.y + VAULT_R
+		var heap := Art.smooth_pts(PackedVector2Array([Vector2(-VAULT_R - 10, base + 4), Vector2(-VAULT_R * 0.75, base - h * 0.55), Vector2(-VAULT_R * 0.3, base - h),
+				Vector2(VAULT_R * 0.3, base - h + 4), Vector2(VAULT_R * 0.75, base - h * 0.5), Vector2(VAULT_R + 10, base + 4)]), 4)
+		var inner := Art.clipped(heap, inside)
+		if not inner.is_empty():
+			Art.toon(ci, inner, Art.GOLD, 0.0, 0.8)
+		var n := 4 + int(f * 16.0)
+		for i in n:
+			var u := fmod(i * 0.618, 1.0)
+			var v := fmod(i * 0.38 + 0.2, 1.0)
+			var p := Vector2((u * 2.0 - 1.0) * VAULT_R * 0.75 * (1.0 - v * 0.5), base - 6.0 - v * h * 0.85)
+			if p.distance_to(c) < VAULT_R - 8.0:
+				Art.push(ci, p, 0.0, Vector2(1.0, 0.55))
+				Art.coin(ci, Vector2.ZERO, 7.0 + (i % 3))
+				Art.pop(ci)
+		if f >= 0.3:
+			# Bags and bars on the shelves.
+			Art.push(ci, c + Vector2(-34, -34))
+			Chars.item(ci, "coinbag", Vector2(0, -28), Art.GOLD)
+			Art.pop(ci)
+			for k in mini(3, 1 + int((f - 0.3) * 6.0)):
+				var bp := c + Vector2(14 + k * 16, -34)
+				Art.toon(ci, PackedVector2Array([bp + Vector2(-8, 0), bp + Vector2(8, 0), bp + Vector2(6, -7), bp + Vector2(-6, -7)]), Color("ffd86a"), 2.0, 0.5)
+		if f >= 0.55:
+			# Spilling out over the sill onto the floor.
+			var w := lerpf(40.0, 110.0, (f - 0.55) / 0.45)
+			var sh := lerpf(14.0, 40.0, (f - 0.55) / 0.45)
+			var spill := Art.smooth_pts(PackedVector2Array([Vector2(-w, 6), Vector2(-w * 0.6, -sh * 0.5), Vector2(-w * 0.2, -sh), Vector2(w * 0.25, -sh * 0.9),
+					Vector2(w * 0.65, -sh * 0.4), Vector2(w, 6)]), 4)
+			Art.toon(ci, spill, Art.GOLD, 3.0, 0.7)
+			for i in 6 + int(f * 8.0):
+				var u := fmod(i * 0.618 + 0.1, 1.0)
+				Art.push(ci, Vector2((u * 2.0 - 1.0) * w * 0.75, -4.0 - fmod(i * 0.37, 1.0) * sh * 0.7), 0.0, Vector2(1.0, 0.55))
+				Art.coin(ci, Vector2.ZERO, 7.0 + (i % 2))
+				Art.pop(ci)
+		if f >= 0.75:
+			# Coin stacks beside the vault.
+			for side: float in [-1.0, 1.0]:
+				for j in 2:
+					var sx := side * (VAULT_R + 30.0 + j * 18.0)
+					var hgt := 3 + int((f - 0.75) * 24.0) - j * 2
+					for k in maxi(1, hgt):
+						Art.push(ci, Vector2(sx, -4.0 - k * 6.0), 0.0, Vector2(1.0, 0.45))
+						Art.t_circle(ci, Vector2.ZERO, 11, Art.GOLD if k % 2 == 0 else Color("ffd86a"), 2.0, 0.0)
+						Art.pop(ci)
+		if f >= 0.9:
+			var cr := Vector2(0, c.y + VAULT_R - lerpf(10.0, VAULT_R * 1.85, minf(1.0, f * 1.25)) - 4.0)
+			Art.toon(ci, PackedVector2Array([cr + Vector2(-16, 6), cr + Vector2(-18, -12), cr + Vector2(-8, -4), cr + Vector2(0, -16),
+					cr + Vector2(8, -4), cr + Vector2(18, -12), cr + Vector2(16, 6)]), Art.GOLD, 2.4, 0.4)
+			Art.disc(ci, cr + Vector2(0, -2), 2.5, Art.RED)
+		Art.cache_end(ci, key)
+	# Twinkles.
+	var ph := fposmod(t * 0.9, 1.0)
+	Art.dot(ci, c + Vector2(-20, 30), 3.5 * sin(ph * PI), Color(1, 1, 1, 0.9))
+	Art.dot(ci, c + Vector2(26, 44), 3.0 * sin(fposmod(ph + 0.5, 1.0) * PI), Color(1, 1, 1, 0.9))
+
+
+# --- Wall pieces ------------------------------------------------------------------------------
+
+## A window onto the current world (r = the glass), with curtains whose
+## cloth follows the wallpaper level.
+static func window_view(ci: CanvasItem, r: Rect2, world: String, level: int) -> void:
+	var lk := FactoryArt.look(world)
+	Art.t_rect(ci, r.grow(9), 8, Color("f4ead6") if level < 4 else Art.GOLD, 3.0, 0.4)
+	FactoryArt.scene(ci, r, lk)
+	Art.flat(ci, PackedVector2Array([r.position + Vector2(r.size.x * 0.15, 0), r.position + Vector2(r.size.x * 0.32, 0),
+			r.position + Vector2(r.size.x * 0.1, r.size.y), r.position + Vector2(0, r.size.y)]), Color(1, 1, 1, 0.16))
+	Art.line_c(ci, PackedVector2Array([Vector2(r.get_center().x, r.position.y), Vector2(r.get_center().x, r.end.y)]), Color("f4ead6"), 5.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(r.position.x, r.get_center().y), Vector2(r.end.x, r.get_center().y)]), Color("f4ead6"), 5.0)
+	Art.ring(ci, Art.rrect_pts(r, 3), Art.INK, 3.0)
+	Art.t_rect(ci, Rect2(r.position.x - 16, r.end.y + 8, r.size.x + 32, 10), 4, Color("f4ead6"), 2.6, 0.3)
+	# Curtains.
+	var cloth: Color = [Color("c9b8a0"), Color("ff8a5c"), Color("5cc8a8"), Color("5a8ae0"), Color("2bb8b4"), Color("b0243a")][clampi(level, 0, 5)]
+	Art.t_rect(ci, Rect2(r.position.x - 26, r.position.y - 22, r.size.x + 52, 8), 4, Art.WOOD_DARK if level < 5 else Art.GOLD, 2.4, 0.2)
+	for side: float in [-1.0, 1.0]:
+		var x0 := r.position.x - 22.0 if side < 0 else r.end.x + 22.0
+		var x1 := x0 - side * r.size.x * 0.22
+		var pts := Art.smooth_pts(PackedVector2Array([Vector2(x0, r.position.y - 18), Vector2(x1, r.position.y - 18), Vector2(lerpf(x0, x1, 0.5), r.get_center().y),
+				Vector2(lerpf(x0, x1, 0.75), r.end.y + 20), Vector2(x0, r.end.y + 24)]), 3)
+		Art.toon(ci, pts, cloth, 2.6, 0.6)
+		Art.t_rect(ci, Rect2(lerpf(x0, x1, 0.4) - 8, r.get_center().y - 3, 16, 7), 3, Art.GOLD, 1.8, 0.0)
+
+
+## Soft light from a window down onto the floor.
+static func window_light(ci: CanvasItem, r: Rect2, floor_y: float) -> void:
+	var c := Color(1.0, 0.95, 0.75, 0.16)
+	var clear := Color(1.0, 0.95, 0.75, 0.0)
+	var dx := (floor_y - r.end.y) * 0.3
+	Art.grad(ci, PackedVector2Array([Vector2(r.position.x + 4, r.end.y), Vector2(r.end.x - 4, r.end.y),
+			Vector2(r.end.x + dx + 30, floor_y + 70), Vector2(r.position.x + dx - 10, floor_y + 70)]), PackedColorArray([c, c, clear, clear]))
+
+
+static func clock(ci: CanvasItem) -> void:
+	Art.t_circle(ci, Vector2.ZERO, 24, Art.WOOD, 3.0, 0.4)
+	Art.t_circle(ci, Vector2.ZERO, 19, Art.CREAM, 2.0, 0.0)
+	for k in 12:
+		Art.disc(ci, Vector2(0, -15).rotated(k * TAU / 12.0), 2.0 if k % 3 == 0 else 1.3, Art.INK_SOFT)
+
+
+static func clock_hands(ci: CanvasItem, t: float) -> void:
+	FactoryArt.clock_hands(ci, t)
+
+
+## A soft dark edge around the room (cozy vignette), w x h.
+static func vignette(ci: CanvasItem, w: float, h: float) -> void:
+	var d := Color(Art.SHADE, 0.22)
+	var c := Color(Art.SHADE, 0.0)
+	var e := minf(w, h) * 0.12
+	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(e, 0), Vector2(e, h), Vector2(0, h)]), PackedColorArray([d, c, c, d]))
+	Art.grad(ci, PackedVector2Array([Vector2(w - e, 0), Vector2(w, 0), Vector2(w, h), Vector2(w - e, h)]), PackedColorArray([c, d, d, c]))
+	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, e), Vector2(0, e)]), PackedColorArray([d, d, c, c]))
