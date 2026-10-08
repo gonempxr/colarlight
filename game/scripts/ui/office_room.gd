@@ -57,6 +57,8 @@ var _inset_top := 0.0
 var _inset_bottom := 0.0
 ## name -> [position (logical), scale]
 var _at: Dictionary = {}
+## The window onto the world (logical).
+var _window := Rect2()
 var _fill := 0.0
 var _drops: Array[Dictionary] = []
 var _fx: Array[Dictionary] = []
@@ -216,37 +218,44 @@ func _layout() -> void:
 	if _wide:
 		var s := 0.8
 		_at = {
-			"wardrobe": [Vector2(X + 52, wb + 14), s],
-			"board": [Vector2(X + W * 0.17, wb - 96), 0.78],
-			"sofa": [Vector2(X + W * 0.32, wb + 16), s],
-			"porthole": [Vector2(X + W * 0.43, wb - 120), 0.8],
-			"lamp": [Vector2(X + W * 0.32, 0), 0.8],
-			"chute": [Vector2(X + W * 0.53, 0), 1.0],
-			"pile": [Vector2(X + W * 0.53, wb + 88), s],
-			"player": [Vector2(X + W * 0.645, wb + 104), 0.8],
-			"trophy": [Vector2(X + W * 0.64, wb - 106), 0.75],
-			"aquarium": [Vector2(X + W * 0.77, wb + 16), s],
-			"desk": [Vector2(X + W * 0.865, wb + 90), s],
-			"plant": [Vector2(X + W - 34, wb + 110), s],
-			"collect": [Vector2(X + W * 0.53 - 150, wb + 96), 0.9],
+			"wardrobe": [Vector2(X + W * 0.05, wb + 12), s],
+			"sofa": [Vector2(X + W * 0.2, wb + 16), s],
+			"board": [Vector2(X + W * 0.2, wb - 98), 0.7],
+			"pile": [Vector2(X + W * 0.47, wb + 8), 0.64],
+			"aquarium": [Vector2(X + W * 0.77, wb + 14), s],
+			"trophy": [Vector2(X + W * 0.885, wb - 116), 0.72],
+			"plant": [Vector2(X + W * 0.965, wb + 104), s],
+			"lamp": [Vector2(X + W * 0.335, 0), 0.8],
+			"clock": [Vector2(X + W * 0.118, 64), 0.7],
+			"chute": [Vector2(X + W * 0.47, 0), 1.0],
+			"desk": [Vector2(X + W * 0.3, wb + 108), s],
+			"player": [Vector2(X + W * 0.63, wb + 112), 0.8],
+			"collect": [Vector2(X + W * 0.47, wb + 66), 0.9],
 		}
+		var wtop := 40.0
+		_window = Rect2(X + W * 0.575, wtop, W * 0.085, clampf(wb - 64.0 - wtop, 60.0, 170.0))
 	else:
-		var big := clampf(W / 520.0, 1.0, 1.3)
+		var big := clampf(minf(W / 520.0, _hall.y / 760.0), 0.86, 1.3)
+		var front := minf(196.0 * big, _hall.y - wb - 44.0)
 		_at = {
-			"wardrobe": [Vector2(X + 56 * big, wb + 14), big],
-			"board": [Vector2(X + W * 0.40, wb - 250), big],
-			"sofa": [Vector2(X + W * 0.40, wb + 18), big],
-			"porthole": [Vector2(X + W * 0.86, wb - 340), big],
-			"lamp": [Vector2(X + W * 0.13, 0), big],
-			"chute": [Vector2(X + W * 0.665, 0), 1.0],
-			"pile": [Vector2(X + W * 0.665, wb + 150), big],
-			"player": [Vector2(X + W * 0.9, wb + 176), big],
-			"trophy": [Vector2(X + W * 0.86, wb - 196), big * 0.8],
-			"aquarium": [Vector2(X + W * 0.86, wb + 18), big * 0.9],
-			"desk": [Vector2(X + W * 0.27, wb + 122), big * 0.95],
-			"plant": [Vector2(X + 38 * big, wb + 222), big * 0.9],
-			"collect": [Vector2(X + W * 0.665, wb + 186), big],
+			"wardrobe": [Vector2(X + W * 0.1 + 6.0, wb + 12), big * 0.95],
+			"trophy": [Vector2(X + W * 0.11 + 4.0, wb - 262 * big), big * 0.72],
+			"sofa": [Vector2(X + W * 0.37, wb + 16), big * 0.92],
+			"board": [Vector2(X + W * 0.37, wb - 196 * big), big * 0.95],
+			"pile": [Vector2(X + W * 0.63, wb + 8), big * 0.88],
+			"aquarium": [Vector2(X + W * 0.915, wb + 14), big * 0.82],
+			"lamp": [Vector2(X + W * 0.2, 0), big * 0.9],
+			"clock": [Vector2(X + W * 0.53, 104), big],
+			"chute": [Vector2(X + W * 0.63, 0), 1.0],
+			"desk": [Vector2(X + W * 0.3, wb + front), big * 0.95],
+			"player": [Vector2(X + W * 0.87, wb + front), big],
+			"plant": [Vector2(X + maxf(W * 0.06, 36.0 * big), wb + front + 18.0 * big), big * 0.85],
+			"collect": [Vector2(X + W * 0.63, wb + 74 * big), big],
 		}
+		var wtop := 74.0
+		var ww := minf(W * 0.16, 150.0)
+		var wx := X + W - ww - 42.0
+		_window = Rect2(wx, wtop, ww, clampf(wb - 175.0 * big - wtop, 70.0, 190.0))
 	_bg_sig = ""
 	queue_redraw()
 
@@ -372,11 +381,11 @@ func collect() -> float:
 		amount = float(gs.call("collect_vault"))
 	if amount <= 0.0:
 		_play("tap")
-		_fx.append({"kind": "text", "p": _p("pile") + Vector2(0, -70) * _s("pile"), "t0": _t, "s": tr("VAULT_EMPTY"), "c": Art.WHITE})
+		_fx.append({"kind": "text", "p": _vault_top(), "t0": _t, "s": tr("VAULT_EMPTY"), "c": Art.WHITE})
 		return 0.0
 	_rich_until = _t + 1.6
 	_play("coins")
-	var top := _p("pile") + Vector2(0, -60) * _s("pile")
+	var top := _vault_top()
 	_fx.append({"kind": "text", "p": top + Vector2(0, -30), "t0": _t, "s": "+" + NumFormat.short(amount), "c": Art.GOLD})
 	for i in 10:
 		var a := randf_range(-PI * 0.9, -PI * 0.1)
@@ -428,16 +437,28 @@ func _paint_bg(ci: CanvasItem) -> void:
 	Art.pop(ci)
 	var fl := decor("floor")
 	if fl in [2, 4, 5]:
-		var c := Vector2(_p("pile").x if not _wide else _cx + _cw * 0.45, _wall + (_hall.y - _wall) * 0.55)
-		OfficeArt.rug(ci, c, Vector2(minf(_cw * 0.3, 190.0), (_hall.y - _wall) * 0.22), fl)
-	Art.push(ci, _p("porthole"), 0.0, Vector2.ONE * _s("porthole"))
-	OfficeArt.porthole(ci, world_id())
+		var c := Vector2(_p("desk").x + (_p("player").x - _p("desk").x) * 0.5, _wall + (_hall.y - _wall) * 0.6)
+		OfficeArt.rug(ci, c, Vector2(minf(_cw * 0.32, 220.0), (_hall.y - _wall) * 0.24), fl)
+	OfficeArt.window_view(ci, _window, world_id(), decor("wallpaper"))
+	OfficeArt.window_light(ci, _window, _wall)
+	Art.push(ci, _p("clock"), 0.0, Vector2.ONE * _s("clock"))
+	OfficeArt.clock(ci)
+	Art.pop(ci)
+	# The pipe from the factory down into the vault, and the vault.
+	var vs := _s("pile")
+	var vtop := _p("pile") + Vector2(0, OfficeArt.VAULT_C.y - OfficeArt.VAULT_R - 46.0) * vs
+	OfficeArt.chute(ci, 10.0, Vector2(_p("chute").x, vtop.y + 4.0), 0.0)
+	Art.push(ci, _p("pile"), 0.0, Vector2.ONE * vs)
+	OfficeArt.vault(ci, tr("VAULT"))
+	Art.pop(ci)
+	Art.push(ci, Vector2(0, -_inset_top / _k))
+	OfficeArt.vignette(ci, _hall.x, full_h)
 	Art.pop(ci)
 	Art.pop(ci)
 
 
 func _sig() -> String:
-	return "%s|%s|%s|%d|%d" % [world_id(), size, _k, decor("wallpaper"), decor("floor")]
+	return "%s|%s|%s|%d|%d|%s" % [world_id(), size, _k, decor("wallpaper"), decor("floor"), TranslationServer.get_locale()]
 
 
 func _bounce(name: String) -> Vector2:
@@ -480,25 +501,32 @@ func _draw() -> void:
 	_push("aquarium")
 	OfficeArt.aquarium(self, decor("aquarium"), _t)
 	Art.pop(self)
-	# Chute and pile.
-	var pile_top := _p("pile") + Vector2(0, -lerpf(14.0, 92.0, Props._q(_fill, 12))) * _s("pile")
-	var mouth := Vector2(_p("chute").x, pile_top.y - (60.0 if not _wide else 40.0))
-	mouth.y = minf(mouth.y, _wall + 10.0)
-	OfficeArt.chute(self, 10.0, mouth, _flap)
+	# Coins falling from the pipe into the vault, and the vault's heap.
+	var vs := _s("pile")
+	var mouth := _vault_mouth()
+	var hole := _p("pile") + (OfficeArt.VAULT_C + Vector2(0, OfficeArt.VAULT_R * 0.35)) * vs
+	if _flap > 0.0:
+		Props.halo(self, mouth, 22.0 * vs * _flap, Color(1.0, 0.85, 0.3, 0.5 * _flap))
 	for d: Dictionary in _drops:
 		var a := (_t - float(d["t0"])) / DROP_SEC
 		if a < 0.0:
 			continue
-		var p := mouth.lerp(pile_top + Vector2(float(d["x"]), 0), a * a)
-		Art.push(self, p, 0.0, Vector2(1.0, 0.6 + 0.4 * absf(sin(a * 9.0))))
-		Art.coin(self, Vector2.ZERO, 9.0 * _s("pile"))
+		var p := mouth.lerp(hole + Vector2(float(d["x"]), 0) * vs, a * a)
+		Art.push(self, p, 0.0, Vector2(absf(cos(a * 9.0)) * 0.7 + 0.3, 1.0) * vs)
+		Art.coin(self, Vector2.ZERO, 9.0)
 		Art.pop(self)
 	var squash := 0.0
 	if _t - _press < 0.3:
-		squash = sin((_t - _press) / 0.3 * PI) * 0.12
+		squash = sin((_t - _press) / 0.3 * PI) * 0.06
 	_push("pile", Vector2(1.0 + squash, 1.0 - squash))
-	OfficeArt.pile(self, _fill, _t)
+	OfficeArt.vault_coins(self, _fill, _t)
 	Art.pop(self)
+	# Clock hands.
+	Art.push(self, _p("clock"), 0.0, Vector2.ONE * _s("clock"))
+	OfficeArt.clock_hands(self, _t)
+	Art.pop(self)
+	# Empty decor slots breathe so they read as "build here".
+	_draw_spots()
 	# Front row: desk with the accountant, the player, the plant.
 	_draw_desk()
 	_draw_player()
@@ -520,6 +548,31 @@ func _draw() -> void:
 	Art.pop(self)
 
 
+## Where the pipe from the factory ends, over the vault.
+func _vault_mouth() -> Vector2:
+	return Vector2(_p("chute").x, _p("pile").y + (OfficeArt.VAULT_C.y - OfficeArt.VAULT_R - 46.0) * _s("pile") + 4.0)
+
+
+## The top of the vault's opening, where collected coins fly from.
+func _vault_top() -> Vector2:
+	return _p("pile") + (OfficeArt.VAULT_C + Vector2(0, -OfficeArt.VAULT_R * 0.4)) * _s("pile")
+
+
+## A soft pulsing ring over the empty (level 0) decor slots.
+func _draw_spots() -> void:
+	var ph := Props._q(0.5 + 0.5 * sin(_t * 3.0), 8)
+	for slot: String in ["sofa", "aquarium", "lamp", "trophy", "plant"]:
+		if decor(slot) != 0 or not _at.has(slot):
+			continue
+		var b: Rect2 = OfficeArt.BOX[slot]
+		var c := b.get_center()
+		if slot == "lamp":
+			c = Vector2(0, 66)
+		var sc := _s(slot)
+		var at := _p(slot) + c * sc
+		Art.ring(self, Art.circle_pts(at, (17.0 + ph * 9.0) * sc, 24), Color(0.55, 1.0, 0.6, 0.7 * (1.0 - ph)), 3.0)
+
+
 func _draw_desk() -> void:
 	var lv := decor("desk")
 	var dp := _p("desk")
@@ -531,20 +584,40 @@ func _draw_desk() -> void:
 	if has_accountant():
 		var since := _t - _acct_at
 		var busy := since < 1.4
-		var stamp := absf(sin(_t * 6.0)) if busy else 0.0
 		var look := Chars.look(0, "short", 4, "none", "glasses", 0, "vest")
-		Chars.person(self, Vector2(-30, -40), 0.86, 1.0, look, {"emotion": "rich" if busy else "focus",
-				"blink": Chars.blinking(_t, 3.0), "arm_r": 1.6 - stamp * 0.8, "arm_l": 0.9, "hold": "clipboard" if not busy else "coinbag", "bob": 0.0})
+		var pose := {"blink": Chars.blinking(_t, 3.0), "bob": 0.0}
+		if busy:
+			# Stamping the books.
+			var stamp := absf(sin(snappedf(since, 1.0 / 30.0) * 8.0))
+			pose.merge({"emotion": "rich", "arm_r": 1.8 - stamp * 0.9, "arm_l": 0.9, "hold": "coinbag"})
+		else:
+			# Typing on the calculator, a glance up now and then.
+			var k := snappedf(_t, 1.0 / 16.0)
+			pose.merge({"emotion": "focus", "arm_r": 1.25 + absf(sin(k * 11.0)) * 0.25, "arm_l": 1.15 + absf(cos(k * 9.0)) * 0.25})
+		Chars.person(self, Vector2(-30, -40), 0.86, 1.0, look, pose)
+	else:
+		Art.push(self, Vector2(-30, -6))
+		OfficeArt.ghost(self)
+		Art.pop(self)
 	OfficeArt.desk(self, lv, _t)
 	Art.pop(self)
-	# The bag of coins hops from the pile to the desk.
+	# The bag of coins hops from the vault to the desk.
 	if has_accountant():
 		var a := (_t - _acct_at) / 0.6
 		if a >= 0.0 and a <= 1.0:
-			var from := _p("pile") + Vector2(0, -40) * _s("pile")
+			var from := _vault_top()
 			var to := dp + Vector2(10, -90) * ds
 			var p := from.lerp(to, a) + Vector2(0, -sin(a * PI) * 60.0)
 			Chars.item(self, "coinbag", p, Art.GOLD)
+
+
+func _pet() -> String:
+	if preview.has("pet"):
+		return str(preview["pet"])
+	var pr := _pr()
+	if pr and pr.has_method("equipped_art"):
+		return str(pr.call("equipped_art", "pet"))
+	return ""
 
 
 func _draw_player() -> void:
@@ -554,16 +627,35 @@ func _draw_player() -> void:
 	var hop := 10.0 * sin(since / 0.5 * PI) if since < 0.5 else 0.0
 	var rich := _t < _rich_until
 	var wave := since < 1.2
-	var emo := "rich" if rich else ("joy" if wave else ("happy" if _fill < 0.6 else "wow"))
-	var arm_r := 2.7 + sin(_t * 10.0) * 0.4 if wave else (2.4 if rich else 0.3)
-	var arm_l := -2.4 if rich else -0.2
-	var pose := {"emotion": emo, "blink": Chars.blinking(_t, 9.0), "arm_r": arm_r, "arm_l": arm_l, "bob": 0.0}
+	# Idle life: a cycle of standing, a wave, and a cheer when the vault is full.
+	var cyc := fmod(_t, 11.0)
+	var mode := "idle"
+	if rich:
+		mode = "collect"
+	elif wave or (cyc > 8.0 and cyc < 9.4):
+		mode = "wave"
+	elif _fill >= 0.85 and cyc > 4.0 and cyc < 5.6:
+		mode = "cheer"
+	var emo := "rich" if rich else ("joy" if mode != "idle" else ("happy" if _fill < 0.6 else "wow"))
+	var facing := -1.0 if _p("pile").x < pp.x else 1.0
 	var at := pp - Vector2(0, hop * ps)
+	Art.flat(self, Art.ellipse_pts(pp + Vector2(0, 2) * ps, Vector2(30, 7) * ps, 16), Color(0, 0, 0, 0.14))
 	if _chars.has_method("player"):
-		var pp2 := {"pose": "collect" if rich else ("wave" if wave else "idle"), "t": _t, "emotion": emo, "facing": -1.0}
+		var pp2 := {"pose": mode, "t": _t, "emotion": emo, "facing": facing, "blink": Chars.blinking(_t, 9.0)}
 		_chars.call("player", self, at, 0.95 * ps, _avatar(), _outfit(), pp2)
 	else:
-		Chars.person(self, at, 0.95 * ps, -1.0, _avatar(), pose)
+		var arm_r := 2.7 + sin(_t * 10.0) * 0.4 if mode == "wave" else (2.4 if rich else 0.3)
+		Chars.person(self, at, 0.95 * ps, facing, _avatar(), {"emotion": emo, "blink": Chars.blinking(_t, 9.0), "arm_r": arm_r, "arm_l": -0.2, "bob": 0.0})
+	# The pet floats beside the player.
+	var pet := _pet()
+	if pet != "":
+		var side := -facing
+		var pa := pp + Vector2(side * 48.0, -62.0 + sin(_t * 2.6) * 5.0) * ps
+		if pa.x > _cx + _cw - 24.0 or pa.x < _cx + 24.0:
+			pa.x = pp.x - side * 48.0 * ps
+		Art.push(self, pa, 0.0, Vector2.ONE * 1.15 * ps)
+		PetArt.draw(self, pet, _t, facing, rich)
+		Art.pop(self)
 
 
 ## The gear board: the workers' gear level now, the next one beside it,
