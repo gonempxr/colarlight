@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ct5cp03xtyx7j"
+
+[deps]
+
+files=["res://i18n/switch.en.translation", "res://i18n/switch.ru.translation", "res://i18n/switch.es.translation", "res://i18n/switch.zh.translation"]
+
+source_file="res://i18n/switch.csv"
+dest_files=["res://i18n/switch.en.translation", "res://i18n/switch.ru.translation", "res://i18n/switch.es.translation", "res://i18n/switch.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

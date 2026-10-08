@@ -284,7 +284,7 @@ const DECOR_PRICES: Array[int] = [15, 30, 50, 80, 120]
 
 # --- Quests ---------------------------------------------------------------------
 ## kind -> which event counts. Amounts scale with how far the player is.
-const QUEST_KINDS: Array[String] = ["upgrade", "tap", "earn", "hire", "open", "puzzle", "chest", "upgrade_stage"]
+const QUEST_KINDS: Array[String] = ["upgrade", "tap", "earn", "hire", "open", "puzzle", "chest", "upgrade_stage", "mine"]
 const QUEST_SLOTS := 3
 
 # --- Daily gifts ----------------------------------------------------------------

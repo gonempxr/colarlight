@@ -187,11 +187,15 @@ static func quest_text(q: Dictionary) -> String:
 			return t("QUEST_PUZZLE")
 		"chest":
 			return t("QUEST_CHEST") if goal <= 1 else t("QUEST_CHESTS") % goal
+		"mine":
+			return t("QUEST_MINE") % [stage_name(q["key"]), goal]
 	return ""
 
 
 static func quests(m: Modal, main: Node) -> void:
 	m.title(t("QUESTS"))
+	# Quests belong to the world being played (they swap with it).
+	m.text(t("QUESTS_WORLD") % WorldLook.name_of(GameState.location), 23, Art.INK)
 	m.text(t("QUESTS_HINT"), 21, Art.INK_SOFT)
 	if Progress.quests.is_empty():
 		m.text(t("QUESTS_EMPTY"), 22)
@@ -202,7 +206,15 @@ static func quests(m: Modal, main: Node) -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 12)
 		c.add_child(h)
-		h.add_child(icon(QUEST_ICONS.get(q["kind"], "quests"), 56))
+		if q["kind"] == "mine":
+			# This world's own ore from that site.
+			var depth := GameState.depth_index(str(q["key"]))
+			var ore := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float):
+				OreArt.chunk(ci, s / 2.0 + Vector2(0, 2), 20.0, depth, -0.2), Vector2(56, 56))
+			ore.custom_minimum_size = Vector2(56, 56)
+			h.add_child(ore)
+		else:
+			h.add_child(icon(QUEST_ICONS.get(q["kind"], "quests"), 56))
 		var mid := VBoxContainer.new()
 		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mid.add_theme_constant_override("separation", 6)

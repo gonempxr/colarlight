@@ -1,0 +1,11 @@
+keys,en,ru,es,zh
+MAP_HERE,You are here,Ты здесь,Estás aquí,你在这里
+MAP_GO_TAG,Go here?,Сюда?,¿Ir aquí?,去这里？
+MAP_GO,Go to %s,Отправиться: %s,Ir a %s,前往%s
+MAP_WAITING,Your mine there is waiting for you. Its helpers keep working while you are away!,"Твоя шахта там ждёт тебя. Помощники работают, пока тебя нет!",Tu mina te espera allí. ¡Sus ayudantes trabajan mientras no estás!,那里的矿场在等你。你不在的时候，帮手们也在工作！
+MAP_WALLET,Coins there,Монеты там,Monedas allí,那里的金币
+MAP_GATE_FAR,"New worlds open from %s, your newest world.",Новые миры открываются из самого нового мира: %s.,"Los mundos nuevos se abren desde %s, tu mundo más nuevo.",新世界要从你最新的世界“%s”开启。
+SWITCH_WELCOME,You are in %s now!,Ты в мире «%s»!,¡Ahora estás en %s!,你来到了%s！
+SWITCH_EARNED,Helpers earned %s while you were away,"Пока тебя не было, помощники заработали %s","Mientras no estabas, los ayudantes ganaron %s",你不在时，帮手们赚了%s
+QUEST_MINE,Bring up %s %d times,Добудь «%s» %d раз,Extrae %s %d veces,开采%s %d 次
+QUESTS_WORLD,Quests of %s,Задания мира «%s»,Misiones de %s,%s的任务

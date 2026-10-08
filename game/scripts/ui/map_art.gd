@@ -819,6 +819,22 @@ static func soon_tag(ci: CanvasItem, at: Vector2, label: String, t: float, size:
 	Art.pop(ci)
 
 
+## A bobbing speech-bubble tag pointing down at an island: "You are here"
+## (gold) over the active world, "Go?" style (green) over a picked one.
+static func here_tag(ci: CanvasItem, at: Vector2, label: String, t: float, fill: Color = Art.GOLD, size: int = 28) -> void:
+	var font := UiTheme.heavy_font()
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 44.0
+	var bob := 0.0 if still else snappedf(sin(t * 2.6) * 4.0, 0.5)
+	var h := size * 1.6
+	Art.push(ci, at + Vector2(0, bob))
+	Art.toon(ci, PackedVector2Array([Vector2(-14, h * 0.5 - 4), Vector2(14, h * 0.5 - 4), Vector2(0, h * 0.5 + 16)]), fill, 3.5, 0.3)
+	Art.t_rect(ci, Rect2(-w / 2.0, -h / 2.0, w, h), h * 0.5, fill, 3.5, 0.5)
+	Art.t_rect(ci, Rect2(-w / 2.0 + 8, -h / 2.0 + 5, w - 16, h * 0.28), h * 0.14, Color(1, 1, 1, 0.35), 0.0, 0.0)
+	var dark := fill.get_luminance() < 0.55
+	Art.text(ci, Vector2(0, size * 0.36), label, size, Art.WHITE if dark else Art.INK, 7 if dark else 0)
+	Art.pop(ci)
+
+
 ## Planted flag on a finished island.
 const FLAG_AT := {"ocean": Vector2(-150, 12), "volcano": Vector2(-168, 30), "acid": Vector2(-150, 20), "moon": Vector2(-150, 22)}
 
