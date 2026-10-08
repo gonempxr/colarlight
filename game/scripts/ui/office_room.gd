@@ -252,12 +252,72 @@ func _layout() -> void:
 			"plant": [Vector2(X + maxf(W * 0.06, 36.0 * big), wb + front + 18.0 * big), big * 0.85],
 			"collect": [Vector2(X + W * 0.63, wb + 74 * big), big],
 		}
+		_unclutter_tall(X, W)
 		var wtop := 74.0
 		var ww := minf(W * 0.16, 150.0)
 		var wx := X + W - ww - 42.0
 		_window = Rect2(wx, wtop, ww, clampf(wb - 175.0 * big - wtop, 70.0, 190.0))
 	_bg_sig = ""
 	queue_redraw()
+
+
+## Widest drawing of each back-row piece (at its biggest level), in its own
+## units: [left, right] of its origin. Measured once.
+static var _extent := {}
+
+
+static func _piece_extent(name: String) -> Vector2:
+	if _extent.has(name):
+		return _extent[name]
+	Art.measure_begin()
+	match name:
+		"sofa":
+			OfficeArt.sofa(null, 5)
+		"aquarium":
+			OfficeArt.aquarium(null, 5, 0.0)
+		"wardrobe":
+			OfficeArt.wardrobe(null, 0.0, Chars.OUTFITS[0])
+	var r := Art.measure_end()
+	_extent[name] = Vector2(-r.position.x, r.end.x)
+	return _extent[name]
+
+
+## Narrow phones: the sofa and the aquarium stand clear of the vault (its
+## open door on the left, the full vault's coin stacks on both sides),
+## moving aside and, if the wall is too short, getting a bit smaller.
+func _unclutter_tall(X: float, W: float) -> void:
+	const GAP := 8.0
+	var vs := _s("pile")
+	var vx := _p("pile").x
+	# The door reaches ~124 left of the vault's middle, the coin stacks ~122
+	# right of it (OfficeArt.vault, vault_coins).
+	var vault_l := vx - 126.0 * vs - GAP
+	var vault_r := vx + 124.0 * vs + GAP
+	var wr := _p("wardrobe").x + _piece_extent("wardrobe").y * _s("wardrobe") + GAP
+	_fit_between("sofa", wr, vault_l, true)
+	_fit_between("aquarium", vault_r, X + W - 6.0, false)
+
+
+## Keeps a back-row piece between two x limits: slides it in, and shrinks
+## it (to 70% at most) when the gap is narrower than the piece. The vault's
+## side (`hi` for the sofa, `lo` for the aquarium) always stays clear.
+func _fit_between(name: String, lo: float, hi: float, clear_hi: bool) -> void:
+	var e := _piece_extent(name)
+	var sc := _s(name)
+	var room := hi - lo
+	if room <= 1.0:
+		return
+	var w := (e.x + e.y) * sc
+	if w > room:
+		sc = maxf(sc * 0.7, room / (e.x + e.y))
+	var x: float = _p(name).x
+	if clear_hi:
+		x = maxf(minf(x, hi - e.y * sc), lo + e.x * sc)
+		x = minf(x, hi - e.y * sc)
+	else:
+		x = minf(maxf(x, lo + e.x * sc), hi - e.y * sc)
+		x = maxf(x, lo + e.x * sc)
+	_at[name] = [Vector2(x, _p(name).y), sc]
 
 
 func _p(name: String) -> Vector2:
