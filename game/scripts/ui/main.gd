@@ -1060,13 +1060,17 @@ func _settle_switch(location: int) -> void:
 	# The world view shows the name banner itself for every world but the first.
 	if location == 0 and _world.has_method("show_world_name"):
 		_world.show_world_name(location)
-	var text := tr("SWITCH_WELCOME") % WorldLook.name_of(location)
+	# The name banner comes first; what the helpers earned follows once it
+	# has faded (still only if the player stayed in this world).
 	var r := GameState.take_away_report()
-	if float(r.get("coins", 0.0)) >= 1.0:
-		text += "\n" + tr("SWITCH_EARNED") % NumFormat.short(r["coins"])
-		var v := get_viewport_rect().size
-		_fx.float_text(v / 2.0 + Vector2(0, -60), "+" + NumFormat.short(r["coins"]), Art.GOLD, 40)
-	_show_toast(text)
+	var earned := float(r.get("coins", 0.0))
+	if earned < 1.0:
+		return
+	await get_tree().create_timer(0.6 if Settings.reduce_motion else 4.4).timeout
+	if GameState.location != location or _map.visible:
+		return
+	_show_toast(tr("SWITCH_WELCOME") % WorldLook.name_of(location) + "\n" + tr("SWITCH_EARNED") % NumFormat.short(earned))
+	Sfx.play("coins")
 
 
 func open_evolution() -> void:

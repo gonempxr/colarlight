@@ -144,6 +144,8 @@ var tap_clock := 0.0
 var _taps := TapLimiter.new(Balance.TAP_CAP, Balance.TAP_WINDOW)
 var _autosave_left := Balance.AUTOSAVE_SEC
 var _offline_report: Dictionary = {}
+## While true, _earn doesn't emit coins_earned (away pay-outs).
+var _quiet_earn := false
 ## Last switch_location() pay-out: {"location", "seconds", "coins"}.
 var _away_report: Dictionary = {}
 ## Deepest site the running lift trip goes to (-1 while the lift waits).
@@ -517,7 +519,10 @@ func _pay_away(seconds: float) -> float:
 	if seconds < AWAY_MIN_SEC:
 		return 0.0
 	_boosted = false
+	# Like the offline pay at start-up, it doesn't count for "earn" quests.
+	_quiet_earn = true
 	var earned := simulate_offline(seconds)
+	_quiet_earn = false
 	_boosted = boost_end > now()
 	return earned
 
@@ -952,7 +957,8 @@ func _earn(amount: float, to_vault: bool = false) -> void:
 		vault_changed.emit()
 	else:
 		coins += amount
-	coins_earned.emit(amount)
+	if not _quiet_earn:
+		coins_earned.emit(amount)
 
 
 func _add_rush() -> void:

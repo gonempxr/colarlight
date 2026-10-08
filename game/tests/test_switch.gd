@@ -48,6 +48,7 @@ func _initialize() -> void:
 	test_quests_per_world()
 	test_quest_save()
 	test_mine_quest()
+	await test_map_ui()
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute(GAME_SAVE)
 	DirAccess.remove_absolute(PROGRESS_SAVE)
@@ -236,6 +237,15 @@ func test_away_no_boost_no_rush() -> void:
 	gs.switch_location(1)
 	check(gs.rush_left == 0.0 and gs.rush_meter == 0.0, "rush does not carry over")
 	gs.switch_location(0)
+	# Away pay doesn't fill "earn" quests (like the offline pay at start-up).
+	pr.features["quests"] = true
+	var s := snap.duplicate(true)
+	s["left_at"] = gs.now() - 3600.0
+	gs.worlds_runs["1"] = s
+	pr.world_quests["1"] = [{"kind": "earn", "key": "", "goal": 1.0e30, "count": 0.0, "pearls": 2}]
+	gs.switch_location(1)
+	check(float(gs.take_away_report()["coins"]) > 0.0 and float(pr.quests[0]["count"]) == 0.0, "away coins don't count for quests")
+	gs.switch_location(0)
 
 
 ## Ten quick switches over ten minutes pay no more than ten minutes away.
@@ -410,3 +420,46 @@ func test_mine_quest() -> void:
 	gs.cycle_finished.emit(other, 1.0)
 	check(float(pr.quests[0]["count"]) == 1.0, "other sites don't count")
 	check("mine" in Content.QUEST_KINDS, "mine is a known quest kind (kept on load)")
+
+
+func _gold(n: Node) -> Array:
+	return n.find_children("*", "Button", true, false).filter(func(b): return b.theme_type_variation == &"GoldButton")
+
+
+## The world map: tap an opened island -> "Go to <world>" -> switched.
+func test_map_ui() -> void:
+	_fresh()
+	_open_next()
+	var mv: GDScript = load("res://scripts/ui/map_view.gd")
+	var host := Control.new()
+	host.theme = load("res://scripts/ui/ui_theme.gd").build()
+	host.size = Vector2(390, 844)
+	root.add_child(host)
+	var v: Control = mv.new()
+	host.add_child(v)
+	v.call("open")
+	await process_frame
+	check(mv.max_location() == 1 and mv.is_opened(0) and not mv.is_opened(2), "map knows the opened worlds")
+	check(int(v.call("_state", 0, 1)) == 0 and int(v.call("_state", 1, 1)) == 1 and int(v.call("_state", 2, 1)) == 2, "states: opened, here, next")
+	var gold := _gold(v)
+	check(gold.size() == 1 and gold[0].text == TranslationServer.translate("OPEN_WORLD") % mv.world_name(2), "the gate panel on the highest world")
+	var at: Vector2 = (v.get("_pos")[0] as Vector2) * float(v.get("_zoom")) + (v.get("_pan") as Vector2)
+	v.call("_tap", at)
+	await process_frame
+	check(int(v.get("_sel")) == 0, "tapping the ocean picks it")
+	gold = _gold(v)
+	check(gold.size() == 1 and gold[0].text == TranslationServer.translate("MAP_GO") % mv.world_name(0), "a Go to button for the ocean")
+	var went := [-1]
+	v.connect("location_switched", func(l): went[0] = l)
+	gold[0].emit_signal("pressed")
+	await process_frame
+	check(gs.location == 0 and went[0] == 0, "Go switched to the ocean")
+	gold = _gold(v)
+	check(gold.size() == 1 and gold[0].text == TranslationServer.translate("MAP_GO") % mv.world_name(1), "from an older world the panel offers the newest one")
+	check(not mv.can_advance(), "no gate button there")
+	# Tapping the active island keeps the default panel; a locked one only hints.
+	var at2: Vector2 = (v.get("_pos")[2] as Vector2) * float(v.get("_zoom")) + (v.get("_pan") as Vector2)
+	v.call("_tap", at2)
+	await process_frame
+	check(int(v.get("_sel")) == -1 and gs.location == 0, "a locked island can't be picked")
+	host.queue_free()
