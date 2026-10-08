@@ -1024,14 +1024,14 @@ func _magma_channel_life() -> void:
 	var at := Vector2(c.x, LEDGE_Y + 15.0)
 	var pulse := snappedf(0.75 + 0.25 * sin(_t * 1.6 + index), 0.05)
 	Art.glow(self, at + Vector2(0, -6), c.y + 16.0, Color(1.0, 0.55, 0.2, 0.32 * pulse), 14)
-	var drift := snappedf(sin(_t * 0.35 + index) * c.y * 0.45, 0.5)
+	var drift := sin(_t * 0.35 + index) * c.y * 0.45
 	Art.push(self, at + Vector2(drift, 0.5), 0.0, Vector2(0.45, 0.6))
 	Art.toon(self, _CHANNEL_CRUST, WorldArt.CRUST, 3.0, 0.6)
 	Art.pop(self)
 	var f := fposmod(_t * 0.4 + index * 0.37, 1.0)
 	var bx := at.x - drift * 0.8 + c.y * 0.3
 	if f < 0.75:
-		var s := snappedf(f / 0.75, 0.1)
+		var s := maxf(f / 0.75, 0.05)
 		Art.push(self, Vector2(bx, at.y), 0.0, Vector2(0.5 + s * 0.5, s) * 0.7)
 		Art.toon(self, _CHANNEL_DOME, Color("ffd24a"), 2.0, 0.3)
 		Art.pop(self)
@@ -1223,8 +1223,9 @@ func _draw_decor_world(st: Dictionary, cave: Rect2) -> bool:
 			Art.toon(self, _NEST, Color("a8743a"), 2.4, 0.5)
 			for k in 5:
 				Art.line(self, Vector2(-34 + k * 15, -10), Vector2(-24 + k * 15, -2), Color("7a4a24"), 2.0)
-			var bob := snappedf(sin(_t * 1.6) * 2.0, 0.5)
-			Art.glow(self, Vector2(0, -26 + bob), 40.0, Color(1.0, 0.6, 0.2, 0.35), 14)
+			# The soft glow keeps a few cached spots; the egg moves smoothly.
+			var bob := sin(_t * 1.6) * 2.0
+			Art.glow(self, Vector2(0, -26 + snappedf(bob, 0.5)), 40.0, Color(1.0, 0.6, 0.2, 0.35), 14)
 			Art.push(self, Vector2(0, -12 + bob), sin(_t * 8.0) * 0.06 * maxf(0.0, sin(_t * 0.7)))
 			OreArt.dragon_egg(self, ore, ore2, _t)
 			Art.pop(self)
@@ -1243,7 +1244,7 @@ func _draw_decor_world(st: Dictionary, cave: Rect2) -> bool:
 			for k in 2:
 				var hopf := absf(sin(_t * 2.2 + k * 1.7))
 				var sq := 1.0 + (1.0 - hopf) * 0.18
-				Art.push(self, Vector2(lerpf(x0 + 20, x1 - 10, k), y + 2 - snappedf(hopf * 10.0, 1.0)), 0.0, Vector2(sq, 2.0 - sq) * (0.9 + k * 0.2))
+				Art.push(self, Vector2(lerpf(x0 + 20, x1 - 10, k), y + 2 - hopf * 10.0), 0.0, Vector2(sq, 2.0 - sq) * (0.9 + k * 0.2))
 				_slime_blob(ore, k)
 				Art.pop(self)
 		"moss":
@@ -1339,7 +1340,7 @@ func _draw_decor_world(st: Dictionary, cave: Rect2) -> bool:
 			Art.push(self, c, -0.4)
 			Art.toon(self, _TAIL_C, Color(ore2, 0.6), 0.0, 0.0)
 			Art.pop(self)
-			Art.push(self, c, snappedf(_t * 0.2, 0.02))
+			Art.push(self, c, _t * 0.2)
 			WorldArt.asteroid(self, 1, Color("a8d8f0"), Art.INK)
 			Art.pop(self)
 			for p: Vector3 in [Vector3(x0 - 10, 30, -0.2), Vector3(x1 + 14, 26, 0.25)]:

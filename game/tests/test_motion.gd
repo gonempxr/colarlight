@@ -4,7 +4,9 @@ extends SceneTree
 ## upgrades the lift and the boat mid-trip, starts a rush, flies coins to
 ## the top bar and switches rooms, and records every frame where the lift
 ## cabin, the boats, the divers, the flying coins and the room slide are.
-## A jump is a step much bigger than the steps just before and after it.
+## A jump is a step much bigger than the steps just before and after it,
+## measured in pixels per second of game time so an uneven frame (a run
+## without --fixed-fps) does not read as a jump.
 ##   godot --headless --path . --resolution 390x844 --fixed-fps 60 -s res://tests/test_motion.gd [-- raw]
 ## "raw" draws straight from GameState's progress (the old way) to show
 ## what the check catches.
@@ -15,6 +17,7 @@ var gs: Node
 var main: Node
 var _series := {}
 var _limits := {}
+var _dt := 1.0 / 60.0
 
 
 func _initialize() -> void:
@@ -64,6 +67,7 @@ func _initialize() -> void:
 		if f == 830:
 			main.show_room(0)
 		await process_frame
+		_dt = clampf(main.get_process_delta_time(), 1.0 / 240.0, 0.25)
 		# Where things are now.
 		_rec("lift cabin", world.lift.cabin_pos(), 2.0)
 		_rec("boat", world.surface.boat_world_pos(), 2.0)
@@ -79,18 +83,30 @@ func _initialize() -> void:
 	var worst_v := 0.0
 	for name in _series:
 		var pts: Array = _series[name]
+		# Steps scaled to a 60 fps frame: px moved / frame time / 60.
 		var d: Array[float] = []
 		for i in range(1, pts.size()):
-			d.append((pts[i] as Vector2).distance_to(pts[i - 1]))
+			d.append((pts[i]["p"] as Vector2).distance_to(pts[i - 1]["p"]) / (float(pts[i]["dt"]) * 60.0))
 		for i in d.size():
 			if d[i] > worst_v:
 				worst_v = d[i]
 				worst = name
+			# A frame hitch (a slow frame without --fixed-fps) moves things
+			# by the time that passed: not a teleport, so it is not judged.
+			var hitch := false
+			for k in range(maxi(1, i), mini(pts.size(), i + 3)):
+				hitch = hitch or float(pts[k]["dt"]) > 1.6 / 60.0
+			# The first and last steps have nothing to compare with.
+			if hitch or i == 0 or i + 1 >= d.size():
+				continue
 			var before := d[i - 1] if i > 0 else 0.0
 			var after := d[i + 1] if i + 1 < d.size() else 0.0
 			if d[i] > 4.0 * maxf(before, after) + float(_limits[name]):
-				print("JUMP %s: %.1f px in one frame (%.1f before, %.1f after) at step %d of %d" % [name, d[i], before, after, i, d.size()])
+				print("JUMP %s: %.1f px per 60 fps frame (%.1f before, %.1f after) at step %d of %d" % [name, d[i], before, after, i, d.size()])
 				bad += 1
+				if OS.get_environment("MOTION_DEBUG") != "":
+					for k in range(maxi(0, i - 3), mini(pts.size(), i + 4)):
+						print("   ", k, " ", pts[k])
 	print("motion: %d series, %d frames, fastest %.1f px/frame (%s), %d jumps" % [_series.size(), FRAMES, worst_v, worst, bad])
 	DirAccess.remove_absolute("user://test_motion_save.json")
 	DirAccess.remove_absolute("user://test_motion_progress.json")
@@ -101,4 +117,4 @@ func _rec(name: String, p: Vector2, eps: float) -> void:
 	if not _series.has(name):
 		_series[name] = []
 		_limits[name] = eps
-	_series[name].append(p)
+	_series[name].append({"p": p, "dt": _dt})

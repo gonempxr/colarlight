@@ -58,10 +58,14 @@ static func progress(key: String) -> float:
 			return -1.0
 		e[0] = shown
 		return shown
-	if shown < 0.0 or frames > 6:
-		# A new cycle from rest starts where the rest pose is.
+	if frames > 6:
 		e[0] = real
 		return real
+	if shown < 0.0:
+		# A new cycle from rest starts at 0 (the rest pose) and speeds up
+		# into the real one; starting at the real progress (already a frame
+		# or more in) lurched and then stalled for the follow to catch up.
+		shown = 0.0
 	# A new cycle began while the last one is still shown: aim past 1.
 	var target := real
 	if target < shown - 0.5:

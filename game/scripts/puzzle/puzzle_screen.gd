@@ -629,10 +629,10 @@ func _update_fx(delta: float) -> void:
 	for p in _parts:
 		p["age"] += delta
 		if p["type"] == "bubble":
-			p["v"].x *= 0.97
+			p["v"].x *= Motion.drag(0.97, delta)
 		else:
 			p["v"].y += 700.0 * delta
-			p["v"] *= 0.97
+			p["v"] *= Motion.drag(0.97, delta)
 		p["p"] += p["v"] * delta
 	_parts = _parts.filter(func(p): return p["age"] < p["life"])
 	for arr: Array in [_ghosts, _beams, _rings, _zaps, _texts]:
