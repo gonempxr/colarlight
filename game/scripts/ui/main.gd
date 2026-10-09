@@ -1030,20 +1030,13 @@ func _on_location_opened(location: int) -> void:
 ## carries the player into that world's rooms, with a calm welcome and what
 ## its helpers earned while it waited (no timers, nothing to hurry).
 func _on_location_switched(location: int) -> void:
-	var cover := ColorRect.new()
-	cover.color = Color("bfe9ff")
-	cover.mouse_filter = Control.MOUSE_FILTER_STOP
-	cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	cover.modulate.a = 0.0
-	add_child(cover)
-	var fast := Settings.reduce_motion
-	var tw := create_tween()
-	tw.tween_interval(0.1 if fast else 0.55)
-	tw.tween_property(cover, "modulate:a", 1.0, 0.08 if fast else 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tw.tween_callback(_settle_switch.bind(location))
-	tw.tween_interval(0.05 if fast else 0.12)
-	tw.tween_property(cover, "modulate:a", 0.0, 0.12 if fast else 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_callback(cover.queue_free)
+	# The map first glides to the new island for a moment, then the clouds
+	# roll in, the world changes behind them, and they part over the new one.
+	var wait := 0.1 if Settings.reduce_motion else 0.5
+	var world := WorldLook.world_of(location)
+	get_tree().create_timer(wait).timeout.connect(func():
+		Sfx.play("dive", 0.8)
+		WorldTravel.start(self, world, world, _settle_switch.bind(location)))
 
 
 func _settle_switch(location: int) -> void:
