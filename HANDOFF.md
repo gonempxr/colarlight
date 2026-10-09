@@ -1,6 +1,6 @@
 # Coralight: handoff for a new Claude session
 
-Read this first, then continue the work. Everything below was true on 2026-09-30.
+Read CLAUDE.md first (the current picture), then this for commands and details. Parts below date from 2026-09-30.
 
 ## The owner
 - Mark (GitHub `gonempxr`). Write to him **in Russian**. He is new to git, so explain git steps simply.
@@ -57,7 +57,7 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
 
 ## Commands (run from game/)
 - **Import after adding a class_name or assets:** `godot --headless --path . --import`
-- **Tests:** `godot --headless --path . -s res://tests/<name>.gd`
+- **Tests:** `tools/run_tests.sh` from the repo root runs them all (or one: `godot --headless --path . -s res://tests/<name>.gd`)
   - `check_scripts` (0 broken), `test_economy` (115), `test_progress` (73), `test_match3` (116), `test_puzzle_ui` (57), `test_fishing` (109), `test_world_taps` (34), `test_diver_trip` ("0 jumps").
   - `test_ui` (19), `test_second` (38) and `test_lift` (98) need `--resolution 390x844`.
 - **Screenshots:** `xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 -s res://tests/screenshot.gd -- out.png ru mid 0 - 1.0`
