@@ -409,8 +409,12 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			console.warn('CrazyGames SDK:', e);
 		}
 	};
+	// The game may say "playing" before the SDK is up or before loading
+	// ended: remember it and tell the SDK once both are true (in that order).
+	bridge.playing = false;
 	bridge.gameplayStart = function () {
-		if (sdk) {
+		bridge.playing = true;
+		if (sdk && bridge.gameReady) {
 			safe(() => sdk.game.gameplayStart());
 		}
 	};
@@ -418,6 +422,9 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 		bridge.gameReady = true;
 		if (sdk) {
 			safe(() => sdk.game.loadingStop());
+			if (bridge.playing) {
+				safe(() => sdk.game.gameplayStart());
+			}
 		}
 	};
 	bridge.cloudBlob = '';
@@ -482,6 +489,9 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			safe(() => SDK.game.addSettingsChangeListener(readSettings));
 			if (bridge.gameReady) {
 				safe(() => SDK.game.loadingStop());
+				if (bridge.playing) {
+					safe(() => SDK.game.gameplayStart());
+				}
 			} else {
 				safe(() => SDK.game.loadingStart());
 			}

@@ -311,13 +311,16 @@ func _ready() -> void:
 	HandCursor.apply(Settings.hand_cursor)
 	_layout()
 	_refresh()
-	if show_title:
+	# Portals (CrazyGames) want the game itself right after loading.
+	if show_title and not Platform.on_portal():
 		_title = TitleScreen.new()
 		_title.started.connect(_after_title)
 		_title.players_pressed.connect(open_players)
 		add_child(_title)
 		move_child(_title, _modal.get_index())
 	else:
+		if Platform.on_portal():
+			Sfx.start_music()
 		_after_title()
 	if bench_room >= 0:
 		show_room(bench_room, false)

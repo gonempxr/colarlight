@@ -62,6 +62,7 @@ var _auto_ok := false
 var _poll_left := 0.0
 var _sdk_wait := 0.0
 var _paused_by_ad := false
+var _playing := false
 var _was_paused := false
 ## JavaScript callbacks must stay referenced while the SDK may call them.
 var _js_started: JavaScriptObject
@@ -115,6 +116,8 @@ func _process(delta: float) -> void:
 func set_provider(id: String) -> void:
 	provider = id
 	provider_changed.emit()
+	if _playing:
+		_send_gameplay_start()
 
 
 func ads_available() -> bool:
@@ -192,12 +195,24 @@ func finish_test_ad(ok: bool) -> void:
 
 
 ## The player starts (or is back to) playing. Only the SDK cares.
+## Called before the SDK is up, it is sent as soon as it is.
 func gameplay_start() -> void:
-	if provider != "crazygames":
+	_playing = true
+	_send_gameplay_start()
+
+
+func _send_gameplay_start() -> void:
+	if provider != "crazygames" or not OS.has_feature("web"):
 		return
 	var bridge = JavaScriptBridge.get_interface("coralightAds")
 	if bridge != null:
 		bridge.gameplayStart()
+
+
+## On a game portal (CrazyGames; the shell made its SDK bridge): the game
+## has to start right away, without the title screen.
+func on_portal() -> bool:
+	return OS.has_feature("web") and _shell_state() != ""
 
 
 func payments_available() -> bool:
