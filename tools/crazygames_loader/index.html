@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Coralight: Dive Tycoon</title>
+<style>
+html, body { margin: 0; height: 100%; background: #0d2c4f; color: #fff; font: 600 18px/1.4 system-ui, sans-serif; }
+#msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<div id="msg">Loading…</div>
+<script>
+// The only file uploaded to CrazyGames. It fetches the game's current page
+// from the game's own site and runs it here, with <base> pointing at that
+// site, so the engine, the game pack and the lazily loaded files all come
+// from there: every update of the site reaches CrazyGames by itself. The
+// page keeps running on the CrazyGames domain, so the shell turns on the
+// CrazyGames SDK (ads, data module, mute) as on any CrazyGames upload.
+(function () {
+	var SRC = 'https://gonempxr.github.io/colarlight/';
+	var fail = function () {
+		document.getElementById('msg').textContent = 'Could not load the game. Please check your connection and reload.';
+	};
+	var get = function (file, fresh) {
+		return fetch(SRC + file + (fresh ? '?t=' + Date.now() : ''), fresh ? { cache: 'no-store' } : {})
+			.then(function (r) { if (!r.ok) { throw new Error(file + ' ' + r.status); } return r.text(); });
+	};
+	Promise.all([get('index.html', true), get('index.js', true)])
+		.then(function (both) {
+			var html = both[0];
+			// The engine script goes in inline: a cross-site script written
+			// with document.write may be blocked on slow connections.
+			// ("</scr" + "ipt>" so this page's own script block does not end here.)
+			var end = '</scr' + 'ipt>';
+			html = html.replace('<script src="index.js">' + end, function () {
+				return '<script>' + both[1].replace(/<\/script/gi, '<\\/script') + end;
+			});
+			html = html.replace(/<head([^>]*)>/i, '<head$1><base href="' + SRC + '">');
+			// Absolute engine paths: the audio worklets and the pack are
+			// located from "executable", not from <base>. No service worker
+			// on another site's origin.
+			html = html.replace('"executable":"index"', '"executable":"' + SRC + 'index"')
+				.replace('"index.pck":', '"' + SRC + 'index.pck":')
+				.replace('"index.wasm":', '"' + SRC + 'index.wasm":')
+				.replace('"ensureCrossOriginIsolationHeaders":true', '"ensureCrossOriginIsolationHeaders":false');
+			// The engine asks for its (absent) service worker by the page's
+			// base URL, which is now another origin: answer "none" quietly.
+			try {
+				if (navigator.serviceWorker) {
+					navigator.serviceWorker.getRegistration = function () { return Promise.resolve(undefined); };
+				}
+			} catch (e) { /* read-only: the engine only logs an error */ }
+			document.open();
+			document.write(html);
+			document.close();
+		})
+		.catch(fail);
+}());
+</script>
+</body>
+</html>
