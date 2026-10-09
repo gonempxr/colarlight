@@ -120,9 +120,17 @@ var _on_release := Callable()
 var _settings_sig := []
 ## Tests and screenshots skip the title screen.
 static var show_title := true
+## An opaque full-screen screen is open over the rooms (see _covering).
+var _covered := false
 
 
 func _ready() -> void:
+	var bench_room := PerfProbe.attach(self)
+	var governor := FrameGovernor.new()
+	add_child(governor)
+	governor.level_changed.connect(func(_l: int) -> void:
+		if Art.low_power != Settings.low_quality():
+			_apply_ui_scale())
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Every button squashes when pressed and wobbles back when let go.
@@ -296,6 +304,7 @@ func _ready() -> void:
 		Sfx.play("milestone"))
 	_settings_sig = _settings_signature()
 	Settings.changed.connect(_on_settings_changed)
+	LazyAssets.ensure_text_data(self, Settings.language)
 	get_viewport().size_changed.connect(_layout)
 	Wardrobe.apply_looks()
 	Progress.changed.connect(Wardrobe.apply_looks)
@@ -310,6 +319,8 @@ func _ready() -> void:
 		move_child(_title, _modal.get_index())
 	else:
 		_after_title()
+	if bench_room >= 0:
+		show_room(bench_room, false)
 	_announce_ready()
 
 
@@ -361,6 +372,13 @@ func _process(delta: float) -> void:
 		_refresh_left = REFRESH_SEC
 		_refresh()
 	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or _room != MINE
+	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
+	# under it: nothing there needs drawing until it closes.
+	World.calm = _modal.visible or _top.visible
+	var covered := _covering()
+	if covered != _covered:
+		_covered = covered
+		_place_rooms()
 	if _side_fit_frames > 0 and _wide:
 		_side_fit_frames -= 1
 		var view := get_viewport_rect().size
@@ -461,13 +479,21 @@ func _move_slide(delta: float) -> void:
 
 
 ## Rooms side by side, moved by the slide; only the ones on screen show.
+## True while an opaque screen covers the whole window (fully faded in).
+func _covering() -> bool:
+	for c in [_puzzle, _fishing]:
+		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
+			return true
+	return _map.visible and _map.modulate.a >= 0.999
+
+
 func _place_rooms() -> void:
 	var rooms: Array[Control] = [_scroller, _factory, _office]
 	for i in rooms.size():
 		var r := rooms[i]
 		var off := (float(i) - _slide) * (_area.size.x + 24.0)
 		# Shown while any of it is on screen (not while it waits in the gap).
-		var on := absf(off) < maxf(1.0, _area.size.x - 0.5)
+		var on := absf(off) < maxf(1.0, _area.size.x - 0.5) and not _covered
 		if on and not r.visible and r == _factory and _factory_card:
 			# Comes into view: its card is up to date from the first frame
 			# (it only refreshes while shown).
@@ -897,6 +923,7 @@ func _settings_signature() -> Array:
 
 
 func _on_settings_changed() -> void:
+	LazyAssets.ensure_text_data(self, Settings.language)
 	if not is_equal_approx(get_tree().root.content_scale_factor, _ui_factor()) or Art.low_power != Settings.low_quality():
 		_apply_ui_scale()
 	HandCursor.apply(Settings.hand_cursor)

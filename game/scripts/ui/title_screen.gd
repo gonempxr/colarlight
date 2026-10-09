@@ -17,6 +17,8 @@ var _t := 0.0
 var _leaving := false
 var _intro := 0.0
 var _bubbles: Array[Vector3] = []
+## The cream card behind the hello, the name and the buttons.
+var _card := Rect2()
 
 
 func _ready() -> void:
@@ -32,7 +34,8 @@ func _ready() -> void:
 	_hello.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hello.add_theme_font_override("font", UiTheme.heavy_font())
 	_hello.add_theme_font_size_override("font_size", 38)
-	_hello.add_theme_constant_override("outline_size", 10)
+	_hello.add_theme_color_override("font_color", Art.INK)
+	_hello.add_theme_constant_override("outline_size", 0)
 	add_child(_hello)
 	_name = LineEdit.new()
 	_name.max_length = Profiles.NAME_MAX
@@ -78,18 +81,34 @@ func _layout() -> void:
 	_logo.size = Vector2(lw, lw * 0.33)
 	_logo.position = Vector2((v.x - lw) / 2.0, v.y * 0.14)
 	_logo.pivot_offset = _logo.size / 2.0
-	var y := _logo.position.y + _logo.size.y + v.y * 0.05
+	_play.text = tr("PLAY")
+	_switch.text = tr("SWITCH_PLAYER")
+	# The hello, the name, Play and "switch player" as one block on a card,
+	# in the middle of the space under the logo.
+	var block := 50.0 + 26.0 + 116.0
+	if _name.visible:
+		block += 84.0 + 30.0
+	if _switch.visible:
+		block += 26.0 + 70.0
+	var top := _logo.position.y + _logo.size.y + 70.0
+	var y := maxf(top, top + (v.y * 0.86 - top - block) / 2.0)
 	_hello.size = Vector2(v.x - 40.0, 50)
 	_hello.position = Vector2(20, y)
-	y += 70.0
-	_name.size = Vector2(minf(460.0, v.x - 60.0), 84)
+	y += 50.0 + 26.0
+	_name.size = Vector2(minf(460.0, v.x - 100.0), 84)
 	_name.position = Vector2((v.x - _name.size.x) / 2.0, y)
-	y += 120.0 if _name.visible else 30.0
+	if _name.visible:
+		y += 84.0 + 30.0
 	_play.size = _play.custom_minimum_size
-	_play.position = Vector2((v.x - _play.size.x) / 2.0, maxf(y, v.y * 0.52))
+	_play.position = Vector2((v.x - _play.size.x) / 2.0, y)
 	_play.pivot_offset = _play.size / 2.0
+	y += 116.0
 	_switch.reset_size()
-	_switch.position = Vector2((v.x - _switch.size.x) / 2.0, _play.position.y + _play.size.y + 30.0)
+	_switch.position = Vector2((v.x - _switch.size.x) / 2.0, y + 26.0)
+	if _switch.visible:
+		y += 26.0 + _switch.size.y
+	var cw := minf(v.x - 32.0, maxf(maxf(_name.size.x, _play.size.x), _switch.size.x) + 120.0)
+	_card = Rect2((v.x - cw) / 2.0, _hello.position.y - 34.0, cw, y - _hello.position.y + 34.0 + 34.0)
 
 
 func _process(delta: float) -> void:
@@ -97,8 +116,6 @@ func _process(delta: float) -> void:
 	# (The first frames load the world and can be long: the intro never
 	# skips ahead by more than a 30 fps frame.)
 	_intro = minf(1.0, _intro + minf(delta, 1.0 / 30.0) / 1.1)
-	_play.text = tr("PLAY")
-	_switch.text = tr("SWITCH_PLAYER")
 	_name.placeholder_text = tr("NAME_PLACEHOLDER")
 	if not _leaving:
 		# Intro: the logo drops in with a bounce, then the rest pops in.
@@ -140,9 +157,13 @@ static func _ease_bounce(x: float) -> float:
 func _draw() -> void:
 	# Dim the scene, a slow sunburst behind the logo and bubbles drifting up.
 	var v := size
-	var top := Color(0.05, 0.08, 0.25, 0.72)
-	var low := Color(0.05, 0.08, 0.25, 0.45)
-	Art.grad(self, PackedVector2Array([Vector2.ZERO, Vector2(v.x, 0), Vector2(v.x, v.y), Vector2(0, v.y)]), PackedColorArray([top, top, low, low]))
+	# Deep blue over the busy game (the cards and buttons behind fade away),
+	# a little lighter in the middle where the ocean shows through.
+	var top := Color(0.04, 0.07, 0.22, 0.86)
+	var mid := Color(0.04, 0.09, 0.26, 0.62)
+	var low := Color(0.03, 0.06, 0.2, 0.82)
+	Art.grad(self, PackedVector2Array([Vector2.ZERO, Vector2(v.x, 0), Vector2(v.x, v.y * 0.5), Vector2(0, v.y * 0.5)]), PackedColorArray([top, top, mid, mid]))
+	Art.grad(self, PackedVector2Array([Vector2(0, v.y * 0.5), Vector2(v.x, v.y * 0.5), v, Vector2(0, v.y)]), PackedColorArray([mid, mid, low, low]))
 	var c := _logo.position + _logo.size / 2.0
 	var r := maxf(v.x, v.y)
 	for i in 16:
@@ -154,6 +175,16 @@ func _draw() -> void:
 		var x := b.x * v.x + sin(_t * 1.5 + b.x * 20.0) * 10.0
 		Art.arc(self, Vector2(x, y), b.z, 0, TAU, 16, Color(1, 1, 1, 0.55), 2.5)
 		Art.disc(self, Vector2(x - b.z * 0.35, y - b.z * 0.35), b.z * 0.25, Color(1, 1, 1, 0.6))
+	# The card pops in with the buttons (alpha in steps: cached colors).
+	var pop := snappedf(clampf((_intro - 0.55) / 0.45, 0.0, 1.0), 0.1)
+	if pop > 0.0 and _card.size.x > 0.0:
+		var k := 0.9 + 0.1 * pop
+		Art.push(self, _card.get_center(), 0.0, Vector2(k, k))
+		var box := Rect2(-_card.size / 2.0, _card.size)
+		Art.flat(self, Art.rrect_pts(Rect2(box.position + Vector2(0, 12), box.size), 34), Color(0.0, 0.02, 0.12, 0.35 * pop))
+		Art.t_rect(self, box, 34, Color(Art.CREAM, pop), 4.0, 0.0)
+		Art.flat(self, Art.rrect_pts(Rect2(box.position + Vector2(10, 10), Vector2(box.size.x - 20, 18)), 9), Color(1, 1, 1, 0.5 * pop))
+		Art.pop(self)
 
 
 func _on_play() -> void:

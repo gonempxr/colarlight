@@ -69,6 +69,17 @@ func _loop_player(name: String, db: float) -> AudioStreamPlayer:
 		var s: AudioStreamOggVorbis = load(path)
 		s.loop = true
 		p.stream = s
+	elif OS.has_feature("web"):
+		# The web page leaves big loops out of the download and fetches them
+		# once the game runs (see LazyAssets); they start when they arrive.
+		LazyAssets.fetch(self, name + ".ogg", func(bytes: PackedByteArray) -> void:
+			if bytes.is_empty():
+				return
+			var s := AudioStreamOggVorbis.load_from_buffer(bytes)
+			if s:
+				s.loop = true
+				p.stream = s
+				_apply_settings())
 	p.volume_db = db
 	add_child(p)
 	return p

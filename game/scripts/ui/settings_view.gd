@@ -7,19 +7,43 @@ static func t(key: String) -> String:
 	return TranslationServer.translate(key)
 
 
-static func _section(m: Modal, key: String) -> void:
-	var l := Views.label(t(key), 26, Color("1c7fb8"), true)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	m.add(l)
+## A section: a tinted card with a colored title pill; rows go inside it.
+static func _section(m: Modal, key: String, color: Color) -> VBoxContainer:
+	var c := Views.card(color.lerp(Color.WHITE, 0.86))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	c.add_child(v)
+	var pill := Label.new()
+	pill.text = t(key)
+	pill.add_theme_font_override("font", UiTheme.heavy_font())
+	pill.add_theme_font_size_override("font_size", 22)
+	pill.add_theme_color_override("font_color", Art.WHITE)
+	pill.add_theme_color_override("font_outline_color", Art.INK)
+	pill.add_theme_constant_override("outline_size", 6)
+	var sb := ToonBox.make(color, 14, 0)
+	sb.line_w = 3.0
+	sb.gloss = 0.25
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	pill.add_theme_stylebox_override("normal", sb)
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(pill)
+	m.add(c)
+	return v
 
 
 ## "Name ........ [control]" row.
-static func _row(m: Modal, key: String, control: Control) -> void:
-	var r := m.row(12)
+static func _row(box: VBoxContainer, key: String, control: Control) -> void:
+	var r := HBoxContainer.new()
+	r.add_theme_constant_override("separation", 12)
+	box.add_child(r)
 	var l := Views.label(t(key), 23, Art.INK, true)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.clip_text = true
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	r.add_child(l)
 	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.add_child(control)
@@ -58,34 +82,34 @@ static func _cycle(text: String, on_press: Callable) -> Button:
 
 static func build(m: Modal, main: Node) -> void:
 	m.title(t("SETTINGS"))
-	_section(m, "SET_SOUND")
-	_row(m, "MUSIC", _slider(Settings.music_volume, func(v): Settings.set_value("music_volume", v)))
-	_row(m, "SOUND", _slider(Settings.sfx_volume, func(v): Settings.set_value("sfx_volume", v)))
-	_row(m, "VOICES", _toggle(Settings.voices, func(v): Settings.set_value("voices", v)))
+	var sound := _section(m, "SET_SOUND", Art.TEAL)
+	_row(sound, "MUSIC", _slider(Settings.music_volume, func(v): Settings.set_value("music_volume", v)))
+	_row(sound, "SOUND", _slider(Settings.sfx_volume, func(v): Settings.set_value("sfx_volume", v)))
+	_row(sound, "VOICES", _toggle(Settings.voices, func(v): Settings.set_value("voices", v)))
 
-	_section(m, "SET_GAME")
-	_row(m, "LANGUAGE", _cycle(Settings.LANGUAGE_NAMES[Settings.language], func(): Settings.next_language()))
-	_row(m, "VIBRATION", _toggle(Settings.vibration, func(v):
+	var game := _section(m, "SET_GAME", Art.BLUE)
+	_row(game, "LANGUAGE", _cycle(Settings.LANGUAGE_NAMES[Settings.language], func(): Settings.next_language()))
+	_row(game, "VIBRATION", _toggle(Settings.vibration, func(v):
 		Settings.set_value("vibration", v)
 		Settings.buzz(40)))
-	_row(m, "NUMBERS", _cycle("1.5K" if Settings.number_style == "short" else "1.5e3",
+	_row(game, "NUMBERS", _cycle("1.5K" if Settings.number_style == "short" else "1.5e3",
 			func(): Settings.set_value("number_style", "sci" if Settings.number_style == "short" else "short")))
 
-	_section(m, "SET_SCREEN")
+	var screen := _section(m, "SET_SCREEN", Art.PURPLE)
 	var q := Settings.QUALITIES
-	_row(m, "QUALITY", _cycle(t("QUALITY_" + Settings.quality.to_upper()),
+	_row(screen, "QUALITY", _cycle(t("QUALITY_" + Settings.quality.to_upper()),
 			func(): Settings.set_value("quality", q[(q.find(Settings.quality) + 1) % q.size()])))
 	var scales := Settings.UI_SCALES
-	_row(m, "UI_SIZE", _cycle(t(["SIZE_NORMAL", "SIZE_BIG", "SIZE_HUGE"][scales.find(Settings.ui_scale)]),
+	_row(screen, "UI_SIZE", _cycle(t(["SIZE_NORMAL", "SIZE_BIG", "SIZE_HUGE"][scales.find(Settings.ui_scale)]),
 			func(): Settings.set_value("ui_scale", scales[(scales.find(Settings.ui_scale) + 1) % scales.size()])))
-	_row(m, "REDUCE_MOTION", _toggle(Settings.reduce_motion, func(v): Settings.set_value("reduce_motion", v)))
+	_row(screen, "REDUCE_MOTION", _toggle(Settings.reduce_motion, func(v): Settings.set_value("reduce_motion", v)))
 	if not HandCursor.touch_device():
-		_row(m, "HAND_CURSOR", _toggle(Settings.hand_cursor, func(v): Settings.set_value("hand_cursor", v)))
+		_row(screen, "HAND_CURSOR", _toggle(Settings.hand_cursor, func(v): Settings.set_value("hand_cursor", v)))
 
-	_section(m, "SET_PLAYER")
-	m.button("%s: %s" % [t("PLAYERS"), Profiles.player_name() if Profiles.player_name() != "" else "?"],
+	var who := _section(m, "SET_PLAYER", Art.CORAL)
+	var players := m.button("%s: %s" % [t("PLAYERS"), Profiles.player_name() if Profiles.player_name() != "" else "?"],
 			func(): Sfx.play("click"); main.open_players(), &"PurpleButton")
-	m.button(t("REPLAY_TUTORIAL"), func():
+	var replay := m.button(t("REPLAY_TUTORIAL"), func():
 		Sfx.play("click")
 		Progress.tutorial_step = 0
 		Progress.changed.emit()
@@ -100,6 +124,8 @@ static func build(m: Modal, main: Node) -> void:
 		else:
 			confirm[0] = true
 			reset.text = t("RESET_CONFIRM"), &"RedButton")
+	for b: Button in [players, replay, reset]:
+		b.reparent(who, false)
 	m.text(t("CREDITS"), 16, Art.INK_SOFT)
 	m.text("Coralight %s" % ProjectSettings.get_setting("application/config/version", ""), 15, Art.INK_SOFT)
 
