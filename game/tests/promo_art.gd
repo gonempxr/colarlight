@@ -31,7 +31,7 @@ class PromoArt extends Control:
 	func _ready() -> void:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		var v := get_viewport_rect().size
-		var share: float = {"banner": 0.5, "portrait": 0.9, "square": 0.82}.get(kind, 0.0)
+		var share: float = {"banner": 0.5, "portrait": 0.9, "square": 0.82, "jp_banner": 0.47, "jp_portrait": 0.92, "jp_square": 0.86}.get(kind, 0.0)
 		if share > 0.0:
 			var svg := FileAccess.get_file_as_string("res://assets/logo.svg")
 			var probe := Image.new()
@@ -50,6 +50,8 @@ class PromoArt extends Control:
 				_portrait(v)
 			"square":
 				_square(v)
+			"jp_banner", "jp_portrait", "jp_square":
+				_jackpot(v, kind.substr(3))
 			_:
 				_icon(v)
 		Art.flush()
@@ -128,6 +130,104 @@ class PromoArt extends Control:
 		_diver(Vector2(v.x * 0.36, v.y * 1.02), 4.1 * s, 1.0, "pick", HIT, false, 0, "joy")
 		_bubbles(v, Vector2(v.x * 0.86, v.y * 0.42), 5, 26 * s)
 		_vignette(v)
+
+	## The jackpot cover: one big happy diver with star eyes next to a chest
+	## that bursts with coins and gems, a warm sunburst behind, the logo.
+	func _jackpot(v: Vector2, form: String) -> void:
+		var s := v.y / 1080.0 if form == "banner" else v.x / 800.0
+		var floor_y: float
+		var chest: Vector2
+		var hero: Vector2
+		var hero_s: float
+		var chest_size: float
+		var logo_c: Vector2
+		match form:
+			"banner":
+				floor_y = v.y * 0.88
+				chest = Vector2(v.x * 0.71, floor_y + 10 * s)
+				hero = Vector2(v.x * 0.42, floor_y + 40 * s)
+				hero_s = 6.8 * s
+				chest_size = 470 * s
+				logo_c = Vector2(v.x * 0.25, v.y * 0.17)
+			"portrait":
+				floor_y = v.y * 0.9
+				chest = Vector2(v.x * 0.73, floor_y + 8 * s)
+				hero = Vector2(v.x * 0.33, floor_y + 40 * s)
+				hero_s = 5.6 * s
+				chest_size = 370 * s
+				logo_c = Vector2(v.x * 0.5, v.y * 0.15)
+			_:
+				floor_y = v.y * 0.9
+				chest = Vector2(v.x * 0.75, floor_y + 8 * s)
+				hero = Vector2(v.x * 0.32, floor_y + 34 * s)
+				hero_s = 4.5 * s
+				chest_size = 290 * s
+				logo_c = Vector2(v.x * 0.5, v.y * 0.15)
+		var burst := chest + Vector2(0, -chest_size * 0.55)
+		_deep_water(v)
+		_sunburst(v, burst, Color(1.0, 0.96, 0.8))
+		Art.glow(self, burst, chest_size * 1.9, Color(1.0, 0.72, 0.25, 0.65), 40)
+		Art.glow(self, burst, chest_size * 0.9, Color(1.0, 0.95, 0.7, 0.8), 40)
+		_seabed(v, floor_y)
+		# Soft blurred coral in the corners frames the scene.
+		OreArt.deposit(self, Vector2(v.x * 0.02, floor_y + 30 * s), chest_size * 0.7, 1, 4, 0.3, 5)
+		OreArt.deposit(self, Vector2(v.x * 0.99, floor_y + 30 * s), chest_size * 0.55, 5, 1, 0.2, 4)
+		OreArt.deposit(self, chest, chest_size, 6, 3, 0.4, 7)
+		_fountain(burst, chest_size, s)
+		_diver(hero, hero_s, 1.0, "cheer", 0.0, false, 0, "rich", 0.0, 0.35)
+		_sparkles(v, burst, chest_size * 1.3, 14, s, hero + Vector2(0, -68 * hero_s), 26 * hero_s)
+		_vignette(v)
+		_logo_at(logo_c)
+
+	func _deep_water(v: Vector2) -> void:
+		var top := Color("2fb5e0")
+		var mid := Color("1573b4")
+		var deep := Color("0a2f66")
+		Art.grad(self, PackedVector2Array([Vector2.ZERO, Vector2(v.x, 0), Vector2(v.x, v.y * 0.5), Vector2(0, v.y * 0.5)]),
+				PackedColorArray([top, top, mid, mid]))
+		Art.grad(self, PackedVector2Array([Vector2(0, v.y * 0.5), Vector2(v.x, v.y * 0.5), v, Vector2(0, v.y)]),
+				PackedColorArray([mid, mid, deep, deep]))
+
+	## Alternating warm rays from the treasure: the "jackpot" light.
+	func _sunburst(v: Vector2, c: Vector2, col: Color) -> void:
+		var r := v.length() * 1.2
+		var n := 22
+		for i in n:
+			var a := TAU * i / n
+			var w := PI / n * 0.55
+			var cc := Color(col, 0.3)
+			Art.grad(self, PackedVector2Array([c, c + Vector2(cos(a - w), sin(a - w)) * r, c + Vector2(cos(a + w), sin(a + w)) * r]),
+					PackedColorArray([cc, Color(col, 0.0), Color(col, 0.0)]))
+
+	## Coins and gems flying up and out of the chest.
+	func _fountain(c: Vector2, size: float, s: float) -> void:
+		_rng.seed = 11
+		var gems := [4, 5, 2, 4, 5, 2]
+		for i in 34:
+			var a := -PI * 0.5 + _rng.randf_range(-1.15, 1.15)
+			var d := size * _rng.randf_range(0.25, 1.25)
+			var p := c + Vector2(cos(a) * 1.25, sin(a)) * d
+			if i % 5 == 4:
+				OreArt.chunk(self, p, 26 * s * _rng.randf_range(0.8, 1.3), gems[(i / 5) % gems.size()], _rng.randf_range(-0.6, 0.6))
+			else:
+				_coin(p, 24 * s * _rng.randf_range(0.7, 1.25), _rng.randf_range(0.25, 1.0), _rng.randf_range(-0.8, 0.8))
+
+	func _coin(p: Vector2, r: float, turn: float, rot: float) -> void:
+		Art.push(self, p, rot, Vector2(turn, 1.0))
+		Art.toon(self, Art.ellipse_pts(Vector2.ZERO, Vector2(r, r)), Art.GOLD, 3.0, 1.0)
+		Art.polyline(self, Art.ellipse_pts(Vector2.ZERO, Vector2(r * 0.68, r * 0.68)), Art.GOLD_DARK, maxf(2.0, r * 0.12), true)
+		Art.disc(self, Vector2(-r * 0.35, -r * 0.4), r * 0.18, Color(1, 1, 1, 0.85))
+		Art.pop(self)
+
+	func _sparkles(v: Vector2, c: Vector2, rad: float, n: int, s: float, avoid := Vector2(-9999, 0), avoid_r := 0.0) -> void:
+		_rng.seed = 5
+		for i in n:
+			var a := _rng.randf_range(0, TAU)
+			var p := c + Vector2(cos(a) * 1.4, sin(a) * 0.8) * rad * _rng.randf_range(0.3, 1.0)
+			var r := 18 * s * _rng.randf_range(0.6, 1.4)
+			if p.distance_to(avoid) < avoid_r:
+				continue
+			Art.flat(self, Art.star_pts(p, r, r * 0.25, 4), Color(1, 1, 0.92, 0.95))
 
 	# --- pieces -----------------------------------------------------------
 
