@@ -382,7 +382,20 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 	try {
 		want = new URLSearchParams(window.location.search).get('ads') || '';
 	} catch (e) { /* old browser: no query */ }
-	const onCrazy = /(^|\.)crazygames\.[a-z.]+$/i.test(window.location.hostname);
+	// On CrazyGames itself, or embedded by CrazyGames from our own site (the
+	// game page on GitHub Pages inside their iframe: the parent page is on a
+	// crazygames domain), so every update of the site reaches it at once.
+	const cgHost = /(^|\.)crazygames\.[a-z.]+$/i;
+	let parentHost = '';
+	try {
+		const ao = window.location.ancestorOrigins;
+		if (ao && ao.length > 0) {
+			parentHost = new URL(ao[ao.length - 1]).hostname;
+		} else if (window.top !== window.self && document.referrer) {
+			parentHost = new URL(document.referrer).hostname;
+		}
+	} catch (e) { /* no parent info */ }
+	const onCrazy = cgHost.test(window.location.hostname) || cgHost.test(parentHost);
 	if (!onCrazy && want !== 'crazygames') {
 		return;
 	}
