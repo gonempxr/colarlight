@@ -486,6 +486,155 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 	document.head.appendChild(script);
 }());
 
+// Google sign-in (Firebase Auth + Firestore) on our own site, so the saves
+// follow the player's Google account to other devices. Not on CrazyGames:
+// it forbids other logins and keeps the saves in its own Data Module.
+// `?cloud=test` fakes the account and the cloud in localStorage (tests).
+// The game (CloudSave autoload) talks to window.coralightCloud:
+//   state: 'loading' | 'in' | 'out' | 'failed'; user: the shown name
+//   cloudBlob: the account's saves read at start ('' = none)
+//   signIn(done): done('blob:<text>') ('blob:' = no saves yet) or done('error:<code>')
+//   signOut(), cloudSave(text), useCloud(text): take the account's saves and restart
+const FIREBASE_CONFIG = null;
+(function () {
+	if (window.coralightAds) {
+		return;
+	}
+	let test = false;
+	try {
+		test = new URLSearchParams(window.location.search).get('cloud') === 'test';
+	} catch (e) { /* no query */ }
+	// The Google sign-in is allowed only on the domain added in Firebase.
+	if (!test && (!FIREBASE_CONFIG || window.location.hostname !== 'gonempxr.github.io')) {
+		return;
+	}
+	const store = {
+		get: function (k) { try { return window.localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+		set: function (k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
+		del: function (k) { try { window.localStorage.removeItem(k); } catch (e) { /* private mode */ } },
+	};
+	const cloud = { state: 'loading', user: '', cloudBlob: '', force: false };
+	window.coralightCloud = cloud;
+	// Saves picked in the "which progress?" question, applied before the game reads anything.
+	const pending = store.get('coralight_cloud_pending');
+	if (pending) {
+		store.del('coralight_cloud_pending');
+		cloud.cloudBlob = pending;
+		cloud.force = true;
+	}
+	// Only a player who signed in before makes the start wait for the cloud.
+	cloud.waitStart = store.get('coralight_google') === '1';
+	cloud.useCloud = function (text) {
+		store.set('coralight_cloud_pending', text);
+		window.location.reload();
+	};
+	let api = null;
+	const ready = function (user) {
+		cloud.user = user || '';
+		cloud.state = user ? 'in' : 'out';
+		store.set('coralight_google', user ? '1' : '0');
+	};
+	const readBlob = function () {
+		return api.read().then(function (text) { return text || ''; });
+	};
+	cloud.cloudSave = function (text) {
+		if (api && cloud.state === 'in') {
+			api.write(text).catch(function (e) { console.warn('Cloud save:', e); });
+		}
+	};
+	cloud.signIn = function (done) {
+		if (!api) {
+			done('error:unavailable');
+			return;
+		}
+		api.signIn().then(function (user) {
+			ready(user);
+			return readBlob().then(function (text) { done('blob:' + text); });
+		}).catch(function (e) {
+			console.warn('Sign-in:', e);
+			done('error:' + ((e && e.code) || 'other'));
+		});
+	};
+	cloud.signOut = function () {
+		if (api) {
+			api.signOut();
+		}
+		ready('');
+	};
+	const start = function () {
+		api.current().then(function (user) {
+			if (!user) {
+				ready('');
+				return;
+			}
+			return readBlob().then(function (text) {
+				if (!cloud.force) {
+					cloud.cloudBlob = text;
+				}
+				ready(user);
+			});
+		}).catch(function (e) {
+			console.warn('Cloud:', e);
+			cloud.state = 'failed';
+		});
+	};
+	if (test) {
+		const later = function (v) { return new Promise(function (r) { setTimeout(function () { r(v); }, 150); }); };
+		api = {
+			current: function () { return later(store.get('coralight_test_user')); },
+			signIn: function () { store.set('coralight_test_user', 'Test Player'); return later('Test Player'); },
+			signOut: function () { store.del('coralight_test_user'); },
+			read: function () { return later(store.get('coralight_test_cloud')); },
+			write: function (t) { store.set('coralight_test_cloud', t); return later(); },
+		};
+		start();
+		return;
+	}
+	const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
+	const load = function (name) {
+		return new Promise(function (resolve, reject) {
+			const s = document.createElement('script');
+			s.src = base + name;
+			s.onload = resolve;
+			s.onerror = reject;
+			document.head.appendChild(s);
+		});
+	};
+	load('firebase-app-compat.js')
+		.then(function () { return Promise.all([load('firebase-auth-compat.js'), load('firebase-firestore-compat.js')]); })
+		.then(function () {
+			const fb = window.firebase;
+			fb.initializeApp(FIREBASE_CONFIG);
+			const auth = fb.auth();
+			const db = fb.firestore();
+			const doc = function () { return db.collection('saves').doc(auth.currentUser.uid); };
+			const nameOf = function (u) { return (u && (u.displayName || u.email)) || ''; };
+			api = {
+				current: function () {
+					return new Promise(function (resolve) {
+						const stop = auth.onAuthStateChanged(function (u) { stop(); resolve(nameOf(u)); });
+					});
+				},
+				signIn: function () {
+					const provider = new fb.auth.GoogleAuthProvider();
+					return auth.signInWithPopup(provider).then(function (r) { return nameOf(r.user); });
+				},
+				signOut: function () { auth.signOut(); },
+				read: function () {
+					return doc().get().then(function (d) { return d.exists ? (d.data().data || '') : ''; });
+				},
+				write: function (t) {
+					return doc().set({ data: t, updated: fb.firestore.FieldValue.serverTimestamp() });
+				},
+			};
+			start();
+		})
+		.catch(function (e) {
+			console.warn('Firebase failed to load:', e);
+			cloud.state = 'failed';
+		});
+}());
+
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
@@ -659,12 +808,15 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 	} else {
 		setProgress(0, 0);
-		// On CrazyGames the saved progress must be read before the game starts.
+		// On CrazyGames (and for a player signed in with Google) the saved
+		// progress must be read before the game starts.
 		const sdkWait = new Promise(function (resolve) {
 			const t0 = Date.now();
 			const look = function () {
 				const a = window.coralightAds;
-				if (!a || a.state !== 'loading' || Date.now() - t0 > 5000) {
+				const c = window.coralightCloud;
+				const busy = (a && a.state === 'loading') || (c && c.waitStart && c.state === 'loading');
+				if (!busy || Date.now() - t0 > 5000) {
 					resolve();
 				} else {
 					setTimeout(look, 50);

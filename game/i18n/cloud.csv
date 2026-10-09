@@ -1,0 +1,11 @@
+keys,en,ru,es,zh
+CLOUD_GOOGLE,Google account,Аккаунт Google,Cuenta de Google,Google 账号
+CLOUD_HINT,Sign in to keep your progress on any device.,"Войди, чтобы играть со своим прогрессом на любом устройстве.",Entra para jugar con tu progreso en cualquier dispositivo.,登录后可在任何设备上继续你的进度。
+CLOUD_SIGN_IN,Sign in with Google,Войти через Google,Entrar con Google,使用 Google 登录
+CLOUD_SIGN_OUT,Sign out,Выйти,Salir,退出登录
+CLOUD_SIGNED_IN,Progress is saved in your Google account,Прогресс сохраняется в аккаунте Google,El progreso se guarda en tu cuenta de Google,进度已保存到你的 Google 账号
+CLOUD_ERROR,Couldn't sign in. Try again.,Не получилось войти. Попробуй ещё раз.,No se pudo entrar. Inténtalo de nuevo.,登录失败，请再试一次。
+CLOUD_ASK_TITLE,Which progress to keep?,Какой прогресс оставить?,¿Qué progreso conservar?,保留哪个进度？
+CLOUD_ASK_TEXT,Your Google account already has a save. The other one will be replaced.,В аккаунте Google уже есть сохранение. Другое будет заменено.,Tu cuenta de Google ya tiene una partida guardada. La otra se reemplazará.,你的 Google 账号里已有存档，另一个将被替换。
+CLOUD_USE_ACCOUNT,From the account (%s),Из аккаунта (%s),De la cuenta (%s),账号存档（%s）
+CLOUD_USE_HERE,From this device (%s),С этого устройства (%s),De este dispositivo (%s),本设备存档（%s）
