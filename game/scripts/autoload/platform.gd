@@ -7,8 +7,11 @@ extends Node
 ##   the UI hides every ad and purchase button, so no button does nothing.
 ## - "crazygames": the CrazyGames HTML5 SDK v3 (window.CrazyGames.SDK). The
 ##   web shell (web/shell.html) loads and initialises it on CrazyGames and
-##   puts a small bridge in window.coralightAds. Rewarded ads only, and only
-##   when the player asks for one: the game is for kids.
+##   puts a small bridge in window.coralightAds. Rewarded ads when the player
+##   asks for one, and short "midgame" breaks only at natural pauses (after
+##   a puzzle, after fishing, when travelling to a world): never in the
+##   first minutes, never during the tutorial, at most one every
+##   MIDGAME_GAP_SEC (the SDK caps them too).
 ## - "test": a pretend ad for trying the flow on a test page: open the game
 ##   with ?ads=test and an overlay (AdOverlay) stands in for a 3-second ad.
 ##
@@ -19,8 +22,9 @@ signal purchase_done(product: String, ok: bool)
 ## An ad began / ended (ok = watched to the end, so the reward is due).
 signal ad_started
 signal ad_finished(ok: bool)
-## Provider "test": the overlay should show the pretend ad now.
-signal test_ad_requested(seconds: float)
+## Provider "test": the overlay should show the pretend ad now (kind is
+## "rewarded" or "midgame").
+signal test_ad_requested(seconds: float, kind: String)
 ## The provider changed (the SDK finished loading): show or hide ad buttons.
 signal provider_changed
 
@@ -31,6 +35,13 @@ const AD_TIMEOUT_SEC := 150.0
 const POLL_SEC := 1.0
 ## How long to wait for the shell to finish starting the SDK.
 const SDK_WAIT_SEC := 40.0
+## Midgame breaks: not before this much play in a session, then at most one
+## per gap (any ad, rewarded too, restarts the gap).
+const MIDGAME_FIRST_SEC := 240.0
+const MIDGAME_GAP_SEC := 200.0
+## Progress.tutorial_step when the tutorial is over (Tutor.DONE; autoloads
+## must not use UI classes).
+const TUTORIAL_DONE := 12
 
 var provider := "none"
 var ad_running := false
@@ -41,6 +52,10 @@ var site_muted := false
 var last_error := ""
 
 var _done: Callable
+var _kind := "rewarded"
+## Seconds played this session (not counting ads) and since the last ad.
+var _played := 0.0
+var _since_ad := 9999.0
 var _ad_left := 0.0
 ## Provider "test" with no overlay listening (tests): the ad ends by itself.
 var _auto_ok := false
@@ -84,6 +99,9 @@ func _process(delta: float) -> void:
 			if muted != site_muted:
 				site_muted = muted
 				_apply_mute()
+	if not ad_running and not get_tree().paused:
+		_played += delta
+		_since_ad += delta
 	if ad_running:
 		_ad_left -= delta
 		if _ad_left <= 0.0:
@@ -109,7 +127,12 @@ func show_rewarded(done: Callable) -> void:
 	if not ads_available():
 		done.call(false)
 		return
+	_start_ad("rewarded", done)
+
+
+func _start_ad(kind: String, done: Callable) -> void:
 	ad_running = true
+	_kind = kind
 	_done = done
 	_ad_left = AD_TIMEOUT_SEC
 	_auto_ok = false
@@ -120,7 +143,7 @@ func show_rewarded(done: Callable) -> void:
 			if test_ad_requested.get_connections().is_empty():
 				_auto_ok = true
 				_ad_left = TEST_AD_SEC
-			test_ad_requested.emit(TEST_AD_SEC)
+			test_ad_requested.emit(TEST_AD_SEC, kind)
 		"crazygames":
 			var bridge = JavaScriptBridge.get_interface("coralightAds")
 			if bridge == null:
@@ -129,7 +152,35 @@ func show_rewarded(done: Callable) -> void:
 				return
 			_js_started = JavaScriptBridge.create_callback(_on_js_started)
 			_js_done = JavaScriptBridge.create_callback(_on_js_done)
-			bridge.rewarded(_js_started, _js_done)
+			if kind == "midgame":
+				bridge.midgame(_js_started, _js_done)
+			else:
+				bridge.rewarded(_js_started, _js_done)
+
+
+## True when a midgame break may be shown now (see the rules above).
+func midgame_due() -> bool:
+	if not ads_available():
+		return false
+	if _played < MIDGAME_FIRST_SEC or _since_ad < MIDGAME_GAP_SEC:
+		return false
+	var progress := get_node_or_null("/root/Progress")
+	return progress == null or int(progress.get("tutorial_step")) >= TUTORIAL_DONE
+
+
+## A natural pause (a puzzle ended, fishing closed, a trip to a world): a
+## short ad may play if one is due. `done` runs afterwards either way (right
+## away when no ad plays), so the game simply carries on. Nothing is paid
+## for these and nothing is lost when one fails.
+func request_midgame(done: Callable = Callable()) -> void:
+	if not midgame_due():
+		if done.is_valid():
+			done.call()
+		return
+	var after := func(_ok: bool) -> void:
+		if done.is_valid():
+			done.call()
+	_start_ad("midgame", after)
 
 
 ## The test overlay reports: watched to the end (true) or skipped (false).
@@ -178,7 +229,7 @@ func _on_js_started(_args: Array) -> void:
 func _on_js_done(args: Array) -> void:
 	var result := str(args[0]) if args.size() > 0 else "error"
 	if result != "ok":
-		push_warning("Rewarded ad not shown: " + result)
+		push_warning("Ad (%s) not shown: %s" % [_kind, result])
 		last_error = result.trim_prefix("error:")
 	_finish(result == "ok")
 
@@ -199,6 +250,7 @@ func _finish(ok: bool) -> void:
 		return
 	ad_running = false
 	_auto_ok = false
+	_since_ad = 0.0
 	if _paused_by_ad:
 		_paused_by_ad = false
 		get_tree().paused = _was_paused

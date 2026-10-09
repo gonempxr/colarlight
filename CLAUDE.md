@@ -43,10 +43,18 @@ This file is the quick picture; keep it up to date when something big changes.
 - Languages RU / EN / ES / ZH (Noto Sans SC subset — rerun
   `python3 tools/subset_fonts.py` after adding Chinese text; it needs the
   full font in `~/fontsrc`, otherwise merge glyphs carefully).
-- Money: only an optional rewarded ad "x2 coins for 30 min" (CrazyGames SDK
-  bridge, `?ads=test` fake). **No IAP, no paid randomness, no FOMO timers, no
-  bots shown as real players** — it is a kids' game; Mark asked for these
-  once and they were declined.
+- Money (decided 2026-10-09): ads through the CrazyGames SDK only.
+  - Rewarded, always optional and opt-in, same-size "no" button, reward only
+    after the ad finished: x2 coins for 30 min, x2 offline earnings, a
+    second "+5 moves" in the puzzle (the first one is free).
+  - Midgame breaks only at natural pauses (puzzle end, fishing closed,
+    travel to a world), never in the first 4 minutes of a session or during
+    the tutorial, at most one per ~3 min (`Platform.request_midgame`).
+  - **No IAP, no paid randomness, no FOMO timers, no bots shown as real
+    players.** Fair-play rules stay even though the game is positioned for
+    all ages (CrazyGames rejects games "targeted at kids": don't market it
+    as a kids' game).
+  - Plan and status: `docs/monetization-marketing.md`.
 
 ## Rules of the code
 - All art is drawn in code through `Art.*` (art.gd) with push/pop — never

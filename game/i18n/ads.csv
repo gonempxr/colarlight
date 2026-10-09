@@ -1,0 +1,6 @@
+keys,en,ru,es,zh
+OFFLINE_X2_HINT,Want twice as much? Watch a short ad — only if you like.,Хочешь вдвое больше? Посмотри короткую рекламу — только если хочешь.,"¿Quieres el doble? Mira un anuncio corto, solo si quieres.",要双倍吗？看一段短广告，看不看由你决定。
+OFFLINE_X2,×2 for an ad,×2 за рекламу,×2 por un anuncio,看广告得 ×2
+PZ_MORE_AD,+%d moves for an ad,+%d ходов за рекламу,+%d movimientos por un anuncio,看广告 +%d 步
+AD_TEST_BREAK,A pretend short break ad. No real ad is shown.,Пробная короткая реклама-перерыв. Настоящей рекламы нет.,Un anuncio de pausa de mentira. No se muestra ningún anuncio real.,模拟的短广告，不会播放真实广告。
+AD_SKIP_BREAK,Skip,Пропустить,Saltar,跳过

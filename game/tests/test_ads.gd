@@ -46,6 +46,7 @@ func _initialize() -> void:
 	test_offline_counts_boost_only_while_on()
 	test_old_save_boost()
 	await test_failure_grants_nothing()
+	await test_midgame_rules()
 	await test_main_buttons()
 	test_rivals_points()
 	test_rivals_board()
@@ -55,6 +56,37 @@ func _initialize() -> void:
 	for f in [SAVE, "user://test_ads_progress.json", "user://test_ads_rivals.json"]:
 		DirAccess.remove_absolute(f)
 	quit(1 if _failures > 0 else 0)
+
+
+## Midgame breaks: only for a provider with ads, not in the first minutes
+## of a session, not during the tutorial, not right after another ad; the
+## game always carries on (done runs whether an ad played or not).
+func test_midgame_rules() -> void:
+	gs.reset()
+	pf.set_provider("none")
+	var ran := [0]
+	var done := func(): ran[0] += 1
+	pf.request_midgame(done)
+	check(ran[0] == 1 and not pf.ad_running, "no ads on this site: the game just goes on")
+	pf.set_provider("test")
+	pf._played = 0.0
+	pf._since_ad = 9999.0
+	pr.tutorial_step = 12
+	check(not pf.midgame_due(), "no break in the first minutes of a session")
+	pf._played = pf.MIDGAME_FIRST_SEC + 1.0
+	pr.tutorial_step = 3
+	check(not pf.midgame_due(), "no break during the tutorial")
+	pr.tutorial_step = 12
+	check(pf.midgame_due(), "a break is due after a while of play")
+	pf.request_midgame(done)
+	check(pf.ad_running, "the break plays (test provider)")
+	await create_timer(pf.TEST_AD_SEC + 0.3).timeout
+	await _frames(2)
+	check(ran[0] == 2 and not pf.ad_running, "the game goes on after the break")
+	check(not pf.midgame_due(), "no second break right after one")
+	pf._since_ad = pf.MIDGAME_GAP_SEC + 1.0
+	check(pf.midgame_due(), "the next one only after the gap")
+	pf.set_provider("none")
 
 
 func _frames(n: int) -> void:
@@ -191,7 +223,7 @@ func test_failure_grants_nothing() -> void:
 	gs.reset()
 	pf.set_provider("test")
 	# Something shows the pretend ad (like the overlay) and the player skips.
-	var skip := func(_s: float): (func(): pf.finish_test_ad(false)).call_deferred()
+	var skip := func(_s: float, _k: String): (func(): pf.finish_test_ad(false)).call_deferred()
 	pf.test_ad_requested.connect(skip)
 	var got := [null]
 	pf.show_rewarded(func(ok):

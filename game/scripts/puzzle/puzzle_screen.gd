@@ -85,6 +85,9 @@ var _shown_frags := 0
 var _moves_bump := 0.0
 var _goal_bump := 0.0
 var _extra_used := false
+## The second "+5 moves", for a rewarded ad (once per level, only when an
+## ad can play).
+var _ad_moves_used := false
 var _ended := false
 var _warned_few := false
 var _result := {}
@@ -155,6 +158,7 @@ func setup(lv: Dictionary, rewards: Callable = Callable()) -> void:
 	_shown_moves = model.moves
 	_shown_frags = 0
 	_extra_used = false
+	_ad_moves_used = false
 	_ended = false
 	_warned_few = false
 	_intro = 3.5
@@ -1347,6 +1351,10 @@ func _show_out() -> void:
 	if not _extra_used:
 		var more := _button(box, "%s  (%s)" % [tr("PZ_MORE") % EXTRA_MOVES, tr("PZ_FREE")], &"GoldButton", _extra_moves, 92)
 		more.name = "More"
+	elif not _ad_moves_used and Platform.ads_available():
+		var ad := _button(box, tr("PZ_MORE_AD") % EXTRA_MOVES, &"BlueButton", _ad_moves, 92)
+		ad.icon = Icons.get_icon("play", 34)
+		ad.name = "MoreAd"
 	var take := _button(box, tr("PZ_TAKE"), &"CreamButton" if not _extra_used else &"Button", func():
 		_ended = true
 		Sfx.play("coins")
@@ -1373,10 +1381,28 @@ func _draw_out_art() -> void:
 			Art.text(ci, p + Vector2(0, 14), "?", 40, Art.WHITE, 6)
 
 
+## The second "+5 moves": only after a rewarded ad played to the end.
+func _ad_moves() -> void:
+	if _ad_moves_used:
+		return
+	_ad_moves_used = true
+	Platform.show_rewarded(func(ok: bool):
+		if ok and model.state == Match3.LOST:
+			_give_moves()
+		else:
+			Sfx.play("deny")
+			_close_panel()
+			_show_out())
+
+
 func _extra_moves() -> void:
 	if _extra_used:
 		return
 	_extra_used = true
+	_give_moves()
+
+
+func _give_moves() -> void:
 	model.add_moves(EXTRA_MOVES)
 	_shown_moves = model.moves
 	_moves_bump = 1.0

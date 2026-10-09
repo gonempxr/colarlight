@@ -1032,6 +1032,8 @@ func _on_map_closed() -> void:
 ## The gate in the map opened the next location: everything follows (the
 ## world's look, the rooms, the cards), and a little party.
 func _on_location_opened(location: int) -> void:
+	# The trip is a natural pause: a short ad may play (the game waits).
+	Platform.request_midgame()
 	Sfx.play("prestige")
 	Progress.add_pearls(25)
 	Progress.save_game()
@@ -1057,6 +1059,7 @@ func _on_location_opened(location: int) -> void:
 ## carries the player into that world's rooms, with a calm welcome and what
 ## its helpers earned while it waited (no timers, nothing to hurry).
 func _on_location_switched(location: int) -> void:
+	Platform.request_midgame()
 	# The map first glides to the new island for a moment, then the clouds
 	# roll in, the world changes behind them, and they part over the new one.
 	var wait := 0.1 if Settings.reduce_motion else 0.5
@@ -1251,7 +1254,8 @@ func open_fishing(panel: String = "") -> void:
 	_fishing.setup({"panel": panel} if panel != "" else {})
 	_fishing.tree_exited.connect(func():
 		_fishing = null
-		_show_next_news())
+		# A natural pause: a short ad may play (Platform decides), then news.
+		Platform.request_midgame(_show_next_news))
 	Sfx.play("start")
 
 
@@ -1300,10 +1304,12 @@ func _puzzle_rewards(result: Dictionary) -> Array:
 
 
 func _on_puzzle_finished(_result: Dictionary) -> void:
-	# The rewards were given when the level ended; now let them fly home.
-	if not _last_puzzle_reward.is_empty():
-		celebrate({"coins": _last_puzzle_reward["coins"], "pearls": _last_puzzle_reward["pearls"]}, get_viewport_rect().size / 2.0)
-		_last_puzzle_reward = {}
+	# A natural pause: a short ad may play first (Platform decides). The
+	# rewards were given when the level ended; then they fly home.
+	Platform.request_midgame(func() -> void:
+		if not _last_puzzle_reward.is_empty():
+			celebrate({"coins": _last_puzzle_reward["coins"], "pearls": _last_puzzle_reward["pearls"]}, get_viewport_rect().size / 2.0)
+			_last_puzzle_reward = {})
 
 
 # --- Players ------------------------------------------------------------------------------
@@ -1378,12 +1384,44 @@ func _open_offline(report: Dictionary) -> void:
 	_modal.open(func(m: Modal):
 		m.text(tr("OFFLINE") % NumFormat.duration(report["seconds"]), 24)
 		m.title("+" + NumFormat.short(report["coins"]))
-		var b := m.button(tr("COLLECT"), func(): pass, &"GoldButton")
+		var after := func() -> void:
+			if Progress.daily_ready():
+				(func(): open_feature("daily")).call_deferred()
+		var b: Button
+		if Platform.ads_available():
+			# The coins are already in; an ad (only if the player wants)
+			# doubles them. Both buttons the same size (portal rules).
+			m.text(tr("OFFLINE_X2_HINT"), 20, Art.INK_SOFT)
+			var r := m.row(12)
+			b = Button.new()
+			b.text = tr("COLLECT")
+			b.theme_type_variation = &"GoldButton"
+			var x2 := Button.new()
+			x2.text = tr("OFFLINE_X2")
+			x2.icon = Icons.get_icon("play", 30)
+			x2.theme_type_variation = &"BlueButton"
+			for bt: Button in [b, x2]:
+				bt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				bt.custom_minimum_size = Vector2(0, 76)
+				r.add_child(bt)
+			x2.pressed.connect(func():
+				var at := x2.get_global_rect().get_center()
+				_modal.close()
+				Platform.show_rewarded(func(ok: bool):
+					var coins: float = report["coins"]
+					if ok:
+						GameState.add_coins(coins)
+						coins *= 2.0
+					else:
+						_show_toast(tr(AdBoost.fail_text(Platform.last_error)))
+					celebrate({"coins": coins}, at)
+					after.call()))
+		else:
+			b = m.button(tr("COLLECT"), func(): pass, &"GoldButton")
 		b.pressed.connect(func():
 			celebrate({"coins": report["coins"]}, b.get_global_rect().get_center())
 			_modal.close()
-			if Progress.daily_ready():
-				(func(): open_feature("daily")).call_deferred()))
+			after.call()))
 
 
 # --- Streak (StreakView, StreakPop) ----------------------------------------------------

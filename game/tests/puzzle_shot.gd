@@ -1,7 +1,7 @@
 extends SceneTree
 ## Screenshot of the puzzle screen (needs a real renderer, not --headless):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 720x1280 \
-##     -s res://tests/puzzle_shot.gd -- out.png [board|anim|win|out] [level] [lang]
+##     -s res://tests/puzzle_shot.gd -- out.png [board|anim|win|out|out_ad] [level] [lang]
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -49,7 +49,11 @@ func _initialize() -> void:
 			var t0 := Time.get_ticks_msec()
 			while Time.get_ticks_msec() - t0 < 4200:
 				await process_frame
-		"out":
+		"out", "out_ad":
+			if mode == "out_ad":
+				# The free +5 is used; with ads on, the second +5 is for an ad.
+				root.get_node("Platform").set_provider("test")
+				screen._extra_used = true
 			m.moves = 1
 			m.fragments_collected = 1
 			screen._shown_frags = 1

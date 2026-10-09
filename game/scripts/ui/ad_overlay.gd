@@ -63,12 +63,12 @@ func _label(s: String, px: int, heavy: bool) -> Label:
 	return l
 
 
-func _show(seconds: float) -> void:
+func _show(seconds: float, kind: String = "rewarded") -> void:
 	_total = maxf(0.1, seconds)
 	_left = _total
 	_title.text = tr("AD_TEST")
-	_note.text = tr("AD_TEST_NOTE")
-	_skip.text = tr("AD_SKIP")
+	_note.text = tr("AD_TEST_BREAK") if kind == "midgame" else tr("AD_TEST_NOTE")
+	_skip.text = tr("AD_SKIP_BREAK") if kind == "midgame" else tr("AD_SKIP")
 	visible = true
 	_update()
 

@@ -375,6 +375,7 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 // (Platform autoload) talks to window.coralightAds:
 //   state: 'loading' | 'ready' | 'disabled' | 'failed'
 //   rewarded(onStarted, onDone): onDone('ok') or onDone('error:<code>')
+//   midgame(onStarted, onDone): a short break at a natural pause, same calls
 //   gameplayStart(), muteAudio (the site's mute setting)
 (function () {
 	let want = '';
@@ -412,7 +413,9 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 			safe(() => sdk.data.setItem('coralight_save', text));
 		}
 	};
-	bridge.rewarded = function (onStarted, onDone) {
+	// One ad of a kind ('rewarded' or 'midgame'); the game pauses and
+	// mutes itself when onStarted runs and goes on when onDone runs.
+	const playAd = function (kind, onStarted, onDone) {
 		if (!sdk) {
 			onDone('error:unavailable');
 			return;
@@ -428,7 +431,7 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 		};
 		safe(() => sdk.game.gameplayStop());
 		try {
-			sdk.ad.requestAd('rewarded', {
+			sdk.ad.requestAd(kind, {
 				adStarted: function () { onStarted(); },
 				adFinished: function () { end('ok'); },
 				adError: function (error) { end('error:' + ((error && error.code) || 'other')); },
@@ -436,6 +439,12 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 		} catch (e) {
 			end('error:other');
 		}
+	};
+	bridge.rewarded = function (onStarted, onDone) {
+		playAd('rewarded', onStarted, onDone);
+	};
+	bridge.midgame = function (onStarted, onDone) {
+		playAd('midgame', onStarted, onDone);
 	};
 	const script = document.createElement('script');
 	script.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
