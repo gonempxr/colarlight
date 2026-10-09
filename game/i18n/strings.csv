@@ -213,7 +213,7 @@ SWITCH_PLAYER,Change player,Сменить игрока,Cambiar jugador,切换�
 HELLO,"Hi, %s!","Привет, %s!","¡Hola, %s!",你好，%s！
 WHATS_YOUR_NAME,What's your name?,Как тебя зовут?,¿Cómo te llamas?,你叫什么名字？
 NAME_PLACEHOLDER,Your name,Твоё имя,Tu nombre,你的名字
-RANDOM_NAMES,"Captain Bubbles, Coral Kid, Pearl Hunter, Sea Star, Little Whale, Wave Rider, Shell Seeker, Deep Diver","Капитан Пузырь, Коралл, Ловец жемчуга, Морская звезда, Китёнок, Покоритель волн, Искатель ракушек, Глубинка","Capitán Burbuja, Niño Coral, Cazaperlas, Estrella de Mar, Ballenita, Surfista, Buscaconchas, Buzo Valiente","泡泡船长, 珊瑚宝宝, 寻珠人, 小海星, 小鲸鱼, 冲浪手, 贝壳猎人, 深海勇士"
+RANDOM_NAMES,"Captain Bubbles, Coral Scout, Pearl Hunter, Sea Star, Little Whale, Wave Rider, Shell Seeker, Deep Diver","Капитан Пузырь, Коралл, Ловец жемчуга, Морская звезда, Китёнок, Покоритель волн, Искатель ракушек, Глубинка","Capitán Burbuja, Cazacorales, Cazaperlas, Estrella de Mar, Ballenita, Surfista, Buscaconchas, Buzo Valiente","泡泡船长, 珊瑚猎手, 寻珠人, 小海星, 小鲸鱼, 冲浪手, 贝壳猎人, 深海勇士"
 TUT_TAP_DIVERS,Divers work on their own. Tap them to speed them up!,"Дайверы работают сами. Тапай, чтобы они спешили!",Los buzos trabajan solos. ¡Tócalos para que vayan más rápido!,潜水员会自己工作。点击让他们更快！
 TUT_UPGRADE,Upgrade the divers: more ore!,Улучши дайверов — будет больше руды!,Mejora a los buzos: ¡más mineral!,升级潜水员：更多矿石！
 TUT_TAP_BOAT,Tap the boat to carry ore to the shore,Тапни по лодке — она отвезёт руду на берег,Toca el barco para llevar el mineral a la orilla,点击运输船，把矿石运到岸边
