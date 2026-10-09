@@ -85,3 +85,20 @@ Build your own underwater mining empire! Hire divers and send them to the seabed
 Left click / tap – interact, tap divers to make them work faster. Mouse wheel / drag – scroll the mine. Tabs or swipe – switch between the Mine, Factory and Office.
 
 **Languages:** English, Russian, Spanish, Chinese (Simplified).
+
+## 8. Вход через Google на нашем сайте (Firebase)
+
+Проект Firebase «coral-light» (тариф Spark, бесплатный). Только на gonempxr.github.io: на CrazyGames внешний вход запрещён.
+- Authentication → Sign-in method → Google: включено. Authorized domains: `gonempxr.github.io`.
+- Firestore: одна запись на игрока `saves/{uid}` (поле `data` — все сохранения JSON-строкой). Правила:
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /saves/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+- Конфиг: `FIREBASE_CONFIG` в tools/web_shell/shell.src.html (публичный, не секрет). Тест без Firebase: `?cloud=test`.

@@ -495,7 +495,16 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 //   cloudBlob: the account's saves read at start ('' = none)
 //   signIn(done): done('blob:<text>') ('blob:' = no saves yet) or done('error:<code>')
 //   signOut(), cloudSave(text), useCloud(text): take the account's saves and restart
-const FIREBASE_CONFIG = null;
+// Public web config of the Firebase project "coral-light" (not a secret:
+// access is guarded by the Firestore rules, see docs/crazygames.md).
+const FIREBASE_CONFIG = {
+	apiKey: 'AIzaSyAo6EXllgse79M_6bP-uGXmnaXEh9TXCqc',
+	authDomain: 'coral-light.firebaseapp.com',
+	projectId: 'coral-light',
+	storageBucket: 'coral-light.firebasestorage.app',
+	messagingSenderId: '541919239356',
+	appId: '1:541919239356:web:23b5f946ea0d456a98c4b9',
+};
 (function () {
 	if (window.coralightAds) {
 		return;
