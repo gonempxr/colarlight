@@ -66,3 +66,22 @@
 - Возраст 13+, PEGI 12, детский сайт без монетизации — https://docs.crazygames.com/requirements/gameplay/
 - Внешние файлы (до 20 секунд), лимиты размера — https://docs.crazygames.com/requirements/technical/
 - Basic Launch: 7 дней / 500 запусков / 21 день, метрики — https://docs.crazygames.com/resources/basic-launch-metrics/
+
+## 7. Обложки и тексты для формы
+
+Обложки (все три обязательны): https://gonempxr.github.io/colarlight/crazygames/coralight-covers.zip
+- cover-landscape-1920x1080.png → Landscape 16:9
+- cover-portrait-800x1200.png → Portrait 2:3
+- cover-square-800x800.png → Square 1:1 (она же «иконка» игры на сайте)
+
+Перерисовать: `xvfb-run -a godot --rendering-driver opengl3 --path game --resolution 1920x1080 -s res://tests/cover_shot.gd -- out.png 0.5 0.06 200 1.2` (portrait: `0.86 0.05 0 1.0`, square: `0.78 0.05 120 1.0`).
+
+**Category:** Clicker. **Tags:** Idle, Tycoon, Clicker, Mining, Management, Casual, 2D, Underwater.
+
+**Description:**
+Build your own underwater mining empire! Hire divers and send them to the seabed to dig shells, coral and treasure. The lift carries the ore up, the boat ships it to shore, and your factory turns it into coins. Upgrade every station, hire managers to automate the work and keep earning even while you are away. Evolve your divers, travel to new worlds – a volcano, an acid swamp and even the Moon – win match-3 puzzles for museum artifacts, go fishing and dress up your crew.
+
+**Controls:**
+Left click / tap – interact, tap divers to make them work faster. Mouse wheel / drag – scroll the mine. Tabs or swipe – switch between the Mine, Factory and Office.
+
+**Languages:** English, Russian, Spanish, Chinese (Simplified).
