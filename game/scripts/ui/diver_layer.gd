@@ -75,7 +75,13 @@ func _ready() -> void:
 	add_child(_fx)
 
 
+## Rising texts at once are capped: each costs a text draw every frame.
+const FLOATERS_MAX := 5
+
+
 func float_text(pos: Vector2, text: String, color: Color, big: bool = false) -> void:
+	if _floaters.size() >= FLOATERS_MAX:
+		return
 	_floaters.append({"pos": pos, "text": text, "color": color, "age": 0.0, "size": 34 if big else 26})
 
 
