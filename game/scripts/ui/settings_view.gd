@@ -107,6 +107,22 @@ static func build(m: Modal, main: Node) -> void:
 		_row(screen, "HAND_CURSOR", _toggle(Settings.hand_cursor, func(v): Settings.set_value("hand_cursor", v)))
 
 	var who := _section(m, "SET_PLAYER", Art.CORAL)
+	if CloudSave.google_available():
+		var user := CloudSave.google_user()
+		if user == "":
+			var hint := m.text(t("CLOUD_HINT"), 19, Art.INK_SOFT)
+			hint.reparent(who, false)
+			var sign_in := m.button(t("CLOUD_SIGN_IN"), func():
+				Sfx.play("click")
+				main.google_sign_in(), &"BlueButton")
+			sign_in.reparent(who, false)
+		else:
+			var acc := m.text("%s: %s" % [t("CLOUD_GOOGLE"), user], 20, Art.INK)
+			acc.reparent(who, false)
+			var sign_out := m.button(t("CLOUD_SIGN_OUT"), func():
+				Sfx.play("click")
+				CloudSave.google_sign_out(), &"DarkButton")
+			sign_out.reparent(who, false)
 	var players := m.button("%s: %s" % [t("PLAYERS"), Profiles.player_name() if Profiles.player_name() != "" else "?"],
 			func(): Sfx.play("click"); main.open_players(), &"PurpleButton")
 	var replay := m.button(t("REPLAY_TUTORIAL"), func():

@@ -53,6 +53,26 @@ func _init() -> void:
 	_check(cs.restore(newer), "newer cloud copy restores")
 	_check(FileAccess.get_file_as_string("user://p/a1/game.json") == "{\"coins\": 9}", "cloud value written")
 
+	# A forced restore (the player chose the account's saves) beats newer local files.
+	_check(cs.restore(old, true), "forced restore applies an older copy")
+	_check(FileAccess.get_file_as_string("user://p/a1/game.json") == "{\"coins\": 1}", "forced value written")
+
+	# Right after a Google sign-in.
+	_write("p/a1/game.json", "{\"coins\": 5}")
+	_check(cs.after_sign_in("") == "ok", "empty account: keep this device")
+	_check(cs.after_sign_in(JSON.stringify(cs.collect())) == "ok", "same saves: nothing to ask")
+	_check(not cs.is_asking(), "not asking after ok")
+	var other := JSON.stringify({"t": 123, "files": {"p/a1/game.json": "{\"coins\": 77}"}})
+	_check(cs.after_sign_in(other) == "ask", "different saves: ask")
+	_check(cs.is_asking(), "asking")
+	_check(int(cs.ask_info()["cloud"]) == 123, "ask_info has the account's time")
+	cs.cancel_ask()
+	_check(not cs.is_asking(), "cancel stops asking")
+	_check(FileAccess.get_file_as_string("user://p/a1/game.json") == "{\"coins\": 5}", "cancel keeps local files")
+	cs.after_sign_in(other)
+	cs.keep_local()
+	_check(not cs.is_asking(), "keep_local stops asking")
+
 	# Bad input and path tricks.
 	_check(not cs.restore("not json"), "garbage ignored")
 	var evil := JSON.stringify({"t": 99999999999, "files": {"../evil.txt": "x"}})

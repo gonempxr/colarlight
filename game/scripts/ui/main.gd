@@ -280,6 +280,12 @@ func _ready() -> void:
 	_top = Modal.new()
 	add_child(_top)
 	_top.closed.connect(_show_next_news)
+	# A Google sign-in question closed without an answer signs out again.
+	_top.closed.connect(CloudSave.cancel_ask)
+	CloudSave.sign_in_done.connect(_on_cloud_signed_in)
+	CloudSave.account_changed.connect(func():
+		if _modal.is_open():
+			_modal.rebuild())
 	_modal.closed.connect(_show_next_news)
 	_fx = FxLayer.new()
 	add_child(_fx)
@@ -1316,6 +1322,40 @@ func _on_puzzle_finished(_result: Dictionary) -> void:
 
 
 # --- Players ------------------------------------------------------------------------------
+
+## Google sign-in from the settings (our own site only).
+func google_sign_in() -> void:
+	CloudSave.google_sign_in()
+
+
+func _on_cloud_signed_in(result: String) -> void:
+	if result == "ok":
+		_show_toast(tr("CLOUD_SIGNED_IN"))
+	elif result == "ask":
+		var info := CloudSave.ask_info()
+		_top.open(func(m: Modal):
+			m.title(tr("CLOUD_ASK_TITLE"))
+			m.text(tr("CLOUD_ASK_TEXT"), 22)
+			m.button(tr("CLOUD_USE_ACCOUNT") % _save_time(info["cloud"]), func():
+				Sfx.play("click")
+				CloudSave.use_cloud(), &"BlueButton")
+			m.button(tr("CLOUD_USE_HERE") % _save_time(info["here"]), func():
+				Sfx.play("click")
+				CloudSave.keep_local()
+				m.close()
+				_show_toast(tr("CLOUD_SIGNED_IN")), &"GoldButton"))
+	else:
+		_show_toast(tr("CLOUD_ERROR"))
+
+
+## "09.10 21:30" in the player's time zone.
+static func _save_time(unix: int) -> String:
+	if unix <= 0:
+		return "?"
+	var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+	var d := Time.get_datetime_dict_from_unix_time(unix + bias)
+	return "%02d.%02d %02d:%02d" % [d["day"], d["month"], d["hour"], d["minute"]]
+
 
 func open_players() -> void:
 	_modal.open(func(m): SettingsView.players(m, self))
