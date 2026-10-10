@@ -20,8 +20,8 @@ BASE_S = dict(vcore.LAYOUTS["cover-square-800x800.png"][2])
 def portrait():
     lay = dict(BASE_P)
     lay.update({
-        "s": 0.6, "floor": 720, "hero": (330, 1520, 0.98), "chest": (575, 735, 0.5), "burst": (575, 500), "glow": 330,
-        "logo": (40, 40, 720), "coral": (770, 730, 0.55), "crystals": (395, 725, 0.45),
+        "s": 0.6, "floor": 740, "hero": (330, 1530, 0.98), "chest": (575, 755, 0.5), "burst": (575, 540), "glow": 330,
+        "logo": (60, 140, 700), "coral": (770, 730, 0.55), "crystals": (395, 725, 0.45),
         "stacks": [(745, 745, 3, 22)], "bars": [], "coins": 24, "spread": 240,
         "near": [(40, 520, 44, 0.8, 0.4), (770, 1130, 50, 0.7, -0.3)], "shafts": [(60, 50), (300, 60)], "seed": 12,
     })
@@ -32,7 +32,7 @@ def square():
     lay = dict(BASE_S)
     lay.update({
         "s": 0.5, "floor": 600, "hero": (245, 1060, 0.8), "chest": (600, 615, 0.42), "burst": (600, 420), "glow": 280,
-        "logo": (40, 22, 600), "coral": (785, 610, 0.45), "crystals": (455, 605, 0.38),
+        "logo": (318, 26, 462), "coral": (785, 610, 0.45), "crystals": (455, 605, 0.38),
         "stacks": [], "bars": [], "coins": 20, "spread": 190,
         "near": [(30, 380, 36, 0.8, 0.4)], "shafts": [(40, 40)], "seed": 15,
     })
