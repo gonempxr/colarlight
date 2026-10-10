@@ -89,3 +89,13 @@ This file is the quick picture; keep it up to date when something big changes.
   GitHub Pages can't be fetched from the container — verify with
   `git ls-remote`, test locally.
 - Promoting the beta to the main site is Mark's decision: ask first.
+
+## CrazyGames status (2026-10-10)
+- First submission was rejected: "overall quality does not yet meet the
+  expectations". Audit and plan: `docs/quality-audit.md`. Resubmitting is
+  allowed after meaningful improvements (Mark decides when).
+- Full build upload (not the loader). Covers: `tools/store_art/` (vector,
+  `final_c.py` = chosen variant C), files in `docs/store/`. Keep the logo out
+  of the top-left label zone. Videos: `gh-pages:crazygames/video/`.
+- On CrazyGames the title screen is skipped and gameplayStart is sent after
+  loadingStop (`Platform.on_portal`). Google sign-in only runs on our site.
