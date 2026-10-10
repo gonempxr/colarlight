@@ -111,6 +111,13 @@ func _ready() -> void:
 		divers.confetti(stage_anchor(k), 30)
 		Sfx.voice("woohoo", randf_range(1.0, 1.25)))
 	GameState.tapped.connect(_on_tapped)
+	# The ore of each trip pops up as a number: the mine visibly earns.
+	GameState.cycle_finished.connect(func(k: String, amount: float) -> void:
+		if amount <= 0.0 or (k != "lift" and GameState.depth_index(k) < 0):
+			return
+		var at := stage_anchor(k) + Vector2(_rng.randf_range(-24.0, 24.0), -34.0)
+		if is_visible_band(at.y - 60.0, at.y + 60.0):
+			divers.float_text(at, "+" + NumFormat.short(amount), Art.GOLD))
 	GameState.rush_started.connect(func():
 		Sfx.voice("woohoo", 1.3)
 		for k in GameState.stage_keys():

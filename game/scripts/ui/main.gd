@@ -290,6 +290,14 @@ func _ready() -> void:
 	_fx = FxLayer.new()
 	add_child(_fx)
 	_fx.arrived.connect(func(kind): _hud.bump(kind))
+	# Every upgrade answers right where the finger is: a small burst and the
+	# new level rising from the button.
+	GameState.upgraded.connect(func(k: String, _n: int) -> void:
+		if not is_instance_valid(_fx):
+			return
+		var at := get_viewport().get_mouse_position()
+		_fx.burst(at, 12)
+		_fx.float_text(at + Vector2(0, -36), tr("LEVEL") % int(GameState.levels.get(k, 1)), Art.GOLD, 32))
 	_ad_overlay = AdOverlay.new()
 	add_child(_ad_overlay)
 	_setup_streak()
@@ -735,7 +743,7 @@ func _layout() -> void:
 		_factory.set_insets(0.0, 10.0)
 		_office_bar.visible = true
 		_factory_card.visible = true
-		_evo_card.visible = true
+		_evo_card.visible = _evo_shown()
 		_panel.set_docked(false)
 		_panel.custom_minimum_size = Vector2(view.x, 0)
 		_panel.size = Vector2(view.x, 0)
@@ -796,7 +804,7 @@ func _layout_side() -> void:
 	_side_office.visible = office
 	_side_lift.visible = _room == MINE
 	_side_boat.visible = _room == MINE
-	_side_evo.visible = _room == MINE
+	_side_evo.visible = _room == MINE and _evo_shown()
 	_side_plant.visible = _room == FACTORY
 	if office:
 		_side_office.custom_minimum_size = Vector2(side, 0)
@@ -892,7 +900,15 @@ func _close_sheet() -> void:
 		_sheet_tween.tween_callback(func(): if not _sheet_open: _panel.visible = false)
 
 
+## The gear card waits until the tutorial gets to it: a grey "300K" card
+## in the first minute only crowds the screen.
+func _evo_shown() -> bool:
+	return Progress.tutorial_step >= Tutor.STEPS.find("evo") or GameState.evo > 0
+
+
 func _refresh() -> void:
+	if _evo_card.visible != (not _wide and _evo_shown()) or (_wide and _side_evo.visible != (_room == MINE and _evo_shown())):
+		_layout()
 	_world.surface.refresh()
 	if _side_cards.visible:
 		_side_lift.refresh()

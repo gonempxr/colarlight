@@ -241,8 +241,10 @@ func _update_divers(redraw: bool) -> void:
 func _draw() -> void:
 	var gs := GameState
 	var view := world.visible_rect()
-	# Only one "Tap!" bubble at a time, so the screen stays calm.
-	var hinted := false
+	# Only one "Tap!" bubble at a time, so the screen stays calm; during
+	# the tutorial its own hand is the only pointer (two hands confused
+	# new players).
+	var hinted := Progress.tutorial_step < Tutor.DONE
 	for key in ["lift", "boat", "plant"]:
 		if gs.cycle_progress(key) < 0.0 and not gs.has_manager(key):
 			var has_ore: bool = gs.pit > 0.0 if key == "lift" else (gs.hold > 0.0 if key == "boat" else gs.dock > 0.0)
