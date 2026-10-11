@@ -96,7 +96,7 @@ service cloud.firestore {
         && d.keys().hasAll(['name', 'score', 'a', 't'])
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
         && d.a is string && d.a.size() <= 300
-        && d.score is number && d.score >= 0 && d.score <= 1.0e100
+        && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000.0
         && d.t == request.time
         && (resource == null
             || (d.score >= resource.data.score
