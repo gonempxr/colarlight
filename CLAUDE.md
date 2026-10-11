@@ -40,6 +40,11 @@ This file is the quick picture; keep it up to date when something big changes.
   match-3 puzzle → artifacts → museum, wardrobe (pets, hats, outfits,
   boat paint), fishing (rods), Rivals League (clearly marked computer
   rivals), hints bulb, tutorial.
+- Online (branch p-online, docs/online.md): real players' leaderboard (week /
+  all time), promo codes (SHA-256 hashes only), first-100 "Founder" gift,
+  invites (?ref= / CrazyGames inviteLink), exclusive Founder Cap. Firebase
+  anonymous auth + Firestore rules; `Online` autoload, `window.coralightOnline`
+  bridge, loaded 4 s after start; `?online=test` fakes it.
 - Languages RU / EN / ES / ZH (Noto Sans SC subset — rerun
   `python3 tools/subset_fonts.py` after adding Chinese text; it needs the
   full font in `~/fontsrc`, otherwise merge glyphs carefully).

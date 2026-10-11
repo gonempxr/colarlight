@@ -524,6 +524,36 @@ const FIREBASE_CONFIG = {
 	messagingSenderId: '541919239356',
 	appId: '1:541919239356:web:23b5f946ea0d456a98c4b9',
 };
+// Loads Firebase (app, auth, firestore; compat builds from gstatic) once,
+// for the Google cloud save and the online features both:
+// window.coralightFirebase() -> Promise of { fb, auth, db }.
+window.coralightFirebase = (function () {
+	let promise = null;
+	const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
+	const load = function (name) {
+		return new Promise(function (resolve, reject) {
+			const s = document.createElement('script');
+			s.src = base + name;
+			s.onload = resolve;
+			s.onerror = reject;
+			document.head.appendChild(s);
+		});
+	};
+	return function () {
+		if (!promise) {
+			promise = load('firebase-app-compat.js')
+				.then(function () { return Promise.all([load('firebase-auth-compat.js'), load('firebase-firestore-compat.js')]); })
+				.then(function () {
+					const fb = window.firebase;
+					if (!fb.apps.length) {
+						fb.initializeApp(FIREBASE_CONFIG);
+					}
+					return { fb: fb, auth: fb.auth(), db: fb.firestore() };
+				});
+		}
+		return promise;
+	};
+}());
 (function () {
 	if (window.coralightAds) {
 		return;
@@ -618,34 +648,42 @@ const FIREBASE_CONFIG = {
 		start();
 		return;
 	}
-	const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
-	const load = function (name) {
-		return new Promise(function (resolve, reject) {
-			const s = document.createElement('script');
-			s.src = base + name;
-			s.onload = resolve;
-			s.onerror = reject;
-			document.head.appendChild(s);
-		});
-	};
-	load('firebase-app-compat.js')
-		.then(function () { return Promise.all([load('firebase-auth-compat.js'), load('firebase-firestore-compat.js')]); })
-		.then(function () {
-			const fb = window.firebase;
-			fb.initializeApp(FIREBASE_CONFIG);
-			const auth = fb.auth();
-			const db = fb.firestore();
+	window.coralightFirebase()
+		.then(function (f) {
+			const fb = f.fb;
+			const auth = f.auth;
+			const db = f.db;
 			const doc = function () { return db.collection('saves').doc(auth.currentUser.uid); };
-			const nameOf = function (u) { return (u && (u.displayName || u.email)) || ''; };
+			// The online features sign every player in anonymously (no
+			// name): only a Google account counts as "signed in" here.
+			const nameOf = function (u) {
+				if (!u || u.isAnonymous) {
+					return '';
+				}
+				const p = (u.providerData && u.providerData[0]) || {};
+				return u.displayName || u.email || p.displayName || p.email || 'Google';
+			};
 			api = {
 				current: function () {
 					return new Promise(function (resolve) {
 						const stop = auth.onAuthStateChanged(function (u) { stop(); resolve(nameOf(u)); });
 					});
 				},
+				// An anonymous online player keeps their id (leaderboard,
+				// founder place, invite code) by linking Google to it; an
+				// account that already exists is simply signed in.
 				signIn: function () {
 					const provider = new fb.auth.GoogleAuthProvider();
-					return auth.signInWithPopup(provider).then(function (r) { return nameOf(r.user); });
+					const u = auth.currentUser;
+					const go = (u && u.isAnonymous)
+						? u.linkWithPopup(provider).catch(function (e) {
+							if (e && e.credential && (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use')) {
+								return auth.signInWithCredential(e.credential);
+							}
+							throw e;
+						})
+						: auth.signInWithPopup(provider);
+					return go.then(function (r) { return nameOf(r.user || auth.currentUser); });
 				},
 				signOut: function () { auth.signOut(); },
 				read: function () {
@@ -661,6 +699,374 @@ const FIREBASE_CONFIG = {
 			console.warn('Firebase failed to load:', e);
 			cloud.state = 'failed';
 		});
+}());
+
+// Online features: the players' leaderboard, the founder gift, invites.
+// Firebase anonymous sign-in (no UI, so allowed on CrazyGames too) and
+// Firestore, on our site and on CrazyGames; a player signed in with Google
+// on our site uses that account's id. All checks live in the Firestore rules
+// (docs/online.md). `?online=test` fakes the backend in localStorage,
+// `?online=test&fail=1` fakes a blocked network, `?online=off` turns it off.
+// The game (Online autoload) talks to window.coralightOnline:
+//   state: 'idle' | 'loading' | 'ready' | 'failed' | 'off'; uid; code (invite code)
+//   begin(): the game calls it a few seconds after it started; only then
+//   Firebase is loaded and the player signed in (the start never waits)
+//   inviteRef(): the invite code this page was opened with ('' = none)
+//   request(id, method, arg, cb): cb(id, result) for the methods below
+//   submitScore(a), fetchBoard(a), claimFounder(), registerInvite(code),
+//   fetchInviteJoins(code), inviteLink(code), share(a): Promises
+(function () {
+	let q = null;
+	try {
+		q = new URLSearchParams(window.location.search);
+	} catch (e) { /* old browser */ }
+	const mode = (q && q.get('online')) || '';
+	const cgHost = /(^|\.)crazygames\.[a-z.]+$/i;
+	let parentHost = '';
+	try {
+		const ao = window.location.ancestorOrigins;
+		if (ao && ao.length > 0) {
+			parentHost = new URL(ao[ao.length - 1]).hostname;
+		} else if (window.top !== window.self && document.referrer) {
+			parentHost = new URL(document.referrer).hostname;
+		}
+	} catch (e) { /* no parent info */ }
+	const onCrazy = cgHost.test(window.location.hostname) || cgHost.test(parentHost);
+	const onSite = window.location.hostname === 'gonempxr.github.io';
+	const test = mode === 'test';
+	const online = { state: 'off', uid: '', code: '', ref: '', host: onCrazy ? 'crazygames' : (onSite ? 'site' : 'other') };
+	window.coralightOnline = online;
+	// ?bench=... plays a throwaway save: its coins never reach the real board.
+	const bench = !!(q && q.get('bench'));
+	if (mode === 'off' || (!test && (bench || (!onSite && !onCrazy)))) {
+		return;
+	}
+	online.state = 'idle';
+	let begun = false;
+	// Called once by the game (Online autoload); the work is in start().
+	let start = function () {};
+	online.begin = function () {
+		if (begun) {
+			return;
+		}
+		begun = true;
+		online.state = 'loading';
+		// A network that never answers counts as "not available" (a late
+		// sign-in still makes it ready).
+		setTimeout(function () {
+			if (online.state === 'loading') {
+				online.state = 'failed';
+			}
+		}, 25000);
+		start();
+	};
+	const SITE_URL = 'https://gonempxr.github.io/colarlight/';
+	// The invite code from the address (our site); it leaves the address
+	// bar so a reload or a copied address doesn't carry it on.
+	try {
+		const r = q && q.get('ref');
+		if (r && /^[A-Za-z0-9]{6,12}$/.test(r)) {
+			online.ref = r;
+			if (!test && window.history && window.history.replaceState) {
+				q.delete('ref');
+				const rest = q.toString();
+				window.history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+			}
+		}
+	} catch (e) { /* keep going */ }
+	const cgSdk = function () {
+		const sdk = window.CrazyGames && window.CrazyGames.SDK;
+		return (window.coralightAds && window.coralightAds.state === 'ready' && sdk && sdk.game) ? sdk : null;
+	};
+	online.inviteRef = function () {
+		if (online.ref) {
+			return online.ref;
+		}
+		try {
+			const sdk = cgSdk();
+			if (sdk && sdk.game.getInviteParam) {
+				const r = sdk.game.getInviteParam('ref');
+				if (r && typeof r.then === 'function') {
+					r.then(function (v) { if (v) { online.ref = String(v); } }).catch(function () {});
+				} else if (r) {
+					online.ref = String(r);
+				}
+			}
+		} catch (e) { /* no invite */ }
+		return online.ref;
+	};
+	const setUser = function (uid) {
+		online.uid = uid;
+		online.code = uid.slice(0, 8);
+		online.state = 'ready';
+	};
+	const linkFor = function (code) {
+		const sdk = cgSdk();
+		if (sdk && sdk.game.inviteLink) {
+			return Promise.resolve(sdk.game.inviteLink({ ref: code })).then(function (l) { return String(l || ''); });
+		}
+		if (test) {
+			return Promise.resolve(window.location.origin + window.location.pathname + '?online=test&ref=' + code);
+		}
+		return Promise.resolve(SITE_URL + '?ref=' + code);
+	};
+	const copy = function (text) {
+		const old = function () {
+			const t = document.createElement('textarea');
+			t.value = text;
+			t.setAttribute('readonly', '');
+			t.style.position = 'fixed';
+			t.style.opacity = '0';
+			document.body.appendChild(t);
+			t.select();
+			let ok = false;
+			try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+			t.remove();
+			return ok ? 'copied' : 'error';
+		};
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			return navigator.clipboard.writeText(text).then(function () { return 'copied'; }, old);
+		}
+		return Promise.resolve(old());
+	};
+	online.share = function (a) {
+		if (navigator.share && !test) {
+			return navigator.share({ title: 'Coralight: Dive Tycoon', text: a.text, url: a.url }).then(function () { return 'shared'; }, function (e) {
+				if (e && e.name === 'AbortError') {
+					return 'cancel';
+				}
+				return copy(a.url);
+			});
+		}
+		return copy(a.url);
+	};
+	online.inviteLink = function (code) { return linkFor(code); };
+	let api = null;
+	if (test) {
+		// A pretend backend in this browser's localStorage, with the same
+		// checks as the Firestore rules. A few "Test" rows fill the board.
+		const KEY = 'coralight_online_test';
+		const load = function () {
+			let d = null;
+			try { d = JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
+			if (!d) {
+				d = { all: {}, weeks: {}, founders: { count: 7, list: {} }, invites: {}, joins: {} };
+				const now = Date.now();
+				for (let i = 1; i <= 12; i++) {
+					const id = 'Test' + String(i).padStart(4, '0') + 'xxxxxxxxxxxxxxxxxxxx';
+					const s = Math.round(Math.pow(10, 3 + i * 0.55));
+					d.all[id] = { name: 'Test diver ' + i, score: s, t: now, a: '' };
+				}
+				d.invites.Test0001 = {};
+			}
+			return d;
+		};
+		const store = function (d) { try { window.localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { /* private mode */ } };
+		let uid = (q && q.get('as')) || '';
+		if (!uid) {
+			try { uid = window.localStorage.getItem(KEY + '_uid') || ''; } catch (e) { uid = ''; }
+		}
+		if (!uid) {
+			const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+			for (let i = 0; i < 28; i++) {
+				uid += abc[Math.floor(Math.random() * abc.length)];
+			}
+			try { window.localStorage.setItem(KEY + '_uid', uid); } catch (e) { /* private mode */ }
+		}
+		const later = function (v) { return new Promise(function (r) { setTimeout(function () { r(v); }, 300); }); };
+		const deny = function () { const e = new Error('denied'); e.code = 'permission-denied'; return Promise.reject(e); };
+		const put = function (table, a) {
+			const old = table[uid];
+			if (old && (a.score < old.score || Date.now() - old.t < 30000)) {
+				return false;
+			}
+			table[uid] = { name: a.name, score: a.score, t: Date.now(), a: a.a };
+			return true;
+		};
+		const top = function (table, mine) {
+			const rows = Object.keys(table).map(function (k) { return { uid: k, name: table[k].name, score: table[k].score, a: table[k].a || '' }; });
+			rows.sort(function (x, y) { return y.score - x.score; });
+			const at = rows.findIndex(function (r) { return r.uid === uid; });
+			const above = rows.filter(function (r) { return r.score > mine; }).length;
+			return { rows: rows.slice(0, 50), rank: at >= 0 ? at + 1 : (mine > 0 ? above + 1 : 0) };
+		};
+		api = {
+			submit: function (a) {
+				const d = load();
+				const wk = d.weeks[a.w] || (d.weeks[a.w] = {});
+				const ok = put(d.all, { name: a.name, score: a.all, a: a.a }) | put(wk, { name: a.name, score: a.week, a: a.a });
+				store(d);
+				return ok ? later('ok') : later('error:limit');
+			},
+			board: function (a) {
+				const d = load();
+				return later(top(a.kind === 'week' ? (d.weeks[a.w] || {}) : d.all, a.score));
+			},
+			founder: function () {
+				const d = load();
+				if (d.founders.list[uid]) {
+					return later('already:' + d.founders.list[uid]);
+				}
+				if (d.founders.count >= 100) {
+					return later('full');
+				}
+				d.founders.count += 1;
+				d.founders.list[uid] = d.founders.count;
+				store(d);
+				return later('n:' + d.founders.count);
+			},
+			join: function (code) {
+				const d = load();
+				if (d.joins[uid] || uid.indexOf(code) === 0) {
+					return later('denied');
+				}
+				d.joins[uid] = code;
+				(d.invites[code] = d.invites[code] || {})[uid] = Date.now();
+				store(d);
+				return later('ok');
+			},
+			joins: function (code) {
+				const d = load();
+				return later('n:' + Object.keys(d.invites[code] || {}).length);
+			},
+		};
+		start = function () {
+			if (q && q.get('fail')) {
+				online.state = 'failed';
+				return;
+			}
+			setTimeout(function () { setUser(uid); }, 400);
+		};
+	} else {
+		let F = null;
+		const ts = function () { return F.fb.firestore.FieldValue.serverTimestamp(); };
+		const me = function () { return F.auth.currentUser.uid; };
+		const weekCol = function (w) { return F.db.collection('weeks').doc(String(w)).collection('scores'); };
+		const denied = function (e) { return e && e.code === 'permission-denied'; };
+		api = {
+			// Two separate writes: a refused weekly score (a clock on the
+			// wrong week) must not stop the all-time one.
+			submit: function (a) {
+				const all = F.db.collection('lb_all').doc(me()).set({ name: a.name, score: a.all, a: a.a, t: ts() });
+				const week = weekCol(a.w).doc(me()).set({ name: a.name, score: a.week, a: a.a, t: ts() });
+				return Promise.allSettled([all, week]).then(function (r) {
+					return (r[0].status === 'fulfilled' || r[1].status === 'fulfilled') ? 'ok' : 'error:' + ((r[0].reason && r[0].reason.code) || 'other');
+				});
+			},
+			board: function (a) {
+				const col = a.kind === 'week' ? weekCol(a.w) : F.db.collection('lb_all');
+				return col.orderBy('score', 'desc').limit(50).get().then(function (snap) {
+					const rows = [];
+					snap.forEach(function (d) {
+						const x = d.data();
+						rows.push({ uid: d.id, name: String(x.name || ''), score: Number(x.score) || 0, a: String(x.a || '') });
+					});
+					const at = rows.findIndex(function (r) { return r.uid === me(); });
+					if (at >= 0 || !(a.score > 0)) {
+						return { rows: rows, rank: at + 1 };
+					}
+					// The player's own place below the top 50: one count query
+					// (a single-field index, no setup needed).
+					let counted = null;
+					try {
+						const above = col.where('score', '>', a.score);
+						if (typeof above.count === 'function') {
+							counted = above.count().get();
+						}
+					} catch (e) { counted = null; }
+					if (!counted) {
+						return { rows: rows, rank: 0 };
+					}
+					return counted.then(function (c) { return { rows: rows, rank: c.data().count + 1 }; }, function () { return { rows: rows, rank: 0 }; });
+				});
+			},
+			// The first 100: one transaction raises the counter by exactly
+			// one and writes this player's number (the rules check both).
+			founder: function () {
+				const meta = F.db.collection('meta').doc('founders');
+				const mine = F.db.collection('founders').doc(me());
+				return F.db.runTransaction(function (tx) {
+					return Promise.all([tx.get(meta), tx.get(mine)]).then(function (r) {
+						if (r[1].exists) {
+							return 'already:' + r[1].data().n;
+						}
+						const count = r[0].exists ? (Number(r[0].data().count) || 0) : 0;
+						if (count >= 100) {
+							return 'full';
+						}
+						tx.set(meta, { count: count + 1 });
+						tx.set(mine, { n: count + 1, t: ts() });
+						return 'n:' + (count + 1);
+					});
+				});
+			},
+			// Joined from a friend's link: both records at once, once per player.
+			join: function (code) {
+				const b = F.db.batch();
+				b.set(F.db.collection('invites').doc(code).collection('joined').doc(me()), { t: ts() });
+				b.set(F.db.collection('joins').doc(me()), { code: code, t: ts() });
+				return b.commit().then(function () { return 'ok'; }, function (e) {
+					if (!denied(e)) {
+						throw e;
+					}
+					// Already joined: fine if it was this very link (an
+					// answer lost on the way), otherwise nothing is due.
+					return F.db.collection('joins').doc(me()).get().then(function (d) {
+						return (d.exists && d.data().code === code) ? 'ok' : 'denied';
+					});
+				});
+			},
+			joins: function (code) {
+				return F.db.collection('invites').doc(code).collection('joined').limit(25).get().then(function (s) { return 'n:' + s.size; });
+			},
+		};
+		start = function () {
+			window.coralightFirebase().then(function (f) {
+				F = f;
+				f.auth.onAuthStateChanged(function (u) {
+					if (u) {
+						setUser(u.uid);
+						return;
+					}
+					online.state = 'loading';
+					f.auth.signInAnonymously().catch(function (e) {
+						console.warn('Online sign-in:', e);
+						online.error = (e && e.code) || 'other';
+						online.state = 'failed';
+					});
+				});
+			}).catch(function (e) {
+				console.warn('Online: Firebase failed to load:', e);
+				online.state = 'failed';
+			});
+		};
+	}
+	online.submitScore = function (a) { return api.submit(a); };
+	online.fetchBoard = function (a) { return api.board(a); };
+	online.claimFounder = function () { return api.founder(); };
+	online.registerInvite = function (code) { return api.join(code); };
+	online.fetchInviteJoins = function (code) { return api.joins(code); };
+	const methods = {
+		submit: function (arg) { return api.submit(JSON.parse(arg)); },
+		board: function (arg) { return api.board(JSON.parse(arg)).then(function (r) { return JSON.stringify(r); }); },
+		founder: function () { return api.founder(); },
+		join: function (arg) { return api.join(arg); },
+		joins: function (arg) { return api.joins(arg); },
+		link: function (arg) { return linkFor(arg); },
+		share: function (arg) { return online.share(JSON.parse(arg)); },
+	};
+	online.request = function (id, method, arg, cb) {
+		let p;
+		try {
+			p = Promise.resolve(methods[method](String(arg || '')));
+		} catch (e) {
+			p = Promise.reject(e);
+		}
+		p.then(function (r) { cb(id, String(r)); }, function (e) {
+			console.warn('Online ' + method + ':', e);
+			cb(id, 'error:' + ((e && e.code) || 'other'));
+		});
+	};
 }());
 
 const engine = new Engine(GODOT_CONFIG);

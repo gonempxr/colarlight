@@ -76,6 +76,8 @@ static func build(m: Modal, main: Node) -> void:
 	m.text(t("RIVALS_HOW"), 19, Art.INK_SOFT)
 	var r: Array[int] = Rivals.REWARDS
 	m.text(t("RIVALS_REWARDS") % [r[0], r[1], r[2]], 19, Art.INK_SOFT)
+	# The real players' board is its own place (OnlineView).
+	OnlineView.rivals_link(m, main)
 
 
 ## The motivation line: how far ahead the rival just above is, or a

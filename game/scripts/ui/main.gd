@@ -70,6 +70,8 @@ var _map: MapView
 ## the Rivals League trophy (only while a weekly reward waits).
 var _boost_btn: SideButton
 var _rivals_btn: SideButton
+## The real players' leaderboard (OnlineView), under the side buttons.
+var _online_btn: OnlineButton
 var _ad_overlay: AdOverlay
 ## Frames left to re-fit the PC side column (wrapped text settles a frame late).
 var _side_fit_frames := 0
@@ -249,6 +251,9 @@ func _ready() -> void:
 	_rivals_btn = SideButton.make("rivals")
 	_rivals_btn.pressed.connect(open_rivals)
 	add_child(_rivals_btn)
+	_online_btn = OnlineButton.new()
+	_online_btn.pressed.connect(func(): OnlineView.open_board(self))
+	add_child(_online_btn)
 
 	_tutor = Tutor.new()
 	_tutor.main = self
@@ -300,6 +305,8 @@ func _ready() -> void:
 		_fx.float_text(at + Vector2(0, -36), tr("LEVEL") % int(GameState.levels.get(k, 1)), Art.GOLD, 32))
 	_ad_overlay = AdOverlay.new()
 	add_child(_ad_overlay)
+	# Online gifts (founder, invites): their thank-you dialogs.
+	add_child(OnlineHook.make(self))
 	_setup_streak()
 
 	GameState.changed.connect(_refresh)
@@ -1203,7 +1210,8 @@ func _place_side_buttons() -> void:
 	# The league lives in the Profile; the trophy shows up only while last
 	# week's pearls wait there.
 	_rivals_btn.visible = settled and Rivals.reward_pending()
-	for b in [_boost_btn, _rivals_btn]:
+	_online_btn.visible = settled and Online.present()
+	for b in [_boost_btn, _rivals_btn, _online_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)
 			# The boost's time tag hangs below it.
