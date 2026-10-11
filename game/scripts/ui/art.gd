@@ -604,7 +604,7 @@ static func _fringe_cols(color: Color, n: int) -> PackedColorArray:
 
 
 static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
-	var k := hash([g[1], fill, line])
+	var k := hash([g[1], fill, line, g[0][0] if not g[0].is_empty() else Vector2.ZERO, g[0][g[0].size() - 1] if not g[0].is_empty() else Vector2.ZERO])
 	var c = _cget(k)
 	if c != null and c.size() == g[0].size():
 		return c
@@ -612,10 +612,38 @@ static func _colors_for(g: Array, fill: Color, line: Color) -> PackedColorArray:
 	c = PackedColorArray()
 	c.append_array(_solid(line, n[0]))
 	c.append_array(_fringe_cols(line, n[1]))
-	c.append_array(_solid(fill, n[2]))
+	if VOLUME > 0.0 and n[2] >= 6 and not low_power:
+		c.append_array(_volume_fill(g[0], n[0] + n[1], n[2], fill))
+	else:
+		c.append_array(_solid(fill, n[2]))
 	c.append_array(_solid(shade_of(fill), n[3]))
 	c.append_array(_solid(Color(1, 1, 1, 0.3 * fill.a), n[4]))
 	_cset(k, c)
+	return c
+
+
+## Every filled shape gets a soft light from above: its fill runs from a
+## little lighter at the top to a little darker at the bottom (volume, for
+## free: the colors are cached with the shape).
+const VOLUME := 0.17
+
+
+static func _volume_fill(v: PackedVector2Array, from: int, count: int, fill: Color) -> PackedColorArray:
+	var top := INF
+	var bottom := -INF
+	for i in range(from, from + count):
+		var y := v[i].y
+		top = minf(top, y)
+		bottom = maxf(bottom, y)
+	var hi := fill.lightened(VOLUME)
+	var lo := fill.darkened(VOLUME * 0.9)
+	hi.a = fill.a
+	lo.a = fill.a
+	var c := PackedColorArray()
+	c.resize(count)
+	var span := maxf(bottom - top, 0.001)
+	for i in count:
+		c[i] = hi.lerp(lo, (v[from + i].y - top) / span)
 	return c
 
 

@@ -185,7 +185,10 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var w := size.x
 	var h := World.ROW_H
 	# Rock layer with strata and pebbles.
-	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), rock)
+	# Rock lit a little from above, darker towards the next layer.
+	var rock_hi := rock.lightened(0.07)
+	var rock_lo := rock.darkened(0.1)
+	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), PackedColorArray([rock_hi, rock_hi, rock_lo, rock_lo]))
 	if WorldLook.world == "volcano":
 		_basalt(ci, w, h, rock)
 	for i in (0 if WorldLook.world == "volcano" else 3):
@@ -266,10 +269,33 @@ func _light_beams(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		var beam := PackedVector2Array([Vector2(x, cave.position.y - 4), Vector2(x + w, cave.position.y - 4),
 				Vector2(x + w + 70.0, cave.end.y + 4), Vector2(x + 40.0, cave.end.y + 4)])
 		Art.flat(ci, Art.clipped(beam, cave_poly), glow)
+	# Soft shade along the cave walls: the middle of the water glows.
+	Art.flat(ci, Art.clipped(_wall_band(cave), cave_poly), Color(Art.SHADE, 0.13))
 	# A darker band low in the water: depth under the light.
 	var low := PackedVector2Array([Vector2(cave.position.x - 4, cave.end.y - cave.size.y * 0.42), Vector2(cave.end.x + 4, cave.end.y - cave.size.y * 0.42),
 			Vector2(cave.end.x + 4, cave.end.y + 4), Vector2(cave.position.x - 4, cave.end.y + 4)])
 	Art.flat(ci, Art.clipped(low, cave_poly), Color(Art.SHADE, 0.16))
+
+
+## A ring a little inside the cave's edge (cached per cave size).
+static var _bands := {}
+
+
+func _wall_band(cave: Rect2) -> PackedVector2Array:
+	var k := hash(cave)
+	if _bands.has(k):
+		return _bands[k]
+	var outer := Art.rrect_pts(cave.grow(20.0), 52, 6)
+	var inner := Art.rrect_pts(cave.grow(-22.0), 30, 6)
+	# One polygon: the outer ring, a seam, then the inner ring backwards.
+	var ring := PackedVector2Array(outer)
+	ring.append(outer[0])
+	var rev := inner.duplicate()
+	rev.reverse()
+	ring.append(inner[inner.size() - 1])
+	ring.append_array(rev)
+	_bands[k] = ring
+	return ring
 
 
 ## The cave plus the doorway to the shaft. The doorway's floor runs on

@@ -10,7 +10,7 @@ var line_w := 4.0
 var depth := 6.0
 var radius := 18.0
 var gloss := 0.22
-var shadow := 0.0
+var shadow := 0.2
 var pressed := false
 ## Sheets glued to the screen bottom: square off the lower corners by
 ## drawing past the bottom edge.
@@ -47,8 +47,13 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 	if open_top:
 		rect.position.y -= radius * 2.0
 		rect.size.y += radius * 2.0
-	if shadow > 0.0:
-		_flat(Color(0.05, 0.02, 0.15, shadow), radius + 2).draw(to_canvas_item, Rect2(rect.position + Vector2(0, 6), rect.size))
+	if shadow > 0.0 and not open_bottom:
+		# A soft drop shadow lifts every card and button off the scene.
+		var sh := _flat(Color(0, 0, 0, 0), radius)
+		sh.shadow_color = Color(0.04, 0.02, 0.14, shadow)
+		sh.shadow_size = 7
+		sh.shadow_offset = Vector2(0, 5)
+		sh.draw(to_canvas_item, rect.grow(-2))
 	# Outline around everything.
 	_flat(line, radius).draw(to_canvas_item, rect)
 	var inner := rect.grow(-line_w)
@@ -58,6 +63,10 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 		_flat(Art.shade_of(fill, 0.38), r).draw(to_canvas_item, Rect2(inner.position + Vector2(0, sink), inner.size - Vector2(0, sink)))
 	var face := Rect2(inner.position + Vector2(0, sink), inner.size - Vector2(0, depth))
 	_flat(fill, r).draw(to_canvas_item, face)
+	# The lower part of the face a touch darker: light from above.
+	if face.size.y > 16.0:
+		var low := Rect2(face.position + Vector2(0, face.size.y * 0.55), Vector2(face.size.x, face.size.y * 0.45))
+		_flat(Color(Art.SHADE, 0.07), minf(r, low.size.y / 2.0)).draw(to_canvas_item, low)
 	if gloss > 0.0 and face.size.y > 12.0:
 		var g := Rect2(face.position + Vector2(r * 0.35 + 3, 3), Vector2(face.size.x - r * 0.7 - 6, face.size.y * 0.38))
 		_flat(Color(1, 1, 1, gloss), minf(r, g.size.y / 2.0)).draw(to_canvas_item, g)

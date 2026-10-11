@@ -588,6 +588,10 @@ func _paint_sea(ci: CanvasItem) -> void:
 			continue
 		elif band.x < TOP_H and WorldLook.world != "ocean":
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.75)) * DayNight.sea_tint()
+		elif band.x < TOP_H:
+			# Ocean: bright at the surface, clearly deeper towards the sand.
+			c0 = c0.lightened(0.08)
+			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.55)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
 
 

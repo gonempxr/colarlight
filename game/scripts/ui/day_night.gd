@@ -13,8 +13,8 @@ const START_PHASE := 0.035
 ## colors are cached, so a new color every frame would flood the caches).
 const STEP_SECONDS := 1.0
 
-const DAY_TOP := Color("4fb3ee")
-const DAY_MID := Color("8fd2f7")
+const DAY_TOP := Color("2f93e6")
+const DAY_MID := Color("74c6f6")
 const DAY_BOTTOM := Color("c9eeff")
 const NIGHT_TOP := Color("0e1440")
 const NIGHT_MID := Color("1b2862")
