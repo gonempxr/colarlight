@@ -77,14 +77,24 @@ def diver(face="happy", arms="up", palette="orange", tool=None):
     if arms == "down":
         new = ["M -100 -390 C -150 -340, -170 -290, -175 -230", "M 100 -390 C 150 -340, 170 -290, 175 -230"]
         gloves = [(-176, -220), (176, -220)]
+    elif arms == "rig":
+        # Left arm down; the right arm is a separate sprite (arm_pick) so
+        # the video can swing it around the shoulder.
+        s = _drop_right_arm(s)
+        new = ["M -100 -390 C -150 -340, -170 -290, -175 -230", ""]
+        gloves = [(-176, -220), None]
     elif arms == "pick":
         new = ["M -100 -390 C -150 -340, -170 -290, -175 -230", "M 100 -390 C 180 -430, 240 -520, 262 -600"]
         gloves = [(-176, -220), (264, -608)]
     else:
         new, gloves = ARMS_UP, GLOVES_UP
     for o, n in zip(ARMS_UP, new):
-        s = s.replace(o, n)
-    for (ox, oy), (nx, ny) in zip(GLOVES_UP, gloves):
+        if n:
+            s = s.replace(o, n)
+    for (ox, oy), g in zip(GLOVES_UP, gloves):
+        if g is None:
+            continue
+        nx, ny = g
         s = s.replace(f'cx="{ox}" cy="{oy}"', f'cx="{nx}" cy="{ny}"')
         s = s.replace(f'M {ox - 26} {oy - 20}', f'M {nx - 26} {ny - 20}')
     if palette == "poor":
@@ -108,6 +118,37 @@ def diver(face="happy", arms="up", palette="orange", tool=None):
     return pre + s
 
 
+def _drop_right_arm(s):
+    import re
+    s = re.sub(r'<path d="M 100 -390 C 170 -460, 220 -620, 236 -790"[^>]*/>', "", s)
+    s = re.sub(r'<circle cx="238" cy="-800"[^>]*/>', "", s)
+    s = re.sub(r'<path d="M 212 -820 a[^>]*/>', "", s)
+    return s
+
+
+ARM_BOX = (-70, -240, 700, 480)
+SHOULDER = (100, -390)  # in diver units
+
+
+def arm_pick(palette="orange", tool="pick"):
+    """Right arm from the shoulder (0, 0) pointing along +x, glove at 200,
+    pickaxe continuing the arm. Rotated around the origin by the video."""
+    suit = {"orange": "url(#suitArm)", "poor": "url(#suitArmP)", "gold": "url(#suitG)"}[palette]
+    d = "M 0 0 C 70 -10, 140 -10, 196 0"
+    s = [f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="80" stroke-linecap="round"/>',
+         f'<path d="{d}" fill="none" stroke="{suit}" stroke-width="64" stroke-linecap="round"/>']
+    if tool == "pick":
+        steel = "url(#steel)" if palette != "gold" else "url(#suitG)"
+        s.append(f'<g transform="translate(205 0) rotate(90)">'
+                 f'<rect x="-13" y="-330" width="26" height="370" rx="12" fill="url(#wood)" stroke="{INK}" stroke-width="7"/>'
+                 f'<path d="M -190 -280 Q 0 -420 190 -280 Q 0 -318 -190 -280 Z" fill="{steel}" stroke="{INK}" stroke-width="9" stroke-linejoin="round"/>'
+                 f'<rect x="-30" y="-350" width="60" height="62" rx="10" fill="#5d6577" stroke="{INK}" stroke-width="7"/>'
+                 f'<path d="M -100 -330 Q 0 -365 100 -330" stroke="#ffffff" stroke-opacity="0.6" stroke-width="8" fill="none" stroke-linecap="round"/></g>')
+    s.append(f'<circle cx="205" cy="0" r="50" fill="url(#glove)" stroke="{INK}" stroke-width="{W}"/>')
+    s.append('<path d="M 180 -22 a 30 30 0 0 1 22 -20" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="9" stroke-linecap="round"/>')
+    return "".join(s)
+
+
 def wrap(body, box, burst=(0, 0)):
     x, y, w, h = box
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}">'
@@ -127,6 +168,13 @@ def all_sprites():
         "coin": wrap(vcore.coin(0, 0, 60, 1.0, 0), (-70, -70, 140, 140)),
         "bar": wrap(vcore.gold_bar(0, 0, 1.0, 0), (-70, -60, 140, 70)),
     }
+    sp["rigSad"] = wrap(diver("sad", "rig", "poor"), DIVER_BOX)
+    sp["rigHappy"] = wrap(diver("happy", "rig", "orange"), DIVER_BOX)
+    sp["rigStar"] = wrap(diver("star", "rig", "orange"), DIVER_BOX)
+    sp["armP"] = wrap(arm_pick("poor"), ARM_BOX)
+    sp["armO"] = wrap(arm_pick("orange"), ARM_BOX)
+    sp["armG"] = wrap(arm_pick("gold"), ARM_BOX)
+    sp["armE"] = wrap(arm_pick("orange", None), ARM_BOX)
     for k in ("emerald", "crystal", "ruby", "pearl"):
         sp[k] = wrap(vcore.gem(0, 0, 60, k, 0), (-70, -80, 140, 160))
     return sp

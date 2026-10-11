@@ -5,8 +5,8 @@ and encodes it with ffmpeg at 60 fps.
     python3 tools/promo_video/render.py frames out_dir W H t1 t2 ...   # stills
     python3 tools/promo_video/render.py video out.mp4 W H [ad|cg]
 
-ad = 24 s with captions, logo, PLAY NOW and the link (YouTube / TikTok).
-cg = 18 s, no text or links (CrazyGames preview video rules).
+ad = 32.5 s with captions, music + sound effects, logo, TRY NOW and the link.
+cg = 19.6 s gameplay part, no captions, links or sound (CrazyGames preview rules).
 """
 import base64
 import os
@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import sprites  # noqa: E402
+import audio  # noqa: E402
 
 FPS = 60
 LINK = "gonempxr.github.io/colarlight"
@@ -32,7 +33,7 @@ def page_html(cfg):
     font = b64(open(os.path.join(ROOT, "game/assets/fonts/Nunito-Black.ttf"), "rb").read())
     sp = {k: b64(v.encode()) for k, v in sprites.all_sprites().items()}
     sp["logo"] = b64(open(os.path.join(ROOT, "game/assets/logo.svg"), "rb").read())
-    js = open(os.path.join(HERE, "scene.js")).read()
+    js = "\n".join(open(os.path.join(HERE, n)).read() for n in ("scene.js", "empire.js", "timeline.js"))
     import json
     return f"""<!doctype html><html><head><style>
 @font-face {{ font-family: Nunito; src: url(data:font/ttf;base64,{font}); }}
@@ -74,8 +75,14 @@ def open_page(p, cfg):
 
 def config(w, h, mode):
     if mode == "cg":
-        return {"w": w, "h": h, "captions": False, "endcard": False, "t0": 2.6, "dur": 18.0}
-    return {"w": w, "h": h, "captions": True, "endcard": True, "t0": 0.0, "dur": 24.0, "link": LINK}
+        return {"w": w, "h": h, "captions": False, "endcard": False, "t0": 8.0, "dur": 19.6}
+    return {"w": w, "h": h, "captions": True, "endcard": True, "t0": 0.0, "dur": 32.5, "link": LINK}
+
+
+def soundtrack(pg, cfg, path):
+    ev = pg.evaluate("sfxEvents()")
+    tl = pg.evaluate("T")
+    audio.write_track(path, ev, cfg["t0"], cfg["dur"], tl)
 
 
 def grab(pg, t):
@@ -85,6 +92,14 @@ def grab(pg, t):
 
 def main():
     mode = sys.argv[1]
+    if mode == "audio":
+        out, w, h = sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+        cfg = config(w, h, "ad")
+        with sync_playwright() as p:
+            b, pg = open_page(p, cfg)
+            soundtrack(pg, cfg, out)
+            b.close()
+        return
     if mode == "frames":
         out, w, h = sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
         os.makedirs(out, exist_ok=True)
@@ -99,11 +114,16 @@ def main():
     kind = sys.argv[5] if len(sys.argv) > 5 else "ad"
     cfg = config(w, h, kind)
     n = int(cfg["dur"] * FPS)
-    enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(FPS), "-i", "-",
-                            "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-pix_fmt", "yuv420p",
-                            "-movflags", "+faststart", "-an", out], stdin=subprocess.PIPE)
     with sync_playwright() as p:
         b, pg = open_page(p, cfg)
+        a_args = ["-an"]
+        if kind == "ad":
+            wav = out + ".wav"
+            soundtrack(pg, cfg, wav)
+            a_args = ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(FPS), "-i", "-"]
+                               + a_args[:2] + ["-c:v", "libx264", "-preset", "slow", "-crf", "19", "-pix_fmt", "yuv420p",
+                                               "-movflags", "+faststart"] + a_args[2:] + [out], stdin=subprocess.PIPE)
         for i in range(n):
             enc.stdin.write(grab(pg, i / FPS))
             if i % 120 == 0:
