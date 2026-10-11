@@ -258,6 +258,25 @@ def sfx(kind):
             j = int(at * SR)
             out[j:j + len(s)] += s * 0.9
         return out
+    if kind == "tapestop":
+        d = 0.6
+        tt = t_(d)
+        drop = lambda f: (lambda x: f * np.maximum(0.05, 1 - x / d) ** 1.6)
+        sig = sum(osc(drop(note(n_)), d, "saw") for n_ in (48, 60, 64, 67)) / 4
+        return lp(sig, 2500) * (1 - tt / d) * 0.9
+    if kind == "rewind":
+        d = 0.75
+        tt = t_(d)
+        chirp = osc(lambda x: 900 + 700 * np.sin(x * 2 * np.pi * 11), d, "saw") * 0.25
+        return (bp(noise(d), 1500, 6000) * 0.5 + chirp) * np.sin(np.pi * tt / d) * 0.7
+    if kind == "sadfast":
+        out = np.zeros(int(1.8 * SR))
+        for i, (n_, d) in enumerate(((55, 0.24), (54, 0.24), (53, 0.24), (52, 0.9))):
+            vib = (lambda f, dd: (lambda x: f * (1 + (0.02 if dd > 0.5 else 0.004) * np.sin(x * 2 * np.pi * 6))))(note(n_), d)
+            sgl = lp(osc(vib, d, "saw"), 1400) * env(int(d * SR), 0.02, 3.0, 0.8, 0.1)
+            j = int(i * 0.26 * SR)
+            out[j:j + len(sgl)] += sgl * 0.55
+        return out
     if kind == "sad":
         # the classic descending 'wah wah wah waaah'
         out = np.zeros(int(3.0 * SR))
@@ -275,29 +294,23 @@ def sfx(kind):
 
 
 # ------------------------------------------------------------------ music
-def music(mix, tl):
-    up, end, fin = tl["up"], tl["end"], tl["fin"]
-    # intro: soft minor pad + music-box notes
-    mix.add(0.2, pad((57, 60, 64), up - 0.1, 1200), 0.3)
-    for i, n_ in enumerate((76, 72, 69, 71, 72, 69, 67, 64)):
-        mix.add(0.6 + i * 0.62, pluck(n_, 0.6, "tri", 5000, 0.25), 0.22, pan=-0.3 + 0.1 * (i % 3))
-    # drum fill into the drop
-    for k in range(4):
-        mix.add(up - 0.48 + k * 0.12, snare(), 0.18 + k * 0.06)
-    # groove
-    bpm = 124
-    beat = 60 / bpm
-    prog = [(48, (60, 64, 67)), (43, (59, 62, 67)), (45, (60, 64, 69)), (41, (60, 65, 69))]  # C G Am F
-    lead = [79, 76, 72, 76, 79, 81, 79, 76, 74, 71, 67, 71, 74, 76, 74, 71, 76, 72, 69, 72, 76, 77, 76, 72, 77, 72, 69, 72, 77, 79, 77, 72]
-    t = up
+BPM = 124
+BEAT = 60 / BPM
+PROG = [(48, (60, 64, 67)), (43, (59, 62, 67)), (45, (60, 64, 69)), (41, (60, 65, 69))]  # C G Am F
+LEAD = [79, 76, 72, 76, 79, 81, 79, 76, 74, 71, 67, 71, 74, 76, 74, 71, 76, 72, 69, 72, 76, 77, 76, 72, 77, 72, 69, 72, 77, 79, 77, 72]
+
+
+def groove(mix, start, stop, big_from, rich_from):
+    t = start
     bar = 0
-    while t < end - 0.01:
-        root, chord = prog[bar % 4]
-        big = t >= tl["worlds"]
-        rich = t >= tl["rich"]
+    beat = BEAT
+    while t < stop - 0.01:
+        root, chord = PROG[bar % 4]
+        big = t >= big_from
+        rich = t >= rich_from
         for b in range(4):
             tb = t + b * beat
-            if tb >= end:
+            if tb >= stop:
                 break
             mix.add(tb, kick(), 0.85)
             if b % 2 == 1:
@@ -305,12 +318,11 @@ def music(mix, tl):
             for h in range(2):
                 mix.add(tb + h * beat / 2, hat(open_=(h == 1 and b == 3)), 0.25 if h else 0.18, pan=0.3)
             for h in range(2):
-                mix.add(tb + h * beat / 2, bass(root + (12 if h else 0), beat / 2 * 0.95), 0.42)
-            # offbeat chord stabs
+                if tb + h * beat / 2 < stop:
+                    mix.add(tb + h * beat / 2, bass(root + (12 if h else 0), beat / 2 * 0.95), 0.42)
             mix.add(tb + beat / 2, sum(pluck(n_, beat * 0.45, "saw", 2600, 0.08) for n_ in chord) / 3, 0.22, pan=-0.25)
-            # lead arpeggio (8ths)
             for h in range(2):
-                n_ = lead[((bar % 4) * 8 + b * 2 + h) % len(lead)]
+                n_ = LEAD[((bar % 4) * 8 + b * 2 + h) % len(LEAD)]
                 g = 0.13 if not big else 0.17
                 mix.add(tb + h * beat / 2, pluck(n_, beat * 0.5, "square", 4200, 0.1), g, pan=0.25)
                 if big:
@@ -318,16 +330,32 @@ def music(mix, tl):
             if rich:
                 for h in range(4):
                     mix.add(tb + h * beat / 4, pluck(chord[h % 3] + 24, beat * 0.25, "tri", 9000, 0.04), 0.06, pan=(h % 2) * 0.8 - 0.4)
-        # long pad under each bar
-        mix.add(t, pad(chord, 4 * beat, 1500), 0.08)
+        mix.add(t, pad(chord, min(4 * beat, stop - t + 0.3), 1500), 0.08)
         t += 4 * beat
         bar += 1
+
+
+def music(mix, tl):
+    up, end, fin = tl["up"], tl["end"], tl["fin"]
+    hook, rew = tl.get("hook", 0.0), tl.get("rew", 0.0)
+    # hook: the full 'rich' groove straight away, cut by a tape stop
+    if rew > 0:
+        groove(mix, 0.0, rew, 0.0, 0.0)
+    # broke part: soft minor pad + music-box notes
+    mix.add(hook + 0.05, pad((57, 60, 64), up - hook, 1200), 0.3)
+    for i, n_ in enumerate((76, 72, 69, 71, 72, 69, 67, 64)):
+        at = hook + 0.1 + i * 0.3
+        if at < up - 0.3:
+            mix.add(at, pluck(n_, 0.5, "tri", 5000, 0.2), 0.22, pan=-0.3 + 0.1 * (i % 3))
+    for k in range(4):
+        mix.add(up - 0.48 + k * 0.12, snare(), 0.18 + k * 0.06)
+    groove(mix, up, end, tl["worlds"], tl["rich"])
+    beat = BEAT
     # end card: big chord, then a warm held pad
     mix.add(end, kick(), 1.0)
     mix.add(end, sum(pluck(n_, 1.6, "saw", 3000, 0.5) for n_ in (48, 60, 64, 67, 72)) / 4, 0.5)
     mix.add(end + 0.05, pad((60, 64, 67, 71, 74), fin - end, 2200), 0.2)
     mix.add(end, bass(36, fin - end), 0.35)
-    # soft heartbeat drums on the end card
     for k in range(int((fin - end) / beat)):
         tb = end + k * beat
         if k % 2 == 0 and tb < fin - 0.6:

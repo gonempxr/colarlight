@@ -2,21 +2,26 @@
 // of sound events (render.py turns them into the soundtrack).
 'use strict';
 
-const T = { s2: 3.5, up: 6.0, mine: 8.0, boat: 12.4, fac: 15.4, over: 19.0, worlds: 20.6, rich: 25.6, end: 28.2, fin: 32.5 };
-const TAPS = [3.75, 4.12, 4.48, 4.84, 5.14, 5.42];
+// Video time v runs: hook 0-1.9, start scene 1.9-6.0 (start constants are in
+// video time), then the story from T.mine on, shown SHIFT seconds earlier.
+const HOOK = 1.9, REW = 1.15, VMINE = 6.0, SHIFT = 2.0;
+const T = { s2: 2.2, btn: 3.75, up: 4.25, mine: 8.0, boat: 12.4, fac: 15.4, over: 19.0, worlds: 20.6, rich: 25.6, end: 28.2, fin: 32.5 };
+const TAPS = [2.2, 2.5, 2.8, 3.1, 3.4, 3.7];
 const TAP_V = [1, 5, 5, 10, 25, 50];
-const PRESS = 5.86;
+const PRESS = 4.1;
+const VT = () => ({ hook: HOOK, rew: REW, up: T.up, worlds: T.worlds - SHIFT, rich: T.rich - SHIFT, end: T.end - SHIFT, fin: T.fin - SHIFT });
 const CLICKS = [T.end + 1.9, T.end + 3.2];
 
 const topY = () => -H / 2 / K;
 const botY = () => H / 2 / K;
 
 function money(t) {
+	if (t < HOOK) return t < REW ? 2e11 * Math.pow(6, eOut(span(t, 0, REW))) : 1.2e12 * Math.pow(1e-12, eIn(span(t, REW, HOOK - 0.1)));
 	if (t < T.s2) return 0;
 	if (t < T.mine) {
 		let v = 0;
 		TAPS.forEach((tt, i) => { if (t > tt + 0.6) v += TAP_V[i]; });
-		if (t > T.up + 0.4) v = lerp(96, 1250, eOut(span(t, T.up + 0.4, T.mine)));
+		if (t > T.up + 0.4) v = lerp(96, 1250, eOut(span(t, T.up + 0.4, VMINE)));
 		return v;
 	}
 	if (t < T.over) return 1250 * Math.pow(2000, eIO(span(t, T.mine, T.over)));
@@ -42,6 +47,7 @@ function vignette() {
 
 // ---------------------------------------------------------------- scenes
 function sceneAt(t) {
+	if (t < HOOK) return sceneHook;
 	if (t < T.mine) return sceneStart;
 	if (t < T.worlds) return sceneEmpire;
 	if (t < T.rich) return sceneWorlds;
@@ -50,14 +56,16 @@ function sceneAt(t) {
 }
 const CUTS = [T.mine, T.worlds, T.rich, T.end];
 
-function render(t) {
+function render(v) {
 	ctx.clearRect(0, 0, W, H);
-	t += CFG.t0 || 0;
+	v += CFG.t0 || 0;
+	const t = v < VMINE ? v : v + SHIFT;
 	// circle-reveal transitions: the old scene stays outside a growing circle
 	let cut = null;
-	for (const c of CUTS) if (t >= c && t < c + 0.45 && (c !== T.end || CFG.endcard)) cut = c;
+	for (const c of CUTS) if (t >= c && t < c + 0.45 && (c !== T.end || CFG.endcard) && !(c === T.mine && (CFG.t0 || 0) >= VMINE)) cut = c;
 	if (cut !== null) {
-		sceneAt(cut - 0.001)(Math.min(t, cut - 0.001));
+		const pt = cut === T.mine ? VMINE - 0.001 : cut - 0.001;
+		sceneAt(pt)(pt);
 		const u = eIO((t - cut) / 0.45), R = Math.hypot(W, H) * 0.55 * u;
 		ctx.save(); ctx.beginPath(); ctx.arc(CX, CY, Math.max(1, R), 0, Math.PI * 2); ctx.clip();
 		sceneAt(t)(t);
@@ -72,18 +80,26 @@ function render(t) {
 		let bump = 0;
 		for (const tt of TAPS) bump = Math.max(bump, 1 - Math.abs(t - tt - 0.7) * 5);
 		bump = Math.max(bump, (Math.sin(t * 14) * 0.5 + 0.5) * span(t, T.mine, T.end) * 0.35);
-		counter(money(t), clamp(bump, 0, 1), sat((t - 0.2) * 3));
+		if (t < HOOK) bump = t < REW ? 0.6 + Math.sin(t * 40) * 0.4 : 0.3;
+		counter(money(t), clamp(bump, 0, 1), 1);
 	}
 	sceneCaptions(t);
-	if (t < 0.25) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.25})`; ctx.fillRect(0, 0, W, H); }
+	if (t < 0.22) { ctx.fillStyle = `rgba(255,255,255,${1 - t / 0.22})`; ctx.fillRect(0, 0, W, H); }
+	if (t >= HOOK && t < HOOK + 0.2) { ctx.fillStyle = `rgba(255,255,255,${1 - (t - HOOK) / 0.2})`; ctx.fillRect(0, 0, W, H); }
 }
 
 function sceneCaptions(t) {
 	const cy = topY() + 330;
-	caption('I WAS BROKE...', t, 0.3, T.s2, cy, 120);
-	caption('TAP TO DIG!', t, T.s2, 5.25, cy, 140, 'gold');
-	caption('UPGRADE!', t, 5.3, T.up, cy, 130, 'gold');
-	caption('LEVEL UP!', t, T.up + 0.05, T.mine, cy, 140, 'gold');
+	if (CFG.captions && t < REW) {
+		const u = eBack(span(t, 0.05, 0.4)), sh = Math.sin(t * 50) * 4 * (1 - span(t, 0, 0.5));
+		text('HOW I MADE', sh, cy - 60, 92, { scale: u, rot: -0.03 });
+		text('1 TRILLION!', -sh, cy + 70, 150, { fill: 'gold', scale: eBack(span(t, 0.2, 0.55)) * (1 + Math.sin(t * 9) * 0.03), rot: 0.02 });
+	}
+	caption('LET\'S GO BACK...', t, REW + 0.05, HOOK, cy, 104);
+	caption('I WAS BROKE...', t, HOOK, 2.75, cy, 120);
+	caption('TAP TO DIG!', t, 2.75, T.btn, cy, 140, 'gold');
+	caption('UPGRADE!', t, T.btn, T.up, cy, 130, 'gold');
+	caption('LEVEL UP!', t, T.up + 0.05, VMINE, cy, 140, 'gold');
 	caption('DIG DEEPER!', t, T.mine + 0.3, T.boat - 0.1, cy, 120, 'white');
 	caption('SHIP THE ORE!', t, T.boat + 0.1, T.fac - 0.1, cy, 112, 'white');
 	caption('SMELT GOLD!', t, T.fac + 0.1, T.over - 0.1, cy, 124, 'gold');
@@ -119,7 +135,42 @@ function boulder(x, y, r, rich, shake, cracks, grey) {
 	ctx.restore();
 }
 
-// 0 - 8 s: broke, taps, the upgrade.
+// 0 - 1.9 s: the hook. The payoff first (a trillion coins), then the tape
+// rewinds to the broke start.
+function sceneHook(t) {
+	const rew = t >= REW;
+	const sr = rew ? T.rich + 0.6 + REW - (t - REW) * 3.2 : T.rich + 0.6 + t;
+	const z = rew ? 1 + span(t, REW, HOOK) * 0.25 : 1.22 - eOut(span(t, 0, 0.45)) * 0.22;
+	ctx.save(); ctx.translate(CX, CY); ctx.scale(z, z); ctx.rotate(rew ? Math.sin(t * 60) * 0.004 : 0); ctx.translate(-CX, -CY);
+	sceneRich(Math.max(T.rich + 0.05, sr));
+	for (let k = 0; k < 5; k++) popText(t, 0.1 + k * 0.2, (rnd(k * 7) - 0.5) * 600, (rnd(k * 3) - 0.3) * 500, '+' + ['1B', '5B', '20B', '90B', '250B'][k], 90);
+	ctx.restore();
+	if (rew) {
+		const u = span(t, REW, REW + 0.15);
+		ctx.save();
+		ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${u})`; ctx.fillRect(0, 0, W, H);
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.fillStyle = `rgba(20,30,60,${0.25 * u})`; ctx.fillRect(0, 0, W, H);
+		// VHS tracking bars and scanlines
+		const f = Math.floor(t * 30);
+		for (let k = 0; k < 4; k++) {
+			const y = rnd(f * 3 + k) * H, h = (6 + rnd(f + k * 5) * 30) * K;
+			ctx.fillStyle = `rgba(255,255,255,${0.15 + rnd(f * 7 + k) * 0.35})`; ctx.fillRect(0, y, W, h);
+		}
+		ctx.fillStyle = 'rgba(0,0,0,0.12)';
+		for (let y = 0; y < H; y += 6 * K) ctx.fillRect(0, y, W, 2 * K);
+		// ◀◀ badge
+		if (Math.floor(t * 5) % 2 === 0) {
+			const bx = -W / 2 / K + 80, by = topY() + 470;
+			ctx.fillStyle = '#ffffff'; ctx.strokeStyle = INK; ctx.lineWidth = 6 * K;
+			for (const dx of [0, 46]) { ctx.beginPath(); ctx.moveTo(X(bx + dx + 46), Y(by - 30)); ctx.lineTo(X(bx + dx), Y(by)); ctx.lineTo(X(bx + dx + 46), Y(by + 30)); ctx.closePath(); ctx.stroke(); ctx.fill(); }
+			text('REWIND', bx + 250, by + 2, 56, { align: 'center' });
+		}
+		ctx.restore();
+	}
+}
+
+// 1.9 - 6 s: broke, taps, the upgrade.
 function sceneStart(t) {
 	const up = t >= T.up;
 	const grey = up ? 1 - eOut(span(t, T.up, T.up + 0.6)) : 1;
@@ -185,7 +236,7 @@ function sceneStart(t) {
 	const coins = [];
 	const [hx, hy] = (() => { const sx = dx + SHOULDER[0] * s, sy = dy + SHOULDER[1] * s; return [sx + Math.cos(HIT) * REACH * s, sy + Math.sin(HIT) * REACH * s]; })();
 	TAPS.forEach((tt, i) => {
-		popText(t, tt, hx - 60 + (i % 2) * 60, hy - 320, '+' + TAP_V[i], 84);
+		popText(t, tt, hx - 120 + (i % 3) * 100, hy - 300 - (i % 2) * 90, '+' + TAP_V[i], 84);
 		for (let k = 0; k < 3; k++) coins.push({ t: tt + 0.05 + k * 0.05, x: hx - 100 + (k - 1) * 60, y: hy - 200, dx: (k - 1) * 120 });
 	});
 	if (up) for (let j = 0; j < 4; j++) {
@@ -196,9 +247,9 @@ function sceneStart(t) {
 	flyingCoins(t, coins);
 	// the upgrade button
 	const by = botY() - 170;
-	const bIn = eBack(span(t, 5.25, 5.65));
+	const bIn = eBack(span(t, T.btn, T.btn + 0.3));
 	const bOut = span(t, T.up + 0.2, T.up + 0.5);
-	if (t > 5.25 && bOut < 1) {
+	if (t > T.btn && bOut < 1) {
 		const press = t > PRESS && t < T.up + 0.15 ? 1 : 0;
 		const pulse = 1 + Math.sin(t * 12) * 0.03;
 		button(0, by + (1 - bIn) * 400 + bOut * 400, 600, 150, 'UPGRADE!', ['#7ef07a', '#2fb84a', '#1f7a35'], press, { scale: pulse, size: 74 });
@@ -208,9 +259,9 @@ function sceneStart(t) {
 	// the tapping hand
 	const tx = rx - 40, ty = ry - 20;
 	let hxx = 300, hyy = botY() - 120, press = 0, ha = 0;
-	if (t > 2.6 && t < T.s2 + 0.1) { ha = span(t, 2.6, 2.9); const u = eIO(span(t, 2.6, T.s2)); hxx = lerp(380, tx, u); hyy = lerp(botY(), ty, u); }
-	if (t >= T.s2 && t < 5.5) { ha = 1; hxx = tx; hyy = ty; for (const tt of TAPS) press = Math.max(press, 1 - Math.abs(t - tt) * 8); }
-	if (t >= 5.5 && t < T.up + 0.5) { ha = 1 - span(t, T.up + 0.2, T.up + 0.5); const u = eIO(span(t, 5.5, PRESS)); hxx = lerp(tx, 60, u); hyy = lerp(ty, by + 10, u); press = t > PRESS && t < T.up + 0.15 ? 1 : 0; }
+	if (t > HOOK && t < T.s2 + 0.1) { ha = span(t, HOOK, HOOK + 0.1); const u = eIO(span(t, HOOK, T.s2 - 0.04)); hxx = lerp(380, tx, u); hyy = lerp(botY(), ty, u); }
+	if (t >= T.s2 && t < T.btn + 0.05) { ha = 1; hxx = tx; hyy = ty; for (const tt of TAPS) press = Math.max(press, 1 - Math.abs(t - tt) * 8); }
+	if (t >= T.btn + 0.05 && t < T.up + 0.5) { ha = 1 - span(t, T.up + 0.2, T.up + 0.5); const u = eIO(span(t, T.btn + 0.05, PRESS)); hxx = lerp(tx, 60, u); hyy = lerp(ty, by + 10, u); press = t > PRESS && t < T.up + 0.15 ? 1 : 0; }
 	hand(hxx, hyy, clamp(press, 0, 1), ha);
 }
 
@@ -379,10 +430,14 @@ function sceneEnd(t) {
 function sfxEvents() {
 	const ev = [];
 	const add = (tt, k, g = 1) => ev.push([tt, k, g]);
-	add(0.3, 'sad', 0.8);
+	// hook: jackpot first, then the tape stops and rewinds
+	add(0.0, 'boom', 1); add(0.02, 'jackpot', 1);
+	for (let k = 0; k < 9; k++) add(0.12 + k * 0.11, 'coin', 0.5);
+	add(REW, 'tapestop', 1); add(REW + 0.05, 'rewind', 0.9);
+	add(HOOK, 'sadfast', 0.9);
 	TAPS.forEach((tt, i) => { add(tt, 'hit', 0.9); add(tt + 0.05, 'gem', 0.6); add(tt + 0.7, 'coin', 0.7); });
-	add(5.25, 'pop', 0.8); add(PRESS, 'click', 1); add(T.up, 'levelup', 1); add(T.up, 'burst', 0.9);
-	for (let h = T.up + 0.6; h < T.mine; h += 0.4) { add(h, 'hit', 0.7); add(h + 0.7, 'coin', 0.6); }
+	add(T.btn, 'pop', 0.8); add(PRESS, 'click', 1); add(T.up, 'levelup', 1); add(T.up, 'burst', 0.9);
+	for (let h = T.up + 0.6; h < VMINE; h += 0.4) { add(h, 'hit', 0.7); add(h + 0.7, 'coin', 0.6); }
 	for (const c of [T.mine, T.worlds, T.rich, T.end]) add(c - 0.05, 'whoosh', 0.9);
 	// mine
 	for (let h = T.mine + 0.2; h < T.boat; h += 0.48) add(h, 'hit', 0.35);
@@ -407,5 +462,6 @@ function sfxEvents() {
 	add(T.end + 0.15, 'boom', 1); add(T.end + 0.75, 'pop', 0.9);
 	for (const c of CLICKS) { add(c, 'click', 1); add(c + 0.02, 'pop', 0.6); }
 	add(CLICKS[0] + 0.05, 'fanfare', 1);
-	return ev;
+	// story events happen SHIFT seconds earlier in the video
+	return ev.map(([tt, k, g]) => [tt >= T.mine - 0.1 ? tt - SHIFT : tt, k, g]);
 }

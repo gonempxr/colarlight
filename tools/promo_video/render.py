@@ -5,7 +5,7 @@ and encodes it with ffmpeg at 60 fps.
     python3 tools/promo_video/render.py frames out_dir W H t1 t2 ...   # stills
     python3 tools/promo_video/render.py video out.mp4 W H [ad|cg]
 
-ad = 32.5 s with captions, music + sound effects, logo, TRY NOW and the link.
+ad = 30.5 s with captions, music + sound effects, logo, TRY NOW and the link.
 cg = 19.6 s gameplay part, no captions, links or sound (CrazyGames preview rules).
 """
 import base64
@@ -75,13 +75,13 @@ def open_page(p, cfg):
 
 def config(w, h, mode):
     if mode == "cg":
-        return {"w": w, "h": h, "captions": False, "endcard": False, "t0": 8.0, "dur": 19.6}
-    return {"w": w, "h": h, "captions": True, "endcard": True, "t0": 0.0, "dur": 32.5, "link": LINK}
+        return {"w": w, "h": h, "captions": False, "endcard": False, "t0": 6.0, "dur": 19.6}
+    return {"w": w, "h": h, "captions": True, "endcard": True, "t0": 0.0, "dur": 30.5, "link": LINK}
 
 
 def soundtrack(pg, cfg, path):
     ev = pg.evaluate("sfxEvents()")
-    tl = pg.evaluate("T")
+    tl = pg.evaluate("VT()")
     audio.write_track(path, ev, cfg["t0"], cfg["dur"], tl)
 
 
