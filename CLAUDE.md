@@ -97,5 +97,8 @@ This file is the quick picture; keep it up to date when something big changes.
 - Full build upload (not the loader). Covers: `tools/store_art/` (vector,
   `final_c.py` = chosen variant C), files in `docs/store/`. Keep the logo out
   of the top-left label zone. Videos: `gh-pages:crazygames/video/`.
+- 2026-10-11: the polished build is live on the main site, the beta and
+  `main` (Mark approved). Phones start with the bigger UI size (1.12,
+  `Settings.default_scale`) until the player picks one.
 - On CrazyGames the title screen is skipped and gameplayStart is sent after
   loadingStop (`Platform.on_portal`). Google sign-in only runs on our site.
