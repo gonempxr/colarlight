@@ -218,6 +218,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.flat(ci, Art.clipped(Art.ellipse_pts(cave.get_center() + Vector2(0, -20), Vector2(cave.size.x * 0.42, cave.size.y * 0.36), 30), cave_poly), inner.lightened(0.08))
 	if WorldLook.world == "volcano":
 		_magma_cave_light(ci, cave, cave_poly, inner)
+	else:
+		_light_beams(ci, cave, cave_poly)
 	Art.flat(ci, PackedVector2Array([Vector2(World.SHAFT_L + 4, 120), Vector2(World.SHAFT_R + 2, 120), Vector2(World.SHAFT_R + 2, CAVE_BOTTOM - 2), Vector2(World.SHAFT_L + 4, CAVE_BOTTOM - 2)]), inner)
 	# Shaft walls.
 	for x: float in [World.SHAFT_L, World.SHAFT_R]:
@@ -252,6 +254,22 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.t_rect(ci, Rect2(-40, -17, 80, 34), 6, Art.CREAM, 3.0, 0.3)
 	Art.text(ci, Vector2(0, 8), tr("DEPTH_METERS") % ((index + 1) * 50), 20, Art.INK, 0)
 	Art.pop(ci)
+
+
+## Soft slanted beams of light through the water of the cave (static,
+## drawn once with the background).
+func _light_beams(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) -> void:
+	var glow := Color(1.0, 1.0, 0.9, 0.13)
+	for i in 3:
+		var x := cave.position.x + cave.size.x * (0.22 + 0.27 * i) + (index % 3) * 14.0
+		var w := 34.0 + 18.0 * ((i + index) % 2)
+		var beam := PackedVector2Array([Vector2(x, cave.position.y - 4), Vector2(x + w, cave.position.y - 4),
+				Vector2(x + w + 70.0, cave.end.y + 4), Vector2(x + 40.0, cave.end.y + 4)])
+		Art.flat(ci, Art.clipped(beam, cave_poly), glow)
+	# A darker band low in the water: depth under the light.
+	var low := PackedVector2Array([Vector2(cave.position.x - 4, cave.end.y - cave.size.y * 0.42), Vector2(cave.end.x + 4, cave.end.y - cave.size.y * 0.42),
+			Vector2(cave.end.x + 4, cave.end.y + 4), Vector2(cave.position.x - 4, cave.end.y + 4)])
+	Art.flat(ci, Art.clipped(low, cave_poly), Color(Art.SHADE, 0.16))
 
 
 ## The cave plus the doorway to the shaft. The doorway's floor runs on

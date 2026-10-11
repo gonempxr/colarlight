@@ -762,6 +762,11 @@ func _layout() -> void:
 	_place_side_buttons()
 	_world.surface.boat_card.visible = not _wide
 	_world.surface.plant_card.visible = false
+	# Phone: while the gear card waits, the boat card takes its slot on the
+	# right so the lift card fits in the row beside it.
+	if not _wide:
+		var bx := _world.card_x() if not _evo_shown() else _world.card_x() - 12.0 - World.CARD_W
+		_world.surface.boat_card.position.x = bx
 	_world.lift.wide = _wide
 	_world.lift._place_card()
 

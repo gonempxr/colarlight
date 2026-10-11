@@ -88,6 +88,13 @@ func _ready() -> void:
 	chest = ChestBubble.new()
 	chest.world = self
 	add_child(chest)
+	# The lift's compact card (big UI sizes) goes over the chest bubble by
+	# drawing order, not z_index: a z_index also put it over the windows.
+	var card := lift.compact
+	lift.remove_child(card)
+	card.z_index = 0
+	card.position += lift.position
+	add_child(card)
 	custom_minimum_size.y = height()
 	for i in FISH:
 		_fish.append({"x": _rng.randf(), "y": _rng.randf_range(SURFACE_Y + 50.0, TOP_H - 50.0), "speed": _rng.randf_range(0.015, 0.04),

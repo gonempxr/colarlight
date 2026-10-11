@@ -116,8 +116,7 @@ func _ready() -> void:
 	compact.world = world
 	compact.lift = self
 	compact.position = COMPACT_POS
-	# Over the chest bubble that drifts in the same water.
-	compact.z_index = 2
+	# (World moves it over the chest bubble that drifts in the same water.)
 	compact.visible = false
 	add_child(compact)
 	_look = Balance.lift_look(GameState.get_level("lift"))

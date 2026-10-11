@@ -29,6 +29,9 @@ var auto_low := false:
 			JavaScriptBridge.eval("window.coralightPixelCap = %s; window.dispatchEvent(new Event('resize'));" % ("1.5" if v else "2"), true)
 var reduce_motion := false
 var ui_scale := 1.0
+## The player chose the size in the settings; until then phones get the
+## bigger default (readable text, roomy buttons).
+var ui_scale_picked := false
 ## "short" = 1.2K, 3.4M; "sci" = 1.2e3.
 var number_style := "short"
 ## PC: the cartoon glove cursor (hidden on touch screens).
@@ -56,6 +59,7 @@ func _ready() -> void:
 		reduce_motion = cfg.get_value("ui", "reduce_motion", false) == true
 		var sc = cfg.get_value("ui", "scale", 1.0)
 		ui_scale = float(sc) if (sc is float or sc is int) else 1.0
+		ui_scale_picked = cfg.get_value("ui", "scale_picked", false) == true
 		number_style = str(cfg.get_value("ui", "numbers", "short"))
 		hand_cursor = cfg.get_value("ui", "hand_cursor", true) == true
 	if language not in LANGUAGES:
@@ -64,11 +68,21 @@ func _ready() -> void:
 		quality = "auto"
 	if number_style not in ["short", "sci"]:
 		number_style = "short"
+	if not ui_scale_picked:
+		ui_scale = default_scale()
 	ui_scale = _closest_scale(ui_scale)
 	_sync_web_quality()
 	NumFormat.sci = number_style == "sci"
 	TranslationServer.set_locale(language)
 	reload_avatar()
+
+
+## Phones (a touch screen held upright) start with the bigger UI size.
+static func default_scale() -> float:
+	var win := DisplayServer.window_get_size()
+	if DisplayServer.is_touchscreen_available() and win.y > win.x * 1.25:
+		return 1.12
+	return 1.0
 
 
 static func _vol(v: Variant) -> float:
@@ -136,6 +150,7 @@ func set_value(key: String, value: Variant) -> void:
 			hand_cursor = value == true
 		"ui_scale":
 			ui_scale = _closest_scale(float(value))
+			ui_scale_picked = true
 		"number_style":
 			if str(value) in ["short", "sci"]:
 				number_style = str(value)
@@ -203,6 +218,7 @@ func _save() -> void:
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("ui", "reduce_motion", reduce_motion)
 	cfg.set_value("ui", "scale", ui_scale)
+	cfg.set_value("ui", "scale_picked", ui_scale_picked)
 	cfg.set_value("ui", "numbers", number_style)
 	cfg.set_value("ui", "hand_cursor", hand_cursor)
 	cfg.save(PATH)
