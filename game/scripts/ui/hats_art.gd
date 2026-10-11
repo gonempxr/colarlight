@@ -5,7 +5,7 @@ extends RefCounted
 ## over the top of the head (drawn after Chars.head with hat "none").
 ## Hoods (dino, frog, shark) are a cap over the head top with a face opening.
 
-const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame"]
+const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder"]
 
 const W := 2.5
 
@@ -27,6 +27,7 @@ static func draw(ci: CanvasItem, id: String) -> void:
 		"astronaut": _astronaut(ci)
 		"pumpkin": _pumpkin(ci)
 		"flame": StreakArt.hat(ci)
+		"founder": FounderArt.hat(ci)
 
 
 # --- Shared bits ------------------------------------------------------------------------

@@ -23,7 +23,7 @@ const PUSH_SEC := 15.0
 ## Google (Firestore) has a daily write budget on the free plan.
 const GOOGLE_PUSH_SEC := 60.0
 const MAX_BYTES := 900000
-const ROOT_FILES := ["profiles.cfg", "settings.cfg", "rivals.json", "fishing.json", "imported.txt"]
+const ROOT_FILES := ["profiles.cfg", "settings.cfg", "rivals.json", "fishing.json", "imported.txt", "online.json"]
 
 var _left := PUSH_SEC
 var _last_pushed := ""

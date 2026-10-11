@@ -140,6 +140,7 @@ static func build(m: Modal, main: Node) -> void:
 		else:
 			confirm[0] = true
 			reset.text = t("RESET_CONFIRM"), &"RedButton")
+	OnlineView.settings_buttons(who, m, main)
 	for b: Button in [players, replay, reset]:
 		b.reparent(who, false)
 	m.text(t("CREDITS"), 16, Art.INK_SOFT)
@@ -191,6 +192,7 @@ static func profile(m: Modal, main: Node) -> void:
 		# The Rivals League (made-up sea characters), with this week's place.
 		var league := m.button("%s  ·  #%d" % [t("RIVALS"), Rivals.place()], func(): Sfx.play("click"); main.open_rivals(), &"GoldButton")
 		league.icon = Icons.get_icon("star", 36)
+	OnlineView.profile_buttons(m, main)
 	if Progress.has_feature("shop"):
 		var ward := m.button(t("WARDROBE"), func(): Sfx.play("click"); main.open_feature("shop"))
 		ward.icon = Icons.get_icon("wardrobe", 38)

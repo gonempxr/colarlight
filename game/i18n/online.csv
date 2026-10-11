@@ -1,0 +1,45 @@
+keys,en,ru,es,zh
+ONLINE_BOARD,Leaderboard,Таблица лидеров,Clasificación,排行榜
+ONLINE_BOARD_SUB,Real players from all over the world,Настоящие игроки со всего мира,Jugadores reales de todo el mundo,来自世界各地的真实玩家
+ONLINE_WEEK,This week,Эта неделя,Esta semana,本周
+ONLINE_ALL,All time,За всё время,Siempre,总榜
+ONLINE_WEEK_HINT,Coins earned since Monday. A new week starts every Monday.,Монеты с понедельника. Новая неделя начинается каждый понедельник.,Monedas ganadas desde el lunes. Cada lunes empieza una semana nueva.,从周一开始赚到的金币。每周一开始新的一周。
+ONLINE_ALL_HINT,All the coins you have ever earned.,"Все монеты, заработанные за всю игру.",Todas las monedas que has ganado.,你赚到的所有金币。
+ONLINE_YOU,You,Ты,Tú,你
+ONLINE_YOUR_PLACE,Your place: #%d,Твоё место: #%d,Tu puesto: #%d,你的排名：#%d
+ONLINE_YOUR_SCORE,Your coins: %s,Твои монеты: %s,Tus monedas: %s,你的金币：%s
+ONLINE_LOADING,Loading…,Загрузка…,Cargando…,正在加载…
+ONLINE_OFF,Online is not available right now,Онлайн сейчас недоступен,El modo en línea no está disponible ahora,现在无法联网
+ONLINE_OFF_HINT,Check the internet or try again later. The game works as usual.,Проверь интернет или попробуй позже. Игра работает как обычно.,Revisa internet o inténtalo más tarde. El juego sigue como siempre.,请检查网络或稍后再试。游戏照常运行。
+ONLINE_EMPTY,No scores yet. Be the first!,Пока никого нет. Будь первым!,Aún no hay nadie. ¡Sé el primero!,还没有人上榜。快来当第一名！
+ONLINE_RETRY,Try again,Ещё раз,Reintentar,再试一次
+ONLINE_NAME,Name on the board: %s,Имя в таблице: %s,Nombre en la tabla: %s,榜上名字：%s
+ONLINE_RENAME,Change name,Сменить имя,Cambiar nombre,改名字
+ONLINE_REAL,Real players,Настоящие игроки,Jugadores reales,真实玩家
+ONLINE_BUTTON,Players leaderboard,Таблица игроков,Tabla de jugadores,玩家排行榜
+PROMO,Promo code,Промокод,Código promocional,兑换码
+PROMO_HINT,Have a code? Type it here.,Есть код? Введи его здесь.,¿Tienes un código? Escríbelo aquí.,有兑换码吗？在这里输入。
+PROMO_PLACEHOLDER,CODE,КОД,CÓDIGO,兑换码
+PROMO_OK,Activate,Активировать,Activar,兑换
+PROMO_BAD,No such code. Check the letters.,Такого кода нет. Проверь буквы.,Ese código no existe. Revisa las letras.,没有这个兑换码。请检查字母。
+PROMO_USED,You have already used this code.,Этот код уже использован.,Ya has usado este código.,这个兑换码已经用过了。
+INVITE,Invite friends,Пригласить друзей,Invitar amigos,邀请好友
+INVITE_HINT,"Send your link to friends. When a new friend starts the game with it, you both get %d pearls (up to %d friends).","Отправь друзьям свою ссылку. Когда новый друг начнёт игру по ней, вы оба получите %d жемчужин (до %d друзей).","Envía tu enlace a tus amigos. Cuando un amigo nuevo empiece el juego con él, los dos recibís %d perlas (hasta %d amigos).",把你的链接发给好友。新好友用它开始游戏时，你们都能得到%d颗珍珠（最多%d位好友）。
+INVITE_SHARE,Share link,Поделиться,Compartir,分享链接
+INVITE_TEXT_SHARE,Dive with me in Coralight: Dive Tycoon! We both get pearls.,Ныряй со мной в Coralight: Dive Tycoon! Мы оба получим жемчужины.,¡Bucea conmigo en Coralight: Dive Tycoon! Los dos recibimos perlas.,来和我一起玩 Coralight: Dive Tycoon！我们都能得到珍珠。
+INVITE_COPY,Copy,Копировать,Copiar,复制
+INVITE_COPIED,Link copied!,Ссылка скопирована!,¡Enlace copiado!,链接已复制！
+INVITE_FRIENDS,Friends joined: %d,Друзей пришло: %d,Amigos que llegaron: %d,已加入的好友：%d
+INVITE_CAP_ITEM,Invite 1 friend and get the Founder Cap!,Пригласи 1 друга и получи кепку Основателя!,¡Invita a 1 amigo y consigue la Gorra de Fundador!,邀请1位好友，得到创始人帽！
+THANKS_TITLE,Thank you!,Спасибо!,¡Gracias!,谢谢你！
+THANKS_TEXT,Thank you for coming into my game! Please support the developer!,"Спасибо, что зашли в мою игру! Поддерживайте разработчика!",¡Gracias por entrar en mi juego! ¡Apoya al desarrollador!,谢谢你来玩我的游戏！请支持开发者！
+THANKS_FOUNDER,You are Founder #%d of %d!,Ты Основатель #%d из %d!,¡Eres Fundador #%d de %d!,你是第%d位创始人（共%d位）！
+THANKS_PROMO,Code activated!,Код активирован!,¡Código activado!,兑换成功！
+THANKS_JOIN,A friend invited you: here is a gift!,Тебя пригласил друг: вот подарок!,Un amigo te invitó: ¡aquí tienes un regalo!,好友邀请了你：这是你的礼物！
+THANKS_INVITER,Friends joined with your link: %d,Друзей пришло по твоей ссылке: %d,Amigos que llegaron con tu enlace: %d,通过你的链接加入的好友：%d
+THANKS_ITEM,Exclusive: Founder Cap,Эксклюзив: кепка Основателя,Exclusivo: Gorra de Fundador,专属：创始人帽
+THANKS_OK,Great!,Ура!,¡Genial!,太好了！
+THANKS_BOOST,x2 coins: %d min,x2 монет: %d мин,x2 monedas: %d min,金币×2：%d 分钟
+ITEM_HAT_FOUNDER,Founder Cap,Кепка Основателя,Gorra de Fundador,创始人帽
+EXCLUSIVE,Exclusive,Эксклюзив,Exclusivo,专属
+EXCLUSIVE_HOW,"For the first 100 players, a promo code or inviting a friend","Первым 100 игрокам, по промокоду или за приглашение друга","Para los 100 primeros jugadores, con un código o invitando a un amigo",前100位玩家、兑换码或邀请好友可得

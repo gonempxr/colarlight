@@ -84,8 +84,8 @@ static func artifact(id: String) -> Dictionary:
 # --- Cosmetics ------------------------------------------------------------------
 ## slot: hat (the player's hat), pet (swims next to the player), boat (boat
 ## paint), outfit (the player's own clothes in room 3). Unlock: "free", "pearls" (price),
-## "goal" (an achievement, see GOALS) or "shop" (real money, only when the
-## platform sells things). rarity: 0 common, 1 rare, 2 epic, 3 legendary.
+## "goal" (an achievement, see GOALS), "exclusive" (only given: see Online)
+## or "shop" (real money, only when the platform sells things). rarity: 0 common, 1 rare, 2 epic, 3 legendary.
 const COSMETICS: Array[Dictionary] = [
 	# Pets
 	{"id": "pet_turtle", "slot": "pet", "art": "turtle", "unlock": "goal", "goal": "puzzle_1", "rarity": 0},
@@ -116,6 +116,8 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "hat_pumpkin", "slot": "hat", "art": "pumpkin", "unlock": "goal", "goal": "puzzle_20", "rarity": 2},
 	{"id": "hat_astronaut", "slot": "hat", "art": "astronaut", "unlock": "goal", "goal": "depth_5", "rarity": 3},
 	{"id": "hat_flame", "slot": "hat", "art": "flame", "unlock": "goal", "goal": "streak_30", "rarity": 3},
+	# Exclusive: never sold; founders, a promo code and inviting a friend (Online).
+	{"id": "hat_founder", "slot": "hat", "art": "founder", "unlock": "exclusive", "rarity": 3},
 	# Boat paint
 	{"id": "boat_classic", "slot": "boat", "art": "classic", "unlock": "free", "rarity": 0},
 	{"id": "boat_sunny", "slot": "boat", "art": "sunny", "unlock": "pearls", "price": 60, "rarity": 0},

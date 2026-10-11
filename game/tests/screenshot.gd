@@ -11,7 +11,9 @@ extends SceneTree
 ## HUD badge) | rivals (the Rivals League board) | rivals_reward (with last
 ## week's pearls waiting) | room:<0|1|2> (mine, factory, office) | evo (the
 ## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
-## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing).
+## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
+## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
+## thanks:<founder|promo|join|inviter> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -34,6 +36,8 @@ func _initialize() -> void:
 	pr.autosave_enabled = false
 	pr.save_path = "user://screenshot_progress.json"
 	pr.reset()
+	# Online gifts from an earlier shot don't carry over (exclusive item, ...).
+	root.get_node("Online").data = root.get_node("Online").defaults()
 	var profiles := root.get_node("Profiles")
 	profiles.set_name_of(profiles.current_id, "Маша" if lang == "ru" else "Alex")
 	if scenario != "start":
@@ -220,6 +224,11 @@ func _initialize() -> void:
 				if ":" in overlay:
 					load("res://scripts/ui/wardrobe.gd").tab = overlay.split(":")[1]
 				main.open_feature("shop")
+				# wardrobe:<tab>:end - scrolled to the last items.
+				if overlay.ends_with(":end"):
+					for i in 20:
+						await process_frame
+					main._modal._scroll.scroll_vertical = 100000
 			elif overlay.begins_with("world:") and overlay.ends_with(":sheet"):
 				main._on_stage_selected("d0")
 			elif (overlay.begins_with("ocean:") or overlay.begins_with("world:")) and overlay.ends_with(":banner"):
@@ -239,6 +248,8 @@ func _initialize() -> void:
 				root.get_texture().get_image().save_png(out)
 				quit()
 				return
+			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn"]:
+				await _online_overlay(main, overlay)
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
 				main._started = true
@@ -251,6 +262,70 @@ func _initialize() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out)
 	quit()
+
+
+## Online overlays with a pretend backend (tests/online_fake.gd):
+## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
+## thanks:<founder|promo|join|inviter> (the thank-you dialog).
+func _online_overlay(main: Node, overlay: String) -> void:
+	var online := root.get_node("Online")
+	var parts := overlay.split(":")
+	var fake = load("res://tests/online_fake.gd").new()
+	fake.uid = "Shot0001qqqqqqqqqqqqqqqqqqqq"
+	fake.founders = 100
+	fake.seed(24, ["SeaWolf", "Марина", "Lucía", "小海豚", "DeepDiver", "Капитан", "Pez Globo", "Nemo_77", "Аквамен",
+		"CoralQueen", "Tiburón", "Жемчужина", "BubbleBob", "海星", "Kraken", "Медуза"])
+	online.data["week"] = OnlineRules.week_id(Time.get_unix_time_from_system())
+	var wk := {}
+	for id in fake.all:
+		wk[id] = {"name": fake.all[id]["name"], "score": float(fake.all[id]["score"]) * 0.08, "a": fake.all[id]["a"]}
+	fake.weeks[int(online.data["week"])] = wk
+	fake.invites["Shot0001"] = {"a": true, "b": true}
+	online.data["all_best"] = 2.4e6
+	online.data["week_score"] = 1.9e5
+	online.data["seen_profile"] = ""
+	if not "off" in parts:
+		online.use_backend(fake)
+		online.data["paid"] = {"Shot0001": 2}
+	else:
+		online.state = "failed"
+	online.pending_thanks.clear()
+	var ov = load("res://scripts/ui/online_view.gd")
+	match parts[0]:
+		"board":
+			ov.tab = "all" if "all" in parts else "week"
+			ov.open_board(main)
+			if "end" in parts:
+				for i in 20:
+					await process_frame
+				main._modal._scroll.scroll_vertical = 100000
+		"promo":
+			ov.open_promo(main)
+			if "bad" in parts:
+				await process_frame
+				await process_frame
+				var edit: LineEdit = _find_edit(main._top)
+				edit.text = "DIVE2025"
+				edit.text_submitted.emit(edit.text)
+		"invite":
+			ov.open_invite(main)
+		"thanks":
+			var kind := parts[1] if parts.size() > 1 else "founder"
+			var info: Dictionary = {"founder": {"kind": "founder", "pearls": 100, "item": true, "n": 7},
+				"promo": {"kind": "promo", "pearls": 30, "boost": 3600.0, "item": false},
+				"join": {"kind": "join", "pearls": 30},
+				"inviter": {"kind": "inviter", "pearls": 60, "n": 2}}.get(kind, {})
+			main._top.open(func(m): ov.thanks(m, main, info))
+
+
+func _find_edit(node: Node) -> LineEdit:
+	for c in node.get_children():
+		if c is LineEdit:
+			return c
+		var f := _find_edit(c)
+		if f != null:
+			return f
+	return null
 
 
 ## Streak overlays: streak (the screen), streakpop (the party of a new day),
