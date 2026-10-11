@@ -22,7 +22,7 @@ const BOX := {
 }
 
 const WALLS := [
-	{"a": Color("d9d2c6"), "b": Color("cfc7ba")},
+	{"a": Color("eadfca"), "b": Color("dccfb6")},
 	{"a": Color("f6d7a8"), "b": Color("eec894")},
 	{"a": Color("c4ead9"), "b": Color("a9dcc6")},
 	{"a": Color("bcd8f6"), "b": Color("9fc4ee")},
@@ -102,9 +102,23 @@ static func wallpaper(ci: CanvasItem, w: float, h: float, level: int) -> void:
 	if lv >= 4:
 		# Crown molding.
 		Art.t_rect(ci, Rect2(-4, 0, w + 8, 14), 0.0, Art.CREAM if lv == 4 else Art.GOLD, 2.4, 0.4)
+	_room_light(ci, w, 0.0, h, 0.16)
 
 
-const FLOORS := [Color("aeb1b8"), Color("d39a62"), Color("c9874b"), Color("f3ead6"), Color("b9773f"), Color("f4f1f8")]
+## Room lighting over a wall or floor band: soft shade at the top (under
+## the ceiling or against the wall), clearer towards the bottom, and darker
+## corners at the sides.
+static func _room_light(ci: CanvasItem, w: float, y0: float, y1: float, strength: float) -> void:
+	var dark := Color(Art.SHADE, strength)
+	var clear := Color(Art.SHADE, 0.0)
+	var mid := y0 + (y1 - y0) * 0.45
+	Art.grad(ci, PackedVector2Array([Vector2(0, y0), Vector2(w, y0), Vector2(w, mid), Vector2(0, mid)]), PackedColorArray([dark, dark, clear, clear]))
+	var side := minf(w * 0.14, 90.0)
+	Art.grad(ci, PackedVector2Array([Vector2(0, y0), Vector2(side, y0), Vector2(side, y1), Vector2(0, y1)]), PackedColorArray([dark, clear, clear, dark]))
+	Art.grad(ci, PackedVector2Array([Vector2(w - side, y0), Vector2(w, y0), Vector2(w, y1), Vector2(w - side, y1)]), PackedColorArray([clear, dark, dark, clear]))
+
+
+const FLOORS := [Color("c2a98a"), Color("d39a62"), Color("c9874b"), Color("f3ead6"), Color("b9773f"), Color("f4f1f8")]
 
 
 ## The floor band from y0 (wall foot) to y1, `w` wide.
@@ -163,6 +177,7 @@ static func floor_band(ci: CanvasItem, w: float, y0: float, y1: float, level: in
 				var a := Vector2(fmod(i * 157.0, w), y0 + fmod(i * 41.0, y1 - y0))
 				Art.line_c(ci, PackedVector2Array([a, a + Vector2(30, 10), a + Vector2(46, 4), a + Vector2(70, 16)]), Color("d8d0e8"), 2.0)
 			Art.flat(ci, Art.rrect_pts(Rect2(0, y0 + 4, w, 4), 0.0), Art.GOLD)
+	_room_light(ci, w, y0, y1, 0.2)
 	Art.line_c(ci, PackedVector2Array([Vector2(0, y0), Vector2(w, y0)]), Art.INK, 3.0)
 
 

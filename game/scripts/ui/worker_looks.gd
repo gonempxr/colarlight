@@ -731,6 +731,11 @@ static func draw(ci: CanvasItem, pos: Vector2, scale: float, world: String, form
 	if legs == "wisp":
 		bob = -4.0 + sin(t * 2.0) * 2.0
 	var big: float = _sp.get("size", 1.0)
+	# A soft contact shadow under the ones on the floor.
+	if arm in ["dig", "pick", "show", "idle", "cheer", "walk"] and legs != "wisp":
+		Art.push(ci, pos, 0.0, Vector2(scale, scale) * big)
+		Art.flat(ci, Chars._FOOT_SHADOW, Color(Art.SHADE, 0.2))
+		Art.pop(ci)
 	Art.push(ci, pos, tilt * facing, Vector2(scale * sx, scale * (1.0 + breathe)) * big)
 	Art.push(ci, Vector2(lunge, bob), lean)
 	var moving := (arm in ["swim", "rope", "walk"]) and kick_amp > 0.3

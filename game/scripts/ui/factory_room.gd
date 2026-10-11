@@ -564,6 +564,7 @@ func _paint_bg(ci: CanvasItem) -> void:
 	Art.push(ci, _o, 0.0, Vector2(_k, _k))
 	Art.push(ci, Vector2(0, -_inset_top / _k))
 	FactoryArt.hall(ci, _hall.x, _hall.y + (_inset_top + _inset_bottom) / _k, _floor + _inset_top / _k, lk, _cols)
+	OfficeArt._room_light(ci, _hall.x, 0.0, _floor + _inset_top / _k, 0.13)
 	Art.pop(ci)
 	# Windows and their light on the floor.
 	for r: Rect2 in _wins:

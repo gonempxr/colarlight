@@ -896,6 +896,9 @@ static func diver(ci: CanvasItem, pos: Vector2, scale: float, suit: Color, facin
 	Art.push(ci, Vector2(lunge, 0), lean)
 	var dark := Art.shade_of(suit, 0.35)
 	var rope := arm == "rope"
+	# A soft contact shadow grounds the ones standing on the floor.
+	if not swim and not rope and kick == 0.0:
+		Art.flat(ci, _FOOT_SHADOW, Color(Art.SHADE, 0.22))
 	var kick_amp: float = pose.get("kick_amp", 0.0 if kick == 0.0 else 1.0)
 	_diver_legs(ci, tier, suit, dark, kick, t, st, kick_amp)
 	_diver_back(ci, tier, suit, dark, t, (swim or rope) and kick_amp > 0.3, st)
@@ -1284,6 +1287,9 @@ static func _diver_head(ci: CanvasItem, tier: int, suit: Color, dark: Color, emo
 	_face_draw(ci, emotion, blink, FACE_SKIN)
 	Art.pop(ci)
 	_head_post(ci, tier, suit, st, dyn / 6.0)
+	# A glossy shine on the round metal helmets.
+	if tier == 0 or tier == 3:
+		Art.flat(ci, _DOME_SHINE, Color(1, 1, 1, 0.55))
 	Art.cache_end(ci, key)
 
 
@@ -1421,6 +1427,8 @@ static func _head_post(ci: CanvasItem, tier: int, suit: Color, st: Dictionary, p
 			Art.crystal(ci, Vector2(10, -89), 13, 3.5, 0.4, c, 1.8)
 
 
+static var _FOOT_SHADOW := Art.ellipse_pts(Vector2(2, 1), Vector2(26, 5.5), 18)
+static var _DOME_SHINE := PackedVector2Array([Vector2(-14, -80), Vector2(-9, -86), Vector2(-2, -89.5), Vector2(1, -88), Vector2(-6, -84.5), Vector2(-11, -78.5)])
 static var _FACE_OPEN := Art.ellipse_pts(Vector2(5, -66), Vector2(13, 13.5), 20)
 static var _FACE_EDGE := Art.ellipse_pts(Vector2(5, -66), Vector2(15.2, 15.7), 20)
 static var _MASK_RIM := Art.rrect_pts(Rect2(-3, -73.5, 17, 10), 4.5)
