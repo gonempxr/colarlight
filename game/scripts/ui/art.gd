@@ -1053,6 +1053,44 @@ static func t_rect(ci: CanvasItem, r: Rect2, radius: float, fill: Color, w: floa
 			_gset(gk, g)
 		e = _ready_set(k, g, fill, INK)
 	_put(ci, e[0], e[1])
+	if (fill == WOOD or fill == WOOD_DARK) and maxf(r.size.x, r.size.y) >= 30.0 and minf(r.size.x, r.size.y) >= 8.0:
+		_wood_grain(ci, r, fill)
+	elif (fill == METAL or fill == BRASS) and maxf(r.size.x, r.size.y) >= 24.0 and minf(r.size.x, r.size.y) >= 6.0:
+		# Polished metal: a bright streak along the long side.
+		var along_x := r.size.x >= r.size.y
+		var a := r.position + (Vector2(r.size.x * 0.12, r.size.y * 0.3) if along_x else Vector2(r.size.x * 0.3, r.size.y * 0.12))
+		var b := r.position + (Vector2(r.size.x * 0.6, r.size.y * 0.3) if along_x else Vector2(r.size.x * 0.3, r.size.y * 0.6))
+		line(ci, a, b, Color(1, 1, 1, 0.55), maxf(1.5, minf(r.size.x, r.size.y) * 0.16))
+
+
+## Wood planks and beams get a grain: two thin darker streaks along the
+## long side and a knot (places come from the rect, so they never move).
+static func _wood_grain(ci: CanvasItem, r: Rect2, fill: Color) -> void:
+	var k := hash(["grain", r])
+	var lines = _gget(k)
+	if lines == null:
+		lines = []
+		var along_x := r.size.x >= r.size.y
+		var len := r.size.x if along_x else r.size.y
+		var across := r.size.y if along_x else r.size.x
+		var seed := absi(hash(r)) % 997
+		for i in 2:
+			var off := across * (0.32 + 0.36 * i) + (seed % 3 - 1)
+			var pts := PackedVector2Array()
+			var steps := 4
+			for j in steps + 1:
+				var u := len * (0.12 + 0.76 * j / steps)
+				var wob := sin(j * 1.7 + seed + i) * across * 0.06
+				pts.append(r.position + (Vector2(u, off + wob) if along_x else Vector2(off + wob, u)))
+			lines.append(pts)
+		var kn := len * (0.25 + 0.5 * ((seed % 7) / 7.0))
+		lines.append(r.position + (Vector2(kn, across * 0.5) if along_x else Vector2(across * 0.5, kn)))
+		_gset(k, lines)
+	var streak := Color(shade_of(fill, 0.4), 0.55)
+	for i in 2:
+		line_c(ci, lines[i], streak, 1.4)
+	var knot: Vector2 = lines[2]
+	disc(ci, knot, minf(r.size.x, r.size.y) * 0.12 + 0.6, streak)
 
 
 static func t_ellipse(ci: CanvasItem, c: Vector2, radii: Vector2, fill: Color, w: float = 3.0, shade: float = 1.0, rot: float = 0.0) -> void:

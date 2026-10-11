@@ -593,6 +593,28 @@ func _paint_sea(ci: CanvasItem) -> void:
 			c0 = c0.lightened(0.08)
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.55)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
+		if band.x < TOP_H and WorldLook.world == "ocean":
+			_caustics(ci, w, band.x, band.y)
+
+
+## Light nets on the water near the surface: thin wavy lines (still).
+func _caustics(ci: CanvasItem, w: float, y0: float, y1: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	var lite := Color(1, 1, 1, 0.24 * DayNight.daylight())
+	if lite.a < 0.02:
+		return
+	for row in 4:
+		var y := y0 + 22.0 + row * (y1 - y0 - 40.0) / 4.0
+		var x := rng.randf_range(-40, 0)
+		while x < w:
+			var seg := rng.randf_range(40, 90)
+			var pts := PackedVector2Array()
+			for k in 5:
+				var u := k / 4.0
+				pts.append(Vector2(x + seg * u, y + sin(u * PI * 2.0 + x * 0.05) * 4.0))
+			Art.line_c(ci, pts, Color(lite, lite.a * (1.0 - row * 0.2)), 2.0)
+			x += seg + rng.randf_range(30, 80)
 
 
 ## Glittering path of sun or moon light on the water.
@@ -695,6 +717,21 @@ func _paint_ground(ci: CanvasItem) -> void:
 	Art.toon(ci, top, ground, WorldLook.EDGE, 0.6)
 	var left := PackedVector2Array([Vector2(-10, TOP_H + 4), Vector2(-10, TOP_H - 26), Vector2(20, TOP_H - 30), Vector2(SHAFT_L, TOP_H - 18), Vector2(SHAFT_L, TOP_H + 4)])
 	Art.toon(ci, left, ground, WorldLook.EDGE, 0.6)
+	# The sea floor's surface: a lit lip, ripples, grains and pebbles.
+	Art.polyline(ci, Art.moved(top.slice(1, top.size() - 1), Vector2(0, 5)), ground.lerp(Color.WHITE, 0.22), 4.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var dk := Art.shade_of(ground, 0.3)
+	for i in int(w / 90.0):
+		var c := Vector2(rng.randf_range(SHAFT_R + 20, w - 20), TOP_H - rng.randf_range(2, 12))
+		var wd := rng.randf_range(14, 26)
+		Art.line_c(ci, PackedVector2Array([c + Vector2(-wd, 1), c + Vector2(-wd * 0.3, -2), c + Vector2(wd * 0.3, 1), c + Vector2(wd, -1)]), Color(dk, 0.45), 1.8)
+	for i in int(w / 30.0):
+		var p := Vector2(rng.randf_range(SHAFT_R + 10, w - 6), TOP_H - rng.randf_range(0, 14))
+		Art.disc(ci, p, rng.randf_range(1.0, 2.0), Color(dk, 0.5) if i % 2 else Color(1, 1, 1, 0.4))
+	for i in int(w / 160.0):
+		var p := Vector2(rng.randf_range(SHAFT_R + 30, w - 30), TOP_H - rng.randf_range(2, 8))
+		Art.t_ellipse(ci, p, Vector2(rng.randf_range(5, 9), rng.randf_range(3.5, 5)), ground.darkened(0.12), 1.6, 0.8)
 	var spots: Array[Vector2] = [Vector2(SHAFT_R + 40, TOP_H - 22), Vector2(w * 0.55, TOP_H - 26), Vector2(w * 0.82, TOP_H - 24)]
 	for k in spots.size():
 		var p := spots[k]

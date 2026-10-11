@@ -201,12 +201,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.flat(ci, band, Art.shade_of(rock, 0.1))
 	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, 7), Vector2(0, 7)]), Art.shade_of(rock, 0.3))
 	_wall_details(ci, w, h, rock)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = index * 97 + 5
-	for i in 16:
-		var p := Vector2(rng.randf_range(4, w - 4), rng.randf_range(10, h - 10))
-		var r := rng.randf_range(4, 9)
-		Art.t_ellipse(ci, p, Vector2(r * 1.3, r), rock.lightened(0.12), 2.0, 0.5, rng.randf_range(-0.5, 0.5))
+	_rock_texture(ci, w, h, rock)
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
 	var f := 0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)
@@ -241,7 +236,9 @@ func _draw_bg(ci: CanvasItem) -> void:
 		floor_pts.append(Vector2(lerpf(World.SHAFT_L + 20.0, cave.end.x, k / 9.0), LEDGE_Y - 3.0 + sin(k * 2.1 + index) * 3.0))
 	floor_pts.append(Vector2(cave.end.x + 10, CAVE_BOTTOM + 10))
 	floor_pts.append(Vector2(World.SHAFT_L, CAVE_BOTTOM + 10))
+	_back_silhouettes(ci, cave, cave_poly, inner)
 	Art.flat(ci, Art.clipped(floor_pts, cave_poly), st["floor"])
+	_floor_texture(ci, cave, cave_poly, st["floor"])
 	if WorldLook.world == "volcano":
 		_magma_channel(ci)
 	# Mine frame (metal supports on the moon).
@@ -257,6 +254,52 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.t_rect(ci, Rect2(-40, -17, 80, 34), 6, Art.CREAM, 3.0, 0.3)
 	Art.text(ci, Vector2(0, 8), tr("DEPTH_METERS") % ((index + 1) * 50), 20, Art.INK, 0)
 	Art.pop(ci)
+
+
+## Far rocks and weeds in the blue behind the floor (water worlds): depth.
+func _back_silhouettes(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array, inner: Color) -> void:
+	if not WorldLook.is_water():
+		return
+	var far := Color(inner.darkened(0.22), 0.55)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 53 + 11
+	var x := cave.position.x + 40.0
+	var hills := PackedVector2Array([Vector2(cave.position.x, LEDGE_Y + 6)])
+	while x < cave.end.x:
+		hills.append(Vector2(x, LEDGE_Y - rng.randf_range(16, 46)))
+		x += rng.randf_range(50, 90)
+	hills.append(Vector2(cave.end.x, LEDGE_Y - 20))
+	hills.append(Vector2(cave.end.x, LEDGE_Y + 6))
+	Art.flat(ci, Art.clipped(hills, cave_poly), far)
+	# Tall swaying weeds, still here (the living ones are in front).
+	for i in 4:
+		var bx := lerpf(cave.position.x + 70.0, cave.end.x - 60.0, (i + rng.randf()) / 4.0)
+		var hgt := rng.randf_range(50, 90)
+		var stem := PackedVector2Array()
+		for k in 6:
+			var u := k / 5.0
+			stem.append(Vector2(bx + sin(u * 3.0 + i) * 8.0, LEDGE_Y - u * hgt))
+		Art.polyline(ci, stem, Color(inner.darkened(0.3), 0.45), 7.0)
+
+
+## Sand on the cave floor: a lit lip, ripples and grains.
+func _floor_texture(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array, sand: Color) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 71 + 3
+	var dark := Art.shade_of(sand, 0.28)
+	# A darker band at the foot: the floor turns away from the light.
+	var foot := PackedVector2Array([Vector2(World.SHAFT_L, CAVE_BOTTOM - 14), Vector2(cave.end.x + 10, CAVE_BOTTOM - 14),
+			Vector2(cave.end.x + 10, CAVE_BOTTOM + 10), Vector2(World.SHAFT_L, CAVE_BOTTOM + 10)])
+	Art.flat(ci, Art.clipped(foot, cave_poly), Color(dark, 0.35))
+	# Ripples.
+	for i in 7:
+		var c := Vector2(rng.randf_range(cave.position.x + 60, cave.end.x - 40), rng.randf_range(LEDGE_Y + 8, CAVE_BOTTOM - 12))
+		var wdt := rng.randf_range(18, 34)
+		Art.line_c(ci, PackedVector2Array([c + Vector2(-wdt, 2), c + Vector2(-wdt * 0.4, -2), c + Vector2(wdt * 0.2, 1), c + Vector2(wdt, -1)]), Color(dark, 0.45), 2.0)
+	# Grains.
+	for i in 30:
+		var p := Vector2(rng.randf_range(cave.position.x + 20, cave.end.x - 20), rng.randf_range(LEDGE_Y + 4, CAVE_BOTTOM - 6))
+		Art.disc(ci, p, rng.randf_range(1.0, 2.2), Color(dark, 0.5) if i % 2 else Color(1, 1, 1, 0.35))
 
 
 ## Soft slanted beams of light through the water of the cave (static,
@@ -1018,6 +1061,39 @@ func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
 			for k in 2:
 				var p := Vector2(rng.randf_range(20, w - 20), h - 12.0)
 				Art.crystal(ci, p, 14, 4, rng.randf_range(-0.3, 0.3), Color("9fe0ff"), 1.6)
+
+
+## The rock's surface (a still layer): speckles, a few cracks and stones
+## set in the rock with a lit top and a shaded foot.
+func _rock_texture(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 97 + 5
+	var dark := Art.shade_of(rock, 0.32)
+	var lite := rock.lightened(0.16)
+	# Speckles: tiny grains of lighter and darker stone.
+	for i in 46:
+		var p := Vector2(rng.randf_range(2, w - 2), rng.randf_range(8, h - 6))
+		var r := rng.randf_range(1.4, 3.0)
+		Art.disc(ci, p, r, Color(dark, 0.55) if i % 3 else Color(lite, 0.7))
+	# Cracks.
+	for i in 3:
+		var a := Vector2(rng.randf_range(20, w - 120), rng.randf_range(20, h - 30))
+		var line := PackedVector2Array([a])
+		for k in 4:
+			line.append(line[k] + Vector2(rng.randf_range(14, 26), rng.randf_range(-8, 8)))
+		Art.line_c(ci, line, Color(dark, 0.7), 2.2)
+		Art.line_c(ci, Art.moved(line, Vector2(0, 2)), Color(lite, 0.35), 1.4)
+	# Stones: irregular, outlined in a darker tone of the rock.
+	for i in 18:
+		var c := Vector2(rng.randf_range(6, w - 6), rng.randf_range(12, h - 10))
+		var r := rng.randf_range(5.0, 13.0)
+		var pts := PackedVector2Array()
+		var n := 7
+		for k in n:
+			var ang := TAU * k / n + rng.randf_range(-0.2, 0.2)
+			pts.append(c + Vector2(cos(ang) * r * rng.randf_range(0.8, 1.25), sin(ang) * r * 0.78 * rng.randf_range(0.8, 1.2)))
+		var tone := rock.lightened(rng.randf_range(0.04, 0.14)) if i % 4 else rock.darkened(0.06)
+		Art.toon(ci, pts, tone, 1.8, 0.9, dark)
 
 
 const VEIN := Color("ff7a1e")
