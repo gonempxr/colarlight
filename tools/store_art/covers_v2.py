@@ -91,25 +91,37 @@ def wrap(w, h, body, extra_defs=""):
 
 # ------------------------------------------------------------------ A: jackpot face
 def cover_a(w, h):
-    k = h / 1080
-    cx, cy = w * 0.64, h * 0.52
+    if w > h:  # landscape
+        k = h / 1080
+        L = dict(cx=w * 0.64, cy=h * 0.52, glow=260 * k, chest=(w * 0.64 + 330 * k, h - 40 * k, 1.05 * k),
+                 stack=(w * 0.64 + 650 * k, h - 50 * k, 6, 46 * k), burst=(w * 0.64 + 150 * k, h * 0.52 - 60 * k, 26, 380 * k, 24 * k, 64 * k, 3),
+                 hero=(w * 0.30, h * 0.52, 1.18 * k), shadow=330 * k, logo=(w - min(w * 0.42, 820 * k) - 40 * k, 30 * k, min(w * 0.42, 820 * k)))
+    elif h > w:  # portrait 800x1200
+        u = w / 800
+        L = dict(cx=430 * u, cy=640 * u, glow=220 * u, chest=(590 * u, 1190 * u, 0.62 * u), stack=(760 * u, 1185 * u, 5, 34 * u),
+                 burst=(500 * u, 520 * u, 22, 250 * u, 20 * u, 50 * u, 0), hero=(340 * u, 640 * u, 1.18 * u), shadow=260 * u,
+                 logo=(60 * u, 110 * u, 680 * u))
+    else:  # square 800x800
+        u = w / 800
+        L = dict(cx=540 * u, cy=420 * u, glow=200 * u, chest=(650 * u, 795 * u, 0.55 * u), stack=(775 * u, 790 * u, 4, 30 * u),
+                 burst=(560 * u, 380 * u, 20, 210 * u, 18 * u, 46 * u, 0), hero=(250 * u, 420 * u, 0.8 * u), shadow=220 * u,
+                 logo=(318 * u, 24 * u, 462 * u))
+    cx, cy = L["cx"], L["cy"]
     bg = (f'<radialGradient id="bgA" cx="{cx}" cy="{cy}" r="{max(w, h) * 0.8}" gradientUnits="userSpaceOnUse">'
           '<stop offset="0" stop-color="#fff6c4"/><stop offset="0.22" stop-color="#ffd23f"/><stop offset="0.55" stop-color="#ff8a1e"/><stop offset="1" stop-color="#b8320f"/></radialGradient>')
     body = [f'<rect width="{w}" height="{h}" fill="url(#bgA)"/>', rays(cx, cy, 22, max(w, h) * 1.2, "#ffffff", 0.18)]
-    body.append(f'<circle cx="{cx}" cy="{cy}" r="{260 * k}" fill="#ffffff" fill-opacity="0.35" filter="url(#blur14)"/>')
-    # chest overflowing behind, bottom right
-    body.append(place(vcore.chest(), cx + 330 * k, h - 40 * k, 1.05 * k))
-    body.append(vcore.coin_stack(cx + 650 * k, h - 50 * k, 6, 46 * k))
-    body.append(coins_burst(cx + 150 * k, cy - 60 * k, 26, 380 * k, 3, 24 * k, 64 * k, near=3))
-    # the hero: big amazed face, arms up
+    body.append(f'<circle cx="{cx}" cy="{cy}" r="{L["glow"]}" fill="#ffffff" fill-opacity="0.35" filter="url(#blur14)"/>')
+    x, y, sc = L["chest"]
+    body.append(place(vcore.chest(), x, y, sc))
+    body.append(vcore.coin_stack(*L["stack"]))
+    bx, by, n, sp, r0, r1, near = L["burst"]
+    body.append(coins_burst(bx, by, n, sp, 3, r0, r1, near=near))
     hero = sprites.diver("wow", "up", "orange")
-    s = 1.18 * k
-    hx, hy = w * 0.30, h * 0.52
-    body.append(f'<ellipse cx="{hx}" cy="{h - 10}" rx="{330 * k}" ry="{50 * k}" fill="#7a2a0a" fill-opacity="0.35"/>')
+    hx, hy, s = L["hero"]
+    body.append(f'<ellipse cx="{hx}" cy="{h - 10}" rx="{L["shadow"]}" ry="{L["shadow"] * 0.15}" fill="#7a2a0a" fill-opacity="0.35"/>')
     body.append(place(hero, hx, hy + 590 * s, s))
     body.append(sparkles(16, 9, (0, 0, w, h)))
-    lw = min(w * 0.42, 820 * k)
-    body.append(logo(w - lw - 40 * k, 30 * k, lw))
+    body.append(logo(*L["logo"]))
     return wrap(w, h, "".join(body), bg)
 
 
