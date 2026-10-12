@@ -5,7 +5,7 @@ extends RefCounted
 ## over the top of the head (drawn after Chars.head with hat "none").
 ## Hoods (dino, frog, shark) are a cap over the head top with a face opening.
 
-const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder"]
+const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder", "coral_crown", "trident"]
 
 const W := 2.5
 
@@ -28,6 +28,8 @@ static func draw(ci: CanvasItem, id: String) -> void:
 		"pumpkin": _pumpkin(ci)
 		"flame": StreakArt.hat(ci)
 		"founder": FounderArt.hat(ci)
+		"coral_crown": _coral_crown(ci)
+		"trident": _trident(ci)
 
 
 # --- Shared bits ------------------------------------------------------------------------
@@ -353,3 +355,56 @@ static func _pumpkin(ci: CanvasItem) -> void:
 			Vector2(8, -25), Vector2(4, -21), Vector2(-4, -21)]), glow, 1.5, 0.0)
 	_shine(ci, Vector2(-12, -35), Vector2(3.5, 2), -0.6)
 	Art.pop(ci)
+
+
+# --- Sea pass hats (BattlePass rewards) ------------------------------------------------
+
+## Pink coral branches standing on a gold band, pearls at the tips.
+static func _coral_crown(ci: CanvasItem) -> void:
+	var coral := Color("ff7f8f")
+	var branches := [
+		[Vector2(-15, -16), Vector2(-19, -27), Vector2(-24, -33)],
+		[Vector2(-8, -18), Vector2(-9, -31), Vector2(-14, -40)],
+		[Vector2(0, -19), Vector2(1, -34), Vector2(-1, -45)],
+		[Vector2(8, -18), Vector2(10, -31), Vector2(15, -40)],
+		[Vector2(15, -16), Vector2(19, -27), Vector2(24, -33)],
+	]
+	var shapes := []
+	for b: Array in branches:
+		shapes.append(_tube(PackedVector2Array(b), 6.0, 3.2))
+	# Little side twigs.
+	shapes.append(_tube(PackedVector2Array([Vector2(-9, -27), Vector2(-4, -31), Vector2(-3, -35)]), 3.6, 2.2))
+	shapes.append(_tube(PackedVector2Array([Vector2(9, -27), Vector2(4, -31), Vector2(3, -35)]), 3.6, 2.2))
+	Art.toon(ci, Art.union(shapes), coral, W, 0.5)
+	for b: Array in branches:
+		var tip: Vector2 = b[2]
+		Art.t_circle(ci, tip + (tip - b[1]).normalized() * 2.0, 3.0, Color("fff6f0"), 1.6, 0.0)
+	# The band.
+	var band := PackedVector2Array()
+	for i in 13:
+		var a := PI + 0.35 + (PI - 0.7) * i / 12.0
+		band.append(Vector2(0, -2) + Vector2(cos(a) * 22.0, sin(a) * 15.0))
+	for i in 13:
+		var a := TAU - 0.35 - (PI - 0.7) * i / 12.0
+		band.append(Vector2(0, 4) + Vector2(cos(a) * 22.0, sin(a) * 15.0))
+	Art.toon(ci, band, Art.GOLD, W, 0.6)
+	for x: float in [-11.0, 0.0, 11.0]:
+		Art.t_circle(ci, Vector2(x, -15.5 + absf(x) * 0.12), 2.4, Color("7be0ff"), 1.3, 0.0)
+
+
+## The sea king's crown: gold, three trident prongs, a sea-green gem.
+static func _trident(ci: CanvasItem) -> void:
+	var gold := Art.GOLD
+	var crown := PackedVector2Array([Vector2(-21, -13), Vector2(-23, -27), Vector2(-14, -22), Vector2(-9, -34),
+			Vector2(-4, -24), Vector2(0, -38), Vector2(4, -24), Vector2(9, -34), Vector2(14, -22), Vector2(23, -27), Vector2(21, -13)])
+	Art.toon(ci, crown, gold, W, 0.7)
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(-8, -24), Vector2(4, 9), 12, 0.3), crown), Color(1, 1, 1, 0.45))
+	# Prong tips: little barbs like a trident.
+	for p: Vector2 in [Vector2(-9, -34), Vector2(0, -38), Vector2(9, -34)]:
+		var tip := PackedVector2Array([p + Vector2(0, -7), p + Vector2(3.2, 1), p + Vector2(-3.2, 1)])
+		Art.toon(ci, tip, Art.GOLD_DARK, 1.8, 0.0)
+	Art.t_rect(ci, Rect2(-22, -16, 44, 7), 3.0, Art.GOLD_DARK, W, 0.3)
+	Art.t_ellipse(ci, Vector2(0, -21), Vector2(4.2, 5.2), Color("2fd6b5"), 1.8, 0.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-1.3, -23), Vector2(1.2, 1.8), 8, 0.0), Color(1, 1, 1, 0.8))
+	for x: float in [-14.0, 14.0]:
+		Art.t_circle(ci, Vector2(x, -12.5), 2.0, Color("fff6f0"), 1.2, 0.0)

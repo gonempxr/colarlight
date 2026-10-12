@@ -35,7 +35,11 @@ func _ready() -> void:
 	size = custom_minimum_size
 	pivot_offset = size / 2.0
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	tooltip_text = tr("BOOST_BTN" if kind == "boost" else "RIVALS")
+	tooltip_text = _tip()
+
+
+func _tip() -> String:
+	return tr({"boost": "BOOST_BTN", "rivals": "RIVALS", "pass": "BP_TITLE"}.get(kind, "RIVALS"))
 
 
 func _get_tooltip(at_position: Vector2) -> String:
@@ -59,7 +63,7 @@ func _gui_input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree():
-		tooltip_text = tr("BOOST_BTN" if kind == "boost" else "RIVALS")
+		tooltip_text = _tip()
 
 
 func _process(delta: float) -> void:
@@ -80,6 +84,9 @@ func _process(delta: float) -> void:
 		var left: float = GameState.boost_left
 		if left > 0.0:
 			tag = NumFormat.duration(left)
+	elif kind == "pass":
+		badge = BattlePass.waiting() > 0
+		tag = "%d" % BattlePass.level()
 	else:
 		badge = bool(Rivals.reward_pending())
 	if dim != _dim or badge != _badge or tag != _tag:
@@ -102,6 +109,18 @@ func _draw() -> void:
 			var tag := Rect2(c.x - w / 2.0, SIZE - 16.0, w, 24.0)
 			Art.t_rect(self, tag, 9.0, Art.GOLD, 3.0, 0.4)
 			Art.text(self, Vector2(c.x, SIZE + 1.5), _tag, 17, Art.INK, 0)
+	elif kind == "pass":
+		Art.t_circle(self, c, r, Color("e9f3ff"), 4.0, 0.6)
+		PassView.draw_icon(self, c + Vector2(0, -2), r * 0.62)
+		# The level on a small blue tag under the ticket.
+		var font := UiTheme.heavy_font()
+		var w := font.get_string_size(_tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 16.0
+		Art.t_rect(self, Rect2(c.x - w / 2.0, SIZE - 16.0, w, 24.0), 9.0, Color("7fd0ff"), 3.0, 0.4)
+		Art.text(self, Vector2(c.x, SIZE + 1.5), _tag, 17, Art.INK, 0)
+		if _badge:
+			var b := c + Vector2(SIZE * 0.32, -SIZE * 0.32)
+			Art.t_circle(self, b, 12.0, Art.RED, 3.0, 0.0)
+			Art.text(self, b + Vector2(0, 7), "!", 19, Art.WHITE, 0)
 	else:
 		Art.t_circle(self, c, r, Color("e9f3ff"), 4.0, 0.6)
 		draw_trophy(self, c + Vector2(0, 1), r * 0.62)

@@ -189,3 +189,30 @@ GUIDE_MUSEUM_LOCK,Opens with your first artifact piece from the puzzle.,Откр
 GUIDE_FISHING_LOCK,Opens when you open the 3rd dive site.,"Откроется, когда откроешь 3-ю площадку.",Se abre al abrir el 3.er sitio de buceo.,开启第3个潜点后开启。
 GUIDE_SHOP_LOCK,Opens when you collect a few pearls.,"Откроется, когда соберёшь немного жемчуга.",Se abre al reunir algunas perlas.,收集一些珍珠后开启。
 GUIDE_RIVALS_LOCK,Opens with the quests.,Откроется вместе с заданиями.,Se abre con las misiones.,与任务一起开启。
+BP_TITLE,Sea Pass,Морской пропуск,Pase marino,海洋通行证
+BP_CHAPTER,Chapter %d,Глава %d,Capítulo %d,第 %d 章
+BP_FREE,"Free for everyone. Earned only by playing, no timer: your progress never burns.","Бесплатно для всех. Только за игру, без таймера: прогресс не сгорает.","Gratis para todos. Solo jugando, sin temporizador: tu progreso no se pierde.",所有人免费。只靠游戏获得，没有倒计时：进度不会消失。
+BP_LEVEL,Level %d of %d,Уровень %d из %d,Nivel %d de %d,等级 %d / %d
+BP_DONE,All levels reached! Take the rewards to start the next chapter.,Все уровни пройдены! Забери награды — начнётся новая глава.,¡Todos los niveles! Recoge las recompensas y empieza el siguiente capítulo.,全部等级完成！领取奖励开始下一章。
+BP_TAKE,Take rewards (%d),Забрать награды (%d),Recoger recompensas (%d),领取奖励（%d）
+BP_HOW,How to get XP,Как получить опыт,Cómo ganar XP,如何获得经验
+BP_XP_CHALLENGE,Challenge of the day,Задание дня,Desafío del día,每日挑战
+BP_XP_DAILY,Daily gift,Подарок дня,Regalo diario,每日礼物
+BP_XP_QUEST,A quest,Задание,Una misión,一个任务
+BP_XP_BADGE,A new badge,Новый значок,Una insignia nueva,一枚新徽章
+BP_XP_CHEST,A treasure bubble,Пузырь с сокровищем,Una burbuja del tesoro,一个宝藏泡泡
+BP_XP_STAR,A puzzle star,Звезда в пазле,Una estrella del puzle,一颗拼图星
+BP_XP_FISH,A fish,Рыба,Un pez,一条鱼
+BP_XP_MINUTE,A minute of play,Минута игры,Un minuto de juego,游戏一分钟
+BP_READY,TAKE!,ЗАБЕРИ!,¡COGE!,领取！
+BP_SHORT,Sea Pass,Пропуск,Pase,通行证
+BP_ITEM_HOW,"Sea Pass reward, level %d","Награда пропуска, уровень %d","Premio del pase, nivel %d",通行证奖励，第 %d 级
+BP_LEVEL_UP,Sea Pass: level %d!,Пропуск: уровень %d!,Pase: ¡nivel %d!,通行证：第 %d 级！
+HINT_PASS_TAKE,New Sea Pass rewards are waiting: take them!,Тебя ждут награды морского пропуска: забери их!,Te esperan premios del pase marino: ¡recógelos!,海洋通行证奖励在等你：快领取！
+HINT_SEE_PASS,The Sea Pass: play and get rewards and items no one can buy!,"Морской пропуск: играй и получай награды и вещи, которые нельзя купить!",El pase marino: juega y gana premios y objetos que no se compran.,海洋通行证：玩游戏获得奖励和买不到的物品！
+GUIDE_PASS,Sea Pass,Морской пропуск,Pase marino,海洋通行证
+GUIDE_PASS_D,"30 levels of rewards for playing, free. Items no one can buy.","30 уровней наград за игру, бесплатно. Вещи, которые нельзя купить.","30 niveles de premios por jugar, gratis. Objetos que no se compran.",30级游戏奖励，免费。买不到的物品。
+GUIDE_PASS_LOCK,Opens with the quests.,Откроется вместе с заданиями.,Se abre con las misiones.,与任务一起开启。
+ITEM_HAT_CORAL_CROWN,Coral Crown,Коралловая корона,Corona de coral,珊瑚王冠
+ITEM_HAT_TRIDENT,Sea King Crown,Корона морского царя,Corona del rey del mar,海王王冠
+ITEM_BOAT_REEF,Reef paint,Рифовая краска,Pintura de arrecife,珊瑚礁涂装

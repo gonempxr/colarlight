@@ -252,6 +252,14 @@ func _initialize() -> void:
 			elif overlay.begins_with("nick"):
 				root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "")
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
+			elif overlay.begins_with("pass"):
+				# The sea pass at level 7 with three rewards waiting.
+				var bpass = load("res://scripts/data/battle_pass.gd")
+				bpass.tick()
+				bpass.add_xp(420)
+				root.get_node("Progress").stats["bp_got"] = 4
+				if overlay == "pass":
+					load("res://scripts/ui/pass_view.gd").open(main)
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true
 			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club", "guide"]:
@@ -273,7 +281,7 @@ func _initialize() -> void:
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
 ## thanks:<founder|promo|join|inviter|week|season> (the thank-you dialog); board:taken (the name is someone else's);
-## guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
+## pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")

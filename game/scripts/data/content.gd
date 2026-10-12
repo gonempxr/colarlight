@@ -84,7 +84,8 @@ static func artifact(id: String) -> Dictionary:
 # --- Cosmetics ------------------------------------------------------------------
 ## slot: hat (the player's hat), pet (swims next to the player), boat (boat
 ## paint), outfit (the player's own clothes in room 3). Unlock: "free", "pearls" (price),
-## "goal" (an achievement, see GOALS), "exclusive" (only given: see Online)
+## "goal" (an achievement, see GOALS), "exclusive" (only given: see Online),
+## "pass" (a sea pass reward, see BattlePass)
 ## or "shop" (real money, only when the platform sells things). rarity: 0 common, 1 rare, 2 epic, 3 legendary.
 const COSMETICS: Array[Dictionary] = [
 	# Pets
@@ -118,6 +119,9 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "hat_flame", "slot": "hat", "art": "flame", "unlock": "goal", "goal": "streak_30", "rarity": 3},
 	# Exclusive: never sold; founders, a promo code and inviting a friend (Online).
 	{"id": "hat_founder", "slot": "hat", "art": "founder", "unlock": "exclusive", "rarity": 3},
+	# Sea pass rewards (BattlePass): never sold.
+	{"id": "hat_coral_crown", "slot": "hat", "art": "coral_crown", "unlock": "pass", "rarity": 2},
+	{"id": "hat_trident", "slot": "hat", "art": "trident", "unlock": "pass", "rarity": 3},
 	# Boat paint
 	{"id": "boat_classic", "slot": "boat", "art": "classic", "unlock": "free", "rarity": 0},
 	{"id": "boat_sunny", "slot": "boat", "art": "sunny", "unlock": "pearls", "price": 60, "rarity": 0},
@@ -125,6 +129,7 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "boat_pirate", "slot": "boat", "art": "pirate", "unlock": "pearls", "price": 200, "rarity": 2},
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
 	{"id": "boat_flame", "slot": "boat", "art": "flame", "unlock": "goal", "goal": "streak_14", "rarity": 2},
+	{"id": "boat_reef", "slot": "boat", "art": "reef", "unlock": "pass", "rarity": 2},
 	# Player outfits (room 3). Pearls or goals only, never real money.
 	{"id": "outfit_casual", "slot": "outfit", "art": "casual", "unlock": "free", "rarity": 0},
 	{"id": "outfit_captain", "slot": "outfit", "art": "captain", "unlock": "pearls", "price": 60, "rarity": 0},
@@ -148,6 +153,7 @@ const BOAT_PAINTS := {
 	"pirate": [Color("3a3350"), Color("e8c48a"), Color("7a2e3a"), Color("5c5470"), Color("1a1a24")],
 	"royal": [Color("2a4fb8"), Color("ffd84a"), Color("ffd84a"), Color("ffd84a"), Color("d8363c")],
 	"flame": [Color("ff6a2b"), Color("ffd23f"), Color("d8363c"), Color("ffb347"), Color("ffe36b")],
+	"reef": [Color("2fd6b5"), Color("ff7f8f"), Color("ff7f8f"), Color("fff6f0"), Color("ffd23f")],
 }
 ## The diver suits are gone (worker evolution replaced them). Pearls spent
 ## on them are refunded once on load (Progress). Old id -> pearl price.

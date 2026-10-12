@@ -105,6 +105,7 @@ static func claim() -> bool:
 	if claimed() or not complete():
 		return false
 	Progress.stats["dc_done"] = 1
+	Progress.stats["dc_claims"] = int(Progress.stats.get("dc_claims", 0)) + 1
 	Progress.add_pearls(PEARLS)
 	Progress.save_game()
 	return true

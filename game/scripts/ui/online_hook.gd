@@ -46,6 +46,10 @@ func _check_badges() -> void:
 	if not is_instance_valid(main) or not main._started:
 		return
 	_new_badges.append_array(Achievements.check())
+	if BattlePass.tick() > 0 and not main._blocked():
+		var view: Vector2 = main.get_viewport_rect().size
+		Sfx.play("unlock")
+		main._fx.float_text(Vector2(view.x / 2.0, view.y * 0.22), tr("BP_LEVEL_UP") % BattlePass.level(), Color("7fd0ff"), 34)
 	if _new_badges.is_empty() or main._blocked() or main.is_busy() or main._modal.visible or main._top.visible:
 		return
 	# One toast: the first new badge, "+N" more when several came at once

@@ -129,7 +129,7 @@ static func _cell(c: Dictionary, m: Modal) -> Control:
 	var pic := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): _draw_item(ci, c, s, tt), Vector2(0, 130), true)
 	v.add_child(pic)
 	if not owned:
-		pic.modulate = Color(0.75, 0.75, 0.8) if c["unlock"] in ["goal", "exclusive"] else Color.WHITE
+		pic.modulate = Color(0.75, 0.75, 0.8) if c["unlock"] in ["goal", "exclusive", "pass"] else Color.WHITE
 	var name := Views.label(t("ITEM_" + id.to_upper()), 18, Art.INK, true)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(name)
@@ -159,6 +159,16 @@ static func _cell(c: Dictionary, m: Modal) -> Control:
 			else:
 				Sfx.play("deny")
 				_shake(b))
+	elif c["unlock"] == "pass":
+		# Earned in the sea pass (playing), never sold.
+		b.text = t("BP_SHORT")
+		b.icon = Icons.get_icon("lock", 28)
+		b.theme_type_variation = &"DarkButton"
+		b.add_theme_font_size_override("font_size", 17)
+		b.pressed.connect(func(): Sfx.play("deny"); main_toast(m, t("BP_ITEM_HOW") % BattlePass.level_of_item(id)))
+		var how := Views.label(t("BP_ITEM_HOW") % BattlePass.level_of_item(id), 15, Art.INK_SOFT)
+		how.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(how)
 	elif c["unlock"] == "exclusive":
 		# Never sold: founders, a promo code, inviting a friend (Online).
 		b.text = t("EXCLUSIVE")

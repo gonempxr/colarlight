@@ -59,6 +59,12 @@ This file is the quick picture; keep it up to date when something big changes.
   `clubs/`, `clubweeks/`). UI in `social_view.gd`, strings `i18n/social.csv`.
   Balance: coins for pearls once per 5 h; fish never sell for more in a
   poorer world (`Fishing.value_of`).
+  Also: weekly puzzle board (stars won, `puzzleweeks/`, small Monday
+  prizes); "Everything in the game" guide (`GuideView`, from the lightbulb,
+  profile, settings; "What's new" once per `NEWS_VERSION`); the lightbulb
+  points to never-opened features; free Sea Pass (`BattlePass`, 30 levels,
+  XP from counters, no timer, chapters repeat; items `unlock: "pass"`),
+  side button under the lightbulb.
 - Puzzle: each world has its own board (TileWorlds: lava, swamp, space).
 - Languages RU / EN / ES / ZH (Noto Sans SC subset — rerun
   `python3 tools/subset_fonts.py` after adding Chinese text; it needs the

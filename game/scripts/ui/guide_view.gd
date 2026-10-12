@@ -10,7 +10,7 @@ extends RefCounted
 
 ## Bump when "What's new" should show again (with new WHATS_NEW ids).
 const NEWS_VERSION := 1
-const WHATS_NEW := ["challenge", "ach", "clubs", "season", "puzzle_board", "friends", "titles"]
+const WHATS_NEW := ["pass", "challenge", "ach", "clubs", "season", "puzzle_board", "friends", "titles"]
 ## Long enough in the game to be told about news (new players learn as they go).
 const NEWS_AFTER_SEC := 300.0
 
@@ -53,6 +53,7 @@ static func entries(main: Node) -> Array:
 		["shop", "wardrobe", "fun", Progress.has_feature("shop"), func(): main.open_feature("shop")],
 		["rivals", "star", "fun", Progress.has_feature("quests"), func(): main.open_rivals()],
 		["ach", "star", "fun", true, func(): SocialView.open_achievements(main)],
+		["pass", "gift", "fun", Progress.has_feature("quests"), func(): PassView.open(main)],
 	]
 	if online:
 		list.append_array([

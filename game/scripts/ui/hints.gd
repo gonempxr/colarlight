@@ -69,7 +69,9 @@ static func pick(main: Node) -> Dictionary:
 	if Progress.has_feature("puzzle") and int(Progress.stats.get("puzzles_won", 0)) < 3:
 		return _hint("puzzle", t("HINT_PUZZLE"), false, Callable(), "puzzle")
 	# Things the player has never opened: one at a time, each until seen.
-	for g in [["ach", true], ["challenge", Progress.has_feature("quests")], ["board", Online.present()],
+	if Progress.has_feature("quests") and BattlePass.waiting() > 0:
+		return _hint("pass_take", t("HINT_PASS_TAKE"), true, Callable(), "pass")
+	for g in [["pass", Progress.has_feature("quests")], ["ach", true], ["challenge", Progress.has_feature("quests")], ["board", Online.present()],
 			["puzzle_board", Online.present() and Progress.has_feature("puzzle")], ["clubs", Online.present()]]:
 		if g[1] and not GuideView.seen(str(g[0])):
 			return _hint("see_" + str(g[0]), t("HINT_SEE_" + str(g[0]).to_upper()), false, Callable(), str(g[0]))
@@ -152,6 +154,8 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 					main.open_map()
 				"ach":
 					SocialView.open_achievements(main)
+				"pass":
+					PassView.open(main)
 				"clubs":
 					SocialView.open_clubs(main)
 				"board":

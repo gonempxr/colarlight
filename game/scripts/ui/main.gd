@@ -70,6 +70,7 @@ var _map: MapView
 ## the Rivals League trophy (only while a weekly reward waits).
 var _boost_btn: SideButton
 var _rivals_btn: SideButton
+var _pass_btn: SideButton
 ## The real players' leaderboard (OnlineView), under the side buttons.
 var _online_btn: OnlineButton
 var _ad_overlay: AdOverlay
@@ -252,6 +253,9 @@ func _ready() -> void:
 	_rivals_btn = SideButton.make("rivals")
 	_rivals_btn.pressed.connect(open_rivals)
 	add_child(_rivals_btn)
+	_pass_btn = SideButton.make("pass")
+	_pass_btn.pressed.connect(func(): PassView.open(self))
+	add_child(_pass_btn)
 	_online_btn = OnlineButton.new()
 	_online_btn.pressed.connect(func(): OnlineView.open_board(self))
 	add_child(_online_btn)
@@ -1223,11 +1227,12 @@ func _place_side_buttons() -> void:
 	# week's pearls wait there.
 	_rivals_btn.visible = settled and Rivals.reward_pending()
 	_online_btn.visible = settled and Online.present()
-	for b in [_boost_btn, _rivals_btn, _online_btn]:
+	_pass_btn.visible = settled
+	for b in [_pass_btn, _boost_btn, _rivals_btn, _online_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)
-			# The boost's time tag hangs below it.
-			y += SideButton.SIZE + (22.0 if b == _boost_btn and GameState.boost_left > 0.0 else 10.0)
+			# The boost's time tag and the pass level hang below them.
+			y += SideButton.SIZE + (22.0 if (b == _boost_btn and GameState.boost_left > 0.0) or b == _pass_btn else 10.0)
 
 
 func open_boost() -> void:
