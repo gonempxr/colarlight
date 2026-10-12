@@ -216,3 +216,16 @@ GUIDE_PASS_LOCK,Opens with the quests.,Откроется вместе с зад
 ITEM_HAT_CORAL_CROWN,Coral Crown,Коралловая корона,Corona de coral,珊瑚王冠
 ITEM_HAT_TRIDENT,Sea King Crown,Корона морского царя,Corona del rey del mar,海王王冠
 ITEM_BOAT_REEF,Reef paint,Рифовая краска,Pintura de arrecife,珊瑚礁涂装
+BP_ROW_BONUS,BONUS,БОНУС,BONUS,奖励
+BP_ROW_MAIN,SEA PASS,ПРОПУСК,PASE,通行证
+BP_BONUS_LOCKED,Bonus track: do %d of %d challenges of the day to open it (free).,"Бонусная дорожка: выполни задания дня — %d из %d, и она откроется (бесплатно).",Pista bonus: haz desafíos del día — %d de %d — y se abre (gratis).,奖励路线：完成每日挑战 %d/%d 即可开启（免费）。
+BP_BONUS_OPEN,Bonus track is open: take double rewards!,Бонусная дорожка открыта: забирай двойные награды!,¡Pista bonus abierta: recoge premios dobles!,奖励路线已开启：领取双倍奖励！
+BP_TRACKS,Two tracks: the main one for everyone and the bonus one that opens after %d challenges of the day. Nothing is sold.,"Две дорожки: основная для всех и бонусная, которая открывается после %d заданий дня. Ничего не продаётся.","Dos pistas: la principal para todos y la bonus, que se abre tras %d desafíos del día. Nada se vende.",两条路线：所有人的主路线，以及完成 %d 个每日挑战后开启的奖励路线。不出售任何东西。
+BP_NOTHING,Play to reach the next level,"Играй, чтобы взять новый уровень",Juega para subir de nivel,继续游戏升到下一级
+BP_NEED_LEVEL,Reach level %d to take this.,"Дойди до уровня %d, чтобы забрать.",Llega al nivel %d para recogerlo.,达到第 %d 级即可领取。
+BP_GOT_ITEM,New item: %s! It's in the wardrobe.,Новая вещь: %s! Она в гардеробе.,¡Objeto nuevo: %s! Está en el armario.,新物品：%s！在衣橱里。
+BP_NEW_CHAPTER,Sea Pass: chapter %d begins!,Пропуск: началась глава %d!,Pase: ¡empieza el capítulo %d!,通行证：第 %d 章开始！
+BP_DONE_SHORT,All levels!,Все уровни!,¡Todos los niveles!,全部等级！
+BP_MIN,%d min,%d мин,%d min,%d 分钟
+BP_SHOWCASE,Level %d reward,Награда уровня %d,Premio del nivel %d,第 %d 级奖励
+BP_ONLY_HERE,Only in the Sea Pass: it can't be bought.,Только в пропуске: купить нельзя.,Solo en el pase: no se puede comprar.,仅限通行证：无法购买。

@@ -34,6 +34,30 @@ static func stage_name(key: String) -> String:
 
 # --- Small widgets -------------------------------------------------------------------
 
+## A grid of big menu tiles (icon on top, words below), two per row.
+## items: [icon, text, button variation, Callable].
+static func tiles(items: Array, cols: int = 2) -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = cols
+	g.add_theme_constant_override("h_separation", 10)
+	g.add_theme_constant_override("v_separation", 10)
+	for it in items:
+		var b := Button.new()
+		b.theme_type_variation = it[2]
+		b.text = str(it[1])
+		b.icon = Icons.get_icon(str(it[0]), 52)
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(0, 128)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 21)
+		var go: Callable = it[3]
+		b.pressed.connect(func(): Sfx.play("click"); go.call())
+		g.add_child(b)
+	return g
+
+
 static func icon(name: String, px: int) -> TextureRect:
 	var r := TextureRect.new()
 	r.texture = Icons.get_icon(name, px)

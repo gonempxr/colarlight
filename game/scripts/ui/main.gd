@@ -411,7 +411,7 @@ func _process(delta: float) -> void:
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or _room != MINE
+	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or _room != MINE
 	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
 	# under it: nothing there needs drawing until it closes.
 	World.calm = _modal.visible or _top.visible
@@ -521,7 +521,7 @@ func _move_slide(delta: float) -> void:
 ## Rooms side by side, moved by the slide; only the ones on screen show.
 ## True while an opaque screen covers the whole window (fully faded in).
 func _covering() -> bool:
-	for c in [_puzzle, _fishing]:
+	for c in [_puzzle, _fishing, _pass]:
 		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
 			return true
 	return _map.visible and _map.modulate.a >= 0.999
@@ -652,7 +652,7 @@ func _after_tap(f: Callable) -> void:
 
 
 func _blocked() -> bool:
-	return _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title)
+	return _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass)
 
 
 # --- Cards ------------------------------------------------------------------------------
@@ -1239,6 +1239,23 @@ func open_boost() -> void:
 	_modal.open(func(m): AdBoost.offer(m, self))
 
 
+var _pass: Control
+
+
+## The Sea Pass on its own screen (PassScreen), over everything but the fx.
+func open_pass() -> void:
+	if is_instance_valid(_pass):
+		return
+	_modal.close()
+	_pass = PassScreen.new()
+	_pass.main = self
+	add_child(_pass)
+	move_child(_pass, _fx.get_index())
+	_pass.tree_exited.connect(func():
+		_pass = null
+		_show_next_news())
+
+
 func open_rivals() -> void:
 	_modal.open(func(m): RivalsView.build(m, self))
 
@@ -1268,7 +1285,7 @@ func open_feature(id: String) -> void:
 
 
 func _show_next_news() -> void:
-	if _news.is_empty() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or not _started:
+	if _news.is_empty() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_pass) or not _started:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")

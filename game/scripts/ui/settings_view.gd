@@ -188,18 +188,20 @@ static func profile(m: Modal, main: Node) -> void:
 	h.add_child(rename)
 	m.add(c)
 	m.text(t("PROFILE_HINT"), 20, Art.INK_SOFT)
-	var look := m.button(t("EDIT_LOOK"), func(): Sfx.play("click"); main.open_avatar_editor(main.open_profile), &"BlueButton")
-	look.icon = Icons.get_icon("pencil", 34)
+	# Everything about the player as big tiles.
+	var items := [["pencil", t("EDIT_LOOK"), &"BlueButton", func(): main.open_avatar_editor(main.open_profile)]]
+	if Progress.has_feature("shop"):
+		items.append(["wardrobe", t("WARDROBE"), &"Button", func(): main.open_feature("shop")])
+	if Progress.has_feature("quests"):
+		items.append(["gift", t("BP_TITLE"), &"PurpleButton", func(): PassView.open(main)])
+	items.append(["star", "%s  %d/%d" % [t("ACH_BUTTON"), Achievements.count(), Achievements.LIST.size()], &"GoldButton",
+		func(): SocialView.open_achievements(main)])
 	if Progress.has_feature("quests"):
 		# The Rivals League (made-up sea characters), with this week's place.
-		var league := m.button("%s  ·  #%d" % [t("RIVALS"), Rivals.place()], func(): Sfx.play("click"); main.open_rivals(), &"GoldButton")
-		league.icon = Icons.get_icon("star", 36)
-	OnlineView.profile_buttons(m, main)
-	if Progress.has_feature("shop"):
-		var ward := m.button(t("WARDROBE"), func(): Sfx.play("click"); main.open_feature("shop"))
-		ward.icon = Icons.get_icon("wardrobe", 38)
-	var who := m.button(t("SWITCH_PLAYER"), func(): Sfx.play("click"); main.open_players(), &"PurpleButton")
-	who.icon = Icons.get_icon("people", 36)
+		items.append(["star", "%s  #%d" % [t("RIVALS"), Rivals.place()], &"GoldButton", func(): main.open_rivals()])
+	items.append_array(OnlineView.profile_items(main))
+	items.append(["people", t("SWITCH_PLAYER"), &"DarkButton", func(): main.open_players()])
+	m.add(Views.tiles(items))
 
 
 # --- Players ---------------------------------------------------------------------------

@@ -466,35 +466,46 @@ func _initialize() -> void:
 
 	# --- Sea pass ---------------------------------------------------------------------------------
 	var bp: GDScript = load("res://scripts/data/battle_pass.gd")
-	for bk in ["bp_s_minute", "bp_xp", "bp_got", "bp_ch"]:
-		pr.stats.erase(bk)
+	for bk in pr.stats.keys():
+		if str(bk).begins_with("bp_"):
+			pr.stats.erase(bk)
 	_check(bp.tick() == 0 and bp.xp() == 0 and bp.level() == 0, "the pass starts at zero (old progress gives no XP)")
 	pr.stats["quests_done"] = int(pr.stats.get("quests_done", 0)) + 3
 	pr.stats["puzzle_stars"] = int(pr.stats.get("puzzle_stars", 0)) + 4
 	_check(bp.tick() == 1 and bp.xp() == 100, "3 quests + 4 stars = 100 XP = level 1")
 	_check(bp.tick() == 0, "nothing new, no XP")
-	_check(bp.waiting() == 1, "one reward waits")
+	_check(bp.waiting() == 1 and bp.ready("f", 1) and not bp.ready("b", 1), "one main reward waits; the bonus track is closed")
 	var bpp: int = pr.pearls
-	var got_bp: Dictionary = bp.claim_all()
-	_check(int(got_bp["pearls"]) == 5 and pr.pearls == bpp + 5 and bp.waiting() == 0, "level 1 pays 5 pearls")
-	_check(bp.claim_all().is_empty(), "nothing twice")
-	_check(bp.reward(10, 1).get("item") == "boat_reef" and bp.reward(20, 1).get("item") == "hat_coral_crown" and bp.reward(30, 1).get("item") == "hat_trident", "items at 10, 20, 30")
-	_check(bp.reward(5).has("boost") and bp.reward(3).has("coins_min") and bp.reward(4).has("pearls"), "boosts, coins, pearls")
+	var got_bp: Dictionary = bp.claim("f", 1)
+	_check(int(got_bp["pearls"]) == 5 and pr.pearls == bpp + 5 and bp.waiting() == 0 and bp.taken("f", 1), "level 1 pays 5 pearls")
+	_check(bp.claim("f", 1).is_empty() and bp.claim("f", 2).is_empty(), "nothing twice, nothing not reached")
+	_check(bp.claim("b", 1).is_empty(), "the bonus track can't be taken while closed")
+	pr.stats["dc_claims"] = int(pr.stats.get("dc_claims", 0)) + bp.BONUS_NEED
+	bp.tick()
+	_check(bp.bonus_open() and bp.ready("b", 1), "challenges of the day open the bonus track")
+	_check(bp.reward("f", 10, 1).get("item") == "boat_reef" and bp.reward("f", 20, 1).get("item") == "hat_coral_crown" and bp.reward("f", 30, 1).get("item") == "hat_trident", "items at 10, 20, 30")
+	_check(bp.reward("f", 5).has("boost") and bp.reward("f", 3).has("coins_min") and bp.reward("f", 4).has("pearls") and bp.reward("b", 10).has("pearls"), "boosts, coins, pearls")
 	for id in ["boat_reef", "hat_coral_crown", "hat_trident"]:
 		_check(Content.cosmetic(id).get("unlock") == "pass" and not pr.buy_item(id), "%s is never sold" % id)
 		_check(TranslationServer.translate("ITEM_" + id.to_upper()) != "ITEM_" + id.to_upper(), "%s has a name" % id)
 	_check("coral_crown" in HatsArt.IDS and "trident" in HatsArt.IDS and Content.BOAT_PAINTS.has("reef"), "pass items are drawn")
+	var xb: int = bp.xp()
 	bp.add_xp(5000)
 	_check(bp.level() == 30, "level 30 at most")
+	var bpp2: int = pr.pearls
 	var all_bp: Dictionary = bp.claim_all()
 	_check(pr.is_owned("boat_reef") and pr.is_owned("hat_coral_crown") and pr.is_owned("hat_trident") and all_bp["items"].size() == 3, "all three items given")
-	_check(bp.chapter() == 2 and bp.taken() == 0 and bp.xp() == 5100 - 3000, "the next chapter starts with the XP left over")
-	_check(not bp.reward(10).has("item") and int(bp.reward(10)["pearls"]) == 80, "owned items become pearls in later chapters")
-	var dcc := int(pr.stats.get("dc_claims", 0))
-	pr.stats["dc_claims"] = dcc + 1
+	_check(pr.pearls > bpp2 + 300, "both tracks paid (%d)" % (pr.pearls - bpp2))
+	_check(bp.chapter() == 2 and not bp.taken("f", 1) and bp.xp() == mini(xb + 5000, 6000) - 3000 and int(all_bp.get("chapter", 0)) == 2, "the next chapter starts with the XP left over")
+	_check(not bp.bonus_open(), "the bonus track closes again for the new chapter")
+	_check(not bp.reward("f", 10).has("item") and int(bp.reward("f", 10)["pearls"]) == 80, "owned items become pearls in later chapters")
 	var x0: int = bp.xp()
+	pr.stats["dc_claims"] = int(pr.stats.get("dc_claims", 0)) + 1
 	bp.tick()
 	_check(bp.xp() == x0 + 100, "the challenge of the day: 100 XP")
+	# The first version kept one number of levels taken.
+	pr.stats["bp_got"] = 3
+	_check(bp.taken("f", 1) and bp.taken("f", 3) and not bp.taken("f", 4) and not pr.stats.has("bp_got"), "old pass saves move to the new form")
 
 	# --- The guide: every entry has words ------------------------------------------------------
 	var guide_src := FileAccess.get_file_as_string("res://scripts/ui/guide_view.gd")

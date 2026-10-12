@@ -92,6 +92,58 @@ static func pill_box(color: Color, radius: float = R_PILL) -> ToonBox:
 	return b
 
 
+# --- Dialogs: a light-blue panel under a striped title banner ----------------------
+
+const DIALOG_FILL := Color("dbe9fa")
+const BANNER_BLUE := Color("2f73e0")
+const BANNER_GOLD := Color("f2a516")
+const BANNER_PURPLE := Color("7a4fe0")
+const BANNER_GREEN := Color("2fae5a")
+const BANNER_RED := Color("e0484a")
+
+
+static func dialog_box() -> ToonBox:
+	var b := ToonBox.make(DIALOG_FILL, 30, 8)
+	b.line_w = 5.0
+	b.gloss = 0.0
+	b.shadow = 0.45
+	b.content_margin_left = 18
+	b.content_margin_right = 18
+	b.content_margin_top = 14
+	b.content_margin_bottom = 20 + 8
+	return b
+
+
+## The title banner: a bold colour band with light diagonal stripes, a
+## glossy top and a darker lip at the bottom (drawn on `ci` in `r`).
+static func draw_banner(ci: CanvasItem, r: Rect2, color: Color) -> void:
+	if r.size.x < 10.0 or r.size.y < 10.0:
+		return
+	var rad := 20.0
+	var lip := 7.0
+	var outer := Art.rrect_pts(r, rad)
+	Art.flat(ci, outer, Art.INK)
+	var inner := r.grow(-3.5)
+	Art.flat(ci, Art.rrect_pts(inner, rad - 3.0), color.darkened(0.3))
+	var face_r := Rect2(inner.position, inner.size - Vector2(0, lip))
+	var face := Art.rrect_pts(face_r, rad - 3.0)
+	Art.flat(ci, face, color)
+	# Diagonal stripes, clipped to the face.
+	var stripes := []
+	var x := face_r.position.x - face_r.size.y
+	while x < face_r.end.x:
+		stripes.append(PackedVector2Array([Vector2(x, face_r.end.y), Vector2(x + 16.0, face_r.end.y),
+			Vector2(x + 16.0 + face_r.size.y, face_r.position.y), Vector2(x + face_r.size.y, face_r.position.y)]))
+		x += 40.0
+	for st in stripes:
+		var c := Art.clipped(st, face)
+		if c.size() >= 3:
+			Art.flat(ci, c, Color(1, 1, 1, 0.09))
+	# Gloss on the upper half.
+	var g := Rect2(face_r.position + Vector2(rad * 0.6, 4), Vector2(face_r.size.x - rad * 1.2, face_r.size.y * 0.36))
+	Art.flat(ci, Art.rrect_pts(g, g.size.y / 2.0), Color(1, 1, 1, 0.22))
+
+
 static func build() -> Theme:
 	var t := Theme.new()
 	t.default_font = body_font()

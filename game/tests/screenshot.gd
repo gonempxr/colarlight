@@ -258,7 +258,8 @@ func _initialize() -> void:
 				bpass.tick()
 				bpass.add_xp(420)
 				root.get_node("Progress").stats["bp_got"] = 4
-				if overlay == "pass":
+				root.get_node("Progress").stats["dc_claims"] = int(root.get_node("Progress").stats.get("bp_dc0", 0)) + (6 if "bonus" in overlay else 2)
+				if overlay != "pass:btn":
 					load("res://scripts/ui/pass_view.gd").open(main)
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true

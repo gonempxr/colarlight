@@ -22,19 +22,14 @@ static func t(key: String) -> String:
 
 # --- Entry points (one line each in the screens that show them) --------------------
 
-## Profile: the players' board and the invite button, under the Rivals League.
-static func profile_buttons(m: Modal, main: Node) -> void:
-	var board := m.button(t("ONLINE_BUTTON"), func(): Sfx.play("click"); open_board(main), &"BlueButton")
-	board.icon = Icons.get_icon("star", 36)
-	var inv := m.button(t("INVITE"), func(): Sfx.play("click"); open_invite(main), &"Button")
-	inv.icon = Icons.get_icon("people", 36)
-	var ach := m.button("%s  ·  %d/%d" % [t("ACH_BUTTON"), Achievements.count(), Achievements.LIST.size()],
-		func(): Sfx.play("click"); SocialView.open_achievements(main), &"GoldButton")
-	ach.icon = Icons.get_icon("star", 36)
-	var club := m.button(t("CLUB_MY") if Online.in_club() else t("CLUB_FIND"), func(): Sfx.play("click"); SocialView.open_clubs(main), &"Button")
-	club.icon = Icons.get_icon("people", 36)
-	var all := m.button(t("GUIDE_TITLE"), func(): Sfx.play("click"); GuideView.open(main), &"PurpleButton")
-	all.icon = Icons.get_icon("quests", 36)
+## Profile tiles: the players' board, clubs, invites, the guide.
+static func profile_items(main: Node) -> Array:
+	return [
+		["star", t("ONLINE_BUTTON"), &"BlueButton", func(): open_board(main)],
+		["people", t("CLUB_MY") if Online.in_club() else t("CLUB_FIND"), &"Button", func(): SocialView.open_clubs(main)],
+		["people", t("INVITE"), &"Button", func(): open_invite(main)],
+		["quests", t("GUIDE_TITLE"), &"PurpleButton", func(): GuideView.open(main)],
+	]
 
 
 ## Settings, the player section: promo code and invites.
