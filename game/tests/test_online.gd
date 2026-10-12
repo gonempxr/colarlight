@@ -267,6 +267,62 @@ func _initialize() -> void:
 	online._keep_exclusive()
 	_check(pr.is_owned(OnlineRules.EXCLUSIVE_ITEM), "exclusive item restored on another profile")
 
+	# --- Names: stronger filter, one owner per name ----------------------------------------
+	for bad in ["nigger", "N1gg3r", "gay", "Gay Boy", "epstein", "Epst3in", "BigAssDiver", "гей", "пидр", "Hitler88", "sexy", "кончай секс"]:
+		_check(OnlineRules.is_rude(bad), "blocked name: %s" % bad)
+	for good in ["Lev", "геймер", "Gamer", "Spicy", "Assistant", "Classic", "Cucumber", "Canal", "Хачапури", "Peacock", "Dickens"]:
+		_check(not OnlineRules.is_rude(good), "allowed name: %s" % good)
+	_check(OnlineRules.name_key("Big Lev") == "biglev" and OnlineRules.name_key("LEV") == OnlineRules.name_key("lev"), "name keys ignore case and spaces")
+	_check(OnlineRules.strip_name("a/b") == "ab", "slashes are taken out of names")
+	_check(OnlineRules.is_fallback("Diver0042") and not OnlineRules.is_fallback("Diver42") and not OnlineRules.is_fallback("Lev"), "Diver#### is the fallback name")
+	var nf = load("res://tests/online_fake.gd").new()
+	nf.names["lev"] = "Someone0xxxxxxxxxxxxxxxxxxxx"
+	online.data["claimed"] = ""
+	online.data["claimed_by"] = ""
+	online.data["taken"] = ""
+	online.use_backend(nf)
+	var keep_name: String = root.get_node("Profiles").player_name()
+	root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "Lev")
+	_check(online.name_state() == "wait" and OnlineRules.is_fallback(online.board_name()), "a new name shows Diver#### until it is claimed")
+	var claim_res := [""]
+	online.claim_name(func(rr: String): claim_res[0] = rr)
+	_check(claim_res[0] == "taken" and online.name_state() == "taken" and OnlineRules.is_fallback(online.board_name()), "a taken name stays Diver####")
+	root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "Lev Two")
+	online.claim_name(func(rr: String): claim_res[0] = rr)
+	_check(claim_res[0] == "ok" and online.board_name() == "Lev Two" and nf.names.get("levtwo", "") == nf.uid, "a free name becomes the player's")
+	root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "Lev Three")
+	online.claim_name(func(rr: String): claim_res[0] = rr)
+	_check(claim_res[0] == "ok" and not nf.names.has("levtwo") and nf.names.get("levthree", "") == nf.uid, "renaming lets the old name go")
+	root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "fuck")
+	_check(online.name_state() == "rude" and OnlineRules.is_fallback(online.board_name()), "a rude name is never shown")
+	root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, keep_name)
+
+	# --- Saturday x2 and the weekly race ------------------------------------------------------
+	_check(OnlineRules.weekday(_unix(2026, 10, 12, 12)) == 0, "2026-10-12 is a Monday")
+	_check(OnlineRules.is_x2_day(_unix(2026, 10, 17, 0, 0, 1)) and OnlineRules.is_x2_day(_unix(2026, 10, 17, 23, 59)), "Saturday is the x2 day (UTC)")
+	_check(not OnlineRules.is_x2_day(_unix(2026, 10, 16, 23, 59)) and not OnlineRules.is_x2_day(_unix(2026, 10, 18, 0, 1)), "only Saturday")
+	gs.x2_days_on = false
+	var base_mult: float = gs.income_mult()
+	gs.x2_day = true
+	_check(is_equal_approx(gs.income_mult(), base_mult * 2.0), "the x2 day doubles income")
+	gs.x2_day = false
+	_check(OnlineRules.week_prize(1, 10.0)["pearls"] == 500 and OnlineRules.week_prize(1, 10.0)["boost"] == 4 * 3600, "1st place: 500 pearls and 4 h of x2")
+	_check(OnlineRules.week_prize(3, 10.0)["pearls"] == 300 and OnlineRules.week_prize(10, 10.0)["pearls"] == 150, "top 3 and top 10")
+	_check(OnlineRules.week_prize(50, 1.0)["pearls"] == 75 and OnlineRules.week_prize(100, 1.0)["pearls"] == 40, "top 50 and top 100")
+	_check(OnlineRules.week_prize(5000, 1.0)["pearls"] == 20 and OnlineRules.week_prize(0, 1.0)["pearls"] == 20, "everyone who raced gets a little")
+	_check(OnlineRules.week_prize(1, 0.0).is_empty(), "no score, no prize")
+	var now_w := OnlineRules.week_id(Time.get_unix_time_from_system())
+	nf.weeks[now_w - 1] = {"A": {"name": "a", "score": 900.0, "a": ""}, "B": {"name": "b", "score": 500.0, "a": ""}, nf.uid: {"name": "me", "score": 700.0, "a": ""}}
+	online.data["prize_week"] = -1
+	online.pending_thanks.clear()
+	var pw0: int = pr.pearls
+	online.check_week_prize()
+	_check(pr.pearls == pw0 + 300 and int(online.data["prize_week"]) == now_w - 1, "2nd place last week: 300 pearls")
+	_check(online.pending_thanks.size() == 1 and online.pending_thanks[0]["kind"] == "week" and int(online.pending_thanks[0]["n"]) == 2, "a week results dialog")
+	online.check_week_prize()
+	_check(pr.pearls == pw0 + 300, "the week prize is paid once")
+	online.pending_thanks.clear()
+
 	DirAccess.remove_absolute(online.SAVE_PATH)
 	print("test_online: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

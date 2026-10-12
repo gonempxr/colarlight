@@ -176,6 +176,7 @@ func after_ready() -> void:
 	if str(data.get("ref_pending", "")) != "":
 		_join(str(data["ref_pending"]))
 	check_invites()
+	check_week_prize()
 	submit()
 
 
@@ -219,7 +220,7 @@ func _js_str(code: String) -> String:
 func defaults() -> Dictionary:
 	return {"v": 1, "redeemed": {}, "founder": 0, "founder_done": false, "code": "", "referred_by": "", "ref_pending": "",
 		"ref_done": false, "paid": {}, "exclusive": false, "week": -1, "week_score": 0.0, "all_best": 0.0,
-		"seen_total": -1.0, "seen_profile": ""}
+		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1}
 
 
 func load_data() -> void:
@@ -293,8 +294,59 @@ func score(kind: String) -> float:
 	return float(data["week_score"]) if kind == "week" else float(data["all_best"])
 
 
+## The name on the board: the player's own name once it is theirs online
+## (names are unique), otherwise "Diver####".
 func board_name() -> String:
+	var want := wanted_name()
+	if OnlineRules.is_fallback(want) or name_ok(want):
+		return want
+	return OnlineRules.fallback_name(uid)
+
+
+## The typed name after the filter (what the player wants to be called).
+func wanted_name() -> String:
 	return OnlineRules.board_name(Profiles.player_name(), uid)
+
+
+func name_ok(name: String) -> bool:
+	return uid != "" and str(data["claimed"]) == OnlineRules.name_key(name) and str(data["claimed_by"]) == uid
+
+
+## "ok", "taken" (someone else has it), "rude" (the filter changed it),
+## "wait" (not claimed yet).
+func name_state() -> String:
+	var typed := OnlineRules.strip_name(Profiles.player_name())
+	if typed != "" and OnlineRules.is_rude(typed):
+		return "rude"
+	var want := wanted_name()
+	if OnlineRules.is_fallback(want) or name_ok(want):
+		return "ok"
+	if str(data["taken"]) == OnlineRules.name_key(want):
+		return "taken"
+	return "wait"
+
+
+## Makes the wanted name this player's own (one owner per name):
+## done.call("ok" | "taken" | "error").
+func claim_name(done: Callable = Callable()) -> void:
+	var want := wanted_name()
+	if OnlineRules.is_fallback(want) or name_ok(want):
+		if done.is_valid():
+			done.call("ok")
+		return
+	var key := OnlineRules.name_key(want)
+	var old := str(data["claimed"]) if str(data["claimed_by"]) == uid else ""
+	_request("claim", JSON.stringify({"name": want, "key": key, "old": old}), func(res: String):
+		if res == "ok":
+			data["claimed"] = key
+			data["claimed_by"] = uid
+			data["taken"] = ""
+			save_data()
+		elif res == "taken":
+			data["taken"] = key
+			_dirty = true
+		if done.is_valid():
+			done.call(res if res in ["ok", "taken"] else "error"))
 
 
 ## A score worth sending soon (a new world, ...): within the rate limit.
@@ -305,6 +357,14 @@ func submit_soon() -> void:
 ## Sends both scores when they changed (at most every SUBMIT_GAP_SEC).
 func submit(done: Callable = Callable()) -> void:
 	track()
+	# A new name is made the player's own first (one owner per name).
+	if state == "ready" and name_state() == "wait" and score("all") > 0.0 and _since_submit >= SUBMIT_GAP_SEC:
+		claim_name(func(_r: String): _submit_now(done))
+		return
+	_submit_now(done)
+
+
+func _submit_now(done: Callable) -> void:
 	var name := board_name()
 	var changed := score("all") != float(_sent["all"]) or score("week") != float(_sent["week"]) or name != str(_sent["name"])
 	if state != "ready" or not changed or _since_submit < SUBMIT_GAP_SEC or score("all") <= 0.0:
@@ -485,6 +545,38 @@ func invite_link(done: Callable) -> void:
 ## Shares (or copies) the link: done.call("shared" | "copied" | "cancel" | "error").
 func share(text: String, link: String, done: Callable) -> void:
 	_request("share", JSON.stringify({"text": text, "url": link}), func(res: String): done.call(res))
+
+
+# --- Weekly race ---------------------------------------------------------------------------------
+
+## Once a new week starts: the place on last week's board pays a prize
+## (OnlineRules.WEEK_PRIZES), once per week.
+func check_week_prize(now: float = -1.0) -> void:
+	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var last := OnlineRules.week_id(t) - 1
+	if int(data["prize_week"]) >= last:
+		return
+	_request("rank", JSON.stringify({"w": last}), func(res: String): on_week_rank(last, res))
+
+
+## res: "r:<rank>:<score>" or "none" (did not play that week).
+func on_week_rank(week: int, res: String) -> void:
+	if res == "none":
+		data["prize_week"] = week
+		_dirty = true
+		return
+	if not res.begins_with("r:"):
+		return
+	var parts := res.split(":")
+	if parts.size() < 3:
+		return
+	var rank := parts[1].to_int()
+	var score := parts[2].to_float()
+	data["prize_week"] = week
+	var prize := OnlineRules.week_prize(rank, score)
+	if not prize.is_empty():
+		_grant({"kind": "week", "pearls": int(prize["pearls"]), "boost": float(prize["boost"]), "n": rank})
+	save_data()
 
 
 # --- Rewards ------------------------------------------------------------------------------------

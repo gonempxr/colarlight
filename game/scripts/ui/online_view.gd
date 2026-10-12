@@ -67,6 +67,7 @@ static func open_invite(main: Node) -> void:
 
 static func board(m: Modal, main: Node) -> void:
 	m.title(t("ONLINE_BOARD"))
+	_account(m, main)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	head.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -122,6 +123,12 @@ static func board(m: Modal, main: Node) -> void:
 			m.rebuild())
 		return
 	var rows: Array = got["rows"]
+	if kind == "week":
+		var my_rank := int(got.get("rank", 0))
+		for i in rows.size():
+			if rows[i]["you"]:
+				my_rank = i + 1
+		m.add(_race(rows, my_rank, Online.score("week")))
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
 	var mine_shown := false
@@ -155,12 +162,112 @@ static func board(m: Modal, main: Node) -> void:
 	rename.pressed.connect(func():
 		Sfx.play("click")
 		main.ask_name(Profiles.current_id, func():
-			Online.submit_soon()
-			if m.is_open():
-				m.rebuild()))
+			Online.claim_name(func(_r: String):
+				Online.submit_soon()
+				if m.is_open():
+					m.rebuild())))
 	name_row.add_child(rename)
+	match Online.name_state():
+		"taken":
+			m.text(t("ONLINE_NAME_TAKEN") % Online.wanted_name(), 19, Color("c8372d"))
+		"rude":
+			m.text(t("ONLINE_NAME_RUDE"), 19, Color("c8372d"))
 	var inv := m.button(t("INVITE"), func(): Sfx.play("click"); open_invite(main), &"GoldButton")
 	inv.icon = Icons.get_icon("people", 34)
+
+
+## The account: who is playing and where the progress is kept, with the
+## way to log in that this page allows (CrazyGames account on CrazyGames,
+## Google on our own site; nothing else on CrazyGames, by their rules).
+static func _account(m: Modal, main: Node) -> void:
+	var card := Views.card(Color("eaf6ff"))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	card.add_child(h)
+	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, Settings.avatar, "happy", Chars.blinking(tt, 3.0), Color("bfe8ff")), Vector2(64, 64), true))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(v)
+	var name := Views.label(Profiles.player_name(), 23, Art.INK, true)
+	name.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name.custom_minimum_size.x = 80
+	v.add_child(name)
+	var line := ""
+	var btn_text := ""
+	var go := Callable()
+	if Platform.cg_accounts():
+		var u := Platform.cg_user()
+		if u != "":
+			line = t("ACCOUNT_CG_IN") % u
+		else:
+			line = t("ACCOUNT_CG_HINT")
+			btn_text = t("ACCOUNT_CG_SIGN_IN")
+			go = func(): Platform.cg_sign_in()
+	elif CloudSave.google_available():
+		var u := CloudSave.google_user()
+		if u != "":
+			line = t("ACCOUNT_GOOGLE_IN") % u
+		else:
+			line = t("CLOUD_HINT")
+			btn_text = t("CLOUD_SIGN_IN")
+			go = func(): main.google_sign_in()
+	else:
+		line = t("ACCOUNT_LOCAL")
+	var l := Views.label(line, 18, Art.INK_SOFT)
+	l.custom_minimum_size.x = 120
+	v.add_child(l)
+	m.add(card)
+	if btn_text != "":
+		var b := m.button(btn_text, func(): Sfx.play("click"); go.call(), &"BlueButton")
+		b.icon = Icons.get_icon("people", 32)
+
+
+## This week's race: the place, how far the next place is, the prizes.
+static func _race(rows: Array, rank: int, mine: float) -> Control:
+	var card := Views.card(Color("fff4d6"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	card.add_child(v)
+	var head := Views.label(t("RACE_TITLE"), 25, Art.GOLD_DARK.darkened(0.25), true)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var gap := 0.0
+	var target := 0.0
+	if rank == 1:
+		v.add_child(_center(Views.label(t("RACE_LEAD"), 21, Art.GREEN_DARK, true)))
+	elif rank > 1 and rank - 2 < rows.size():
+		target = float(rows[rank - 2]["score"])
+		gap = maxf(0.0, target - mine)
+		v.add_child(_center(Views.label(t("RACE_PLACE") % rank, 21, Art.INK, true)))
+		v.add_child(_center(Views.label(t("RACE_TO_NEXT") % [NumFormat.short(gap + 1.0), rank - 1], 19, Art.INK_SOFT)))
+	elif rank > 1:
+		v.add_child(_center(Views.label(t("RACE_PLACE") % rank, 21, Art.INK, true)))
+	if target > 0.0:
+		var f := clampf(mine / target, 0.0, 1.0)
+		v.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float):
+			var r := Rect2(Vector2(8, s.y / 2.0 - 9), Vector2(s.x - 16, 18))
+			Art.t_rect(ci, r, 9.0, Color("e8d9b0"), 2.5, 0.0)
+			if f > 0.02:
+				Art.t_rect(ci, Rect2(r.position, Vector2(maxf(18.0, r.size.x * f), r.size.y)), 9.0, Art.GOLD, 2.5, 0.5), Vector2(0, 30)))
+	var prizes := Views.label(t("RACE_PRIZES"), 17, Art.INK_SOFT)
+	prizes.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prizes.custom_minimum_size.x = 160
+	v.add_child(prizes)
+	var sat := Views.label(t("RACE_X2"), 17, Color("2a8a4a"), true)
+	sat.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sat.custom_minimum_size.x = 160
+	v.add_child(sat)
+	return card
+
+
+static func _center(l: Label) -> Label:
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size.x = 160
+	return l
 
 
 static func _row(place: int, row: Dictionary) -> Control:
@@ -408,12 +515,16 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 	m.add(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		if kind == "founder":
 			FounderArt.medal(ci, s / 2.0 + Vector2(0, 18), 54.0, n, tt)
+		elif kind == "week":
+			FounderArt.podium(ci, s / 2.0 + Vector2(0, 14), 1.7, tt)
 		elif kind in ["join", "inviter"]:
 			FounderArt.letter(ci, s / 2.0 + Vector2(0, 6), 1.7, tt)
 		else:
 			_draw_ticket(ci, s / 2.0, tt), Vector2(0, 140), true))
-	m.title(t("THANKS_TITLE"))
+	m.title(t("THANKS_WEEK_TITLE") if kind == "week" else t("THANKS_TITLE"))
 	match kind:
+		"week":
+			m.text(t("THANKS_WEEK") % n if n > 0 else t("THANKS_WEEK_ALL"), 25, Art.GOLD_DARK.darkened(0.2))
 		"founder":
 			m.text(t("THANKS_FOUNDER") % [n, OnlineRules.FOUNDER_MAX], 26, Art.GOLD_DARK.darkened(0.2))
 		"promo":
@@ -422,12 +533,13 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 			m.text(t("THANKS_JOIN"), 24, Color("1c7fb8"))
 		"inviter":
 			m.text(t("THANKS_INVITER") % n, 24, Color("1c7fb8"))
-	var c := Views.card(Color("fff1c2"))
-	var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
-	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	msg.custom_minimum_size.x = 200
-	c.add_child(msg)
-	m.add(c)
+	if kind != "week":
+		var c := Views.card(Color("fff1c2"))
+		var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
+		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		msg.custom_minimum_size.x = 200
+		c.add_child(msg)
+		m.add(c)
 	var chips := {"pearls": int(info.get("pearls", 0)), "boost": int(float(info.get("boost", 0.0)) / 60.0)}
 	m.add(Views.reward_chips(chips))
 	if bool(info.get("item", false)):

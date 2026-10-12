@@ -98,9 +98,32 @@ service cloud.firestore {
         && d.a is string && d.a.size() <= 300
         && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000.0
         && d.t == request.time
+        && ownName(d.name)
         && (resource == null
             || (d.score >= resource.data.score
                 && request.time > resource.data.t + duration.value(30, 's')));
+    }
+
+    // Names are unique: names/{key} (lower case, no spaces) belongs to
+    // one player. A score row carries either its owner's name or "Diver1234".
+    function nameKey(n) { return n.lower().replace(' ', ''); }
+    function ownName(n) {
+      return n.matches('^Diver[0-9]{4}$')
+        || get(/databases/$(database)/documents/names/$(nameKey(n))).data.uid == request.auth.uid;
+    }
+    function goodName(key) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['uid', 'name', 't'])
+        && d.uid == request.auth.uid
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 16
+        && nameKey(d.name) == key
+        && d.t == request.time;
+    }
+    match /names/{key} {
+      allow read: if signedIn();
+      allow create: if signedIn() && goodName(key);
+      allow update: if signedIn() && resource.data.uid == request.auth.uid && goodName(key);
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /lb_all/{uid} {

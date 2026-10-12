@@ -248,6 +248,8 @@ func _initialize() -> void:
 				root.get_texture().get_image().save_png(out)
 				quit()
 				return
+			elif overlay == "x2":
+				root.get_node("GameState").x2_force = true
 			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn"]:
 				await _online_overlay(main, overlay)
 			elif overlay.begins_with("feature:"):
@@ -266,7 +268,7 @@ func _initialize() -> void:
 
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
-## thanks:<founder|promo|join|inviter> (the thank-you dialog).
+## thanks:<founder|promo|join|inviter|week> (the thank-you dialog); board:taken (the name is someone else's).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")
@@ -284,8 +286,11 @@ func _online_overlay(main: Node, overlay: String) -> void:
 	online.data["all_best"] = 2.4e6
 	online.data["week_score"] = 1.9e5
 	online.data["seen_profile"] = ""
+	if "taken" in parts:
+		fake.names[OnlineRules.name_key(OnlineRules.board_name(root.get_node("Profiles").player_name(), fake.uid))] = "Other001xxxxxxxxxxxxxxxxxxxx"
 	if not "off" in parts:
 		online.use_backend(fake)
+		online.claim_name()
 		online.data["paid"] = {"Shot0001": 2}
 	else:
 		online.state = "failed"
@@ -314,7 +319,8 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			var info: Dictionary = {"founder": {"kind": "founder", "pearls": 100, "item": true, "n": 7},
 				"promo": {"kind": "promo", "pearls": 30, "boost": 3600.0, "item": false},
 				"join": {"kind": "join", "pearls": 30},
-				"inviter": {"kind": "inviter", "pearls": 60, "n": 2}}.get(kind, {})
+				"inviter": {"kind": "inviter", "pearls": 60, "n": 2},
+				"week": {"kind": "week", "pearls": 300, "boost": 10800.0, "n": 2}}.get(kind, {})
 			main._top.open(func(m): ov.thanks(m, main, info))
 
 

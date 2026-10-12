@@ -10,6 +10,8 @@ var founders := 0
 var founder_of := {}
 var invites := {}
 var joins := {}
+## Name key -> owner uid.
+var names := {}
 ## Answer every request with this instead ("" = work normally).
 var fail := ""
 var calls: Array[String] = []
@@ -73,6 +75,27 @@ func request(method: String, arg: String) -> String:
 			return "ok"
 		"joins":
 			return "n:%d" % invites.get(arg, {}).size()
+		"claim":
+			var a: Dictionary = JSON.parse_string(arg)
+			var key := str(a["key"])
+			if names.has(key) and names[key] != uid:
+				return "taken"
+			names[key] = uid
+			var old := str(a.get("old", ""))
+			if old != "" and old != key and names.get(old, "") == uid:
+				names.erase(old)
+			return "ok"
+		"rank":
+			var a: Dictionary = JSON.parse_string(arg)
+			var wk: Dictionary = weeks.get(int(a["w"]), {})
+			if not wk.has(uid) or float(wk[uid]["score"]) <= 0.0:
+				return "none"
+			var mine := float(wk[uid]["score"])
+			var above := 0
+			for id in wk:
+				if float(wk[id]["score"]) > mine:
+					above += 1
+			return "r:%d:%s" % [above + 1, str(mine)]
 		"link":
 			return "https://gonempxr.github.io/colarlight/?ref=" + arg
 		"share":

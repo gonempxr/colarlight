@@ -28,17 +28,28 @@ const NAME_MIN := 2
 const NAME_MAX := 16
 const CODE_LEN := 8
 
-## Small block list (EN / RU / ES): a name containing one becomes "Diver####".
+## Block list (EN / RU / ES): a name containing one becomes "Diver####".
 ## Checked on the name in lower case with look-alike letters and digits
 ## mapped back (0 -> o, 1 -> i, 3 -> e, ...) and spaces/dots removed.
+## Slurs, swearing, sex, hate and notorious criminals.
 const BLOCKED: Array[String] = [
-	"fuck", "fuk", "shit", "bitch", "cunt", "pussy", "nigg", "fagg", "whore", "slut", "nazi", "hitler",
-	"porn", "asshole", "bastard", "penis", "vagina", "dildo", "wank", "retard",
+	"fuck", "fuk", "fck", "shit", "bitch", "cunt", "pussy", "nigg", "niga", "nigr", "negro", "fagg", "faggot", "whore", "slut",
+	"nazi", "hitler", "heil", "fuhrer", "kkk", "isis", "jihad", "terroris", "epstein", "diddy", "pedo", "paedo",
+	"molest", "rapist", "porn", "hentai", "onlyfans", "nude", "boob", "tits", "penis", "vagina", "dildo", "wank", "jerkoff",
+	"blowjob", "handjob", "orgasm", "horny", "asshole", "bastard", "retard", "chink", "kike", "tranny", "dyke",
+	"suicide", "killyourself", "kys", "gay", "lesbo",
 	"хуй", "хуе", "хуё", "пизд", "бляд", "блят", "ебат", "ебан", "ебал", "ёба", "сука", "суки", "мудак", "мудил",
-	"пидор", "пидар", "педик", "гандон", "шлюх", "залуп", "долбо", "дроч", "жопа", "говн",
+	"пидор", "пидар", "пидр", "педик", "педоф", "гандон", "шлюх", "залуп", "долбо", "дроч", "жопа", "говн",
+	"нигер", "нигга", "негр", "гитлер", "нацист", "зиг хайл", "зига", "эпштейн", "чурк", "секс",
+	"порно", "сиськ", "член", "трах", "насил", "суицид", "убейся", "гомик",
 	"puta", "puto", "mierda", "coño", "cabron", "cabrón", "pendej", "joder", "polla", "verga", "chinga",
-	"culero", "maricon", "maricón", "gilipoll", "follar", "zorra", "mamon", "pinche",
+	"culero", "maricon", "maricón", "gilipoll", "follar", "zorra", "mamon", "pinche", "negrata", "violador",
 ]
+## Short words blocked only as a whole word (or the start of one), so that
+## "gamer" or "canal" stay fine: "ass", "cum", "sex", "гей" (not "геймер").
+const BLOCKED_WORDS: Array[String] = ["ass", "cum", "sex", "anal", "dick", "cock", "fag", "rape", "hoe", "gey", "spic", "гей", "хер", "хач", "жид", "даун", "сосу", "соси", "puto"]
+const WORD_OK: Array[String] = ["assist", "assassin", "assault", "asset", "cumulus", "cumbia", "analog", "analy", "dickens", "cockatoo", "cockpit",
+	"hoek", "rapeseed", "spice", "spicy", "гейм", "херсон", "хачап", "жидк", "сосиск"]
 const LOOKALIKE := {"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b", "@": "a", "$": "s", "!": "i"}
 ## Latin letters that look like Cyrillic ones, so "сyка" or "xуй" (mixed
 ## alphabets) are caught as well.
@@ -70,6 +81,8 @@ static func strip_name(value: String) -> String:
 	for ch in value:
 		var c := ch.unicode_at(0)
 		# Control characters, zero-width and direction marks.
+		if ch in ["/", "\\", "#", "[", "]", "*", "`", "~"]:
+			continue
 		if c < 32 or c == 127 or (c >= 0x80 and c < 0xA0) or (c >= 0x200B and c <= 0x200F) or (c >= 0x202A and c <= 0x202E) \
 				or (c >= 0x2060 and c <= 0x206F) or c == 0xFEFF:
 			continue
@@ -93,7 +106,61 @@ static func is_rude(name: String) -> bool:
 	for w in BLOCKED:
 		if flat.contains(w) or cyr.contains(w) or low.contains(w):
 			return true
+	for word in _words(name):
+		var wl := ""
+		for ch in word.to_lower():
+			wl += LOOKALIKE.get(ch, ch)
+		var wc := ""
+		for ch in wl:
+			wc += LATIN_AS_CYR.get(ch, ch)
+		for w in BLOCKED_WORDS:
+			if (wl.begins_with(w) or wc.begins_with(w)) and not _word_ok(wl) and not _word_ok(wc):
+				return true
 	return false
+
+
+static func _word_ok(word: String) -> bool:
+	for ok in WORD_OK:
+		if word.begins_with(ok):
+			return true
+	return false
+
+
+## The words of a name: split at spaces, digits, signs and camelCase
+## ("BigAssDiver" -> big, ass, diver).
+static func _words(name: String) -> Array[String]:
+	var out: Array[String] = []
+	var cur := ""
+	var prev_lower := false
+	for ch in name:
+		var letter := ch.to_lower() != ch.to_upper()
+		if not letter:
+			if cur != "":
+				out.append(cur)
+			cur = ""
+			prev_lower = false
+			continue
+		var upper := ch == ch.to_upper()
+		if upper and prev_lower and cur != "":
+			out.append(cur)
+			cur = ""
+		cur += ch
+		prev_lower = not upper
+	if cur != "":
+		out.append(cur)
+	return out
+
+
+## The unique key of a name: lower case without spaces ("Lev", "l e v" and
+## "LEV" are the same name). The Firestore rules compute the same thing.
+static func name_key(name: String) -> String:
+	return name.to_lower().replace(" ", "")
+
+
+static func is_fallback(name: String) -> bool:
+	if name.length() != 9 or not name.begins_with("Diver"):
+		return false
+	return name.substr(5).is_valid_int()
 
 
 ## "Diver" and 4 digits made from the player's id (the same every time).
@@ -121,6 +188,40 @@ static func week_id(unix: float) -> int:
 
 static func week_start(id: int) -> float:
 	return float(id * 7 + 4) * 86400.0
+
+
+## Monday = 0 ... Sunday = 6 (UTC).
+static func weekday(unix: float) -> int:
+	return posmod(floori(unix / 86400.0) + 3, 7)
+
+
+## Every Saturday (UTC) everyone earns x2 coins, for free.
+const X2_WEEKDAY := 5
+
+
+static func is_x2_day(unix: float) -> bool:
+	return weekday(unix) == X2_WEEKDAY
+
+
+# --- Weekly race -----------------------------------------------------------------------
+
+## Prizes for last week's place on the players' board (coins earned that
+## week): pearls and hours of x2 coins. Everyone who took part gets a little.
+const WEEK_PRIZES := [
+	[1, 500, 4], [3, 300, 3], [10, 150, 2], [50, 75, 1], [100, 40, 0],
+]
+const WEEK_PARTICIPATION := 20
+
+
+static func week_prize(rank: int, score: float) -> Dictionary:
+	if score <= 0.0:
+		return {}
+	if rank <= 0:
+		return {"pearls": WEEK_PARTICIPATION, "boost": 0}
+	for p in WEEK_PRIZES:
+		if rank <= int(p[0]):
+			return {"pearls": int(p[1]), "boost": int(p[2]) * 3600}
+	return {"pearls": WEEK_PARTICIPATION, "boost": 0}
 
 
 # --- Invites ---------------------------------------------------------------------------

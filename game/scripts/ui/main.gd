@@ -127,6 +127,7 @@ var _covered := false
 
 
 func _ready() -> void:
+	GameState.x2_days_on = true
 	var bench_room := PerfProbe.attach(self)
 	var governor := FrameGovernor.new()
 	add_child(governor)

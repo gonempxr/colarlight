@@ -347,15 +347,19 @@ func _process(delta: float) -> void:
 	_pearls.text = str(Progress.pearls)
 	var rushing := GameState.is_rushing()
 	var boosted := GameState.boost_left > 0.0
-	_rush.visible = not rushing and not boosted and GameState.rush_meter > 0.0
+	var x2_day := GameState.x2_day
+	_rush.visible = not rushing and not boosted and not x2_day and GameState.rush_meter > 0.0
 	_rush.value = GameState.rush_meter
-	_rush_label.visible = rushing or boosted
+	_rush_label.visible = rushing or boosted or x2_day
 	if rushing:
 		_rush_label.text = "%s %d" % [tr("RUSH"), ceili(GameState.rush_left)]
 		_rush_label.add_theme_color_override("font_color", Color("ff9fd0"))
 	elif boosted:
-		_rush_label.text = "×2  %s" % NumFormat.duration(GameState.boost_left)
+		_rush_label.text = "×%d  %s" % [4 if x2_day else 2, NumFormat.duration(GameState.boost_left)]
 		_rush_label.add_theme_color_override("font_color", Art.GOLD)
+	elif x2_day:
+		_rush_label.text = "×2  " + tr("X2_DAY")
+		_rush_label.add_theme_color_override("font_color", Color("8fffb0"))
 	_place_hang(_rush.visible or _rush_label.visible)
 
 

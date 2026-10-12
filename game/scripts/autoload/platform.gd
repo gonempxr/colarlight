@@ -279,3 +279,26 @@ func _finish(ok: bool) -> void:
 
 func _apply_mute() -> void:
 	AudioServer.set_bus_mute(0, site_muted or _paused_by_ad)
+
+
+# --- CrazyGames accounts ---------------------------------------------------------
+
+## CrazyGames accounts work here (on CrazyGames itself, SDK ready).
+func cg_accounts() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return str(JavaScriptBridge.eval("(window.coralightAds && window.coralightAds.state === 'ready' && window.coralightAds.accounts) ? 'y' : ''", true)) == "y"
+
+
+## The logged-in CrazyGames name ("" for a guest).
+func cg_user() -> String:
+	if not cg_accounts():
+		return ""
+	return str(JavaScriptBridge.eval("String(window.coralightAds.user || '')", true))
+
+
+## Opens the CrazyGames log-in popup (CrazyGames reloads the game after it).
+func cg_sign_in() -> void:
+	if cg_accounts():
+		JavaScriptBridge.eval("(function(){try{window.coralightAds.signIn()}catch(e){}})()", true)
+

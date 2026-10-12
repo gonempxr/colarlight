@@ -43,3 +43,20 @@ THANKS_BOOST,x2 coins: %d min,x2 монет: %d мин,x2 monedas: %d min,金币
 ITEM_HAT_FOUNDER,Founder Cap,Кепка Основателя,Gorra de Fundador,创始人帽
 EXCLUSIVE,Exclusive,Эксклюзив,Exclusivo,专属
 EXCLUSIVE_HOW,"For the first 100 players, a promo code or inviting a friend","Первым 100 игрокам, по промокоду или за приглашение друга","Para los 100 primeros jugadores, con un código o invitando a un amigo",前100位玩家、兑换码或邀请好友可得
+ACCOUNT_CG_IN,CrazyGames account: %s. Progress is saved there.,Аккаунт CrazyGames: %s. Прогресс сохраняется в нём.,Cuenta de CrazyGames: %s. El progreso se guarda allí.,CrazyGames 账号：%s。进度保存在账号中。
+ACCOUNT_CG_HINT,Log in to keep your progress on every device.,"Войди, чтобы прогресс был на всех устройствах.",Entra para tener tu progreso en todos los dispositivos.,登录后，所有设备都能保留进度。
+ACCOUNT_CG_SIGN_IN,Log in with CrazyGames,Войти через CrazyGames,Entrar con CrazyGames,使用 CrazyGames 登录
+ACCOUNT_GOOGLE_IN,Google account: %s. Progress is saved there.,Аккаунт Google: %s. Прогресс сохраняется в нём.,Cuenta de Google: %s. El progreso se guarda allí.,Google 账号：%s。进度保存在账号中。
+ACCOUNT_LOCAL,Progress is saved in this browser.,Прогресс сохраняется в этом браузере.,El progreso se guarda en este navegador.,进度保存在此浏览器中。
+ONLINE_NAME_TAKEN,The name “%s” is taken. Pick another one!,Ник «%s» уже занят. Выбери другой!,El nombre «%s» ya está ocupado. ¡Elige otro!,昵称“%s”已被使用，请换一个！
+ONLINE_NAME_RUDE,This name is not allowed. Pick another one!,Такой ник нельзя. Выбери другой!,Ese nombre no está permitido. ¡Elige otro!,这个昵称不可用，请换一个！
+RACE_TITLE,Race of the week,Гонка недели,Carrera de la semana,每周竞赛
+RACE_PLACE,You are #%d,Ты на %d месте,Vas en el puesto %d,你排在第 %d 名
+RACE_TO_NEXT,%s more coins to take place #%d,Ещё %s монет до %d места,%s monedas más para el puesto %d,再赚 %s 金币即可升到第 %d 名
+RACE_LEAD,You lead the race! Keep it up!,Ты лидер гонки! Так держать!,¡Vas primero! ¡Sigue así!,你领先了！继续加油！
+RACE_PRIZES,"Prizes every Monday: #1 – 500 pearls and x2 for 4 h, #2-3 – 300, top 10 – 150, top 50 – 75, top 100 – 40, everyone who raced – 20.","Призы каждый понедельник: 1 место – 500 жемчуга и x2 на 4 ч, 2–3 – 300, топ-10 – 150, топ-50 – 75, топ-100 – 40, всем участникам – 20.","Premios cada lunes: 1.º – 500 perlas y x2 durante 4 h, 2.º-3.º – 300, top 10 – 150, top 50 – 75, top 100 – 40, todos los que corrieron – 20.",每周一发奖：第1名 – 500 珍珠和 4 小时双倍金币，第2-3名 – 300，前10名 – 150，前50名 – 75，前100名 – 40，所有参赛者 – 20。
+RACE_X2,Every Saturday: x2 coins for everyone!,Каждую субботу: x2 монет для всех!,¡Cada sábado: monedas x2 para todos!,每周六：所有人金币×2！
+X2_DAY,Saturday,Суббота,Sábado,周六
+THANKS_WEEK_TITLE,Week results!,Итоги недели!,¡Resultados de la semana!,本周结果！
+THANKS_WEEK,You took place #%d in the race of the week!,Ты занял %d место в гонке недели!,¡Quedaste en el puesto %d en la carrera de la semana!,你在每周竞赛中获得第 %d 名！
+THANKS_WEEK_ALL,Thanks for racing this week!,Спасибо за участие в гонке недели!,¡Gracias por correr esta semana!,感谢你参加本周竞赛！

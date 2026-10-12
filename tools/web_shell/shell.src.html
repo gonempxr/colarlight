@@ -377,6 +377,9 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 //   rewarded(onStarted, onDone): onDone('ok') or onDone('error:<code>')
 //   midgame(onStarted, onDone): a short break at a natural pause, same calls
 //   gameplayStart(), muteAudio (the site's mute setting)
+//   accounts (CrazyGames accounts work here), user (the logged-in name or ''),
+//   signIn(): the CrazyGames log-in popup (CrazyGames reloads the game after
+//   a log-in and keeps the Data Module progress)
 (function () {
 	let want = '';
 	try {
@@ -466,6 +469,21 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 	bridge.midgame = function (onStarted, onDone) {
 		playAd('midgame', onStarted, onDone);
 	};
+	bridge.accounts = false;
+	bridge.user = '';
+	const nameOf = function (u) { return u ? String(u.username || '') : ''; };
+	bridge.signIn = function () {
+		if (!sdk || !bridge.accounts) {
+			return;
+		}
+		try {
+			Promise.resolve(sdk.user.showAuthPrompt()).then(function (u) { bridge.user = nameOf(u); }, function (e) {
+				console.warn('CrazyGames log-in:', e);
+			});
+		} catch (e) {
+			console.warn('CrazyGames log-in:', e);
+		}
+	};
 	const script = document.createElement('script');
 	script.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
 	script.onerror = function () { bridge.state = 'failed'; };
@@ -496,6 +514,14 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 				safe(() => SDK.game.loadingStart());
 			}
 			safe(() => { bridge.cloudBlob = SDK.data.getItem('coralight_save') || ''; });
+			safe(() => {
+				const a = SDK.user.isUserAccountAvailable;
+				bridge.accounts = !!(typeof a === 'function' ? a.call(SDK.user) : a);
+				if (bridge.accounts) {
+					Promise.resolve(SDK.user.getUser()).then(function (u) { bridge.user = nameOf(u); }, function () {});
+					SDK.user.addAuthListener(function (u) { bridge.user = nameOf(u); });
+				}
+			});
 			bridge.state = 'ready';
 		}).catch(function (e) {
 			console.warn('CrazyGames SDK init failed:', e);
@@ -929,6 +955,29 @@ window.coralightFirebase = (function () {
 				const d = load();
 				return later('n:' + Object.keys(d.invites[code] || {}).length);
 			},
+			claim: function (a) {
+				const d = load();
+				d.names = d.names || { testdiver1: 'Test0001xxxxxxxxxxxxxxxxxxxx' };
+				if (d.names[a.key] && d.names[a.key] !== uid) {
+					return later('taken');
+				}
+				d.names[a.key] = uid;
+				if (a.old && a.old !== a.key && d.names[a.old] === uid) {
+					delete d.names[a.old];
+				}
+				store(d);
+				return later('ok');
+			},
+			rank: function (a) {
+				const d = load();
+				const wk = d.weeks[a.w] || {};
+				const mine = wk[uid] ? wk[uid].score : 0;
+				if (!(mine > 0)) {
+					return later('none');
+				}
+				const above = Object.keys(wk).filter(function (k) { return wk[k].score > mine; }).length;
+				return later('r:' + (above + 1) + ':' + mine);
+			},
 		};
 		start = function () {
 			if (q && q.get('fail')) {
@@ -1019,6 +1068,49 @@ window.coralightFirebase = (function () {
 			joins: function (code) {
 				return F.db.collection('invites').doc(code).collection('joined').limit(25).get().then(function (s) { return 'n:' + s.size; });
 			},
+			// One owner per name: names/{key} {uid, name}; the old name is
+			// let go in the same transaction.
+			claim: function (a) {
+				const ref = F.db.collection('names').doc(a.key);
+				const old = (a.old && a.old !== a.key) ? F.db.collection('names').doc(a.old) : null;
+				return F.db.runTransaction(function (tx) {
+					const reads = [tx.get(ref)];
+					if (old) {
+						reads.push(tx.get(old));
+					}
+					return Promise.all(reads).then(function (r) {
+						if (r[0].exists && r[0].data().uid !== me()) {
+							return 'taken';
+						}
+						tx.set(ref, { uid: me(), name: a.name, t: ts() });
+						if (old && r[1].exists && r[1].data().uid === me()) {
+							tx.delete(old);
+						}
+						return 'ok';
+					});
+				});
+			},
+			// The player's place on a past week's board: 'r:<rank>:<score>' or 'none'.
+			rank: function (a) {
+				const col = weekCol(a.w);
+				return col.doc(me()).get().then(function (d) {
+					const s = d.exists ? (Number(d.data().score) || 0) : 0;
+					if (!(s > 0)) {
+						return 'none';
+					}
+					let counted = null;
+					try {
+						const above = col.where('score', '>', s);
+						if (typeof above.count === 'function') {
+							counted = above.count().get();
+						}
+					} catch (e) { counted = null; }
+					if (!counted) {
+						return 'r:0:' + s;
+					}
+					return counted.then(function (c) { return 'r:' + (c.data().count + 1) + ':' + s; }, function () { return 'r:0:' + s; });
+				});
+			},
 		};
 		start = function () {
 			window.coralightFirebase().then(function (f) {
@@ -1052,6 +1144,8 @@ window.coralightFirebase = (function () {
 		founder: function () { return api.founder(); },
 		join: function (arg) { return api.join(arg); },
 		joins: function (arg) { return api.joins(arg); },
+		claim: function (arg) { return api.claim(JSON.parse(arg)); },
+		rank: function (arg) { return api.rank(JSON.parse(arg)); },
 		link: function (arg) { return linkFor(arg); },
 		share: function (arg) { return online.share(JSON.parse(arg)); },
 	};

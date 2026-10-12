@@ -131,6 +131,14 @@ var boost_left: float:
 var boost_end := 0.0
 ## Cached "boost is on" for the hot income math; refreshed every frame.
 var _boosted := false
+## The game turns the Saturday x2 on (main.gd); tests leave it off so their
+## numbers do not depend on the day they run.
+var x2_days_on := false
+## Screenshots: pretend it is Saturday.
+var x2_force := false
+## Saturday (UTC): x2 coins for everyone (OnlineRules.is_x2_day), live
+## play only; refreshed every frame like _boosted.
+var x2_day := false
 ## Extra multipliers per stage key from artifacts and the like ("all" = every
 ## stage). Filled by Progress; not saved here.
 var bonus: Dictionary = {}
@@ -302,7 +310,7 @@ func is_open(key: String) -> bool:
 ## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
 	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult \
-			* (2.0 if _boosted else 1.0) * float(bonus.get("all", 1.0))
+			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0))
 
 
 # --- Worlds and locations --------------------------------------------------------
@@ -519,6 +527,7 @@ func _pay_away(seconds: float) -> float:
 	if seconds < AWAY_MIN_SEC:
 		return 0.0
 	_boosted = false
+	x2_day = false
 	# Like the offline pay at start-up, it doesn't count for "earn" quests.
 	_quiet_earn = true
 	var earned := simulate_offline(seconds)
@@ -891,6 +900,7 @@ func advance(seconds: float) -> void:
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
 	_boosted = boost_end > now()
+	x2_day = x2_force or (x2_days_on and seconds < 2.0 and OnlineRules.is_x2_day(now()))
 	for key in stage_keys():
 		if not is_open(key):
 			continue
