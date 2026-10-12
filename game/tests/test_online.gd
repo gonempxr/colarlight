@@ -323,6 +323,119 @@ func _initialize() -> void:
 	_check(pr.pearls == pw0 + 300, "the week prize is paid once")
 	online.pending_thanks.clear()
 
+	var ach: GDScript = load("res://scripts/data/achievements.gd")
+	var dc: GDScript = load("res://scripts/data/daily_challenge.gd")
+	# --- Titles, seasons, profile card -------------------------------------------------------
+	_check(int(online.data["best_rank"]) == 2, "the best weekly place is kept")
+	_check(online.title() == 2 and int(online.data["title_week"]) == now_w, "2nd place: Master title this week")
+	_check(online.title(OnlineRules.week_start(now_w + 1) + 10.0) == 0, "the title is worn one week only")
+	_check(OnlineRules.title_for(1) == 3 and OnlineRules.title_for(3) == 2 and OnlineRules.title_for(10) == 1 and OnlineRules.title_for(11) == 0 and OnlineRules.title_for(0) == 0, "title tiers")
+	_check(OnlineRules.month_id(_unix(2026, 10, 12)) == 202610 and OnlineRules.prev_month(202601) == 202512 and OnlineRules.prev_month(202610) == 202609, "season ids")
+	_check(OnlineRules.season_prize(1, 5.0) == 1000 and OnlineRules.season_prize(2, 5.0) == 600 and OnlineRules.season_prize(10, 5.0) == 300, "season prizes")
+	_check(OnlineRules.season_prize(100, 5.0) == 80 and OnlineRules.season_prize(0, 5.0) == 30 and OnlineRules.season_prize(1, 0.0) == 0, "season prizes (low places, none)")
+	var now_m := OnlineRules.month_id(Time.get_unix_time_from_system())
+	nf.months[OnlineRules.prev_month(now_m)] = {"A": {"name": "a", "score": 900.0, "a": ""}, nf.uid: {"name": "me", "score": 999.0, "a": ""}}
+	online.data["season_prize"] = -1
+	var ps0: int = pr.pearls
+	online.check_season_prize()
+	_check(pr.pearls == ps0 + 1000 and online.pending_thanks.size() == 1 and online.pending_thanks[0]["kind"] == "season", "1st in last season: 1000 pearls and a dialog")
+	online.check_season_prize()
+	_check(pr.pearls == ps0 + 1000, "the season prize is paid once")
+	online.pending_thanks.clear()
+	online.data["month"] = now_m - 1
+	online.track()
+	_check(int(online.data["month"]) == now_m and float(online.data["month_score"]) == 0.0, "a new season starts from zero")
+	var seen: float = online.data["seen_total"]
+	gs.total_earned = seen + 1234.0
+	online.track()
+	_check(is_equal_approx(float(online.data["month_score"]), 1234.0), "season coins are counted")
+	var prof: Dictionary = online.parse_profile(online.profile_info())
+	_check(int(prof["t"]) == 2 and int(prof["r"]) == 2 and int(prof["wo"]) >= 1, "own profile card: title, best place, worlds")
+	_check(online.profile_info().length() <= 200, "the profile field stays small")
+	var odd: Dictionary = online.parse_profile('{"t": 99, "wo": 50, "b": -3, "c": "x[b]y"}')
+	_check(int(odd["t"]) == 3 and int(odd["wo"]) == 4 and int(odd["b"]) == 0 and str(odd["c"]) == "xby", "odd profile values are clamped")
+	_check(int(online.parse_profile("nonsense")["t"]) == 0, "a broken profile is empty")
+	online._since_submit = 9999.0
+	online.submit()
+	_check(nf.months.get(now_m, {}).has(nf.uid) and str(nf.all[nf.uid].get("p", "")).begins_with("{"), "scores carry the season and the profile")
+
+	# --- Friends board ----------------------------------------------------------------------
+	nf.all["Friend01xxxxxxxxxxxxxxxxxxxx"] = {"name": "Friend", "score": 50.0, "a": ""}
+	nf.invites[online.invite_code()] = {"Friend01xxxxxxxxxxxxxxxxxxxx": true}
+	var fbx := [{}]
+	online._boards.clear()
+	online.fetch_board("friends", func(b): fbx[0] = b)
+	var fuids: Array = fbx[0]["rows"].map(func(x): return x["uid"])
+	_check(fbx[0]["ok"] and "Friend01xxxxxxxxxxxxxxxxxxxx" in fuids and nf.uid in fuids and fuids.size() == 2, "friends board: me and my friend only")
+
+	# --- Clubs -------------------------------------------------------------------------------
+	_check(OnlineRules.club_name("  Deep  Divers ") == "Deep Divers" and OnlineRules.club_name("ab") == "" and OnlineRules.club_name("gay club") == "", "club names are filtered")
+	_check(OnlineRules.club_id_ok("Ab3dEf7h") and not OnlineRules.club_id_ok("short") and not OnlineRules.club_id_ok("bad/id!!"), "club codes")
+	var cres := [""]
+	online.club_create("ab", func(r): cres[0] = r)
+	_check(cres[0] == "rude" and not online.in_club(), "a bad club name is refused")
+	online.club_create("Coral Crew", func(r): cres[0] = r)
+	var my_club: String = online.data["club"]
+	_check(cres[0] == "ok" and online.in_club() and str(online.data["club_name"]) == "Coral Crew" and nf.clubs.has(my_club), "a club is made with me in it")
+	_check(ach.has("club"), "joining a club unlocks its badge")
+	var info := [{}]
+	online.club_info(my_club, func(i): info[0] = i)
+	_check(info[0]["ok"] and int(info[0]["n"]) == 1 and info[0]["members"][0]["you"], "my club shows me")
+	nf.seed_clubs(int(online.data["week"]))
+	online.club_join("Club0002", func(r): cres[0] = r)
+	_check(cres[0] == "ok" and str(online.data["club"]) == "Club0002" and not nf.clubs[my_club]["m"].has(nf.uid), "joining another club leaves the old one")
+	online.club_join("Club0005", func(r): cres[0] = r)
+	_check(cres[0] == "ok", "join a big club")
+	for i in 40:
+		nf.clubs["Club0004"]["m"]["Fill%d" % i] = {"name": "f", "score": 1.0, "w": 0}
+	online.club_join("Club0004", func(r): cres[0] = r)
+	_check(cres[0] == "full" and str(online.data["club"]) == "Club0005", "a full club says so")
+	online.club_join("Nope0000", func(r): cres[0] = r)
+	_check(cres[0] == "gone", "an unknown code says so")
+	online._boards.clear()
+	online.fetch_board("clubs", func(b): fbx[0] = b)
+	_check(fbx[0]["ok"] and fbx[0]["rows"].size() >= 5 and int(fbx[0]["rows"][0]["n"]) > 0, "the club board lists clubs with members")
+	online.club_leave(func(r): cres[0] = r)
+	_check(cres[0] == "ok" and not online.in_club() and str(online.data["club_name"]) == "", "leave the club")
+	online.save_data()
+	online.load_data()
+	_check(int(online.data["best_rank"]) == 2 and int(online.data["season_prize"]) == OnlineRules.prev_month(now_m), "new fields survive a save")
+
+	# --- Achievements and the challenge of the day ----------------------------------------------
+	var a0: int = pr.pearls
+	pr.stats["taps"] = 1000
+	var got_b: Array = ach.check()
+	_check("taps_1000" in got_b and ach.has("taps_1000") and pr.pearls >= a0 + 5, "a badge unlocks once, with pearls")
+	_check(not "taps_1000" in ach.check(), "badges unlock once")
+	for a in ach.LIST:
+		_check(TranslationServer.translate("ACH_" + str(a[0]).to_upper()) != "ACH_" + str(a[0]).to_upper(), "badge %s has a name" % a[0])
+	var day: int = dc.day_of(_unix(2026, 10, 12, 10))
+	_check(dc.kind_for(day) == dc.kind_for(day), "the same challenge all day")
+	pr.stats.erase("dc_day")
+	dc.refresh(_unix(2026, 10, 12, 10))
+	_check(not dc.complete() and not dc.claim(), "a fresh challenge is not done")
+	var k: String = dc.kind()
+	match k:
+		"earn":
+			gs.total_earned += float(pr.stats["dc_goal"])
+		"taps":
+			pr.stats["taps"] = int(pr.stats["taps"]) + 200
+		"puzzle":
+			pr.stats["puzzles_won"] = int(pr.stats.get("puzzles_won", 0)) + 1
+		"fish":
+			root.get_node("Fishing").stats["caught"] = int(root.get_node("Fishing").stats.get("caught", 0)) + 3
+		"chest":
+			pr.stats["chests"] = int(pr.stats.get("chests", 0)) + 1
+		"quests":
+			pr.stats["quests_done"] = int(pr.stats.get("quests_done", 0)) + 3
+	var d0: int = pr.pearls
+	_check(dc.complete() and dc.claim() and pr.pearls == d0 + dc.PEARLS, "the challenge pays once done (%s)" % k)
+	_check(not dc.claim(), "and only once")
+	dc.refresh(_unix(2026, 10, 13, 10))
+	_check(not dc.claimed(), "a new day, a new challenge")
+	for kk in dc.KINDS:
+		_check(TranslationServer.translate("DC_" + str(kk[0]).to_upper()) != "DC_" + str(kk[0]).to_upper(), "challenge text %s" % kk[0])
+
 	DirAccess.remove_absolute(online.SAVE_PATH)
 	print("test_online: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

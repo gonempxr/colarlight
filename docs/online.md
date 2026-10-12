@@ -92,8 +92,9 @@ service cloud.firestore {
     // avatar JSON, a number that never goes down, at most every 30 s.
     function goodScore() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['name', 'score', 'a', 't'])
+      return d.keys().hasOnly(['name', 'score', 'a', 't', 'p'])
         && d.keys().hasAll(['name', 'score', 'a', 't'])
+        && (!('p' in d) || (d.p is string && d.p.size() <= 200))
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
         && d.a is string && d.a.size() <= 300
         && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000.0
@@ -138,6 +139,74 @@ service cloud.firestore {
         && weekId.matches('^[0-9]{1,6}$')
         && request.time.toMillis() >= (int(weekId) * 7 + 4) * 86400000
         && request.time.toMillis() < (int(weekId) * 7 + 11) * 86400000;
+    }
+
+    // Seasons: one calendar month (UTC); only the current month is written.
+    match /months/{monthId}/scores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid) && goodScore()
+        && monthId.matches('^[0-9]{6}$')
+        && int(monthId) == request.time.year() * 100 + request.time.month();
+    }
+
+    // Clubs: clubs/{id} {name, owner, n, t} with up to 30 members
+    // clubs/{id}/m/{uid} {name, s (this week's coins), w (week), t}. Joining
+    // and leaving change n by one in the same transaction as the member row.
+    function clubPath(id) { return /databases/$(database)/documents/clubs/$(id); }
+    function memberPath(id) { return /databases/$(database)/documents/clubs/$(id)/m/$(request.auth.uid); }
+    function goodMember() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 's', 'w', 't'])
+        && d.keys().hasAll(['name', 's', 'w', 't'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
+        && ownName(d.name)
+        && d.s is number && d.s >= 0 && d.s <= 1000000000000000000000000000000000000000000000000000000000000.0
+        && d.w is int && d.w >= 0
+        && d.t == request.time;
+    }
+    match /clubs/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && id.matches('^[A-Za-z0-9]{8}$')
+        && request.resource.data.keys().hasOnly(['name', 'owner', 'n', 't'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 20
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.n == 1
+        && request.resource.data.t == request.time
+        && existsAfter(memberPath(id));
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n'])
+        && ((request.resource.data.n == resource.data.n + 1 && request.resource.data.n <= 30
+              && !exists(memberPath(id)) && existsAfter(memberPath(id)))
+          || (request.resource.data.n == resource.data.n - 1 && request.resource.data.n >= 0
+              && exists(memberPath(id)) && !existsAfter(memberPath(id))));
+      match /m/{uid} {
+        allow read: if signedIn();
+        allow create: if isMe(uid) && goodMember()
+          && ((!exists(clubPath(id)) && getAfter(clubPath(id)).data.owner == uid)
+            || (exists(clubPath(id)) && getAfter(clubPath(id)).data.n == get(clubPath(id)).data.n + 1));
+        allow update: if isMe(uid) && goodMember()
+          && request.time > resource.data.t + duration.value(30, 's');
+        allow delete: if isMe(uid)
+          && getAfter(clubPath(id)).data.n == get(clubPath(id)).data.n - 1;
+      }
+    }
+    // The weekly club board: written by a member (the sum of the members'
+    // coins this week), only for the current week.
+    match /clubweeks/{weekId}/clubs/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && existsAfter(memberPath(id))
+        && request.resource.data.keys().hasOnly(['name', 's', 'n', 't'])
+        && request.resource.data.name == getAfter(clubPath(id)).data.name
+        && request.resource.data.n == getAfter(clubPath(id)).data.n
+        && request.resource.data.s is number && request.resource.data.s >= 0
+        && request.resource.data.s <= 1000000000000000000000000000000000000000000000000000000000000.0
+        && request.resource.data.t == request.time
+        && weekId.matches('^[0-9]{1,6}$')
+        && request.time.toMillis() >= (int(weekId) * 7 + 4) * 86400000
+        && request.time.toMillis() < (int(weekId) * 7 + 11) * 86400000
+        && (resource == null || request.time > resource.data.t + duration.value(30, 's'));
     }
 
     // The first 100 players: one transaction writes founders/{uid} {n} and
@@ -193,7 +262,8 @@ service cloud.firestore {
 }
 ```
 No `update` / `delete` is allowed anywhere except the score rows (update only,
-going up). Everything else is denied by default.
+going up), names (owner), clubs (member count by one) and club members
+(own row). Everything else is denied by default.
 
 ## Инструкция для Марка (по шагам)
 

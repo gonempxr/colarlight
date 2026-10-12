@@ -51,6 +51,14 @@ This file is the quick picture; keep it up to date when something big changes.
   (CrazyGames log-in on CrazyGames, Google on our site). The rules in
   docs/online.md changed: Mark must publish them together with promoting the
   beta to main (old clients can't send scores under the new rules).
+  Social pack (p-social, docs/social-plan.md): achievements (21 badges,
+  `Achievements`, toast from OnlineHook), challenge of the day on top of the
+  quests (`DailyChallenge`), titles for the weekly top 10 (worn next week),
+  monthly seasons (`months/{YYYYMM}` + prize on the 1st), player card (tap a
+  name; optional `p` field on score rows), friends tab, clubs (≤30,
+  `clubs/`, `clubweeks/`). UI in `social_view.gd`, strings `i18n/social.csv`.
+  Balance: coins for pearls once per 5 h; fish never sell for more in a
+  poorer world (`Fishing.value_of`).
 - Puzzle: each world has its own board (TileWorlds: lava, swamp, space).
 - Languages RU / EN / ES / ZH (Noto Sans SC subset — rerun
   `python3 tools/subset_fonts.py` after adding Chinese text; it needs the

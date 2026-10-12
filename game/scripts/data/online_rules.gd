@@ -227,6 +227,70 @@ static func week_prize(rank: int, score: float) -> Dictionary:
 # --- Invites ---------------------------------------------------------------------------
 
 ## The player's invite code: the first letters of their online id.
+# --- Seasons (one calendar month, UTC) ---------------------------------------------
+
+## The season id: year * 100 + month (UTC), e.g. 202610.
+static func month_id(unix: float) -> int:
+	var d := Time.get_datetime_dict_from_unix_time(int(floor(unix)))
+	return int(d["year"]) * 100 + int(d["month"])
+
+
+## The season before `id` (202601 -> 202512).
+static func prev_month(id: int) -> int:
+	var y := id / 100
+	var m := id % 100
+	return (y - 1) * 100 + 12 if m <= 1 else y * 100 + m - 1
+
+
+## [best place, pearls]; places beyond the last pay SEASON_PARTICIPATION.
+const SEASON_PRIZES := [[1, 1000], [3, 600], [10, 300], [50, 150], [100, 80]]
+const SEASON_PARTICIPATION := 30
+
+
+static func season_prize(rank: int, score: float) -> int:
+	if score <= 0.0:
+		return 0
+	if rank > 0:
+		for p in SEASON_PRIZES:
+			if rank <= int(p[0]):
+				return int(p[1])
+	return SEASON_PARTICIPATION
+
+
+# --- Titles (the week after a good weekly place) ------------------------------------
+
+## 3 = king (1st), 2 = master (2nd-3rd), 1 = star (4th-10th), 0 = none.
+static func title_for(rank: int) -> int:
+	if rank == 1:
+		return 3
+	if rank >= 2 and rank <= 3:
+		return 2
+	if rank >= 4 and rank <= 10:
+		return 1
+	return 0
+
+
+const TITLE_KEYS := ["", "TITLE_STAR", "TITLE_MASTER", "TITLE_KING"]
+const TITLE_COLORS: Array[Color] = [Color.WHITE, Color("8fd3ff"), Color("c9d3e0"), Color("ffcc33")]
+
+
+# --- Clubs -----------------------------------------------------------------------------
+
+const CLUB_MAX := 30
+
+
+## A club name: 3-16 characters after the filter, not rude.
+static func club_name(text: String) -> String:
+	var n := strip_name(text).left(20).strip_edges()
+	if n.length() < 3 or is_rude(n):
+		return ""
+	return n
+
+
+static func club_id_ok(id: String) -> bool:
+	return id.length() == 8 and RegEx.create_from_string("^[A-Za-z0-9]{8}$").search(id) != null
+
+
 static func code_of(uid: String) -> String:
 	return uid.left(CODE_LEN) if uid.length() >= CODE_LEN else ""
 

@@ -13,7 +13,8 @@ extends SceneTree
 ## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
-## thanks:<founder|promo|join|inviter> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button).
+## thanks:<founder|promo|join|inviter|week|season> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
+## board:<month|friends|clubs> | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -253,7 +254,7 @@ func _initialize() -> void:
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true
-			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn"]:
+			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club"]:
 				await _online_overlay(main, overlay)
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
@@ -271,7 +272,8 @@ func _initialize() -> void:
 
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
-## thanks:<founder|promo|join|inviter|week> (the thank-you dialog); board:taken (the name is someone else's).
+## thanks:<founder|promo|join|inviter|week|season> (the thank-you dialog); board:taken (the name is someone else's);
+## board:<month|friends|clubs>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")
@@ -285,6 +287,24 @@ func _online_overlay(main: Node, overlay: String) -> void:
 	for id in fake.all:
 		wk[id] = {"name": fake.all[id]["name"], "score": float(fake.all[id]["score"]) * 0.08, "a": fake.all[id]["a"]}
 	fake.weeks[int(online.data["week"])] = wk
+	# Titles and profile cards on some rows, a season board, clubs, friends.
+	var nr := 0
+	for id in fake.all:
+		var tier := 3 if nr == 23 else (2 if nr >= 21 else (1 if nr >= 15 else 0))
+		var pj := JSON.stringify({"t": tier, "b": 3 + nr % 15, "wo": 1 + nr % 4, "c": ["Coral Crew", "", "Lava Lords"][nr % 3], "r": maxi(1, 24 - nr)})
+		fake.all[id]["p"] = pj
+		wk[id]["p"] = pj
+		nr += 1
+	online.data["month"] = OnlineRules.month_id(Time.get_unix_time_from_system())
+	var mo := {}
+	for id in fake.all:
+		mo[id] = {"name": fake.all[id]["name"], "score": float(fake.all[id]["score"]) * 0.3, "a": fake.all[id]["a"], "p": fake.all[id]["p"]}
+	fake.months[int(online.data["month"])] = mo
+	online.data["month_score"] = 7.2e5
+	fake.seed_clubs(int(online.data["week"]))
+	online.data["title"] = 1
+	online.data["title_week"] = int(online.data["week"])
+	online.data["best_rank"] = 7
 	fake.invites["Shot0001"] = {"a": true, "b": true}
 	online.data["all_best"] = 2.4e6
 	online.data["week_score"] = 1.9e5
@@ -295,13 +315,37 @@ func _online_overlay(main: Node, overlay: String) -> void:
 		online.use_backend(fake)
 		online.claim_name()
 		online.data["paid"] = {"Shot0001": 2}
+		var ids: Array = fake.all.keys()
+		fake.invites[online.invite_code()] = {ids[20]: true, ids[11]: true}
+		if parts[0] == "club" and not "none" in parts:
+			online.club_join("Club0003", func(_r): pass)
 	else:
 		online.state = "failed"
 	online.pending_thanks.clear()
 	var ov = load("res://scripts/ui/online_view.gd")
 	match parts[0]:
+		"ach":
+			var pr := root.get_node("Progress")
+			pr.stats["taps"] = 640
+			pr.stats["puzzles_won"] = 12
+			pr.stats["chests"] = 9
+			load("res://scripts/data/achievements.gd").check()
+			load("res://scripts/ui/social_view.gd").open_achievements(main)
+		"card":
+			var rows := []
+			for id in fake.all:
+				rows.append({"uid": id, "name": fake.all[id]["name"], "score": fake.all[id]["score"], "a": fake.all[id]["a"], "p": fake.all[id]["p"], "you": false})
+			rows.sort_custom(func(x, y): return x["score"] > y["score"])
+			ov.tab = "week"
+			ov.open_board(main)
+			load("res://scripts/ui/social_view.gd").open_profile(main, rows[0])
+		"club":
+			load("res://scripts/ui/social_view.gd").open_clubs(main)
 		"board":
-			ov.tab = "all" if "all" in parts else "week"
+			ov.tab = "week"
+			for k in ["all", "month", "friends", "clubs"]:
+				if k in parts:
+					ov.tab = k
 			ov.open_board(main)
 			if "end" in parts:
 				for i in 20:
@@ -323,7 +367,8 @@ func _online_overlay(main: Node, overlay: String) -> void:
 				"promo": {"kind": "promo", "pearls": 30, "boost": 3600.0, "item": false},
 				"join": {"kind": "join", "pearls": 30},
 				"inviter": {"kind": "inviter", "pearls": 60, "n": 2},
-				"week": {"kind": "week", "pearls": 300, "boost": 10800.0, "n": 2}}.get(kind, {})
+				"week": {"kind": "week", "pearls": 300, "boost": 10800.0, "n": 2},
+				"season": {"kind": "season", "pearls": 600, "n": 3}}.get(kind, {})
 			main._top.open(func(m): ov.thanks(m, main, info))
 
 

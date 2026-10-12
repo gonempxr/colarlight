@@ -60,7 +60,7 @@ var _save_left := SAVE_SEC
 var _dirty := false
 var _submit_left := 10.0
 var _since_submit := 9999.0
-var _sent := {"all": -1.0, "week": -1.0, "name": ""}
+var _sent := {"all": -1.0, "week": -1.0, "month": -1.0, "name": "", "p": ""}
 var _ref_looks := 40
 var _boards := {}
 var _after_ready_done := false
@@ -180,7 +180,11 @@ func after_ready() -> void:
 		_join(str(data["ref_pending"]))
 	check_invites()
 	check_week_prize()
+	check_season_prize()
 	submit()
+	if in_club():
+		# Keeps the club's weekly total fresh on the club board.
+		club_info(str(data["club"]), func(_i: Dictionary): pass)
 
 
 func _request(method: String, arg: String, cb: Callable) -> void:
@@ -223,7 +227,9 @@ func _js_str(code: String) -> String:
 func defaults() -> Dictionary:
 	return {"v": 1, "redeemed": {}, "founder": 0, "founder_done": false, "code": "", "referred_by": "", "ref_pending": "",
 		"ref_done": false, "paid": {}, "exclusive": false, "week": -1, "week_score": 0.0, "all_best": 0.0,
-		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1}
+		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
+		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
+		"club": "", "club_name": ""}
 
 
 func load_data() -> void:
@@ -279,10 +285,16 @@ func track(now: float = -1.0) -> void:
 		data["week"] = w
 		data["week_score"] = 0.0
 		_dirty = true
+	var m := OnlineRules.month_id(t)
+	if m != int(data["month"]):
+		data["month"] = m
+		data["month_score"] = 0.0
+		_dirty = true
 	var prof := str(Profiles.current_id)
 	var total := float(GameState.total_earned)
 	if str(data["seen_profile"]) == prof and float(data["seen_total"]) >= 0.0 and total > float(data["seen_total"]):
 		data["week_score"] = float(data["week_score"]) + (total - float(data["seen_total"]))
+		data["month_score"] = float(data["month_score"]) + (total - float(data["seen_total"]))
 		_dirty = true
 	if str(data["seen_profile"]) != prof or float(data["seen_total"]) != total:
 		_dirty = true
@@ -294,7 +306,49 @@ func track(now: float = -1.0) -> void:
 
 
 func score(kind: String) -> float:
-	return float(data["week_score"]) if kind == "week" else float(data["all_best"])
+	match kind:
+		"week", "clubs":
+			return float(data["week_score"])
+		"month":
+			return float(data["month_score"])
+	return float(data["all_best"])
+
+
+## The title won last week (OnlineRules.title_for), worn this week only.
+func title(now: float = -1.0) -> int:
+	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	if int(data["title_week"]) != OnlineRules.week_id(t):
+		return 0
+	return clampi(int(data["title"]), 0, 3)
+
+
+## What the profile card shows to others (the "p" field of a score row).
+func profile_info() -> String:
+	var p := {"t": title(), "b": Achievements.count(), "wo": int(GameState.max_location) + 1}
+	if str(data["club_name"]) != "":
+		p["c"] = str(data["club_name"])
+	if int(data["founder"]) > 0:
+		p["f"] = int(data["founder"])
+	if int(data["best_rank"]) > 0:
+		p["r"] = int(data["best_rank"])
+	return JSON.stringify(p)
+
+
+## A profile card's fields from a row's "p" (anything odd is dropped).
+static func parse_profile(p: String) -> Dictionary:
+	var d = JSON.parse_string(p) if p.begins_with("{") and p.length() <= 300 else null
+	var out := {"t": 0, "b": 0, "wo": 1, "c": "", "f": 0, "r": 0}
+	if not d is Dictionary:
+		return out
+	for k in ["t", "b", "wo", "f", "r"]:
+		if d.get(k) is float or d.get(k) is int:
+			out[k] = maxi(0, int(d[k]))
+	out["t"] = mini(int(out["t"]), 3)
+	out["wo"] = clampi(int(out["wo"]), 1, 4)
+	out["b"] = mini(int(out["b"]), 99)
+	if d.get("c") is String:
+		out["c"] = OnlineRules.strip_name(str(d["c"]))
+	return out
 
 
 ## The name on the board: the player's own name once it is theirs online
@@ -373,15 +427,17 @@ func submit(done: Callable = Callable()) -> void:
 
 func _submit_now(done: Callable) -> void:
 	var name := board_name()
-	var changed := score("all") != float(_sent["all"]) or score("week") != float(_sent["week"]) or name != str(_sent["name"])
+	var p := profile_info()
+	var changed := score("all") != float(_sent["all"]) or score("week") != float(_sent["week"]) or name != str(_sent["name"]) \
+		or score("month") != float(_sent["month"]) or p != str(_sent["p"])
 	if state != "ready" or not changed or _since_submit < SUBMIT_GAP_SEC or score("all") <= 0.0:
 		if done.is_valid():
 			done.call(false)
 		return
 	_since_submit = 0.0
-	var sent := {"all": score("all"), "week": score("week"), "name": name}
+	var sent := {"all": score("all"), "week": score("week"), "month": score("month"), "name": name, "p": p}
 	var arg := JSON.stringify({"name": name, "a": JSON.stringify(Settings.avatar), "all": sent["all"], "week": sent["week"],
-		"w": int(data["week"])})
+		"w": int(data["week"]), "month": sent["month"], "m": int(data["month"]), "p": p, "club": str(data["club"])})
 	_request("submit", arg, func(res: String):
 		if res == "ok":
 			_sent = sent
@@ -389,8 +445,9 @@ func _submit_now(done: Callable) -> void:
 			done.call(res == "ok"))
 
 
-## The board: done.call({"ok", "rows": [{uid, name, score, a, you}], "rank"}).
-## kind: "week" or "all".
+## The board: done.call({"ok", "rows": [{uid, name, score, a, p, n, you}], "rank"}).
+## kind: "week", "month", "all", "friends" (my inviter and who joined with
+## my link) or "clubs" (this week's clubs: uid = club id, n = members).
 func fetch_board(kind: String, done: Callable) -> void:
 	if state != "ready":
 		done.call({"ok": false, "rows": [], "rank": 0})
@@ -401,7 +458,8 @@ func fetch_board(kind: String, done: Callable) -> void:
 		done.call(cached["board"])
 		return
 	var ask := func(_sent_ok: bool = false) -> void:
-		var arg := JSON.stringify({"kind": kind, "w": int(data["week"]), "score": score(kind)})
+		var arg := JSON.stringify({"kind": kind, "w": int(data["week"]), "m": int(data["month"]), "score": score(kind),
+			"code": invite_code(), "ref": str(data["referred_by"]), "club": str(data["club"])})
 		_request("board", arg, func(res: String):
 			var board := parse_board(res, uid)
 			if board["ok"]:
@@ -420,8 +478,10 @@ static func parse_board(res: String, me: String) -> Dictionary:
 			continue
 		var id := str(r.get("uid", ""))
 		var s := float(r.get("score", 0)) if (r.get("score") is float or r.get("score") is int) else 0.0
+		var n = r.get("n", 0)
 		rows.append({"uid": id, "name": OnlineRules.board_name(str(r.get("name", "")), id), "score": maxf(0.0, s),
-			"a": str(r.get("a", "")), "you": id == me and me != ""})
+			"a": str(r.get("a", "")), "p": str(r.get("p", "")), "n": int(n) if (n is float or n is int) else 0,
+			"you": id == me and me != ""})
 	return {"ok": true, "rows": rows, "rank": maxi(0, int(d.get("rank", 0)))}
 
 
@@ -580,10 +640,156 @@ func on_week_rank(week: int, res: String) -> void:
 	var rank := parts[1].to_int()
 	var score := parts[2].to_float()
 	data["prize_week"] = week
+	if rank > 0 and (int(data["best_rank"]) <= 0 or rank < int(data["best_rank"])):
+		data["best_rank"] = rank
+	if OnlineRules.title_for(rank) > 0:
+		data["title"] = OnlineRules.title_for(rank)
+		data["title_week"] = week + 1
 	var prize := OnlineRules.week_prize(rank, score)
 	if not prize.is_empty():
 		_grant({"kind": "week", "pearls": int(prize["pearls"]), "boost": float(prize["boost"]), "n": rank})
 	save_data()
+
+
+# --- Seasons --------------------------------------------------------------------------------------
+
+## Once a new month starts: last month's place pays the season prize.
+func check_season_prize(now: float = -1.0) -> void:
+	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var last := OnlineRules.prev_month(OnlineRules.month_id(t))
+	if int(data["season_prize"]) >= last:
+		return
+	_request("rank", JSON.stringify({"kind": "month", "id": last}), func(res: String): on_season_rank(last, res))
+
+
+func on_season_rank(month: int, res: String) -> void:
+	if res == "none":
+		data["season_prize"] = month
+		_dirty = true
+		return
+	if not res.begins_with("r:"):
+		return
+	var parts := res.split(":")
+	if parts.size() < 3:
+		return
+	data["season_prize"] = month
+	var pearls := OnlineRules.season_prize(parts[1].to_int(), parts[2].to_float())
+	if pearls > 0:
+		_grant({"kind": "season", "pearls": pearls, "n": parts[1].to_int(), "m": month})
+	save_data()
+
+
+# --- Clubs ------------------------------------------------------------------------------------------
+
+func in_club() -> bool:
+	return str(data["club"]) != ""
+
+
+func _club_arg(extra: Dictionary = {}) -> Dictionary:
+	var a := {"name": board_name(), "s": score("week"), "w": int(data["week"])}
+	a.merge(extra, true)
+	return a
+
+
+## Makes a new club with this player in it: done.call("ok" | "rude" | "error").
+func club_create(text: String, done: Callable) -> void:
+	var name := OnlineRules.club_name(text)
+	if name == "":
+		done.call("rude")
+		return
+	var id := ""
+	var abc := "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+	for i in 8:
+		id += abc[randi() % abc.length()]
+	var old := str(data["club"])
+	_request("club_create", JSON.stringify(_club_arg({"id": id, "club": name})), func(res: String):
+		if res == "ok":
+			_leave_old(old)
+			_set_club(id, name)
+		done.call("ok" if res == "ok" else "error"))
+
+
+## Joins a club: done.call("ok" | "full" | "gone" | "error").
+func club_join(id: String, done: Callable) -> void:
+	if not OnlineRules.club_id_ok(id):
+		done.call("gone")
+		return
+	if id == str(data["club"]):
+		done.call("ok")
+		return
+	# The old club is left only once the new one took the player (a full
+	# club must not leave them with none).
+	var old := str(data["club"])
+	_request("club_join", JSON.stringify(_club_arg({"id": id})), func(res: String):
+		if res.begins_with("ok"):
+			_leave_old(old)
+			_set_club(id, res.trim_prefix("ok:"))
+			done.call("ok")
+		else:
+			done.call(res if res in ["full", "gone"] else "error"))
+
+
+## done.call("ok" | "error").
+func club_leave(done: Callable) -> void:
+	if not in_club():
+		done.call("ok")
+		return
+	_request("club_leave", JSON.stringify({"id": str(data["club"]), "w": int(data["week"])}), func(res: String):
+		if res == "ok" or res == "gone":
+			_set_club("", "")
+		done.call("ok" if res == "ok" or res == "gone" else "error"))
+
+
+func _leave_old(old: String) -> void:
+	if old != "":
+		_request("club_leave", JSON.stringify({"id": old, "w": int(data["week"])}), func(_r: String): pass)
+
+
+func _set_club(id: String, name: String) -> void:
+	data["club"] = id
+	data["club_name"] = OnlineRules.strip_name(name)
+	_sent["p"] = ""
+	_boards.erase("clubs")
+	save_data()
+	Achievements.check()
+	state_changed.emit()
+
+
+## A club and its members: done.call({"ok", "id", "name", "n", "owner",
+## "members": [{uid, name, score, you}], "sum"}). A member's look also
+## refreshes the club's weekly total on the club board.
+func club_info(id: String, done: Callable) -> void:
+	if not OnlineRules.club_id_ok(id):
+		done.call({"ok": false})
+		return
+	_request("club", JSON.stringify(_club_arg({"id": id, "mine": id == str(data["club"])})), func(res: String):
+		var info := parse_club(res, uid)
+		if info["ok"] and id == str(data["club"]) and str(info["name"]) != str(data["club_name"]):
+			data["club_name"] = str(info["name"])
+			_dirty = true
+		if res == "gone" and id == str(data["club"]):
+			_set_club("", "")
+		done.call(info))
+
+
+## Members count this week's coins only (an old week counts 0).
+static func parse_club(res: String, me: String) -> Dictionary:
+	var d = JSON.parse_string(res) if res.begins_with("{") else null
+	if not d is Dictionary or not d.get("members") is Array:
+		return {"ok": false}
+	var members: Array = []
+	var sum := 0.0
+	for r in d["members"]:
+		if not r is Dictionary or members.size() >= OnlineRules.CLUB_MAX:
+			continue
+		var id := str(r.get("uid", ""))
+		var s := float(r.get("score", 0)) if (r.get("score") is float or r.get("score") is int) else 0.0
+		s = maxf(0.0, s) if is_finite(s) else 0.0
+		sum += s
+		members.append({"uid": id, "name": OnlineRules.board_name(str(r.get("name", "")), id), "score": s, "you": id == me and me != ""})
+	members.sort_custom(func(x, y): return x["score"] > y["score"])
+	return {"ok": true, "id": str(d.get("id", "")), "name": OnlineRules.strip_name(str(d.get("name", ""))),
+		"n": members.size(), "owner": str(d.get("owner", "")), "members": members, "sum": sum}
 
 
 # --- Rewards ------------------------------------------------------------------------------------

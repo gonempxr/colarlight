@@ -6,6 +6,10 @@ extends RefCounted
 var uid := "Me000001abcdefghijklmnopqrst"
 var all := {}
 var weeks := {}
+var months := {}
+## Club id -> {name, owner, m: {uid: {name, score, w}}}; week -> {club id: {name, s, n}}.
+var clubs := {}
+var club_weeks := {}
 var founders := 0
 var founder_of := {}
 var invites := {}
@@ -38,15 +42,41 @@ func request(method: String, arg: String) -> String:
 			var a: Dictionary = JSON.parse_string(arg)
 			var wk: Dictionary = weeks.get(int(a["w"]), {})
 			weeks[int(a["w"])] = wk
-			var ok := _put(all, a["name"], float(a["all"]), str(a.get("a", "")))
-			ok = _put(wk, a["name"], float(a["week"]), str(a.get("a", ""))) or ok
+			var p := str(a.get("p", ""))
+			var ok := _put(all, a["name"], float(a["all"]), str(a.get("a", "")), p)
+			ok = _put(wk, a["name"], float(a["week"]), str(a.get("a", "")), p) or ok
+			if a.has("m"):
+				var mo: Dictionary = months.get(int(a["m"]), {})
+				months[int(a["m"])] = mo
+				ok = _put(mo, a["name"], float(a.get("month", 0.0)), str(a.get("a", "")), p) or ok
+			var club := str(a.get("club", ""))
+			if club != "" and clubs.has(club) and clubs[club]["m"].has(uid):
+				clubs[club]["m"][uid] = {"name": a["name"], "score": float(a["week"]), "w": int(a["w"])}
 			return "ok" if ok else "error:permission-denied"
 		"board":
 			var a: Dictionary = JSON.parse_string(arg)
-			var table: Dictionary = weeks.get(int(a["w"]), {}) if a["kind"] == "week" else all
+			var table: Dictionary = all
+			match str(a["kind"]):
+				"week":
+					table = weeks.get(int(a["w"]), {})
+				"month":
+					table = months.get(int(a.get("m", 0)), {})
+				"friends":
+					table = {}
+					for id in all:
+						var code := str(a.get("code", ""))
+						if id == uid or (str(a.get("ref", "")) != "" and id.begins_with(str(a["ref"]))) \
+								or (code != "" and invites.get(code, {}).has(id)):
+							table[id] = all[id]
+				"clubs":
+					table = {}
+					var cw: Dictionary = club_weeks.get(int(a["w"]), {})
+					for id in cw:
+						table[id] = {"name": cw[id]["name"], "score": cw[id]["s"], "a": "", "n": cw[id]["n"]}
 			var rows := []
 			for id in table:
-				rows.append({"uid": id, "name": table[id]["name"], "score": table[id]["score"], "a": table[id]["a"]})
+				rows.append({"uid": id, "name": table[id]["name"], "score": table[id]["score"], "a": table[id]["a"],
+					"p": table[id].get("p", ""), "n": table[id].get("n", 0)})
 			rows.sort_custom(func(x, y): return x["score"] > y["score"])
 			var at := -1
 			var above := 0
@@ -87,7 +117,7 @@ func request(method: String, arg: String) -> String:
 			return "ok"
 		"rank":
 			var a: Dictionary = JSON.parse_string(arg)
-			var wk: Dictionary = weeks.get(int(a["w"]), {})
+			var wk: Dictionary = months.get(int(a["id"]), {}) if str(a.get("kind", "week")) == "month" else weeks.get(int(a.get("w", a.get("id", 0))), {})
 			if not wk.has(uid) or float(wk[uid]["score"]) <= 0.0:
 				return "none"
 			var mine := float(wk[uid]["score"])
@@ -96,6 +126,43 @@ func request(method: String, arg: String) -> String:
 				if float(wk[id]["score"]) > mine:
 					above += 1
 			return "r:%d:%s" % [above + 1, str(mine)]
+		"club_create":
+			var a: Dictionary = JSON.parse_string(arg)
+			clubs[str(a["id"])] = {"name": str(a["club"]), "owner": uid, "m": {uid: {"name": a["name"], "score": float(a["s"]), "w": int(a["w"])}}}
+			_club_total(str(a["id"]), int(a["w"]))
+			return "ok"
+		"club_join":
+			var a: Dictionary = JSON.parse_string(arg)
+			var id := str(a["id"])
+			if not clubs.has(id) or clubs[id]["m"].is_empty():
+				return "gone"
+			if not clubs[id]["m"].has(uid):
+				if clubs[id]["m"].size() >= OnlineRules.CLUB_MAX:
+					return "full"
+				clubs[id]["m"][uid] = {"name": a["name"], "score": float(a["s"]), "w": int(a["w"])}
+			_club_total(id, int(a["w"]))
+			return "ok:" + str(clubs[id]["name"])
+		"club_leave":
+			var a: Dictionary = JSON.parse_string(arg)
+			var id := str(a["id"])
+			if not clubs.has(id) or not clubs[id]["m"].has(uid):
+				return "gone"
+			clubs[id]["m"].erase(uid)
+			return "ok"
+		"club":
+			var a: Dictionary = JSON.parse_string(arg)
+			var id := str(a["id"])
+			if not clubs.has(id) or clubs[id]["m"].is_empty():
+				return "gone"
+			var c: Dictionary = clubs[id]
+			if c["m"].has(uid):
+				c["m"][uid] = {"name": a["name"], "score": float(a["s"]), "w": int(a["w"])}
+				_club_total(id, int(a["w"]))
+			var members := []
+			for m in c["m"]:
+				var r: Dictionary = c["m"][m]
+				members.append({"uid": m, "name": r["name"], "score": float(r["score"]) if int(r["w"]) == int(a["w"]) else 0.0})
+			return JSON.stringify({"id": id, "name": c["name"], "owner": c["owner"], "members": members})
 		"link":
 			return "https://gonempxr.github.io/colarlight/?ref=" + arg
 		"share":
@@ -103,9 +170,32 @@ func request(method: String, arg: String) -> String:
 	return "error:unknown"
 
 
-func _put(table: Dictionary, name: String, score: float, a: String) -> bool:
+func _put(table: Dictionary, name: String, score: float, a: String, p := "") -> bool:
 	var old: Dictionary = table.get(uid, {})
 	if not old.is_empty() and score < float(old["score"]):
 		return false
-	table[uid] = {"name": name, "score": score, "a": a}
+	table[uid] = {"name": name, "score": score, "a": a, "p": p}
 	return true
+
+
+func _club_total(id: String, w: int) -> void:
+	var sum := 0.0
+	for m in clubs[id]["m"]:
+		var r: Dictionary = clubs[id]["m"][m]
+		if int(r["w"]) == w:
+			sum += float(r["score"])
+	var cw: Dictionary = club_weeks.get(w, {})
+	club_weeks[w] = cw
+	cw[id] = {"name": clubs[id]["name"], "s": sum, "n": clubs[id]["m"].size()}
+
+
+## A few made-up clubs for screenshots.
+func seed_clubs(w: int) -> void:
+	var names := ["Deep Divers", "Coral Crew", "Lava Lords", "Moon Miners", "Acid Ducks"]
+	for i in names.size():
+		var id := "Club%04d" % (i + 1)
+		var m := {}
+		for j in 3 + i * 4:
+			m["Mem%d_%d" % [i, j]] = {"name": "Diver %d" % (i * 10 + j), "score": pow(10.0, 4.0 + i * 0.7) * (1.0 + j * 0.2), "w": w}
+		clubs[id] = {"name": names[i], "owner": "Mem%d_0" % i, "m": m}
+		_club_total(id, w)

@@ -876,7 +876,7 @@ window.coralightFirebase = (function () {
 			let d = null;
 			try { d = JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
 			if (!d) {
-				d = { all: {}, weeks: {}, founders: { count: 7, list: {} }, invites: {}, joins: {} };
+				d = { all: {}, weeks: {}, months: {}, founders: { count: 7, list: {} }, invites: {}, joins: {}, clubs: {}, clubweeks: {} };
 				const now = Date.now();
 				for (let i = 1; i <= 12; i++) {
 					const id = 'Test' + String(i).padStart(4, '0') + 'xxxxxxxxxxxxxxxxxxxx';
@@ -906,11 +906,23 @@ window.coralightFirebase = (function () {
 			if (old && (a.score < old.score || Date.now() - old.t < 30000)) {
 				return false;
 			}
-			table[uid] = { name: a.name, score: a.score, t: Date.now(), a: a.a };
+			table[uid] = { name: a.name, score: a.score, t: Date.now(), a: a.a, p: a.p || '' };
 			return true;
 		};
+		const fix = function (d) {
+			d.months = d.months || {};
+			d.clubs = d.clubs || {};
+			d.clubweeks = d.clubweeks || {};
+			return d;
+		};
+		const clubTotal = function (d, id, w) {
+			const c = d.clubs[id];
+			let s = 0;
+			Object.keys(c.m).forEach(function (k) { if (c.m[k].w === w) { s += c.m[k].score; } });
+			(d.clubweeks[w] = d.clubweeks[w] || {})[id] = { name: c.name, score: s, n: Object.keys(c.m).length, a: '' };
+		};
 		const top = function (table, mine) {
-			const rows = Object.keys(table).map(function (k) { return { uid: k, name: table[k].name, score: table[k].score, a: table[k].a || '' }; });
+			const rows = Object.keys(table).map(function (k) { return { uid: k, name: table[k].name, score: table[k].score, a: table[k].a || '', p: table[k].p || '', n: table[k].n || 0 }; });
 			rows.sort(function (x, y) { return y.score - x.score; });
 			const at = rows.findIndex(function (r) { return r.uid === uid; });
 			const above = rows.filter(function (r) { return r.score > mine; }).length;
@@ -918,15 +930,92 @@ window.coralightFirebase = (function () {
 		};
 		api = {
 			submit: function (a) {
-				const d = load();
+				const d = fix(load());
 				const wk = d.weeks[a.w] || (d.weeks[a.w] = {});
-				const ok = put(d.all, { name: a.name, score: a.all, a: a.a }) | put(wk, { name: a.name, score: a.week, a: a.a });
+				let ok = put(d.all, { name: a.name, score: a.all, a: a.a, p: a.p }) | put(wk, { name: a.name, score: a.week, a: a.a, p: a.p });
+				if (a.m) {
+					ok = ok | put(d.months[a.m] || (d.months[a.m] = {}), { name: a.name, score: a.month, a: a.a, p: a.p });
+				}
+				if (a.club && d.clubs[a.club] && d.clubs[a.club].m[uid]) {
+					d.clubs[a.club].m[uid] = { name: a.name, score: a.week, w: a.w };
+				}
 				store(d);
 				return ok ? later('ok') : later('error:limit');
 			},
 			board: function (a) {
-				const d = load();
-				return later(top(a.kind === 'week' ? (d.weeks[a.w] || {}) : d.all, a.score));
+				const d = fix(load());
+				let table = d.all;
+				if (a.kind === 'week') {
+					table = d.weeks[a.w] || {};
+				} else if (a.kind === 'month') {
+					table = d.months[a.m] || {};
+				} else if (a.kind === 'clubs') {
+					table = d.clubweeks[a.w] || {};
+				} else if (a.kind === 'friends') {
+					table = {};
+					const mine = d.invites[a.code] || {};
+					Object.keys(d.all).forEach(function (k) {
+						if (k === uid || mine[k] || (a.ref && k.indexOf(a.ref) === 0)) {
+							table[k] = d.all[k];
+						}
+					});
+				}
+				const r = top(table, a.score);
+				if (a.kind === 'clubs') {
+					const at = r.rows.findIndex(function (x) { return x.uid === a.club; });
+					r.rank = at + 1;
+				}
+				return later(r);
+			},
+			club_create: function (a) {
+				const d = fix(load());
+				const m = {};
+				m[uid] = { name: a.name, score: a.s, w: a.w };
+				d.clubs[a.id] = { name: a.club, owner: uid, m: m };
+				clubTotal(d, a.id, a.w);
+				store(d);
+				return later('ok');
+			},
+			club_join: function (a) {
+				const d = fix(load());
+				const c = d.clubs[a.id];
+				if (!c || !Object.keys(c.m).length) {
+					return later('gone');
+				}
+				if (!c.m[uid]) {
+					if (Object.keys(c.m).length >= 30) {
+						return later('full');
+					}
+					c.m[uid] = { name: a.name, score: a.s, w: a.w };
+				}
+				clubTotal(d, a.id, a.w);
+				store(d);
+				return later('ok:' + c.name);
+			},
+			club_leave: function (a) {
+				const d = fix(load());
+				const c = d.clubs[a.id];
+				if (!c || !c.m[uid]) {
+					return later('gone');
+				}
+				delete c.m[uid];
+				clubTotal(d, a.id, a.w || 0);
+				store(d);
+				return later('ok');
+			},
+			club: function (a) {
+				const d = fix(load());
+				const c = d.clubs[a.id];
+				if (!c || !Object.keys(c.m).length) {
+					return later('gone');
+				}
+				if (c.m[uid]) {
+					c.m[uid] = { name: a.name, score: a.s, w: a.w };
+					clubTotal(d, a.id, a.w);
+					store(d);
+				}
+				const members = Object.keys(c.m).map(function (k) { return { uid: k, name: c.m[k].name, score: c.m[k].w === a.w ? c.m[k].score : 0 }; });
+				return later(JSON.stringify({ id: a.id, name: c.name, owner: c.owner, members: members }));
 			},
 			founder: function () {
 				const d = load();
@@ -969,8 +1058,8 @@ window.coralightFirebase = (function () {
 				return later('ok');
 			},
 			rank: function (a) {
-				const d = load();
-				const wk = d.weeks[a.w] || {};
+				const d = fix(load());
+				const wk = (a.kind === 'month' ? d.months[a.id] : d.weeks[a.w !== undefined ? a.w : a.id]) || {};
 				const mine = wk[uid] ? wk[uid].score : 0;
 				if (!(mine > 0)) {
 					return later('none');
@@ -991,25 +1080,72 @@ window.coralightFirebase = (function () {
 		const ts = function () { return F.fb.firestore.FieldValue.serverTimestamp(); };
 		const me = function () { return F.auth.currentUser.uid; };
 		const weekCol = function (w) { return F.db.collection('weeks').doc(String(w)).collection('scores'); };
+		const monthCol = function (m) { return F.db.collection('months').doc(String(m)).collection('scores'); };
+		const clubRef = function (id) { return F.db.collection('clubs').doc(id); };
+		const memberRef = function (id) { return clubRef(id).collection('m').doc(me()); };
+		const clubWeekRef = function (w, id) { return F.db.collection('clubweeks').doc(String(w)).collection('clubs').doc(id); };
+		const rowOf = function (d) {
+			const x = d.data();
+			return { uid: d.id, name: String(x.name || ''), score: Number(x.score !== undefined ? x.score : x.s) || 0, a: String(x.a || ''), p: String(x.p || ''), n: Number(x.n) || 0 };
+		};
+		// A score row; "p" (the profile card) only when there is one.
+		const scoreRow = function (a, score) {
+			const r = { name: a.name, score: score, a: a.a, t: ts() };
+			if (a.p) {
+				r.p = a.p;
+			}
+			return r;
+		};
+		let friends = null;
 		const denied = function (e) { return e && e.code === 'permission-denied'; };
 		api = {
 			// Two separate writes: a refused weekly score (a clock on the
 			// wrong week) must not stop the all-time one.
 			submit: function (a) {
-				const all = F.db.collection('lb_all').doc(me()).set({ name: a.name, score: a.all, a: a.a, t: ts() });
-				const week = weekCol(a.w).doc(me()).set({ name: a.name, score: a.week, a: a.a, t: ts() });
+				// Old rules (before the profile card) refuse "p": try again without it.
+				const put = function (ref, score) {
+					return ref.set(scoreRow(a, score)).catch(function (e) {
+						if (!a.p || !denied(e)) {
+							throw e;
+						}
+						return ref.set(scoreRow({ name: a.name, a: a.a }, score));
+					});
+				};
+				const all = put(F.db.collection('lb_all').doc(me()), a.all);
+				const week = put(weekCol(a.w).doc(me()), a.week);
+				// The season row and the club member row: extras that
+				// never hold back the main two.
+				if (a.m) {
+					monthCol(a.m).doc(me()).set(scoreRow(a, a.month)).catch(function () {});
+				}
+				if (a.club) {
+					memberRef(a.club).update({ name: a.name, s: a.week, w: a.w, t: ts() }).catch(function () {});
+				}
 				return Promise.allSettled([all, week]).then(function (r) {
 					return (r[0].status === 'fulfilled' || r[1].status === 'fulfilled') ? 'ok' : 'error:' + ((r[0].reason && r[0].reason.code) || 'other');
 				});
 			},
 			board: function (a) {
-				const col = a.kind === 'week' ? weekCol(a.w) : F.db.collection('lb_all');
+				if (a.kind === 'friends') {
+					return friends(a);
+				}
+				if (a.kind === 'clubs') {
+					return F.db.collection('clubweeks').doc(String(a.w)).collection('clubs').orderBy('s', 'desc').limit(50).get().then(function (snap) {
+						const rows = [];
+						snap.forEach(function (d) {
+							const r = rowOf(d);
+							if (r.n > 0) {
+								rows.push(r);
+							}
+						});
+						const at = rows.findIndex(function (r) { return r.uid === a.club; });
+						return { rows: rows, rank: at + 1 };
+					});
+				}
+				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : F.db.collection('lb_all'));
 				return col.orderBy('score', 'desc').limit(50).get().then(function (snap) {
 					const rows = [];
-					snap.forEach(function (d) {
-						const x = d.data();
-						rows.push({ uid: d.id, name: String(x.name || ''), score: Number(x.score) || 0, a: String(x.a || '') });
-					});
+					snap.forEach(function (d) { rows.push(rowOf(d)); });
 					const at = rows.findIndex(function (r) { return r.uid === me(); });
 					if (at >= 0 || !(a.score > 0)) {
 						return { rows: rows, rank: at + 1 };
@@ -1090,9 +1226,10 @@ window.coralightFirebase = (function () {
 					});
 				});
 			},
-			// The player's place on a past week's board: 'r:<rank>:<score>' or 'none'.
+			// The player's place on a past week's (or month's) board:
+			// 'r:<rank>:<score>' or 'none'.
 			rank: function (a) {
-				const col = weekCol(a.w);
+				const col = a.kind === 'month' ? monthCol(a.id) : weekCol(a.w !== undefined ? a.w : a.id);
 				return col.doc(me()).get().then(function (d) {
 					const s = d.exists ? (Number(d.data().score) || 0) : 0;
 					if (!(s > 0)) {
@@ -1111,6 +1248,105 @@ window.coralightFirebase = (function () {
 					return counted.then(function (c) { return 'r:' + (c.data().count + 1) + ':' + s; }, function () { return 'r:0:' + s; });
 				});
 			},
+			// Clubs: clubs/{id} {name, owner, n, t}, members clubs/{id}/m/{uid}
+			// {name, s, w, t}; the weekly club board clubweeks/{w}/clubs/{id}.
+			club_create: function (a) {
+				return F.db.runTransaction(function (tx) {
+					return tx.get(clubRef(a.id)).then(function (c) {
+						if (c.exists) {
+							return 'error:exists';
+						}
+						tx.set(clubRef(a.id), { name: a.club, owner: me(), n: 1, t: ts() });
+						tx.set(memberRef(a.id), { name: a.name, s: a.s, w: a.w, t: ts() });
+						tx.set(clubWeekRef(a.w, a.id), { name: a.club, s: a.s, n: 1, t: ts() });
+						return 'ok';
+					});
+				});
+			},
+			club_join: function (a) {
+				return F.db.runTransaction(function (tx) {
+					return Promise.all([tx.get(clubRef(a.id)), tx.get(memberRef(a.id))]).then(function (r) {
+						if (!r[0].exists || !(r[0].data().n > 0)) {
+							return 'gone';
+						}
+						const name = String(r[0].data().name || '');
+						if (r[1].exists) {
+							return 'ok:' + name;
+						}
+						if (r[0].data().n >= 30) {
+							return 'full';
+						}
+						tx.update(clubRef(a.id), { n: r[0].data().n + 1 });
+						tx.set(memberRef(a.id), { name: a.name, s: a.s, w: a.w, t: ts() });
+						return 'ok:' + name;
+					});
+				});
+			},
+			club_leave: function (a) {
+				return F.db.runTransaction(function (tx) {
+					return Promise.all([tx.get(clubRef(a.id)), tx.get(memberRef(a.id))]).then(function (r) {
+						if (!r[0].exists || !r[1].exists) {
+							return 'gone';
+						}
+						tx.update(clubRef(a.id), { n: Math.max(0, r[0].data().n - 1) });
+						tx.delete(memberRef(a.id));
+						return 'ok';
+					});
+				});
+			},
+			// A club with its members; a member also writes the weekly total.
+			club: function (a) {
+				return Promise.all([clubRef(a.id).get(), clubRef(a.id).collection('m').limit(30).get()]).then(function (r) {
+					if (!r[0].exists || !(r[0].data().n > 0)) {
+						return 'gone';
+					}
+					const c = r[0].data();
+					const members = [];
+					let sum = 0;
+					r[1].forEach(function (d) {
+						const x = d.data();
+						let s = (x.w === a.w) ? (Number(x.s) || 0) : 0;
+						if (d.id === me()) {
+							s = a.s;
+						}
+						sum += s;
+						members.push({ uid: d.id, name: String(x.name || ''), score: s });
+					});
+					if (a.mine && members.some(function (m) { return m.uid === me(); })) {
+						memberRef(a.id).update({ name: a.name, s: a.s, w: a.w, t: ts() }).catch(function () {});
+						clubWeekRef(a.w, a.id).set({ name: String(c.name || ''), s: sum, n: Number(c.n) || members.length, t: ts() }).catch(function () {});
+					}
+					return JSON.stringify({ id: a.id, name: String(c.name || ''), owner: String(c.owner || ''), members: members });
+				});
+			},
+		};
+		// Friends: who joined with my link and the friend whose link I
+		// came from (their id starts with the code), on the all-time board.
+		friends = function (a) {
+			const ids = {};
+			ids[me()] = true;
+			const jobs = [];
+			if (a.code) {
+				jobs.push(F.db.collection('invites').doc(a.code).collection('joined').limit(25).get().then(function (s) {
+					s.forEach(function (d) { ids[d.id] = true; });
+				}).catch(function () {}));
+			}
+			if (a.ref) {
+				const id = F.fb.firestore.FieldPath.documentId();
+				jobs.push(F.db.collection('lb_all').where(id, '>=', a.ref).where(id, '<', a.ref + '\uf8ff').limit(1).get().then(function (s) {
+					s.forEach(function (d) { ids[d.id] = true; });
+				}).catch(function () {}));
+			}
+			return Promise.all(jobs).then(function () {
+				return Promise.all(Object.keys(ids).map(function (k) {
+					return F.db.collection('lb_all').doc(k).get().then(function (d) { return d.exists ? rowOf(d) : null; }, function () { return null; });
+				}));
+			}).then(function (list) {
+				const rows = list.filter(function (r) { return r; });
+				rows.sort(function (x, y) { return y.score - x.score; });
+				const at = rows.findIndex(function (r) { return r.uid === me(); });
+				return { rows: rows, rank: at + 1 };
+			});
 		};
 		start = function () {
 			window.coralightFirebase().then(function (f) {
@@ -1146,6 +1382,10 @@ window.coralightFirebase = (function () {
 		joins: function (arg) { return api.joins(arg); },
 		claim: function (arg) { return api.claim(JSON.parse(arg)); },
 		rank: function (arg) { return api.rank(JSON.parse(arg)); },
+	club_create: function (arg) { return api.club_create(JSON.parse(arg)); },
+	club_join: function (arg) { return api.club_join(JSON.parse(arg)); },
+	club_leave: function (arg) { return api.club_leave(JSON.parse(arg)); },
+	club: function (arg) { return api.club(JSON.parse(arg)); },
 		link: function (arg) { return linkFor(arg); },
 		share: function (arg) { return online.share(JSON.parse(arg)); },
 	};

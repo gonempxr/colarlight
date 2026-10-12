@@ -197,6 +197,8 @@ static func quests(m: Modal, main: Node) -> void:
 	# Quests belong to the world being played (they swap with it).
 	m.text(t("QUESTS_WORLD") % WorldLook.name_of(GameState.location), 23, Art.INK)
 	m.text(t("QUESTS_HINT"), 21, Art.INK_SOFT)
+	# The challenge of the day (the same for every player).
+	SocialView.daily_card(m, main)
 	if Progress.quests.is_empty():
 		m.text(t("QUESTS_EMPTY"), 22)
 	for i in Progress.quests.size():

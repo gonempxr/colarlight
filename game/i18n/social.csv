@@ -45,3 +45,65 @@ ACH_FRIEND,Good friend,Хороший друг,Buen amigo,好朋友
 ACH_FRIEND_D,Play with a friend's invite,Играй по приглашению друга,Juega con la invitación de un amigo,通过好友邀请一起玩
 ACH_CLUB,Team player,Командный игрок,Jugador de equipo,团队玩家
 ACH_CLUB_D,Join a club,Вступи в клуб,Únete a un club,加入一个俱乐部
+ACH_BUTTON,Achievements,Достижения,Logros,成就
+TITLE_STAR,Star of the week,Звезда недели,Estrella de la semana,本周之星
+TITLE_MASTER,Master of the week,Мастер недели,Maestro de la semana,本周大师
+TITLE_KING,King of the week,Король недели,Rey de la semana,本周之王
+TITLE_HINT,"Top 10 of the weekly race wear a title the next week: #1 King, #2-3 Master, #4-10 Star.","Топ-10 гонки недели носят титул всю следующую неделю: 1 место – Король, 2–3 – Мастер, 4–10 – Звезда.","El top 10 de la carrera semanal lleva un título la semana siguiente: 1.º Rey, 2.º-3.º Maestro, 4.º-10.º Estrella.",每周竞赛前10名在下一周获得称号：第1名 国王，第2-3名 大师，第4-10名 之星。
+CARD_SCORE,Coins: %s,Монеты: %s,Monedas: %s,金币：%s
+CARD_BADGES,Badges: %d of %d,Значки: %d из %d,Insignias: %d de %d,徽章：%d / %d
+CARD_WORLDS,Worlds opened: %d of 4,Открыто миров: %d из 4,Mundos abiertos: %d de 4,已开启世界：%d / 4
+CARD_CLUB,Club: %s,Клуб: %s,Club: %s,俱乐部：%s
+CARD_BEST,Best weekly place: #%d,Лучшее место недели: %d,Mejor puesto semanal: %d,最佳周排名：第 %d 名
+CARD_FOUNDER,Founder #%d,Основатель #%d,Fundador #%d,创始玩家 #%d
+CARD_TAP,Tap a name to see the player's card.,"Нажми на имя, чтобы увидеть карточку игрока.",Toca un nombre para ver la ficha del jugador.,点击名字查看玩家名片。
+ONLINE_MONTH,Season,Сезон,Temporada,赛季
+ONLINE_FRIENDS,Friends,Друзья,Amigos,好友
+ONLINE_CLUBS,Clubs,Клубы,Clubes,俱乐部
+SEASON_HINT,"Season: %s. Coins earned this month. Prizes on the 1st: #1 – 1000 pearls, #2-3 – 600, top 10 – 300, top 50 – 150, top 100 – 80, everyone – 30.","Сезон: %s. Монеты, заработанные за месяц. Призы 1-го числа: 1 место – 1000 жемчуга, 2–3 – 600, топ-10 – 300, топ-50 – 150, топ-100 – 80, всем – 30.","Temporada: %s. Monedas ganadas este mes. Premios el día 1: 1.º – 1000 perlas, 2.º-3.º – 600, top 10 – 300, top 50 – 150, top 100 – 80, todos – 30.",赛季：%s。本月赚到的金币。每月1日发奖：第1名 – 1000 珍珠，第2-3名 – 600，前10名 – 300，前50名 – 150，前100名 – 80，所有人 – 30。
+FRIENDS_HINT,"You, the friend who invited you and the friends who came with your link (all-time coins).","Ты, друг, который тебя пригласил, и друзья, пришедшие по твоей ссылке (монеты за всё время).","Tú, el amigo que te invitó y los amigos que llegaron con tu enlace (monedas de siempre).",你、邀请你的好友，以及通过你的链接加入的好友（累计金币）。
+FRIENDS_EMPTY,No friends here yet: invite someone with your link!,Друзей пока нет: пригласи кого-нибудь по своей ссылке!,Aún no hay amigos: ¡invita a alguien con tu enlace!,还没有好友：用你的链接邀请朋友吧！
+CLUBS_HINT,Clubs of up to 30 players: everyone's coins this week add up.,Клубы до 30 игроков: монеты всех участников за неделю складываются.,Clubes de hasta 30 jugadores: las monedas de todos esta semana se suman.,最多30人的俱乐部：所有成员本周的金币相加。
+CLUB_TITLE,Club,Клуб,Club,俱乐部
+CLUB_MY,My club,Мой клуб,Mi club,我的俱乐部
+CLUB_FIND,Find a club,Найти клуб,Buscar club,寻找俱乐部
+CLUB_HINT,Play together! Make your own club or join one: all members' coins this week count for the club.,Играйте вместе! Создай свой клуб или вступи в другой: монеты всех участников за неделю идут в счёт клуба.,¡Jugad juntos! Crea tu club o únete a uno: las monedas de todos los miembros esta semana cuentan para el club.,一起玩！创建你的俱乐部或加入一个：所有成员本周的金币都计入俱乐部。
+CLUB_NAME_HINT,Club name,Название клуба,Nombre del club,俱乐部名称
+CLUB_CREATE,Create a club,Создать клуб,Crear club,创建俱乐部
+CLUB_CODE_ENTER,Club code,Код клуба,Código del club,俱乐部代码
+CLUB_JOIN,Join,Вступить,Unirse,加入
+CLUB_TOP,Clubs this week:,Клубы этой недели:,Clubes de esta semana:,本周俱乐部：
+CLUB_NONE,No clubs yet: be the first!,Клубов пока нет: стань первым!,Aún no hay clubes: ¡sé el primero!,还没有俱乐部：成为第一个吧！
+CLUB_MEMBERS,%d of %d players,%d из %d игроков,%d de %d jugadores,%d / %d 名玩家
+CLUB_WEEK,This week: %s coins,За неделю: %s монет,Esta semana: %s monedas,本周：%s 金币
+CLUB_CODE,Code: %s,Код: %s,Código: %s,代码：%s
+CLUB_CODE_HINT,Give friends the code so they can join.,"Дай друзьям код, чтобы они вступили.",Da el código a tus amigos para que se unan.,把代码告诉朋友，让他们加入。
+CLUB_LEAVE,Leave the club,Выйти из клуба,Salir del club,退出俱乐部
+CLUB_SWITCH,You will leave %s.,Ты выйдешь из клуба %s.,Saldrás de %s.,你将退出 %s。
+CLUB_FULL,This club is full (30 players).,Клуб заполнен (30 игроков).,Este club está lleno (30 jugadores).,该俱乐部已满（30人）。
+CLUB_GONE,No club with this code.,Клуба с таким кодом нет.,No hay ningún club con ese código.,没有这个代码的俱乐部。
+CLUB_RUDE,"Choose another name (3-16 letters, nothing rude).","Выбери другое название (3–16 букв, без грубостей).","Elige otro nombre (3-16 letras, nada grosero).",请换一个名称（3-16个字符，不能有不文明用语）。
+DC_TITLE,Challenge of the day,Задание дня,Desafío del día,每日挑战
+DC_EARN,Earn %s coins,Заработай %s монет,Gana %s monedas,赚取 %s 金币
+DC_TAPS,Tap %s times,Сделай %s тапов,Toca %s veces,点击 %s 次
+DC_PUZZLE,Win %s puzzle,Победи в пазле: %s,Gana %s puzle,赢得 %s 次拼图
+DC_FISH,Catch %s fish,Поймай %s рыб,Pesca %s peces,钓到 %s 条鱼
+DC_CHEST,Open %s chest,Открой сундук: %s,Abre %s cofre,打开 %s 个宝箱
+DC_QUESTS,Finish %s quests,Выполни %s задания,Completa %s misiones,完成 %s 个任务
+DC_SAME,Same challenge for every player today.,Сегодня у всех игроков одно задание.,Hoy todos los jugadores tienen el mismo desafío.,今天所有玩家的挑战相同。
+DC_DONE,Done! A new one tomorrow.,Готово! Новое — завтра.,¡Hecho! Mañana uno nuevo.,完成！明天有新的。
+THANKS_SEASON_TITLE,Season results!,Итоги сезона!,¡Resultados de la temporada!,赛季结果！
+THANKS_SEASON,You took place #%d in the season!,Ты занял %d место в сезоне!,¡Quedaste en el puesto %d de la temporada!,你在本赛季获得第 %d 名！
+THANKS_SEASON_ALL,Thanks for playing this season!,"Спасибо, что играл в этом сезоне!",¡Gracias por jugar esta temporada!,感谢你参加本赛季！
+MONTH_1,January,Январь,Enero,一月
+MONTH_2,February,Февраль,Febrero,二月
+MONTH_3,March,Март,Marzo,三月
+MONTH_4,April,Апрель,Abril,四月
+MONTH_5,May,Май,Mayo,五月
+MONTH_6,June,Июнь,Junio,六月
+MONTH_7,July,Июль,Julio,七月
+MONTH_8,August,Август,Agosto,八月
+MONTH_9,September,Сентябрь,Septiembre,九月
+MONTH_10,October,Октябрь,Octubre,十月
+MONTH_11,November,Ноябрь,Noviembre,十一月
+MONTH_12,December,Декабрь,Diciembre,十二月
