@@ -20,6 +20,9 @@ func _initialize() -> void:
 	bg.color = Art.SEA_DEEP
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
+	if mode == "win":
+		# Online present: the win panel shows the puzzle board button.
+		root.get_node("Online").backend = RefCounted.new()
 	var screen: Control = load("res://scripts/puzzle/puzzle_screen.gd").new()
 	screen.world = world
 	root.add_child(screen)

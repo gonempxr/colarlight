@@ -254,7 +254,7 @@ func _initialize() -> void:
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true
-			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club"]:
+			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club", "guide"]:
 				await _online_overlay(main, overlay)
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
@@ -273,7 +273,7 @@ func _initialize() -> void:
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
 ## thanks:<founder|promo|join|inviter|week|season> (the thank-you dialog); board:taken (the name is someone else's);
-## board:<month|friends|clubs>, ach (achievements), card (a player's card), club[:none] (my club / find one).
+## guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")
@@ -300,6 +300,13 @@ func _online_overlay(main: Node, overlay: String) -> void:
 	for id in fake.all:
 		mo[id] = {"name": fake.all[id]["name"], "score": float(fake.all[id]["score"]) * 0.3, "a": fake.all[id]["a"], "p": fake.all[id]["p"]}
 	fake.months[int(online.data["month"])] = mo
+	var pzw := {}
+	var np := 0
+	for id in fake.all:
+		pzw[id] = {"name": fake.all[id]["name"], "score": float(3 + (np * 7) % 40), "a": fake.all[id]["a"], "p": fake.all[id]["p"]}
+		np += 1
+	fake.puzzle_weeks[int(online.data["week"])] = pzw
+	online.data["pz_score"] = 21.0
 	online.data["month_score"] = 7.2e5
 	fake.seed_clubs(int(online.data["week"]))
 	online.data["title"] = 1
@@ -341,9 +348,19 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			load("res://scripts/ui/social_view.gd").open_profile(main, rows[0])
 		"club":
 			load("res://scripts/ui/social_view.gd").open_clubs(main)
+		"guide":
+			if "new" in parts:
+				main._news.append("whatsnew")
+				main._show_next_news()
+			else:
+				load("res://scripts/ui/guide_view.gd").open(main)
+			if "end" in parts:
+				for i in 20:
+					await process_frame
+				main._modal._scroll.scroll_vertical = 100000
 		"board":
 			ov.tab = "week"
-			for k in ["all", "month", "friends", "clubs"]:
+			for k in ["all", "month", "friends", "clubs", "puzzle"]:
 				if k in parts:
 					ov.tab = k
 			ov.open_board(main)

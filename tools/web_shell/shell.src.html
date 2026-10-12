@@ -913,6 +913,7 @@ window.coralightFirebase = (function () {
 			d.months = d.months || {};
 			d.clubs = d.clubs || {};
 			d.clubweeks = d.clubweeks || {};
+			d.puzzle = d.puzzle || {};
 			return d;
 		};
 		const clubTotal = function (d, id, w) {
@@ -936,6 +937,9 @@ window.coralightFirebase = (function () {
 				if (a.m) {
 					ok = ok | put(d.months[a.m] || (d.months[a.m] = {}), { name: a.name, score: a.month, a: a.a, p: a.p });
 				}
+				if (a.pz > 0) {
+					ok = ok | put(d.puzzle[a.w] || (d.puzzle[a.w] = {}), { name: a.name, score: a.pz, a: a.a, p: a.p });
+				}
 				if (a.club && d.clubs[a.club] && d.clubs[a.club].m[uid]) {
 					d.clubs[a.club].m[uid] = { name: a.name, score: a.week, w: a.w };
 				}
@@ -949,6 +953,8 @@ window.coralightFirebase = (function () {
 					table = d.weeks[a.w] || {};
 				} else if (a.kind === 'month') {
 					table = d.months[a.m] || {};
+				} else if (a.kind === 'puzzle') {
+					table = d.puzzle[a.w] || {};
 				} else if (a.kind === 'clubs') {
 					table = d.clubweeks[a.w] || {};
 				} else if (a.kind === 'friends') {
@@ -1059,7 +1065,7 @@ window.coralightFirebase = (function () {
 			},
 			rank: function (a) {
 				const d = fix(load());
-				const wk = (a.kind === 'month' ? d.months[a.id] : d.weeks[a.w !== undefined ? a.w : a.id]) || {};
+				const wk = (a.kind === 'month' ? d.months[a.id] : (a.kind === 'puzzle' ? d.puzzle[a.w] : d.weeks[a.w !== undefined ? a.w : a.id])) || {};
 				const mine = wk[uid] ? wk[uid].score : 0;
 				if (!(mine > 0)) {
 					return later('none');
@@ -1081,6 +1087,7 @@ window.coralightFirebase = (function () {
 		const me = function () { return F.auth.currentUser.uid; };
 		const weekCol = function (w) { return F.db.collection('weeks').doc(String(w)).collection('scores'); };
 		const monthCol = function (m) { return F.db.collection('months').doc(String(m)).collection('scores'); };
+		const puzzleCol = function (w) { return F.db.collection('puzzleweeks').doc(String(w)).collection('scores'); };
 		const clubRef = function (id) { return F.db.collection('clubs').doc(id); };
 		const memberRef = function (id) { return clubRef(id).collection('m').doc(me()); };
 		const clubWeekRef = function (w, id) { return F.db.collection('clubweeks').doc(String(w)).collection('clubs').doc(id); };
@@ -1118,6 +1125,9 @@ window.coralightFirebase = (function () {
 				if (a.m) {
 					monthCol(a.m).doc(me()).set(scoreRow(a, a.month)).catch(function () {});
 				}
+				if (a.pz > 0) {
+					puzzleCol(a.w).doc(me()).set(scoreRow(a, a.pz)).catch(function () {});
+				}
 				if (a.club) {
 					memberRef(a.club).update({ name: a.name, s: a.week, w: a.w, t: ts() }).catch(function () {});
 				}
@@ -1142,7 +1152,7 @@ window.coralightFirebase = (function () {
 						return { rows: rows, rank: at + 1 };
 					});
 				}
-				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : F.db.collection('lb_all'));
+				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : (a.kind === 'puzzle' ? puzzleCol(a.w) : F.db.collection('lb_all')));
 				return col.orderBy('score', 'desc').limit(50).get().then(function (snap) {
 					const rows = [];
 					snap.forEach(function (d) { rows.push(rowOf(d)); });
@@ -1229,7 +1239,7 @@ window.coralightFirebase = (function () {
 			// The player's place on a past week's (or month's) board:
 			// 'r:<rank>:<score>' or 'none'.
 			rank: function (a) {
-				const col = a.kind === 'month' ? monthCol(a.id) : weekCol(a.w !== undefined ? a.w : a.id);
+				const col = a.kind === 'month' ? monthCol(a.id) : (a.kind === 'puzzle' ? puzzleCol(a.w) : weekCol(a.w !== undefined ? a.w : a.id));
 				return col.doc(me()).get().then(function (d) {
 					const s = d.exists ? (Number(d.data().score) || 0) : 0;
 					if (!(s > 0)) {

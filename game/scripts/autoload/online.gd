@@ -60,7 +60,7 @@ var _save_left := SAVE_SEC
 var _dirty := false
 var _submit_left := 10.0
 var _since_submit := 9999.0
-var _sent := {"all": -1.0, "week": -1.0, "month": -1.0, "name": "", "p": ""}
+var _sent := {"all": -1.0, "week": -1.0, "month": -1.0, "puzzle": -1.0, "name": "", "p": ""}
 var _ref_looks := 40
 var _boards := {}
 var _after_ready_done := false
@@ -181,6 +181,7 @@ func after_ready() -> void:
 	check_invites()
 	check_week_prize()
 	check_season_prize()
+	check_puzzle_prize()
 	submit()
 	if in_club():
 		# Keeps the club's weekly total fresh on the club board.
@@ -229,7 +230,7 @@ func defaults() -> Dictionary:
 		"ref_done": false, "paid": {}, "exclusive": false, "week": -1, "week_score": 0.0, "all_best": 0.0,
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
-		"club": "", "club_name": ""}
+		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1}
 
 
 func load_data() -> void:
@@ -284,6 +285,7 @@ func track(now: float = -1.0) -> void:
 	if w != int(data["week"]):
 		data["week"] = w
 		data["week_score"] = 0.0
+		data["pz_score"] = 0.0
 		_dirty = true
 	var m := OnlineRules.month_id(t)
 	if m != int(data["month"]):
@@ -298,6 +300,13 @@ func track(now: float = -1.0) -> void:
 		_dirty = true
 	if str(data["seen_profile"]) != prof or float(data["seen_total"]) != total:
 		_dirty = true
+	# Puzzle points (stars won) this week, the same way.
+	var pz := float(Progress.stats.get("puzzle_stars", 0))
+	if str(data["seen_profile"]) == prof and float(data["seen_pz"]) >= 0.0 and pz > float(data["seen_pz"]):
+		data["pz_score"] = float(data["pz_score"]) + (pz - float(data["seen_pz"]))
+	if float(data["seen_pz"]) != pz:
+		data["seen_pz"] = pz
+		_dirty = true
 	data["seen_profile"] = prof
 	data["seen_total"] = total
 	if total > float(data["all_best"]):
@@ -311,6 +320,8 @@ func score(kind: String) -> float:
 			return float(data["week_score"])
 		"month":
 			return float(data["month_score"])
+		"puzzle":
+			return float(data["pz_score"])
 	return float(data["all_best"])
 
 
@@ -429,15 +440,15 @@ func _submit_now(done: Callable) -> void:
 	var name := board_name()
 	var p := profile_info()
 	var changed := score("all") != float(_sent["all"]) or score("week") != float(_sent["week"]) or name != str(_sent["name"]) \
-		or score("month") != float(_sent["month"]) or p != str(_sent["p"])
+		or score("month") != float(_sent["month"]) or p != str(_sent["p"]) or score("puzzle") != float(_sent["puzzle"])
 	if state != "ready" or not changed or _since_submit < SUBMIT_GAP_SEC or score("all") <= 0.0:
 		if done.is_valid():
 			done.call(false)
 		return
 	_since_submit = 0.0
-	var sent := {"all": score("all"), "week": score("week"), "month": score("month"), "name": name, "p": p}
+	var sent := {"all": score("all"), "week": score("week"), "month": score("month"), "puzzle": score("puzzle"), "name": name, "p": p}
 	var arg := JSON.stringify({"name": name, "a": JSON.stringify(Settings.avatar), "all": sent["all"], "week": sent["week"],
-		"w": int(data["week"]), "month": sent["month"], "m": int(data["month"]), "p": p, "club": str(data["club"])})
+		"w": int(data["week"]), "month": sent["month"], "m": int(data["month"]), "p": p, "club": str(data["club"]), "pz": sent["puzzle"]})
 	_request("submit", arg, func(res: String):
 		if res == "ok":
 			_sent = sent
@@ -446,7 +457,7 @@ func _submit_now(done: Callable) -> void:
 
 
 ## The board: done.call({"ok", "rows": [{uid, name, score, a, p, n, you}], "rank"}).
-## kind: "week", "month", "all", "friends" (my inviter and who joined with
+## kind: "week", "month", "all", "puzzle" (stars won in the puzzle this week), "friends" (my inviter and who joined with
 ## my link) or "clubs" (this week's clubs: uid = club id, n = members).
 func fetch_board(kind: String, done: Callable) -> void:
 	if state != "ready":
@@ -648,6 +659,34 @@ func on_week_rank(week: int, res: String) -> void:
 	var prize := OnlineRules.week_prize(rank, score)
 	if not prize.is_empty():
 		_grant({"kind": "week", "pearls": int(prize["pearls"]), "boost": float(prize["boost"]), "n": rank})
+	save_data()
+
+
+# --- Puzzle race ----------------------------------------------------------------------------------
+
+## Last week's place on the puzzle board pays a small prize, once.
+func check_puzzle_prize(now: float = -1.0) -> void:
+	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var last := OnlineRules.week_id(t) - 1
+	if int(data["pz_prize"]) >= last:
+		return
+	_request("rank", JSON.stringify({"kind": "puzzle", "w": last}), func(res: String): on_puzzle_rank(last, res))
+
+
+func on_puzzle_rank(week: int, res: String) -> void:
+	if res == "none":
+		data["pz_prize"] = week
+		_dirty = true
+		return
+	if not res.begins_with("r:"):
+		return
+	var parts := res.split(":")
+	if parts.size() < 3:
+		return
+	data["pz_prize"] = week
+	var pearls := OnlineRules.puzzle_prize(parts[1].to_int(), parts[2].to_float())
+	if pearls > 0:
+		_grant({"kind": "puzzle", "pearls": pearls, "n": parts[1].to_int()})
 	save_data()
 
 

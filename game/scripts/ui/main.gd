@@ -384,6 +384,8 @@ func _after_title() -> void:
 	Platform.gameplay_start()
 	if ask_nick_at_start and Profiles.player_name() == "":
 		ask_nickname()
+	if GuideView.news_due():
+		_news.append("whatsnew")
 	var report := GameState.take_offline_report()
 	if not report.is_empty():
 		_open_offline(report)
@@ -1265,6 +1267,9 @@ func _show_next_news() -> void:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")
+	if id == "whatsnew":
+		GuideView.open(self, true)
+		return
 	var opener := Callable()
 	if id in ["daily", "quests", "puzzle", "museum", "shop", "fishing"]:
 		opener = func(): open_feature(id)
@@ -1352,13 +1357,16 @@ func _puzzle_rewards(result: Dictionary) -> Array:
 	return lines
 
 
-func _on_puzzle_finished(_result: Dictionary) -> void:
+func _on_puzzle_finished(result: Dictionary) -> void:
 	# A natural pause: a short ad may play first (Platform decides). The
 	# rewards were given when the level ended; then they fly home.
 	Platform.request_midgame(func() -> void:
 		if not _last_puzzle_reward.is_empty():
 			celebrate({"coins": _last_puzzle_reward["coins"], "pearls": _last_puzzle_reward["pearls"]}, get_viewport_rect().size / 2.0)
-			_last_puzzle_reward = {})
+			_last_puzzle_reward = {}
+		if bool(result.get("board", false)):
+			Online.submit_soon()
+			OnlineView.open_board(self, "puzzle"))
 
 
 # --- Players ------------------------------------------------------------------------------

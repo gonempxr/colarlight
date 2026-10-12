@@ -107,3 +107,85 @@ MONTH_9,September,Сентябрь,Septiembre,九月
 MONTH_10,October,Октябрь,Octubre,十月
 MONTH_11,November,Ноябрь,Noviembre,十一月
 MONTH_12,December,Декабрь,Diciembre,十二月
+ONLINE_PUZZLE,Puzzle,Пазл,Puzle,拼图
+PUZZLE_BOARD_HINT,"Stars won in the puzzle this week (1-3 per level, fewer moves = more stars). Prizes on Monday: #1 – 150 pearls, #2-3 – 100, top 10 – 50, everyone who won – 10.","Звёзды, выигранные в пазле за неделю (1–3 за уровень: чем меньше ходов, тем больше звёзд). Призы в понедельник: 1 место – 150 жемчуга, 2–3 – 100, топ-10 – 50, всем, кто выиграл, – 10.","Estrellas ganadas en el puzle esta semana (1-3 por nivel, menos movimientos = más estrellas). Premios el lunes: 1.º – 150 perlas, 2.º-3.º – 100, top 10 – 50, todos los que ganaron – 10.",本周在拼图中获得的星星（每关1-3颗，步数越少星越多）。周一发奖：第1名 – 150 珍珠，第2-3名 – 100，前10名 – 50，所有获胜者 – 10。
+THANKS_PUZZLE_TITLE,Puzzle week results!,Итоги недели пазлов!,¡Resultados de la semana del puzle!,拼图周结果！
+THANKS_PUZZLE,You took place #%d on the puzzle board!,Ты занял %d место в таблице пазлов!,¡Quedaste en el puesto %d del puzle!,你在拼图榜上获得第 %d 名！
+THANKS_PUZZLE_ALL,Thanks for playing puzzles this week!,"Спасибо, что играл в пазлы на этой неделе!",¡Gracias por jugar puzles esta semana!,感谢你本周玩拼图！
+PZ_BOARD,Puzzle leaderboard,Таблица пазлов,Clasificación del puzle,拼图排行榜
+GUIDE_TITLE,Everything in the game,Всё об игре,Todo el juego,游戏全部功能
+GUIDE_INTRO,Every feature in one place: what it is and where to find it.,Все функции в одном месте: что это и где найти.,Todas las funciones en un sitio: qué son y dónde están.,所有功能都在这里：是什么、在哪里。
+GUIDE_NEWS_TITLE,What's new,Что нового,Novedades,新内容
+GUIDE_NEWS_HINT,New things to try! Everything is also in Settings → Everything in the game.,Новое в игре! А всё остальное — в Настройки → «Всё об игре».,¡Cosas nuevas! Todo lo demás está en Ajustes → «Todo el juego».,新功能来了！其余全部功能在 设置 → 游戏全部功能。
+GUIDE_GROUP_BASE,Your business,Твоё дело,Tu negocio,你的事业
+GUIDE_GROUP_FUN,Things to do,Чем заняться,Qué hacer,可以做的事
+GUIDE_GROUP_ONLINE,With other players,С другими игроками,Con otros jugadores,和其他玩家一起
+HINT_CHALLENGE,The challenge of the day is done: take your pearls!,Задание дня выполнено: забери жемчуг!,¡Desafío del día hecho: recoge tus perlas!,每日挑战完成了：领取珍珠吧！
+HINT_SEE_ACH,Look at your achievements: badges give pearls!,Загляни в достижения: за значки дают жемчуг!,Mira tus logros: ¡las insignias dan perlas!,看看你的成就：徽章能换珍珠！
+HINT_SEE_CHALLENGE,Every day there is a new challenge for everyone: it's on top of the quests.,Каждый день новое задание для всех: оно сверху в «Заданиях».,Cada día hay un desafío nuevo para todos: está arriba en las misiones.,每天都有一个大家相同的新挑战：在任务列表最上方。
+HINT_SEE_BOARD,Race real players this week: the leaderboard!,Соревнуйся с настоящими игроками: таблица лидеров!,¡Compite con jugadores reales esta semana: la clasificación!,和真实玩家比赛：排行榜！
+HINT_SEE_PUZZLE_BOARD,Puzzle stars count in a weekly race with prizes!,Звёзды из пазла идут в недельную гонку с призами!,¡Las estrellas del puzle cuentan en una carrera semanal con premios!,拼图星星计入每周竞赛，有奖励！
+HINT_SEE_CLUBS,Join a club or make your own with friends!,Вступи в клуб или создай свой с друзьями!,¡Únete a un club o crea el tuyo con amigos!,加入俱乐部，或和朋友创建一个！
+GUIDE_MINE,Mine,Шахта,Mina,矿场
+GUIDE_MINE_D,Divers bring ore up from the dive sites. Upgrade sites and open deeper ones.,Ныряльщики добывают руду на площадках. Улучшай их и открывай глубже.,Los buzos sacan mineral. Mejora los sitios y abre otros más hondos.,潜水员从潜点采矿。升级潜点，开启更深的地方。
+GUIDE_MANAGERS,Managers,Управляющие,Gerentes,经理
+GUIDE_MANAGERS_D,"Hire a manager and that part works by itself, even when you are away.","Найми управляющего — и эта часть работает сама, даже когда тебя нет.","Contrata un gerente y esa parte funciona sola, incluso sin ti.",雇佣经理，这部分就会自动运转，离线也一样。
+GUIDE_FACTORY,Factory,Фабрика,Fábrica,工厂
+GUIDE_FACTORY_D,"Boats bring ore to the factory, it turns ore into coins.","Лодки везут руду на фабрику, она превращает руду в монеты.","Los barcos llevan el mineral a la fábrica, que lo convierte en monedas.",船把矿石运到工厂，工厂把它变成金币。
+GUIDE_OFFICE,Office,Офис,Oficina,办公室
+GUIDE_OFFICE_D,The vault with your coins and the decor of your office.,Сейф с монетами и украшения офиса.,La caja fuerte con tus monedas y la decoración.,存放金币的金库和办公室装饰。
+GUIDE_EVO,Gear,Снаряжение,Equipo,装备
+GUIDE_EVO_D,Better gear and skins for your divers: everything goes faster.,Лучшее снаряжение и скины для ныряльщиков: всё быстрее.,Mejor equipo y aspectos para tus buzos: todo va más rápido.,给潜水员更好的装备和皮肤：一切更快。
+GUIDE_MAP,Worlds,Миры,Mundos,世界
+GUIDE_MAP_D,"Ocean, Volcano, Acid swamp and Moon: travel on for bigger income.","Океан, Вулкан, Кислотное болото и Луна: двигайся дальше ради дохода.","Océano, Volcán, Pantano ácido y Luna: avanza para ganar más.",海洋、火山、酸沼和月球：前进获得更多收入。
+GUIDE_HINT,Lightbulb,Лампочка,Bombilla,灯泡
+GUIDE_HINT_D,Don't know what to do? Tap the lightbulb: it shows the best next step.,"Не знаешь, что делать? Нажми лампочку — она покажет лучший шаг.",¿No sabes qué hacer? Toca la bombilla: te muestra el mejor paso.,不知道做什么？点灯泡，它会告诉你下一步。
+GUIDE_DAILY,Daily gift,Подарок дня,Regalo diario,每日礼物
+GUIDE_DAILY_D,A present every day.,Подарок каждый день.,Un regalo cada día.,每天一份礼物。
+GUIDE_STREAK,Login streak,Серия входов,Racha diaria,连续登录
+GUIDE_STREAK_D,Come every day: the flame grows and gifts get bigger.,"Заходи каждый день: огонёк растёт, подарки больше.",Entra cada día: la llama crece y los regalos también.,每天来：火焰变大，礼物更丰富。
+GUIDE_CHESTS,Treasure bubbles,Пузыри с сокровищами,Burbujas del tesoro,宝藏泡泡
+GUIDE_CHESTS_D,Sometimes a chest floats by in a bubble: tap it!,Иногда мимо проплывает сундук в пузыре: нажми на него!,A veces pasa un cofre en una burbuja: ¡tócalo!,有时宝箱会漂过：点它！
+GUIDE_QUESTS,Quests,Задания,Misiones,任务
+GUIDE_QUESTS_D,Little goals in every world that give pearls.,Маленькие цели в каждом мире за жемчуг.,Pequeñas metas en cada mundo que dan perlas.,每个世界的小目标，奖励珍珠。
+GUIDE_CHALLENGE,Challenge of the day,Задание дня,Desafío del día,每日挑战
+GUIDE_CHALLENGE_D,One challenge for all players each day: 15 pearls.,Одно задание для всех игроков в день: 15 жемчуга.,Un desafío al día para todos: 15 perlas.,每天所有玩家同一个挑战：15珍珠。
+GUIDE_PUZZLE,Puzzle,Пазл,Puzle,拼图
+GUIDE_PUZZLE_D,Match 3 and win artifacts for the museum. Every world has its own puzzle.,Собери 3 в ряд и выиграй артефакты для музея. В каждом мире свой пазл.,Junta 3 y gana artefactos para el museo. Cada mundo tiene su puzle.,三消赢取博物馆文物。每个世界的拼图都不同。
+GUIDE_MUSEUM,Museum,Музей,Museo,博物馆
+GUIDE_MUSEUM_D,Ancient artifacts: each one boosts your income forever.,Древние артефакты: каждый навсегда увеличивает доход.,Artefactos antiguos: cada uno sube tus ingresos para siempre.,古代文物：每件永久提升收入。
+GUIDE_FISHING,Fishing,Рыбалка,Pesca,钓鱼
+GUIDE_FISHING_D,Catch fish and sell them. Better rods catch rarer fish.,Лови рыбу и продавай. Удочки получше ловят редкую рыбу.,Pesca y vende. Mejores cañas pescan peces más raros.,钓鱼并出售。更好的鱼竿钓到稀有鱼。
+GUIDE_SHOP,Wardrobe,Гардероб,Armario,衣橱
+GUIDE_SHOP_D,"Pets, hats, outfits and boat paint for pearls.","Питомцы, шапки, одежда и краска для лодки за жемчуг.","Mascotas, gorros, ropa y pintura de barco por perlas.",用珍珠买宠物、帽子、服装和船漆。
+GUIDE_RIVALS,Rivals League,Лига соперников,Liga de rivales,对手联赛
+GUIDE_RIVALS_D,A weekly league with sea characters (computer rivals).,Недельная лига с морскими персонажами (соперники-компьютер).,Una liga semanal con personajes del mar (rivales de la computadora).,与海洋角色（电脑对手）的每周联赛。
+GUIDE_ACH,Achievements,Достижения,Logros,成就
+GUIDE_ACH_D,"21 badges: bronze, silver, gold. Each gives pearls once.","21 значок: бронза, серебро, золото. За каждый — жемчуг.","21 insignias: bronce, plata, oro. Cada una da perlas.",21枚徽章：铜、银、金。每枚奖励珍珠。
+GUIDE_BOARD,Leaderboard,Таблица лидеров,Clasificación,排行榜
+GUIDE_BOARD_D,Real players. The weekly race pays prizes every Monday.,Настоящие игроки. Гонка недели с призами каждый понедельник.,Jugadores reales. La carrera semanal da premios cada lunes.,真实玩家。每周竞赛每周一发奖。
+GUIDE_SEASON,Seasons,Сезоны,Temporadas,赛季
+GUIDE_SEASON_D,A season is a month: big prizes on the 1st.,Сезон — это месяц: большие призы 1-го числа.,Una temporada es un mes: grandes premios el día 1.,一个赛季是一个月：每月1日发大奖。
+GUIDE_PUZZLE_BOARD,Puzzle leaderboard,Таблица пазлов,Clasificación del puzle,拼图排行榜
+GUIDE_PUZZLE_BOARD_D,"Puzzle stars this week, prizes on Monday.","Звёзды из пазла за неделю, призы в понедельник.","Estrellas del puzle esta semana, premios el lunes.",本周拼图星星，周一发奖。
+GUIDE_TITLES,Titles,Титулы,Títulos,称号
+GUIDE_TITLES_D,"Top 10 of the week wear King, Master or Star next week.","Топ-10 недели носят титул Король, Мастер или Звезда.","El top 10 lleva Rey, Maestro o Estrella la semana siguiente.",每周前10名下周获得国王、大师或之星称号。
+GUIDE_CLUBS,Clubs,Клубы,Clubes,俱乐部
+GUIDE_CLUBS_D,Up to 30 players: coins add up for the club board.,До 30 игроков: монеты складываются в таблицу клубов.,Hasta 30 jugadores: las monedas suman para el club.,最多30人：金币合计进入俱乐部榜。
+GUIDE_FRIENDS,Invite friends,Пригласи друзей,Invita amigos,邀请好友
+GUIDE_FRIENDS_D,Pearls for each friend who comes with your link.,Жемчуг за каждого друга по твоей ссылке.,Perlas por cada amigo que llega con tu enlace.,每位通过你链接加入的好友都奖励珍珠。
+GUIDE_X2DAY,Saturday x2,Суббота x2,Sábado x2,周六双倍
+GUIDE_X2DAY_D,Every Saturday everyone earns double coins.,Каждую субботу у всех двойные монеты.,Cada sábado todos ganan monedas dobles.,每周六所有人金币翻倍。
+GUIDE_PROMO,Promo codes,Промокоды,Códigos promo,兑换码
+GUIDE_PROMO_D,Got a code? Enter it for a gift.,Есть код? Введи его и получи подарок.,¿Tienes un código? Escríbelo y recibe un regalo.,有兑换码？输入领取礼物。
+GUIDE_EVO_LOCK,Opens a bit later in the tutorial.,"Откроется чуть позже, по ходу обучения.",Se abre un poco más tarde en el tutorial.,在教程中稍后开启。
+GUIDE_DAILY_LOCK,Opens in the first minute of play.,Откроется в первую минуту игры.,Se abre en el primer minuto.,游戏第一分钟内开启。
+GUIDE_STREAK_LOCK,Opens with the daily gift.,Откроется вместе с подарком дня.,Se abre con el regalo diario.,与每日礼物一起开启。
+GUIDE_CHESTS_LOCK,Opens after a couple of minutes.,Откроется через пару минут игры.,Se abre tras un par de minutos.,几分钟后开启。
+GUIDE_QUESTS_LOCK,Opens when you hire the boat manager.,"Откроется, когда наймёшь управляющего лодкой.",Se abre al contratar al gerente del barco.,雇佣船经理后开启。
+GUIDE_CHALLENGE_LOCK,Opens with the quests.,Откроется вместе с заданиями.,Se abre con las misiones.,与任务一起开启。
+GUIDE_PUZZLE_LOCK,Opens when you open the 2nd dive site.,"Откроется, когда откроешь 2-ю площадку.",Se abre al abrir el 2.º sitio de buceo.,开启第2个潜点后开启。
+GUIDE_MUSEUM_LOCK,Opens with your first artifact piece from the puzzle.,Откроется с первым кусочком артефакта из пазла.,Se abre con tu primera pieza de artefacto del puzle.,获得第一块拼图文物碎片后开启。
+GUIDE_FISHING_LOCK,Opens when you open the 3rd dive site.,"Откроется, когда откроешь 3-ю площадку.",Se abre al abrir el 3.er sitio de buceo.,开启第3个潜点后开启。
+GUIDE_SHOP_LOCK,Opens when you collect a few pearls.,"Откроется, когда соберёшь немного жемчуга.",Se abre al reunir algunas perlas.,收集一些珍珠后开启。
+GUIDE_RIVALS_LOCK,Opens with the quests.,Откроется вместе с заданиями.,Se abre con las misiones.,与任务一起开启。

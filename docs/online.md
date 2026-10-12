@@ -141,6 +141,15 @@ service cloud.firestore {
         && request.time.toMillis() < (int(weekId) * 7 + 11) * 86400000;
     }
 
+    // The weekly puzzle board (stars won in the puzzle), like the weeks.
+    match /puzzleweeks/{weekId}/scores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid) && goodScore()
+        && weekId.matches('^[0-9]{1,6}$')
+        && request.time.toMillis() >= (int(weekId) * 7 + 4) * 86400000
+        && request.time.toMillis() < (int(weekId) * 7 + 11) * 86400000;
+    }
+
     // Seasons: one calendar month (UTC); only the current month is written.
     match /months/{monthId}/scores/{uid} {
       allow read: if signedIn();

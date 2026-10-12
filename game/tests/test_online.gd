@@ -436,6 +436,48 @@ func _initialize() -> void:
 	for kk in dc.KINDS:
 		_check(TranslationServer.translate("DC_" + str(kk[0]).to_upper()) != "DC_" + str(kk[0]).to_upper(), "challenge text %s" % kk[0])
 
+	# --- Puzzle board --------------------------------------------------------------------------
+	online.track()
+	var pz0: float = online.score("puzzle")
+	pr.stats["puzzle_stars"] = int(pr.stats.get("puzzle_stars", 0)) + 3
+	online.track()
+	_check(is_equal_approx(online.score("puzzle"), pz0 + 3.0), "puzzle stars count for the week")
+	online._since_submit = 9999.0
+	online.submit()
+	_check(nf.puzzle_weeks.get(int(online.data["week"]), {}).has(nf.uid), "puzzle points reach the puzzle board")
+	var pzb := [{}]
+	online._boards.clear()
+	online.fetch_board("puzzle", func(b): pzb[0] = b)
+	_check(pzb[0]["ok"] and pzb[0]["rows"].size() == 1 and pzb[0]["rows"][0]["you"], "the puzzle board shows me")
+	_check(OnlineRules.puzzle_prize(1, 3.0) == 150 and OnlineRules.puzzle_prize(3, 3.0) == 100 and OnlineRules.puzzle_prize(10, 1.0) == 50
+		and OnlineRules.puzzle_prize(0, 1.0) == 10 and OnlineRules.puzzle_prize(1, 0.0) == 0, "puzzle prizes")
+	nf.puzzle_weeks[now_w - 1] = {"A": {"name": "a", "score": 30.0, "a": ""}, nf.uid: {"name": "me", "score": 12.0, "a": ""}}
+	online.data["pz_prize"] = -1
+	online.pending_thanks.clear()
+	var pp0: int = pr.pearls
+	online.check_puzzle_prize()
+	_check(pr.pearls == pp0 + 100 and online.pending_thanks.size() == 1 and online.pending_thanks[0]["kind"] == "puzzle", "2nd on last week's puzzle board: 100 pearls")
+	online.check_puzzle_prize()
+	_check(pr.pearls == pp0 + 100, "the puzzle prize is paid once")
+	online.pending_thanks.clear()
+	online.data["week"] = int(online.data["week"]) - 1
+	online.track()
+	_check(online.score("puzzle") == 0.0, "a new week starts the puzzle board from zero")
+
+	# --- The guide: every entry has words ------------------------------------------------------
+	var guide_src := FileAccess.get_file_as_string("res://scripts/ui/guide_view.gd")
+	var rx := RegEx.create_from_string('\\["([a-z0-9_]+)", "[a-z]+", "(base|fun|online)"')
+	var gids := rx.search_all(guide_src).map(func(r): return r.get_string(1)).filter(func(g): return g != "base")
+	_check(gids.size() >= 25, "the guide lists every feature (%d)" % gids.size())
+	for gid in gids:
+		var key: String = "GUIDE_" + str(gid).to_upper()
+		_check(TranslationServer.translate(key) != key and TranslationServer.translate(key + "_D") != key + "_D", "guide words for %s" % gid)
+	for lid in ["evo", "daily", "streak", "chests", "quests", "challenge", "puzzle", "museum", "fishing", "shop", "rivals"]:
+		var lk: String = "GUIDE_" + str(lid).to_upper() + "_LOCK"
+		_check(TranslationServer.translate(lk) != lk, "guide lock words for %s" % lid)
+	for hk in ["HINT_CHALLENGE", "HINT_SEE_ACH", "HINT_SEE_CHALLENGE", "HINT_SEE_BOARD", "HINT_SEE_PUZZLE_BOARD", "HINT_SEE_CLUBS", "PZ_BOARD", "ONLINE_PUZZLE"]:
+		_check(TranslationServer.translate(hk) != hk, "words for %s" % hk)
+
 	DirAccess.remove_absolute(online.SAVE_PATH)
 	print("test_online: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

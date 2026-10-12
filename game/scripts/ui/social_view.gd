@@ -91,6 +91,7 @@ static func month_name(id: int) -> String:
 # --- Achievements ---------------------------------------------------------------------------
 
 static func open_achievements(main: Node) -> void:
+	GuideView.mark("ach")
 	main._modal.open(func(m): achievements(m, main))
 
 
@@ -184,6 +185,7 @@ static func profile(m: Modal, row: Dictionary) -> void:
 # --- Clubs ---------------------------------------------------------------------------------
 
 static func open_clubs(main: Node, show_id := "") -> void:
+	GuideView.mark("clubs")
 	_club = {}
 	_clubs_board = {}
 	_club_msg = ""
@@ -393,6 +395,7 @@ static func club_rows(m: Modal, main: Node, board: Dictionary) -> void:
 
 ## The card on top of the quests list.
 static func daily_card(m: Modal, main: Node) -> void:
+	GuideView.mark("challenge")
 	DailyChallenge.refresh()
 	var kind := DailyChallenge.kind()
 	var p := DailyChallenge.progress()

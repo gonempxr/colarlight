@@ -33,6 +33,8 @@ static func profile_buttons(m: Modal, main: Node) -> void:
 	ach.icon = Icons.get_icon("star", 36)
 	var club := m.button(t("CLUB_MY") if Online.in_club() else t("CLUB_FIND"), func(): Sfx.play("click"); SocialView.open_clubs(main), &"Button")
 	club.icon = Icons.get_icon("people", 36)
+	var all := m.button(t("GUIDE_TITLE"), func(): Sfx.play("click"); GuideView.open(main), &"PurpleButton")
+	all.icon = Icons.get_icon("quests", 36)
 
 
 ## Settings, the player section: promo code and invites.
@@ -52,7 +54,9 @@ static func rivals_link(m: Modal, main: Node) -> void:
 	b.icon = Icons.get_icon("star", 34)
 
 
-static func open_board(main: Node) -> void:
+static func open_board(main: Node, want := "") -> void:
+	if want != "":
+		tab = want
 	_boards = {}
 	main._modal.open(func(m): board(m, main))
 
@@ -94,7 +98,7 @@ static func board(m: Modal, main: Node) -> void:
 		return
 	# Two rows of tabs: the races (week, season, all time), then friends and clubs.
 	for line in [[["week", "ONLINE_WEEK"], ["month", "ONLINE_MONTH"], ["all", "ONLINE_ALL"]],
-			[["friends", "ONLINE_FRIENDS"], ["clubs", "ONLINE_CLUBS"]]]:
+			[["puzzle", "ONLINE_PUZZLE"], ["friends", "ONLINE_FRIENDS"], ["clubs", "ONLINE_CLUBS"]]]:
 		var tabs := HBoxContainer.new()
 		tabs.add_theme_constant_override("separation", 8)
 		for tb in line:
@@ -112,9 +116,12 @@ static func board(m: Modal, main: Node) -> void:
 			tabs.add_child(b)
 		Views.fit_button_row(tabs, 22)
 		m.add(tabs)
+	GuideView.mark({"week": "board", "month": "season", "puzzle": "puzzle_board", "friends": "friends", "clubs": "clubs", "all": "board"}.get(tab, "board"))
 	match tab:
 		"week":
 			m.text(t("ONLINE_WEEK_HINT"), 18, Art.INK_SOFT)
+		"puzzle":
+			m.text(t("PUZZLE_BOARD_HINT"), 18, Art.INK_SOFT)
 		"month":
 			m.text(t("SEASON_HINT") % SocialView.month_name(int(Online.data["month"])), 18, Art.INK_SOFT)
 		"friends":
@@ -158,7 +165,7 @@ static func board(m: Modal, main: Node) -> void:
 	for i in rows.size():
 		var r: Dictionary = rows[i]
 		mine_shown = mine_shown or r["you"]
-		var card := _row(i + 1, r)
+		var card := _row(i + 1, r, "star" if kind == "puzzle" else "coin")
 		SocialView.on_tap(card, func(): SocialView.open_profile(main, r))
 		list.add_child(card)
 	if rows.size() <= 1 and kind == "friends":
@@ -173,7 +180,7 @@ static func board(m: Modal, main: Node) -> void:
 		var rank := int(got.get("rank", 0))
 		if rank > 0:
 			m.text(t("ONLINE_YOUR_PLACE") % rank, 21, Art.INK)
-			m.add(_row(rank, me))
+			m.add(_row(rank, me, "star" if kind == "puzzle" else "coin"))
 		else:
 			m.text(t("ONLINE_YOUR_SCORE") % NumFormat.short(Online.score(kind)), 21, Art.INK)
 	var name_row := m.row(10)
@@ -299,7 +306,7 @@ static func _center(l: Label) -> Label:
 	return l
 
 
-static func _row(place: int, row: Dictionary) -> Control:
+static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	var you: bool = row["you"]
 	var card := Views.card(Color("ffe9a0") if you else Color("fffaf0"))
 	var sb: ToonBox = card.get_theme_stylebox("panel")
@@ -338,7 +345,7 @@ static func _row(place: int, row: Dictionary) -> Control:
 	var score := Views.label(NumFormat.short(float(row["score"])), 22, Color("1c7fb8") if not you else Art.INK, true)
 	score.autowrap_mode = TextServer.AUTOWRAP_OFF
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	h.add_child(Views.icon("coin", 30))
+	h.add_child(Views.icon(unit, 30))
 	h.add_child(score)
 	return card
 
@@ -552,14 +559,16 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 	m.add(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		if kind == "founder":
 			FounderArt.medal(ci, s / 2.0 + Vector2(0, 18), 54.0, n, tt)
-		elif kind == "week" or kind == "season":
+		elif kind == "week" or kind == "season" or kind == "puzzle":
 			FounderArt.podium(ci, s / 2.0 + Vector2(0, 14), 1.7, tt)
 		elif kind in ["join", "inviter"]:
 			FounderArt.letter(ci, s / 2.0 + Vector2(0, 6), 1.7, tt)
 		else:
 			_draw_ticket(ci, s / 2.0, tt), Vector2(0, 140), true))
-	m.title(t("THANKS_WEEK_TITLE") if kind == "week" else (t("THANKS_SEASON_TITLE") if kind == "season" else t("THANKS_TITLE")))
+	m.title({"week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE")}.get(kind, t("THANKS_TITLE")))
 	match kind:
+		"puzzle":
+			m.text(t("THANKS_PUZZLE") % n if n > 0 else t("THANKS_PUZZLE_ALL"), 25, Art.GOLD_DARK.darkened(0.2))
 		"season":
 			m.text(t("THANKS_SEASON") % n if n > 0 else t("THANKS_SEASON_ALL"), 25, Art.GOLD_DARK.darkened(0.2))
 		"week":
@@ -572,7 +581,7 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 			m.text(t("THANKS_JOIN"), 24, Color("1c7fb8"))
 		"inviter":
 			m.text(t("THANKS_INVITER") % n, 24, Color("1c7fb8"))
-	if kind != "week" and kind != "season":
+	if not kind in ["week", "season", "puzzle"]:
 		var c := Views.card(Color("fff1c2"))
 		var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
 		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

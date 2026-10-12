@@ -16,6 +16,8 @@ static func pick(main: Node) -> Dictionary:
 	var world: World = main._world
 	if Progress.has_feature("daily") and Progress.daily_ready():
 		return _hint("daily", t("HINT_DAILY"), true, Callable(), "daily")
+	if Progress.has_feature("quests") and DailyChallenge.complete() and not DailyChallenge.claimed():
+		return _hint("challenge", t("HINT_CHALLENGE"), true, Callable(), "quests")
 	if Progress.has_feature("quests") and Progress.quests_ready() > 0:
 		return _hint("quests", t("HINT_QUESTS"), true, Callable(), "quests")
 	# Coins waiting in the vault (no accountant yet).
@@ -66,6 +68,11 @@ static func pick(main: Node) -> Dictionary:
 		return _hint("fishing", t("HINT_FISHING"), false, Callable(), "fishing")
 	if Progress.has_feature("puzzle") and int(Progress.stats.get("puzzles_won", 0)) < 3:
 		return _hint("puzzle", t("HINT_PUZZLE"), false, Callable(), "puzzle")
+	# Things the player has never opened: one at a time, each until seen.
+	for g in [["ach", true], ["challenge", Progress.has_feature("quests")], ["board", Online.present()],
+			["puzzle_board", Online.present() and Progress.has_feature("puzzle")], ["clubs", Online.present()]]:
+		if g[1] and not GuideView.seen(str(g[0])):
+			return _hint("see_" + str(g[0]), t("HINT_SEE_" + str(g[0]).to_upper()), false, Callable(), str(g[0]))
 	for k in GameState.AUTOMATED:
 		if gs.is_open(k) and not gs.has_manager(k):
 			var card: StageCard = main.stage_card(k)
@@ -137,19 +144,32 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 	var open: String = h["open"]
 	var point: Callable = h["point"]
 	if open != "":
-		m.button(t("OPEN_IT"), func():
+		var go := func():
 			Sfx.play("click")
 			m.close()
-			if open == "map":
-				main.open_map()
-			else:
-				main.open_feature(open), &"GoldButton")
+			match open:
+				"map":
+					main.open_map()
+				"ach":
+					SocialView.open_achievements(main)
+				"clubs":
+					SocialView.open_clubs(main)
+				"board":
+					OnlineView.open_board(main, "week")
+				"puzzle_board":
+					OnlineView.open_board(main, "puzzle")
+				_:
+					main.open_feature(open)
+		m.button(t("OPEN_IT"), go, &"GoldButton")
 	elif point.is_valid():
 		m.button(t("HINT_SHOW"), func():
 			Sfx.play("click")
 			m.close()
 			main.show_room(int(h.get("room", 0)))
 			main._tutor.show_hint(point, h["text"]), &"GoldButton")
+	# Everything in the game, in one list.
+	var all := m.button(t("GUIDE_TITLE"), func(): Sfx.play("click"); m.close(); GuideView.open(main), &"PurpleButton")
+	all.icon = Icons.get_icon("quests", 34)
 	# Automation checklist.
 	var card := Views.card(Color("eaf6ff"))
 	var v := VBoxContainer.new()

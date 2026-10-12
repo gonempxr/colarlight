@@ -454,6 +454,8 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 			out["piece"] = id
 			out["level"] = add_piece(id)
 		stats["puzzles_won"] = int(stats.get("puzzles_won", 0)) + 1
+		# Puzzle points for the weekly puzzle board: the stars of the win.
+		stats["puzzle_stars"] = int(stats.get("puzzle_stars", 0)) + clampi(stars, 1, 3)
 		puzzle_level += 1
 		_count("puzzle", 1)
 	GameState.add_coins(out["coins"])

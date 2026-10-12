@@ -125,6 +125,8 @@ static func build(m: Modal, main: Node) -> void:
 			sign_out.reparent(who, false)
 	var players := m.button("%s: %s" % [t("PLAYERS"), Profiles.player_name() if Profiles.player_name() != "" else "?"],
 			func(): Sfx.play("click"); main.open_players(), &"PurpleButton")
+	var guide := m.button(t("GUIDE_TITLE"), func(): Sfx.play("click"); GuideView.open(main), &"GoldButton")
+	guide.icon = Icons.get_icon("quests", 32)
 	var replay := m.button(t("REPLAY_TUTORIAL"), func():
 		Sfx.play("click")
 		Progress.tutorial_step = 0
@@ -141,7 +143,7 @@ static func build(m: Modal, main: Node) -> void:
 			confirm[0] = true
 			reset.text = t("RESET_CONFIRM"), &"RedButton")
 	OnlineView.settings_buttons(who, m, main)
-	for b: Button in [players, replay, reset]:
+	for b: Button in [guide, players, replay, reset]:
 		b.reparent(who, false)
 	m.text(t("CREDITS"), 16, Art.INK_SOFT)
 	m.text("Coralight %s" % ProjectSettings.get_setting("application/config/version", ""), 15, Art.INK_SOFT)

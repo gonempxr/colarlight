@@ -1427,6 +1427,15 @@ func _show_win() -> void:
 	_fill_rewards()
 	var collect := _button(box, tr("PZ_COLLECT"), &"GoldButton", func(): Sfx.play("coins"); _finish(result), 92)
 	collect.name = "Collect"
+	if Online.present():
+		# Collect, then see the week's puzzle board (stars won count).
+		var board := _button(box, tr("PZ_BOARD"), &"CreamButton", func():
+			Sfx.play("coins")
+			var r := result.duplicate()
+			r["board"] = true
+			_finish(r), 70)
+		board.icon = Icons.get_icon("star", 30)
+		board.name = "Board"
 	_pop_panel()
 	Sfx.play("milestone")
 	Sfx.play("voice_woohoo")

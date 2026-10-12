@@ -257,6 +257,23 @@ static func season_prize(rank: int, score: float) -> int:
 	return SEASON_PARTICIPATION
 
 
+# --- Puzzle race (stars won in the puzzle in a week) ---------------------------------
+
+## [best place, pearls]; everyone who won a puzzle that week gets the last.
+const PUZZLE_PRIZES := [[1, 150], [3, 100], [10, 50]]
+const PUZZLE_PARTICIPATION := 10
+
+
+static func puzzle_prize(rank: int, score: float) -> int:
+	if score <= 0.0:
+		return 0
+	if rank > 0:
+		for p in PUZZLE_PRIZES:
+			if rank <= int(p[0]):
+				return int(p[1])
+	return PUZZLE_PARTICIPATION
+
+
 # --- Titles (the week after a good weekly place) ------------------------------------
 
 ## 3 = king (1st), 2 = master (2nd-3rd), 1 = star (4th-10th), 0 = none.

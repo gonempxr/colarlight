@@ -7,6 +7,8 @@ var uid := "Me000001abcdefghijklmnopqrst"
 var all := {}
 var weeks := {}
 var months := {}
+## Week -> the puzzle board (stars won that week).
+var puzzle_weeks := {}
 ## Club id -> {name, owner, m: {uid: {name, score, w}}}; week -> {club id: {name, s, n}}.
 var clubs := {}
 var club_weeks := {}
@@ -49,6 +51,10 @@ func request(method: String, arg: String) -> String:
 				var mo: Dictionary = months.get(int(a["m"]), {})
 				months[int(a["m"])] = mo
 				ok = _put(mo, a["name"], float(a.get("month", 0.0)), str(a.get("a", "")), p) or ok
+			if float(a.get("pz", 0.0)) > 0.0:
+				var pzw: Dictionary = puzzle_weeks.get(int(a["w"]), {})
+				puzzle_weeks[int(a["w"])] = pzw
+				ok = _put(pzw, a["name"], float(a["pz"]), str(a.get("a", "")), p) or ok
 			var club := str(a.get("club", ""))
 			if club != "" and clubs.has(club) and clubs[club]["m"].has(uid):
 				clubs[club]["m"][uid] = {"name": a["name"], "score": float(a["week"]), "w": int(a["w"])}
@@ -61,6 +67,8 @@ func request(method: String, arg: String) -> String:
 					table = weeks.get(int(a["w"]), {})
 				"month":
 					table = months.get(int(a.get("m", 0)), {})
+				"puzzle":
+					table = puzzle_weeks.get(int(a["w"]), {})
 				"friends":
 					table = {}
 					for id in all:
@@ -117,7 +125,11 @@ func request(method: String, arg: String) -> String:
 			return "ok"
 		"rank":
 			var a: Dictionary = JSON.parse_string(arg)
-			var wk: Dictionary = months.get(int(a["id"]), {}) if str(a.get("kind", "week")) == "month" else weeks.get(int(a.get("w", a.get("id", 0))), {})
+			var wk: Dictionary = weeks.get(int(a.get("w", a.get("id", 0))), {})
+			if str(a.get("kind", "week")) == "month":
+				wk = months.get(int(a["id"]), {})
+			elif str(a.get("kind", "week")) == "puzzle":
+				wk = puzzle_weeks.get(int(a["w"]), {})
 			if not wk.has(uid) or float(wk[uid]["score"]) <= 0.0:
 				return "none"
 			var mine := float(wk[uid]["score"])
