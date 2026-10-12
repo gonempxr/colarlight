@@ -1,0 +1,47 @@
+keys,en,ru,es,zh
+ACH_TITLE,Achievements,Достижения,Logros,成就
+ACH_NEW,New badge: %s!,Новый значок: %s!,¡Nueva insignia: %s!,新徽章：%s！
+ACH_COUNT,Badges: %d of %d,Значки: %d из %d,Insignias: %d de %d,徽章：%d / %d
+ACH_REWARD,+%d pearls,+%d жемчуга,+%d perlas,+%d 珍珠
+ACH_COINS_1M,Millionaire,Миллионер,Millonario,百万富翁
+ACH_COINS_1M_D,Earn 1M coins,Заработай 1M монет,Gana 1M monedas,赚到 1M 金币
+ACH_COINS_1B,Billionaire,Миллиардер,Multimillonario,亿万富翁
+ACH_COINS_1B_D,Earn 1B coins,Заработай 1B монет,Gana 1B monedas,赚到 1B 金币
+ACH_COINS_1T,Trillionaire,Триллионер,Billonario,万亿富翁
+ACH_COINS_1T_D,Earn 1T coins,Заработай 1T монет,Gana 1T monedas,赚到 1T 金币
+ACH_COINS_1AA,Ocean tycoon,Магнат океана,Magnate del océano,海洋大亨
+ACH_COINS_1AA_D,Earn 1aa coins,Заработай 1aa монет,Gana 1aa monedas,赚到 1aa 金币
+ACH_WORLD_2,Explorer,Путешественник,Explorador,探险家
+ACH_WORLD_2_D,Reach the second world,Доберись до второго мира,Llega al segundo mundo,到达第二个世界
+ACH_WORLD_4,To the Moon!,До Луны!,¡Hasta la Luna!,登上月球！
+ACH_WORLD_4_D,Reach the Moon,Доберись до Луны,Llega a la Luna,到达月球
+ACH_PUZZLE_10,Puzzler,Головоломщик,Rompecabezas,解谜者
+ACH_PUZZLE_10_D,Win 10 puzzles,Выиграй 10 пазлов,Gana 10 puzles,赢得 10 次拼图
+ACH_PUZZLE_50,Puzzle master,Мастер пазлов,Maestro del puzle,拼图大师
+ACH_PUZZLE_50_D,Win 50 puzzles,Выиграй 50 пазлов,Gana 50 puzles,赢得 50 次拼图
+ACH_FISH_10,Fisher,Рыбак,Pescador,钓鱼人
+ACH_FISH_10_D,Catch 10 fish,Поймай 10 рыб,Pesca 10 peces,钓到 10 条鱼
+ACH_FISH_100,Sea angler,Морской рыбак,Pescador de mar,海钓高手
+ACH_FISH_100_D,Catch 100 fish,Поймай 100 рыб,Pesca 100 peces,钓到 100 条鱼
+ACH_FISH_LEGEND,Legend hunter,Охотник за легендой,Cazador de leyendas,传说猎人
+ACH_FISH_LEGEND_D,Catch a legendary fish,Поймай легендарную рыбу,Pesca un pez legendario,钓到一条传说鱼
+ACH_STREAK_7,On fire,В ударе,En racha,火力全开
+ACH_STREAK_7_D,Play 7 days in a row,Играй 7 дней подряд,Juega 7 días seguidos,连续玩 7 天
+ACH_DAILY_30,Faithful diver,Верный водолаз,Buzo fiel,忠实潜水员
+ACH_DAILY_30_D,Open 30 daily gifts,Открой 30 ежедневных подарков,Abre 30 regalos diarios,打开 30 个每日礼物
+ACH_CHESTS_25,Treasure finder,Кладоискатель,Buscatesoros,寻宝者
+ACH_CHESTS_25_D,Open 25 chests,Открой 25 сундуков,Abre 25 cofres,打开 25 个宝箱
+ACH_QUESTS_50,Busy diver,Трудяга,Buzo trabajador,勤劳潜水员
+ACH_QUESTS_50_D,Finish 50 quests,Выполни 50 заданий,Completa 50 misiones,完成 50 个任务
+ACH_TAPS_1000,Fast finger,Быстрый палец,Dedo veloz,快手指
+ACH_TAPS_1000_D,Tap 1000 times,Сделай 1000 нажатий,Toca 1000 veces,点击 1000 次
+ACH_WEEK_TOP10,Star of the week,Звезда недели,Estrella de la semana,本周之星
+ACH_WEEK_TOP10_D,Finish a week race in the top 10,Попади в топ-10 гонки недели,Termina una carrera semanal en el top 10,在每周竞赛中进入前 10 名
+ACH_WEEK_WIN,King of the deep,Король глубин,Rey de las profundidades,深海之王
+ACH_WEEK_WIN_D,Win a week race,Выиграй гонку недели,Gana una carrera semanal,赢得一次每周竞赛
+ACH_FOUNDER,Founder,Основатель,Fundador,创始人
+ACH_FOUNDER_D,Be one of the first 100 players,Будь среди первых 100 игроков,Sé uno de los primeros 100 jugadores,成为前 100 名玩家之一
+ACH_FRIEND,Good friend,Хороший друг,Buen amigo,好朋友
+ACH_FRIEND_D,Play with a friend's invite,Играй по приглашению друга,Juega con la invitación de un amigo,通过好友邀请一起玩
+ACH_CLUB,Team player,Командный игрок,Jugador de equipo,团队玩家
+ACH_CLUB_D,Join a club,Вступи в клуб,Únete a un club,加入一个俱乐部
