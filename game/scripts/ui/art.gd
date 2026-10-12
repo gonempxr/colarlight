@@ -268,9 +268,12 @@ static var fringe_min := FRINGE_MIN
 ## The same for discs and dots: radius.
 const DOT_FRINGE_MIN := 1.5
 
-## Phones: skip the soft outer edge of outlines (it doubles the triangle
-## count; on dense phone screens the difference is hard to see).
+## Phones: fewer redraws and no volume bands (see main.gd / FrameGovernor).
 static var low_power := OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
+## Soft (anti-aliased) edges on every shape, phones too: without them the
+## outlines look stepped ("ladders") on phone screens. Only the slowest
+## devices turn it off (FrameGovernor's lowest level).
+static var smooth := true
 const _QUAD_ALPHA := [1.0, 1.0, 0.0, 1.0, 0.0, 0.0]
 
 static var _geo := {}
@@ -485,7 +488,7 @@ static func _geo_for(pts: PackedVector2Array, w: float, shade: float) -> Array:
 
 ## _geo_for with the outline width already through _ink.
 static func _geo_inked(pts: PackedVector2Array, w: float, shade: float) -> Array:
-	var k := hash([pts, w, shade, fringe_min, _st])
+	var k := hash([pts, w, shade, fringe_min, _st, smooth])
 	var g = _gget(k)
 	if g != null:
 		return g
@@ -540,7 +543,7 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 		outer = _tris(best)
 		# Small shapes (eyes, gloves, rivets, icons) go without the soft edge:
 		# at that size it can't be seen, and it is half of their triangles.
-		if not outer.is_empty() and not low_power and maxf(_bounds(pts).size.x, _bounds(pts).size.y) >= fringe_min:
+		if not outer.is_empty() and smooth and maxf(_bounds(pts).size.x, _bounds(pts).size.y) >= fringe_min:
 			fringe = _fringe(best, _aa())
 	var fill := _tris(pts)
 	var shadow := PackedVector2Array()
@@ -1123,7 +1126,7 @@ static func disc(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
 	_put(ci, fv, _solid_c(color, fv.size()))
-	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
+	if smooth and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
 		_put(ci, fr2, _fringe_cols(color, fr2.size()))
 	_xf = save
 
@@ -1150,8 +1153,8 @@ static func ring(ci: CanvasItem, pts: PackedVector2Array, color: Color, width: f
 
 static func _poly_geo(pts: PackedVector2Array, color: Color, width: float, closed: bool) -> Array:
 	var n := pts.size()
-	# Low power: no soft edges, the core covers about as much instead.
-	var soft := not low_power
+	# Without soft edges the core covers about as much instead.
+	var soft := smooth
 	var aa := _aa()
 	var hw := width / 2.0 if soft else (width + aa) / 2.0
 	var edge := hw + aa
@@ -1465,7 +1468,7 @@ static func dot(ci: CanvasItem, c: Vector2, r: float, color: Color) -> void:
 	var save := _xf
 	_xf = _xf * Transform2D(0.0, c)
 	_put(ci, fv, _solid_c(color, fv.size()))
-	if not low_power and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
+	if smooth and (r >= DOT_FRINGE_MIN or fringe_min < 1.0):
 		var fr: PackedVector2Array = g[1]
 		_put(ci, fr, _fringe_cols(color, fr.size()))
 	_xf = save

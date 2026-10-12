@@ -59,7 +59,7 @@ func _ready() -> void:
 	box.add_child(_head)
 	_name = Label.new()
 	_name.add_theme_font_override("font", UiTheme.heavy_font())
-	_name.add_theme_font_size_override("font_size", 19)
+	_name.add_theme_font_size_override("font_size", 21)
 	_name.add_theme_constant_override("outline_size", 6)
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -132,7 +132,7 @@ func _ready() -> void:
 	_level = Label.new()
 	_level.theme_type_variation = &"InkLabel"
 	_level.add_theme_font_override("font", UiTheme.heavy_font())
-	_level.add_theme_font_size_override("font_size", 25)
+	_level.add_theme_font_size_override("font_size", 28)
 	lv.add_child(_level)
 	_bar = ProgressBar.new()
 	_bar.show_percentage = false
@@ -141,12 +141,13 @@ func _ready() -> void:
 	lv.add_child(_bar)
 	_rate = Label.new()
 	_rate.theme_type_variation = &"InkLabel"
-	_rate.add_theme_font_size_override("font_size", 19)
+	_rate.add_theme_font_size_override("font_size", 21)
 	_rate.add_theme_color_override("font_color", Art.GREEN_DARK)
 	if narrow:
 		# Three in a row: the output line gets the card's whole width.
 		_rate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		box.add_child(_rate)
+
 		# Two lines for every stage name, and the buttons of the three cards
 		# line up at the bottom.
 		if _stage:
@@ -158,10 +159,13 @@ func _ready() -> void:
 		box.add_child(gap)
 	else:
 		lv.add_child(_rate)
+	# Small cards over the scene (phone) keep only the big level and price:
+	# the output per second is in the panel the card opens.
+	_rate.visible = hero
 
 	_upgrade = PriceButton.new()
 	_upgrade.custom_minimum_size = Vector2(0, 62)
-	_upgrade.add_theme_font_size_override("font_size", 22 if narrow else 24)
+	_upgrade.add_theme_font_size_override("font_size", 25 if narrow else 27)
 	_upgrade.pressed.connect(_on_upgrade)
 	box.add_child(_upgrade)
 
@@ -169,7 +173,7 @@ func _ready() -> void:
 	# no row of its own, so the cards keep their size and line up).
 	_tag = Label.new()
 	_tag.add_theme_font_override("font", UiTheme.heavy_font())
-	_tag.add_theme_font_size_override("font_size", 16)
+	_tag.add_theme_font_size_override("font_size", 18)
 	_tag.add_theme_constant_override("outline_size", 5)
 	_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -376,7 +380,7 @@ func _btn(variation: StringName) -> StringName:
 func _fit_text() -> void:
 	if _level == null:
 		return
-	var fs := _name_fs if _name_fs > 0 else 19
+	var fs := _name_fs if _name_fs > 0 else 21
 	# Clipped labels ask for no width of their own: the card's width decides
 	# and the text shrinks to it.
 	var one_line := _name.autowrap_mode == TextServer.AUTOWRAP_OFF
@@ -399,7 +403,7 @@ func _fit_text() -> void:
 			sf -= 1
 		if _stage.get_theme_font_size("font_size") != sf:
 			_stage.add_theme_font_size_override("font_size", sf)
-	for pair: Array in [[_level, 25], [_rate, 19]]:
+	for pair: Array in [[_level, 28], [_rate, 21]]:
 		var l: Label = pair[0]
 		l.clip_text = true
 		if l.size.x > 1.0:

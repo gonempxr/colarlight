@@ -7,7 +7,7 @@ extends RefCounted
 ## Text on the ocean is white with a thick ink outline; text on cream
 ## panels is ink without an outline (theme variations InkLabel/SoftLabel).
 
-const FONT_BOLD := "res://assets/fonts/Rubik-SemiBold.ttf"
+const FONT_BOLD := "res://assets/fonts/Nunito-ExtraBold.ttf"
 const FONT_BLACK := "res://assets/fonts/Nunito-Black.ttf"
 const FONT_CJK := "res://assets/fonts/NotoSansSC-Bold-subset.ttf"
 

@@ -198,6 +198,7 @@ func title(text: String) -> Label:
 
 
 func text(value: String, size_px: int = 24, color: Color = Art.INK) -> Label:
+	size_px = maxi(size_px, Views.MIN_PX)
 	var l := Label.new()
 	l.theme_type_variation = &"InkLabel"
 	l.text = value

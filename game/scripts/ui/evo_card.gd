@@ -37,7 +37,7 @@ func _ready() -> void:
 	box.add_child(head)
 	_name = Label.new()
 	_name.add_theme_font_override("font", UiTheme.heavy_font())
-	_name.add_theme_font_size_override("font_size", 19)
+	_name.add_theme_font_size_override("font_size", 21)
 	_name.add_theme_constant_override("outline_size", 6)
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -51,7 +51,7 @@ func _ready() -> void:
 	box.add_child(_pic)
 	_rate = Label.new()
 	_rate.theme_type_variation = &"InkLabel"
-	_rate.add_theme_font_size_override("font_size", 18)
+	_rate.add_theme_font_size_override("font_size", 20)
 	_rate.add_theme_color_override("font_color", Art.GREEN_DARK)
 	_rate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rate.clip_text = true
@@ -63,7 +63,7 @@ func _ready() -> void:
 		box.add_child(gap)
 	_btn = PriceButton.new()
 	_btn.custom_minimum_size = Vector2(0, 62)
-	_btn.add_theme_font_size_override("font_size", 22 if narrow else 24)
+	_btn.add_theme_font_size_override("font_size", 25 if narrow else 27)
 	_btn.pressed.connect(_on_press)
 	box.add_child(_btn)
 	# (The stage cards' "Bottleneck" tag hangs off their button and takes no

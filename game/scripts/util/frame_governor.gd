@@ -7,8 +7,9 @@ extends Node
 ## steps down one level at a time:
 ##   0  everything (moving sprites change shape 30 times a second)
 ##   1  sprites and card pictures change shape 20 times a second
-##   2  low quality: no soft outline edges, fewer screen pixels on the web
-##   3  the scenery and the sprites animate 15-20 times a second
+##   2  low quality: no volume bands, fewer screen pixels on the web
+##   3  the scenery and the sprites animate 15-20 times a second, and the
+##      soft (anti-aliased) edges go too
 ## Movement (divers, boats, the lift, scrolling) stays at the full frame
 ## rate on every level. It never steps back up during a session, so it
 ## can't flicker between two levels; a new session starts from 0 again.
@@ -109,3 +110,7 @@ static func apply() -> void:
 	Art.shape_hz = 30.0 if level == 0 else (20.0 if level <= 2 else 15.0)
 	World.anim_hz = 30.0 if level <= 2 else 20.0
 	Settings.auto_low = level >= 2
+	var smooth := level < 3
+	if smooth != Art.smooth:
+		Art.smooth = smooth
+		Art.clear_cache()

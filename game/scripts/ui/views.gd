@@ -67,7 +67,13 @@ static func icon(name: String, px: int) -> TextureRect:
 	return r
 
 
+## The smallest text in dialogs (design pixels; about 12 px on a phone).
+const MIN_PX := 19
+
+
 static func label(text: String, px: int = 24, color: Color = Art.INK, heavy: bool = false) -> Label:
+	# Nothing smaller than this: on a phone it would be hard to read.
+	px = maxi(px, MIN_PX)
 	var l := Label.new()
 	l.theme_type_variation = &"InkLabel"
 	l.text = text

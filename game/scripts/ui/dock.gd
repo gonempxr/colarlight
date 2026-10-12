@@ -45,7 +45,7 @@ func _ready() -> void:
 		b.icon = Icons.get_icon(it[1], 54)
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		b.add_theme_font_size_override("font_size", 19)
+		b.add_theme_font_size_override("font_size", 21)
 		b.add_theme_constant_override("outline_size", 6)
 		b.custom_minimum_size = Vector2(118, BUTTON_H)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL

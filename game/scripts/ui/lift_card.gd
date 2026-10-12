@@ -37,7 +37,7 @@ func _ready() -> void:
 	mid.add_child(_head)
 	_name = Label.new()
 	_name.add_theme_font_override("font", UiTheme.heavy_font())
-	_name.add_theme_font_size_override("font_size", 17)
+	_name.add_theme_font_size_override("font_size", 20)
 	_name.add_theme_constant_override("outline_size", 6)
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -49,15 +49,17 @@ func _ready() -> void:
 	_level = Label.new()
 	_level.theme_type_variation = &"InkLabel"
 	_level.add_theme_font_override("font", UiTheme.heavy_font())
-	_level.add_theme_font_size_override("font_size", 20)
+	_level.add_theme_font_size_override("font_size", 24)
 	line.add_child(_level)
 	_rate = Label.new()
 	_rate.theme_type_variation = &"InkLabel"
-	_rate.add_theme_font_size_override("font_size", 17)
+	_rate.add_theme_font_size_override("font_size", 19)
 	_rate.add_theme_color_override("font_color", Art.GREEN_DARK)
 	_rate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rate.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	line.add_child(_rate)
+	# The phone card stays short and big: the output is in the lift's panel.
+	_rate.visible = false
 	_bar = ProgressBar.new()
 	_bar.show_percentage = false
 	_bar.custom_minimum_size = Vector2(80, 12)
@@ -65,7 +67,7 @@ func _ready() -> void:
 	mid.add_child(_bar)
 	_tag = Label.new()
 	_tag.theme_type_variation = &"InkLabel"
-	_tag.add_theme_font_size_override("font_size", 15)
+	_tag.add_theme_font_size_override("font_size", 17)
 	_tag.add_theme_color_override("font_color", Color("d8363c"))
 	_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tag.visible = false
@@ -74,7 +76,7 @@ func _ready() -> void:
 	_upgrade = PriceButton.new()
 	_upgrade.custom_minimum_size = Vector2(112, 62)
 	_upgrade.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_upgrade.add_theme_font_size_override("font_size", 22)
+	_upgrade.add_theme_font_size_override("font_size", 25)
 	_upgrade.pressed.connect(_on_upgrade)
 	row.add_child(_upgrade)
 	refresh()
