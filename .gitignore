@@ -4,3 +4,4 @@ build/
 balance/__pycache__/
 deliver/
 screenshots/
+__pycache__/
