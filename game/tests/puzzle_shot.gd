@@ -1,7 +1,7 @@
 extends SceneTree
 ## Screenshot of the puzzle screen (needs a real renderer, not --headless):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 720x1280 \
-##     -s res://tests/puzzle_shot.gd -- out.png [board|anim|win|out|out_ad] [level] [lang]
+##     -s res://tests/puzzle_shot.gd -- out.png [board|anim|win|out|out_ad] [level] [lang] [world 0..3]
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -9,6 +9,7 @@ func _initialize() -> void:
 	var mode := args[1] if args.size() > 1 else "board"
 	var n := int(args[2]) if args.size() > 2 else 12
 	var lang := args[3] if args.size() > 3 else "en"
+	var world := int(args[4]) if args.size() > 4 else 0
 	await process_frame
 	for l in ["en", "ru", "es", "zh"]:
 		var res := load("res://i18n/puzzle.%s.translation" % l)
@@ -20,6 +21,7 @@ func _initialize() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	var screen: Control = load("res://scripts/puzzle/puzzle_screen.gd").new()
+	screen.world = world
 	root.add_child(screen)
 	screen.setup(PuzzleLevels.level(n), func(r: Dictionary) -> Array:
 		return [["coin", "+%d" % (250 * maxi(1, r["fragments"]))], ["pearl", "+%d" % (r["stars"] + 1)]])

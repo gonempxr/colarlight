@@ -18,6 +18,17 @@ const URCHIN := Color("a36bff")
 
 const _W := 3.0          # outline width at cell scale
 
+## The world the board belongs to (0 ocean, 1 volcano, 2 acid swamp, 3 moon):
+## the other worlds draw their own pieces (TileWorlds). The puzzle sets it.
+static var world := 0
+
+
+## The color of piece kind i in the current world (bursts, flying pieces).
+static func kind_color(i: int) -> Color:
+	if world > 0:
+		return TileWorlds.color(world, i)
+	return [PEARL, SHELL, STAR, CORAL, FISH, URCHIN][i]
+
 
 ## Board piece. `selected` makes it a little brighter, pulsing, with a glow ring.
 static func draw(ci: CanvasItem, kind: String, t: float, selected: bool = false) -> void:
@@ -28,6 +39,16 @@ static func draw(ci: CanvasItem, kind: String, t: float, selected: bool = false)
 		Art.push(ci, Vector2.ZERO, 0.0, Vector2(s, s))
 		Art.flat(ci, Art.circle_pts(Vector2.ZERO, 30.0, 32), Color(1, 1, 1, 0.22))
 		Art.flat(ci, Art.circle_pts(Vector2.ZERO, 26.0, 32), Color(1, 1, 1, 0.3))
+	if world > 0:
+		TileWorlds.draw(ci, world, KINDS.find(kind), t, lift)
+	else:
+		_kind(ci, kind, t, lift)
+	if selected:
+		Art.ring(ci, Art.circle_pts(Vector2.ZERO, 27.5, 40), Color(1, 1, 1, 0.95), 3.0)
+		Art.pop(ci)
+
+
+static func _kind(ci: CanvasItem, kind: String, t: float, lift: float) -> void:
 	match kind:
 		"pearl": _pearl(ci, t, lift)
 		"shell": _shell(ci, t, lift)
@@ -35,9 +56,6 @@ static func draw(ci: CanvasItem, kind: String, t: float, selected: bool = false)
 		"coral": _coral(ci, t, lift)
 		"fish": _fish(ci, t, lift)
 		"urchin": _urchin(ci, t, lift)
-	if selected:
-		Art.ring(ci, Art.circle_pts(Vector2.ZERO, 27.5, 40), Color(1, 1, 1, 0.95), 3.0)
-		Art.pop(ci)
 
 
 static func _c(c: Color, lift: float) -> Color:
@@ -306,39 +324,44 @@ static func blocker(ci: CanvasItem, kind: String, layers: int) -> void:
 
 
 static func _sand(ci: CanvasItem, layers: int) -> void:
+	var cols := TileWorlds.block_colors(world)
+	var sand: Color = cols[0]
+	var sand_dark: Color = cols[1]
 	var block := Art.rrect_pts(Rect2(-27, -27, 54, 54), 9)
 	if layers >= 2:
-		Art.toon(ci, block, Art.SAND_DARK, _W, 0.6)
+		Art.toon(ci, block, sand_dark, _W, 0.6)
 		# A lighter heap of sand on top of the packed block.
 		var heap := Art.clipped(Art.smooth_pts(PackedVector2Array([Vector2(-30, -8), Vector2(-16, -14), Vector2(-4, -10), Vector2(10, -16),
 				Vector2(24, -11), Vector2(30, -8), Vector2(30, -40), Vector2(-30, -40)]), 3), block)
-		Art.toon(ci, heap, Art.SAND, 2.2, 0.0)
+		Art.toon(ci, heap, sand, 2.2, 0.0)
 		for p: Vector2 in [Vector2(-16, 4), Vector2(-4, 14), Vector2(12, 6), Vector2(18, 18), Vector2(-19, 19), Vector2(4, -1)]:
-			Art.flat(ci, Art.circle_pts(p, 1.6, 8), Art.shade_of(Art.SAND_DARK, 0.3))
-		Art.polyline(ci, PackedVector2Array([Vector2(-8, 3), Vector2(-3, 8), Vector2(-6, 13), Vector2(-1, 19)]), Art.shade_of(Art.SAND_DARK, 0.35), 1.8)
-		Art.polyline(ci, PackedVector2Array([Vector2(14, -4), Vector2(10, 2), Vector2(13, 8)]), Art.shade_of(Art.SAND_DARK, 0.35), 1.8)
+			Art.flat(ci, Art.circle_pts(p, 1.6, 8), Art.shade_of(sand_dark, 0.3))
+		Art.polyline(ci, PackedVector2Array([Vector2(-8, 3), Vector2(-3, 8), Vector2(-6, 13), Vector2(-1, 19)]), Art.shade_of(sand_dark, 0.35), 1.8)
+		Art.polyline(ci, PackedVector2Array([Vector2(14, -4), Vector2(10, 2), Vector2(13, 8)]), Art.shade_of(sand_dark, 0.35), 1.8)
 		for p: Vector2 in [Vector2(-18, -20), Vector2(-6, -21), Vector2(8, -20), Vector2(18, -21)]:
-			Art.flat(ci, Art.circle_pts(p, 1.3, 8), Art.SAND_DARK)
+			Art.flat(ci, Art.circle_pts(p, 1.3, 8), sand_dark)
 		Art.push(ci, Vector2(15, -19), 0.3, Vector2(0.36, 0.36))
 		_shell_deco(ci, Color("ffb3c7"))
 		Art.pop(ci)
 	else:
-		Art.toon(ci, block, Art.SAND, _W, 0.6)
+		Art.toon(ci, block, sand, _W, 0.6)
 		for p: Vector2 in [Vector2(-15, -12), Vector2(-3, -17), Vector2(12, -10), Vector2(18, 4), Vector2(-18, 8), Vector2(-6, 16), Vector2(8, 15), Vector2(2, 1)]:
-			Art.flat(ci, Art.circle_pts(p, 1.5, 8), Art.SAND_DARK)
+			Art.flat(ci, Art.circle_pts(p, 1.5, 8), sand_dark)
 		Art.t_ellipse(ci, Vector2(-11, -1), Vector2(5, 3.5), Color("c9b6a8"), 2.0, 0.4)
 		Art.flat(ci, Art.ellipse_pts(Vector2(-18, -20), Vector2(5, 2), 10, -0.3), Color(1, 1, 1, 0.5))
 
 
 static func _bubble(ci: CanvasItem, layers: int) -> void:
 	var r := 27.0
-	Art.flat(ci, Art.circle_pts(Vector2.ZERO, r, 40), Color(0.72, 0.93, 1.0, 0.3 if layers < 2 else 0.42))
+	var bc := TileWorlds.bubble_colors(world)
+	var tint: Color = bc[0]
+	Art.flat(ci, Art.circle_pts(Vector2.ZERO, r, 40), Color(tint, tint.a if layers < 2 else tint.a + 0.12))
 	# Rainbow sheen along the lower right edge.
 	Art.arc(ci, Vector2.ZERO, r - 3.5, 0.2, 1.3, 10, Color(1.0, 0.6, 0.85, 0.55), 2.5)
 	Art.arc(ci, Vector2.ZERO, r - 3.5, 1.3, 2.2, 8, Color(0.6, 0.8, 1.0, 0.55), 2.5)
 	if layers >= 2:
 		Art.ring(ci, Art.circle_pts(Vector2.ZERO, r - 7.0, 36), Color(1, 1, 1, 0.7), 2.2)
-	Art.ring(ci, Art.circle_pts(Vector2.ZERO, r, 44), Color("2f7fc0"), 4.5 if layers >= 2 else 3.2)
+	Art.ring(ci, Art.circle_pts(Vector2.ZERO, r, 44), bc[1], 4.5 if layers >= 2 else 3.2)
 	Art.ring(ci, Art.circle_pts(Vector2.ZERO, r - 0.8, 44), Color(1, 1, 1, 0.9), 1.4)
 	Art.arc(ci, Vector2.ZERO, r - 5.5, PI + 0.35, PI + 1.25, 10, Color(1, 1, 1, 0.95), 4.0)
 	Art.flat(ci, Art.circle_pts(Vector2(-8, -20), 2.2, 10), Color(1, 1, 1, 0.95))

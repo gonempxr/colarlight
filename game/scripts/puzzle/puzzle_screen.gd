@@ -28,10 +28,19 @@ const MAX_TILE := 110.0
 const HINT_DELAY := 5.0
 const EXTRA_MOVES := 5
 const TOP_H := 124.0
-const KIND_COLORS: Array[Color] = [TileArt.PEARL, TileArt.SHELL, TileArt.STAR, TileArt.CORAL, TileArt.FISH, TileArt.URCHIN]
+## The look of each world's board: background stops, the floor, the frame
+## and the board's back (0 ocean, 1 volcano, 2 acid swamp, 3 moon).
+const LOOKS := [
+	{"bg": ["46c3dc", "1f86bd", "134e8e"], "floor": "f2d29b", "frame": "f2d29b", "back": "1a5c96", "plant": "3fbf6a"},
+	{"bg": ["7a2a2a", "a8341a", "2a0a10"], "floor": "4a3a40", "frame": "6a5660", "back": "3a1a20", "plant": "ff7a1a"},
+	{"bg": ["3f8a3a", "1f5a2a", "0a2a14"], "floor": "5a6a3a", "frame": "8aa04a", "back": "1f3a1a", "plant": "7fd04a"},
+	{"bg": ["1a1a4a", "0d0d2e", "05051a"], "floor": "b8bccb", "frame": "9aa0b4", "back": "1a1a3a", "plant": "c8ccd8"},
+]
 const NO_CELL := Vector2i(-1, -1)
 
 var model: Match3
+## 0 ocean, 1 volcano, 2 acid swamp, 3 moon (main sets it before setup()).
+var world := 0
 var level := {}
 var artifact := "compass"
 ## Cell size in pixels.
@@ -139,6 +148,10 @@ func _ready() -> void:
 	_layout()
 
 
+func _exit_tree() -> void:
+	TileArt.world = 0
+
+
 func _layer(painter: Callable) -> Control:
 	var c := Control.new()
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -150,6 +163,7 @@ func _layer(painter: Callable) -> Control:
 ## Starts a level. `rewards` (optional) maps the result to reward lines
 ## [[icon_name, text], ...] shown on the end panel.
 func setup(lv: Dictionary, rewards: Callable = Callable()) -> void:
+	TileArt.world = world
 	level = lv.duplicate()
 	artifact = String(level.get("artifact", ArtifactArt.IDS[0]))
 	_reward_fn = rewards
@@ -572,7 +586,7 @@ func _process(delta: float) -> void:
 func _pop(c: Vector2i, kind: int, special: String) -> void:
 	var p := _board.position + _cell_center(c)
 	_ghosts.append({"p": p, "kind": kind, "special": special, "age": 0.0, "life": 0.2})
-	var col: Color = KIND_COLORS[kind] if kind >= 0 and kind < KIND_COLORS.size() else Art.GOLD
+	var col: Color = TileArt.kind_color(kind) if kind >= 0 and kind < TileArt.KINDS.size() else Art.GOLD
 	_burst(p, col, 3 if Art.low_power else 6, 1.0)
 	if _rng.randf() < 0.5:
 		_bubble_burst(p, 1 if Art.low_power else 2)
@@ -677,11 +691,20 @@ func _ring_pts() -> PackedVector2Array:
 
 func _draw_bg() -> void:
 	var v := _bg.size
-	var top := Color("46c3dc")
-	var mid := Color("1f86bd")
-	var low := Color("134e8e")
+	var look: Dictionary = LOOKS[world]
+	var top := Color(look["bg"][0])
+	var mid := Color(look["bg"][1])
+	var low := Color(look["bg"][2])
 	Art.grad(_bg, PackedVector2Array([Vector2.ZERO, Vector2(v.x, 0), Vector2(v.x, v.y * 0.5), Vector2(0, v.y * 0.5)]), PackedColorArray([top, top, mid, mid]))
 	Art.grad(_bg, PackedVector2Array([Vector2(0, v.y * 0.5), Vector2(v.x, v.y * 0.5), v, Vector2(0, v.y)]), PackedColorArray([mid, mid, low, low]))
+	match world:
+		1: _bg_volcano(v)
+		2: _bg_swamp(v)
+		3: _bg_space(v)
+		_: _bg_ocean(v)
+
+
+func _bg_ocean(v: Vector2) -> void:
 	# Soft light rays swaying from the surface.
 	for i in 6:
 		var x := v.x * (0.08 + i * 0.18) + sin(_t * 0.4 + i * 1.7) * 40.0
@@ -708,22 +731,90 @@ func _draw_bg() -> void:
 		Art.fish(_bg, Vector2(fx, fy), 13.0, Color("7be0ff") if i == 0 else Color("ffd23f"), dir, _t)
 
 
+## Volcano: a glowing horizon, smoke columns and embers rising.
+func _bg_volcano(v: Vector2) -> void:
+	var glow := Color(1.0, 0.45, 0.1, 0.35)
+	Art.grad(_bg, PackedVector2Array([Vector2(0, v.y * 0.62), Vector2(v.x, v.y * 0.62), Vector2(v.x, v.y), Vector2(0, v.y)]),
+			PackedColorArray([Color(glow, 0.0), Color(glow, 0.0), glow, glow]))
+	# Far volcano silhouettes.
+	for i in 3:
+		var cx := v.x * (0.15 + i * 0.35)
+		var h := v.y * (0.22 + 0.06 * (i % 2))
+		var base := v.y * 0.7
+		Art.flat(_bg, PackedVector2Array([Vector2(cx - h * 1.3, base), Vector2(cx - h * 0.2, base - h), Vector2(cx + h * 0.2, base - h), Vector2(cx + h * 1.3, base)]),
+				Color("3a1418"))
+		Art.flat(_bg, Art.ellipse_pts(Vector2(cx, base - h), Vector2(h * 0.2, 6.0), 12), Color(1.0, 0.55, 0.15, 0.8))
+	# Embers drifting up.
+	for b in _bubbles:
+		var y := fposmod(b.y - _t * (0.04 + b.z * 0.006), 1.0)
+		var x := b.x * v.x + sin(_t * 1.7 + b.x * 20.0) * 14.0
+		var p := Vector2(x, y * (v.y + 40.0) - 20.0)
+		var a := 0.35 + 0.5 * y
+		Art.flat(_bg, Art.circle_pts(p, b.z * 0.9, 8), Color(1.0, 0.75, 0.25, a))
+		Art.flat(_bg, Art.circle_pts(p, b.z * 0.4, 6), Color(1.0, 0.95, 0.7, a))
+
+
+## Acid swamp: green haze, toxic bubbles and fireflies.
+func _bg_swamp(v: Vector2) -> void:
+	for i in 4:
+		var y := v.y * (0.2 + i * 0.2) + sin(_t * 0.3 + i) * 8.0
+		Art.grad(_bg, PackedVector2Array([Vector2(0, y - 30), Vector2(v.x, y - 30), Vector2(v.x, y + 30), Vector2(0, y + 30)]),
+				PackedColorArray([Color(0.6, 1, 0.5, 0.0), Color(0.6, 1, 0.5, 0.0), Color(0.6, 1, 0.5, 0.07), Color(0.6, 1, 0.5, 0.07)]))
+	var rp := _ring_pts()
+	for b in _bubbles:
+		var y := fposmod(b.y - _t * (0.025 + b.z * 0.005), 1.0)
+		var x := b.x * v.x + sin(_t * 1.1 + b.x * 20.0) * 8.0
+		Art.push(_bg, Vector2(x, y * (v.y + 40.0) - 20.0), 0.0, Vector2.ONE * (b.z / _RING_PTS_R))
+		Art.flat(_bg, rp, Color(0.6, 1.0, 0.3, 0.12))
+		Art.ring(_bg, rp, Color(0.75, 1.0, 0.45, 0.5), 1.8)
+		Art.pop(_bg)
+	for i in 7:
+		var x := v.x * fposmod(0.13 * i + _t * 0.012 * (1 + i % 3), 1.0)
+		var y := v.y * (0.15 + 0.1 * i) + sin(_t * 2.0 + i * 1.7) * 18.0
+		var on := 0.5 + 0.5 * sin(_t * 3.0 + i * 2.3)
+		Art.flat(_bg, Art.circle_pts(Vector2(x, y), 9.0, 10), Color(1.0, 1.0, 0.4, 0.18 * on))
+		Art.flat(_bg, Art.circle_pts(Vector2(x, y), 3.0, 8), Color(1.0, 1.0, 0.6, 0.9 * on))
+
+
+## Moon: deep space, twinkling stars, the Earth and a shooting star.
+func _bg_space(v: Vector2) -> void:
+	for i in _bubbles.size():
+		var b: Vector3 = _bubbles[i]
+		var tw := 0.45 + 0.55 * absf(sin(_t * (0.8 + b.z * 0.1) + i))
+		var p := Vector2(b.x * v.x, b.y * v.y)
+		Art.push(_bg, p, 0.0, Vector2.ONE * (b.z * 0.6 * tw))
+		Art.flat(_bg, Art.star_pts(Vector2.ZERO, 1.0, 0.3, 4), Color(1, 1, 1, 0.9))
+		Art.pop(_bg)
+	var e := Vector2(v.x * 0.85, v.y * 0.14)
+	var er := minf(v.x, v.y) * 0.07
+	Art.flat(_bg, Art.circle_pts(e, er * 1.5, 24), Color(0.4, 0.7, 1.0, 0.18))
+	Art.t_circle(_bg, e, er, Color("3a8ae0"), 3.0, 0.5)
+	Art.flat(_bg, Art.ellipse_pts(e + Vector2(-er * 0.2, -er * 0.2), Vector2(er * 0.45, er * 0.3), 14, 0.4), Color("6fcf5a"))
+	Art.flat(_bg, Art.ellipse_pts(e + Vector2(er * 0.35, er * 0.3), Vector2(er * 0.3, er * 0.2), 12, -0.3), Color("6fcf5a"))
+	var f := fposmod(_t * 0.12, 1.0)
+	if f < 0.25:
+		var u := f / 0.25
+		var a := Vector2(v.x * (0.1 + u * 0.6), v.y * (0.08 + u * 0.25))
+		Art.grad(_bg, PackedVector2Array([a + Vector2(-90, -36), a + Vector2(-90, -32), a + Vector2(0, 2), a + Vector2(0, -2)]),
+				PackedColorArray([Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.9 * (1.0 - u)), Color(1, 1, 1, 0.9 * (1.0 - u))]))
+
+
 func _draw_frame() -> void:
 	var v := _frame.size
 	var r := _board_rect
 	var pad := maxf(10.0, tile * 0.2)
 	# Sea floor along the bottom of the screen.
+	var look: Dictionary = LOOKS[world]
+	var floor_col := Color(look["floor"])
+	var frame_col := Color(look["frame"])
 	var floor_y := minf(v.y - 60.0, r.end.y + pad + 10.0) if not _wide else v.y - 80.0
 	var dunes := PackedVector2Array([Vector2(-10, floor_y + 30), Vector2(v.x * 0.2, floor_y + 5), Vector2(v.x * 0.45, floor_y + 28),
 			Vector2(v.x * 0.7, floor_y), Vector2(v.x + 10, floor_y + 22), Vector2(v.x + 10, v.y + 10), Vector2(-10, v.y + 10)])
-	Art.toon(_frame, dunes, Art.SAND, 4.0, 0.5)
+	Art.toon(_frame, dunes, floor_col, 4.0, 0.5)
 	for i in 5:
 		var sx := v.x * (0.1 + i * 0.2)
 		Art.push(_frame, Vector2(sx, v.y - 18.0 - (i % 2) * 14.0), 0.3 * (i - 2), Vector2.ONE * 0.9)
-		if i % 2 == 0:
-			Props.shell(_frame, Color("ffb3c7") if i == 0 else Color("ffd6a0"))
-		else:
-			Props.starfish(_frame, Color("ff8a5c"))
+		_floor_prop(i)
 		Art.pop(_frame)
 	# Coral and seaweed on the sides (more room on PC).
 	var side_l := r.position.x - pad
@@ -734,15 +825,18 @@ func _draw_frame() -> void:
 		if room > 120.0:
 			var cx := edge + s * room * 0.5
 			for k in 3:
-				Art.seaweed(_frame, Vector2(cx + (k - 1) * 34.0 * s, v.y - 30.0), 140.0 + k * 50.0, Color("3fbf6a").lerp(Color("2f9a45"), k * 0.4), 0.0, k * 1.3 + s, 12.0)
+				if world != 3:
+					Art.seaweed(_frame, Vector2(cx + (k - 1) * 34.0 * s, v.y - 30.0), 140.0 + k * 50.0, Color(look["plant"]).lerp(Color(look["plant"]).darkened(0.25), k * 0.4), 0.0, k * 1.3 + s, 12.0)
 			Art.push(_frame, Vector2(cx - s * room * 0.2, v.y - 60.0), 0.0, Vector2.ONE * 1.4)
-			Props.coral(_frame, Color("ff7a8a") if s < 0 else Color("b58cff"), 3 if s < 0 else 8, 0.0)
+			_side_prop(s)
 			Art.pop(_frame)
 	# The board's frame: a chunky sand-and-coral border.
 	var outer := r.grow(pad)
-	Art.t_rect(_frame, Rect2(outer.position + Vector2(0, 8), outer.size), pad + 12.0, Art.shade_of(Art.SAND_DARK, 0.3), 4.0, 0.0)
-	Art.t_rect(_frame, outer, pad + 12.0, Art.SAND, 4.0, 0.6)
-	Art.t_rect(_frame, r.grow(4.0), 14.0, Color("1a5c96"), 3.0, 0.0)
+	Art.t_rect(_frame, Rect2(outer.position + Vector2(0, 8), outer.size), pad + 12.0, Art.shade_of(frame_col.darkened(0.25), 0.3), 4.0, 0.0)
+	Art.t_rect(_frame, outer, pad + 12.0, frame_col, 4.0, 0.6)
+	if world == 1:
+		Art.ring(_frame, Art.rrect_pts(r.grow(pad * 0.55), pad + 4.0), Color(1.0, 0.5, 0.15, 0.85), 3.0)
+	Art.t_rect(_frame, r.grow(4.0), 14.0, Color(look["back"]), 3.0, 0.0)
 	# Pebbles on the frame.
 	var prng := RandomNumberGenerator.new()
 	prng.seed = 5
@@ -755,7 +849,7 @@ func _draw_frame() -> void:
 			1: p = Vector2(lerpf(outer.position.x, outer.end.x, f), outer.end.y - pad * 0.5)
 			2: p = Vector2(outer.position.x + pad * 0.5, lerpf(outer.position.y, outer.end.y, f))
 			3: p = Vector2(outer.end.x - pad * 0.5, lerpf(outer.position.y, outer.end.y, f))
-		Art.flat(_frame, Art.circle_pts(p, prng.randf_range(1.6, 3.2), 8), Art.SAND_DARK)
+		Art.flat(_frame, Art.circle_pts(p, prng.randf_range(1.6, 3.2), 8), frame_col.darkened(0.3))
 	# Checkered cells.
 	var light := Color(1, 1, 1, 0.07)
 	var dark := Color(0.05, 0.1, 0.3, 0.12)
@@ -780,18 +874,66 @@ func _draw_frame() -> void:
 		Art.toon(_frame, Art.arrow_pts(13.0), Art.WHITE, 2.5, 0.0)
 		Art.pop(_frame)
 	# Corner decorations.
-	Art.push(_frame, outer.position + Vector2(pad * 0.2, pad * 1.4), -0.4, Vector2.ONE * (tile / 70.0))
-	Props.coral(_frame, Color("ff6f7f"), 2, 0.0)
-	Art.pop(_frame)
-	Art.push(_frame, Vector2(outer.end.x - pad * 0.3, outer.position.y + pad * 0.5), 0.5, Vector2.ONE * (tile / 80.0))
-	Props.starfish(_frame, Color("ffc23f"))
-	Art.pop(_frame)
-	Art.push(_frame, Vector2(outer.position.x + pad * 0.4, outer.end.y - pad * 0.2), 0.2, Vector2.ONE * (tile / 85.0))
-	Props.shell(_frame, Color("ffb3c7"))
-	Art.pop(_frame)
-	Art.push(_frame, Vector2(outer.end.x - pad * 0.2, outer.end.y - pad * 0.8), 0.0, Vector2.ONE * (tile / 75.0))
-	Props.coral(_frame, Color("b58cff"), 6, 0.0)
-	Art.pop(_frame)
+	if world == 0:
+		Art.push(_frame, outer.position + Vector2(pad * 0.2, pad * 1.4), -0.4, Vector2.ONE * (tile / 70.0))
+		Props.coral(_frame, Color("ff6f7f"), 2, 0.0)
+		Art.pop(_frame)
+		Art.push(_frame, Vector2(outer.end.x - pad * 0.3, outer.position.y + pad * 0.5), 0.5, Vector2.ONE * (tile / 80.0))
+		Props.starfish(_frame, Color("ffc23f"))
+		Art.pop(_frame)
+		Art.push(_frame, Vector2(outer.position.x + pad * 0.4, outer.end.y - pad * 0.2), 0.2, Vector2.ONE * (tile / 85.0))
+		Props.shell(_frame, Color("ffb3c7"))
+		Art.pop(_frame)
+		Art.push(_frame, Vector2(outer.end.x - pad * 0.2, outer.end.y - pad * 0.8), 0.0, Vector2.ONE * (tile / 75.0))
+		Props.coral(_frame, Color("b58cff"), 6, 0.0)
+		Art.pop(_frame)
+	else:
+		var corners := [[outer.position + Vector2(pad * 0.3, pad * 0.6), -0.3, 2], [Vector2(outer.end.x - pad * 0.3, outer.position.y + pad * 0.5), 0.4, 0],
+				[Vector2(outer.position.x + pad * 0.4, outer.end.y - pad * 0.3), 0.2, 4], [Vector2(outer.end.x - pad * 0.3, outer.end.y - pad * 0.6), -0.2, 1]]
+		for c: Array in corners:
+			Art.push(_frame, c[0], c[1], Vector2.ONE * (tile / 64.0))
+			TileWorlds.draw(_frame, world, c[2], 0.0, 0.0)
+			Art.pop(_frame)
+
+
+## A small thing lying on the floor at the bottom of the screen.
+func _floor_prop(i: int) -> void:
+	match world:
+		0:
+			if i % 2 == 0:
+				Props.shell(_frame, Color("ffb3c7") if i == 0 else Color("ffd6a0"))
+			else:
+				Props.starfish(_frame, Color("ff8a5c"))
+		1:
+			Art.push(_frame, Vector2(0, -6), 0.0, Vector2.ONE * 0.55)
+			TileWorlds.draw(_frame, 1, [5, 1, 0, 5, 1][i], 0.0, 0.0)
+			Art.pop(_frame)
+		2:
+			Art.push(_frame, Vector2(0, -8), 0.0, Vector2.ONE * 0.6)
+			TileWorlds.draw(_frame, 2, [1, 4, 1, 3, 1][i], 0.0, 0.0)
+			Art.pop(_frame)
+		3:
+			Art.flat(_frame, Art.ellipse_pts(Vector2.ZERO, Vector2(16, 5), 16), Color("8f95a8"))
+			Art.ring(_frame, Art.ellipse_pts(Vector2.ZERO, Vector2(16, 5), 16), Color("6a7088"), 2.0)
+
+
+## The big decoration beside the board on wide screens.
+func _side_prop(s: float) -> void:
+	match world:
+		0:
+			Props.coral(_frame, Color("ff7a8a") if s < 0 else Color("b58cff"), 3 if s < 0 else 8, 0.0)
+		1:
+			Art.push(_frame, Vector2(0, -20), 0.0, Vector2.ONE * 1.3)
+			TileWorlds.draw(_frame, 1, 2 if s < 0 else 1, _t, 0.0)
+			Art.pop(_frame)
+		2:
+			Art.push(_frame, Vector2(0, -20), 0.0, Vector2.ONE * 1.4)
+			TileWorlds.draw(_frame, 2, 1 if s < 0 else 3, 0.0, 0.0)
+			Art.pop(_frame)
+		3:
+			Art.push(_frame, Vector2(0, -20), 0.0, Vector2.ONE * 1.3)
+			TileWorlds.draw(_frame, 3, 5 if s < 0 else 1, _t, 0.0)
+			Art.pop(_frame)
 
 
 # --- Drawing: board --------------------------------------------------------------------------

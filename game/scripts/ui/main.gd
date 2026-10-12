@@ -1308,6 +1308,7 @@ func open_puzzle() -> void:
 	if target != "":
 		level["artifact"] = target
 	_puzzle = load(PUZZLE_SCRIPT).new()
+	_puzzle.world = WorldLook.world_index(int(GameState.location))
 	add_child(_puzzle)
 	move_child(_puzzle, _fx.get_index())
 	_puzzle.setup(level, _puzzle_rewards)
