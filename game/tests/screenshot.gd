@@ -248,6 +248,9 @@ func _initialize() -> void:
 				root.get_texture().get_image().save_png(out)
 				quit()
 				return
+			elif overlay.begins_with("nick"):
+				root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "")
+				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true
 			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn"]:

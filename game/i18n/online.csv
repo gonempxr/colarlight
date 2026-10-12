@@ -60,3 +60,6 @@ X2_DAY,Saturday,Суббота,Sábado,周六
 THANKS_WEEK_TITLE,Week results!,Итоги недели!,¡Resultados de la semana!,本周结果！
 THANKS_WEEK,You took place #%d in the race of the week!,Ты занял %d место в гонке недели!,¡Quedaste en el puesto %d en la carrera de la semana!,你在每周竞赛中获得第 %d 名！
 THANKS_WEEK_ALL,Thanks for racing this week!,Спасибо за участие в гонке недели!,¡Gracias por correr esta semana!,感谢你参加本周竞赛！
+NICK_TITLE,Choose your nickname,Придумай себе ник,Elige tu apodo,起个昵称吧
+NICK_HINT,Other players will see it on the leaderboard. Every nickname is unique.,Его увидят другие игроки в таблице лидеров. Каждый ник только один.,Otros jugadores lo verán en la clasificación. Cada apodo es único.,其他玩家会在排行榜上看到它。每个昵称都是唯一的。
+NICK_SHORT,"At least 2 letters, please.",Хотя бы 2 буквы.,"Al menos 2 letras, por favor.",至少要 2 个字。

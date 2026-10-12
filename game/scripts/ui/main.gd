@@ -289,6 +289,9 @@ func _ready() -> void:
 	# A Google sign-in question closed without an answer signs out again.
 	_top.closed.connect(CloudSave.cancel_ask)
 	CloudSave.sign_in_done.connect(_on_cloud_signed_in)
+	Online.name_taken.connect(func(name: String):
+		if not _top.visible and _started:
+			ask_nickname(tr("ONLINE_NAME_TAKEN") % name))
 	CloudSave.account_changed.connect(func():
 		if _modal.is_open():
 			_modal.rebuild())
@@ -371,10 +374,16 @@ func _announce_ready() -> void:
 	print("CORALIGHT_READY")
 
 
+## The web game asks a new player for a nickname right at the start.
+var ask_nick_at_start := OS.has_feature("web")
+
+
 func _after_title() -> void:
 	_title = null
 	_started = true
 	Platform.gameplay_start()
+	if ask_nick_at_start and Profiles.player_name() == "":
+		ask_nickname()
 	var report := GameState.take_offline_report()
 	if not report.is_empty():
 		_open_offline(report)
@@ -1432,6 +1441,85 @@ func ask_name(id: String, done: Callable) -> void:
 		edit.text_submitted.connect(submit)
 		r.add_child(ok)
 		edit.grab_focus.call_deferred())
+
+
+## The nickname dialog (a new player, or the online name was taken): the
+## name others see on the leaderboard. Prefilled (the CrazyGames name or a
+## random one) so one tap is enough; rude names are refused at once and,
+## when online, a name someone else has is refused too.
+func ask_nickname(note: String = "") -> void:
+	var done := [false]
+	_top.open(func(m: Modal):
+		m.title(tr("NICK_TITLE"))
+		m.text(tr("NICK_HINT"), 21, Art.INK_SOFT)
+		var edit := LineEdit.new()
+		edit.max_length = OnlineRules.NAME_MAX
+		edit.placeholder_text = tr("NAME_PLACEHOLDER")
+		edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		edit.custom_minimum_size.y = 84
+		var start := Profiles.player_name()
+		if start == "":
+			start = OnlineRules.strip_name(Platform.cg_user())
+		if start == "" or OnlineRules.is_rude(start):
+			start = random_name()
+		edit.text = start
+		m.add(edit)
+		var err := m.text(note, 20, Color("c8372d"))
+		err.visible = note != ""
+		var r := m.row(10)
+		var dice := Button.new()
+		dice.theme_type_variation = &"PurpleButton"
+		dice.icon = Icons.get_icon("dice", 36)
+		dice.custom_minimum_size = Vector2(90, 76)
+		dice.pressed.connect(func():
+			Sfx.play("pop")
+			edit.text = random_name()
+			err.visible = false)
+		r.add_child(dice)
+		var ok := Button.new()
+		ok.text = tr("PLAY")
+		ok.theme_type_variation = &"GoldButton"
+		ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ok.custom_minimum_size.y = 76
+		var busy := [false]
+		var submit := func(_t = ""):
+			if busy[0]:
+				return
+			var name := OnlineRules.strip_name(Profiles.clean_name(edit.text))
+			if name == "" or OnlineRules.is_rude(name):
+				Sfx.play("deny")
+				err.text = tr("ONLINE_NAME_RUDE") if name != "" else tr("NICK_SHORT")
+				err.visible = true
+				return
+			Profiles.set_name_of(Profiles.current_id, name)
+			if not Online.available():
+				Sfx.play("click")
+				done[0] = true
+				m.close()
+				return
+			busy[0] = true
+			ok.disabled = true
+			Online.claim_name(func(res: String):
+				busy[0] = false
+				ok.disabled = false
+				if res == "taken":
+					Sfx.play("deny")
+					err.text = tr("ONLINE_NAME_TAKEN") % name
+					err.visible = true
+					return
+				Sfx.play("click")
+				Online.submit_soon()
+				done[0] = true
+				if m.is_open():
+					m.close())
+		ok.pressed.connect(submit)
+		edit.text_submitted.connect(submit)
+		r.add_child(ok)
+		edit.grab_focus.call_deferred())
+	# Closed without a name: a random one, so the board never shows "".
+	_top.closed.connect(func():
+		if not done[0] and Profiles.player_name() == "":
+			Profiles.set_name_of(Profiles.current_id, random_name()), CONNECT_ONE_SHOT)
 
 
 static func random_name() -> String:

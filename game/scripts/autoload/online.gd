@@ -21,6 +21,9 @@ signal state_changed
 ## joined): the UI shows the thank-you dialog. info: {"kind", "pearls",
 ## "item" (bool), "boost" (seconds), "n" (founder number / friends)}.
 signal thanks(info: Dictionary)
+## The player's name turned out to be someone else's (found while sending
+## scores): the game asks for another one. Once per name.
+signal name_taken(name: String)
 
 const SAVE_PATH := "user://online.json"
 ## Scores go out every few minutes and at important moments (a new world,
@@ -359,7 +362,11 @@ func submit(done: Callable = Callable()) -> void:
 	track()
 	# A new name is made the player's own first (one owner per name).
 	if state == "ready" and name_state() == "wait" and score("all") > 0.0 and _since_submit >= SUBMIT_GAP_SEC:
-		claim_name(func(_r: String): _submit_now(done))
+		var want := wanted_name()
+		claim_name(func(r: String):
+			if r == "taken":
+				name_taken.emit(want)
+			_submit_now(done))
 		return
 	_submit_now(done)
 
