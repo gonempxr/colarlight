@@ -31,6 +31,14 @@ def _face(kind, gy):
         for ex in (-34, 34):
             s.append(f'<path d="{vcore.star_path(ex, gy - 4, 27, 12)}" fill="url(#starEye)" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>')
             s.append(f'<circle cx="{ex - 7}" cy="{gy - 11}" r="4.5" fill="#ffffff"/>')
+    elif kind == "wow":
+        for ex in (-34, 34):
+            s.append(f'<path d="{vcore.star_path(ex, gy - 8, 28, 12)}" fill="url(#starEye)" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>')
+            s.append(f'<circle cx="{ex - 7}" cy="{gy - 15}" r="4.5" fill="#ffffff"/>')
+        my = gy + 42
+        s.append(f'<ellipse cx="0" cy="{my}" rx="24" ry="30" fill="#7a2335" stroke="{INK}" stroke-width="5"/>')
+        s.append(f'<ellipse cx="0" cy="{my + 16}" rx="14" ry="10" fill="#ff8a8a"/>')
+        s.append(f'<path d="M -16 {my - 22} Q 0 {my - 28} 16 {my - 22}" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>')
     elif kind == "sad":
         for ex in (-32, 32):
             s.append(f'<ellipse cx="{ex}" cy="{gy}" rx="11" ry="14" fill="{INK}"/>')
