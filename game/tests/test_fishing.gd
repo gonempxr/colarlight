@@ -112,13 +112,18 @@ func test_prices() -> void:
 				low = minf(low, FishData.price(id, FishData.species(id)["size"].x, rate))
 			ok = ok and low > top
 		check(ok, "prices strictly ordered by rarity at %s coins/s" % NumFormat.short(rate))
-	check(FishData.price("sardine", 16.0, 0.0) >= FishData.MIN_RATE * 10.0 * 0.8, "brand-new players get a price floor")
+	check(FishData.price("sardine", 16.0, 0.0) >= FishData.MIN_RATE * FishData.PRICE_SEC[0] * 0.8, "brand-new players get a price floor")
 	var p1 := FishData.price("perch", 20.0, 100.0)
 	var p2 := FishData.price("perch", 20.0, 1000.0)
 	check(p2 > p1 * 9.0, "prices follow income")
 	check(FishData.price("perch", 35.0, 100.0) > FishData.price("perch", 15.0, 100.0), "bigger fish are worth more")
 	var koi := FishData.price("koi", 60.0, 50.0)
-	check(absf(koi - 50.0 * 480.0 * 1.15) <= 2.0, "epic ~8 min of income at mid size (%s)" % koi)
+	check(absf(koi - 50.0 * FishData.PRICE_SEC[3] * 1.15) <= 2.0, "epic ~2.5 min of income at mid size (%s)" % koi)
+	# A fish caught where the income is high sells for less where it is low.
+	var fake_fish := {"id": "koi", "size": 60.0, "value": 1000.0, "rate": fi.base_rate() * 4.0}
+	check(absf(fi.value_of(fake_fish) - 250.0) <= 1.0, "no profit from selling in a poorer world")
+	var cheap_fish := {"id": "koi", "size": 60.0, "value": 1000.0, "rate": fi.base_rate() / 4.0}
+	check(is_equal_approx(fi.value_of(cheap_fish), 1000.0), "never more than the value it was caught with")
 	# Sizes stay in range.
 	var in_range := true
 	for id in FishData.ids():

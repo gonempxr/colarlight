@@ -143,6 +143,7 @@ WEARING,On,Надето,Puesto,已穿戴
 SHOP_HINT,"Pearls come from quests, puzzles, gifts and treasure bubbles.","Жемчуг дают за задания, пазлы, подарки и пузыри с сокровищами.","Las perlas salen de misiones, puzles, regalos y burbujas del tesoro.",珍珠来自任务、拼图、礼物和宝藏泡泡。
 SHOP_BOOST,Income ×2 for %d min,Доход ×2 на %d мин,Ingresos ×2 durante %d min,收入 ×2，持续 %d 分钟
 SHOP_COINS,Bag of %s coins,Мешок: %s монет,Bolsa de %s monedas,一袋 %s 金币
+SHOP_ONCE,Once every 5 hours,Раз в 5 часов,Una vez cada 5 horas,每 5 小时一次
 PEARLS_HOW,Everything here is earned by playing.,"Всё здесь можно получить, просто играя.",Todo aquí se consigue jugando.,这里的一切都能通过游戏获得。
 GOAL_PUZZLE_1,Win 1 puzzle,Пройди 1 пазл,Gana 1 puzle,完成 1 关拼图
 GOAL_PUZZLE_10,Win 10 puzzles,Пройди 10 пазлов,Gana 10 puzles,完成 10 关拼图

@@ -212,10 +212,22 @@ func buy_boost() -> bool:
 	return true
 
 
+## Seconds until coins can be bought for pearls again (0 = now).
+func coins_wait() -> float:
+	var last := float(stats.get("coins_bought_at", 0.0))
+	var now := Time.get_unix_time_from_system()
+	if last > now + 60.0:
+		# A clock moved back: never lock the shop for longer than the cooldown.
+		last = now
+	return maxf(0.0, last + Content.COINS_COOLDOWN_SEC - now)
+
+
 func buy_coins() -> bool:
-	if not spend_pearls(Content.COINS_PRICE):
+	if coins_wait() > 0.0 or not spend_pearls(Content.COINS_PRICE):
 		return false
 	GameState.add_coins(coins_for_minutes(Content.COINS_MIN))
+	stats["coins_bought_at"] = Time.get_unix_time_from_system()
+	save_game()
 	return true
 
 

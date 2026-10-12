@@ -4,7 +4,10 @@ extends Node
 ## Profiles.file("fishing.json"). Registered as the Fishing autoload
 ## (after GameState and Progress). Never touches UI classes.
 ##
-## A fish is {"id": String, "size": float (cm), "value": float (coins)}.
+## A fish is {"id": String, "size": float (cm), "value": float (coins),
+## "rate": float (the income per second when it was caught)}. It sells for
+## its value, or less when the income is lower now (a fish caught in a rich
+## world doesn't pay a fortune in a poorer one): value_of().
 ## Its value is fixed when it is caught (seconds of the income at that
 ## moment, see FishData.price), so the bucket never changes price.
 ##
@@ -151,7 +154,7 @@ func is_full() -> bool:
 func bucket_value() -> float:
 	var total := 0.0
 	for f in bucket:
-		total += float(f["value"])
+		total += value_of(f)
 	return total
 
 
@@ -244,7 +247,25 @@ func make_fish(rarity: int) -> Dictionary:
 	var list := FishData.of_rarity(rarity)
 	var id: String = list[rng.randi() % list.size()]
 	var size := FishData.size_from_roll(id, rng.randf())
-	return {"id": id, "size": size, "value": FishData.price(id, size, base_rate())}
+	return {"id": id, "size": size, "value": FishData.price(id, size, base_rate()), "rate": base_rate()}
+
+
+## What a fish sells for here and now: never more than its value, scaled
+## down when the income now is lower than when it was caught.
+func value_of(fish: Dictionary) -> float:
+	var v := maxf(0.0, float(fish.get("value", 0.0)))
+	var at := float(fish.get("rate", 0.0))
+	if at < 0.0:
+		# An old save's fish: pinned to the income it is first seen at,
+		# and never worth more than such a fish caught here.
+		var cap := FishData.price(str(fish.get("id", "")), FishData.species(str(fish.get("id", ""))).get("size", Vector2(10, 20)).y, base_rate()) * (1.0 + FishData.PERFECT_BONUS * 3.0)
+		fish["value"] = minf(v, cap)
+		fish["rate"] = base_rate()
+		_dirty = true
+		return float(fish["value"])
+	if at == 0.0:
+		return v
+	return ceilf(v * minf(1.0, base_rate() / at))
 
 
 ## Writes a catch into the fish book: {"new": bool, "record": bool}.
@@ -271,7 +292,8 @@ func record(fish: Dictionary) -> Dictionary:
 func keep(fish: Dictionary) -> bool:
 	if is_full() or FishData.species(str(fish.get("id", ""))).is_empty():
 		return false
-	bucket.append({"id": str(fish["id"]), "size": float(fish.get("size", 0.0)), "value": maxf(0.0, float(fish.get("value", 0.0)))})
+	bucket.append({"id": str(fish["id"]), "size": float(fish.get("size", 0.0)), "value": maxf(0.0, float(fish.get("value", 0.0))),
+		"rate": float(fish.get("rate", base_rate()))})
 	_dirty = true
 	caught.emit(fish)
 	changed.emit()
@@ -280,7 +302,7 @@ func keep(fish: Dictionary) -> bool:
 
 ## Sells a fish straight from the catch card.
 func sell_fish(fish: Dictionary) -> float:
-	var v := maxf(0.0, float(fish.get("value", 0.0)))
+	var v := value_of(fish)
 	caught.emit(fish)
 	_pay(v, 1)
 	return v
@@ -291,7 +313,7 @@ func sell_at(i: int) -> float:
 		return 0.0
 	var f: Dictionary = bucket[i]
 	bucket.remove_at(i)
-	var v := float(f["value"])
+	var v := value_of(f)
 	_pay(v, 1)
 	return v
 
@@ -405,7 +427,11 @@ func load_game() -> bool:
 	if d.get("bucket") is Array:
 		for f in d["bucket"]:
 			if f is Dictionary and not FishData.species(str(f.get("id", ""))).is_empty() and bucket.size() < capacity():
-				bucket.append({"id": str(f["id"]), "size": maxf(0.0, _f(f.get("size"))), "value": maxf(0.0, _f(f.get("value")))})
+				# Older saves have no "rate": the fish counts as caught at
+				# the income of wherever the player loads it (no world hopping).
+				var rate := _f(f.get("rate"))
+				bucket.append({"id": str(f["id"]), "size": maxf(0.0, _f(f.get("size"))), "value": maxf(0.0, _f(f.get("value"))),
+					"rate": rate if rate > 0.0 else -1.0})
 	if d.get("stats") is Dictionary:
 		for k in d["stats"]:
 			if d["stats"][k] is float or d["stats"][k] is int:

@@ -325,6 +325,9 @@ const STREAK_MILESTONES: Array[Dictionary] = [
 const BOOST_PRICE := 20       # pearls for 30 minutes of x2
 const BOOST_MIN := 30
 const COINS_PRICE := 15       # pearls for 30 minutes of income
+## Coins for pearls can be bought once every 5 hours (balance: pearls must
+## not turn into an endless coin tap).
+const COINS_COOLDOWN_SEC := 5 * 3600
 const COINS_MIN := 30
 
 # --- Features ---------------------------------------------------------------------

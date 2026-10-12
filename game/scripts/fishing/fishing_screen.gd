@@ -771,7 +771,7 @@ func _show_card() -> void:
 	var size_l := Views.label(tr("FISHING_CM") % _cm(float(fish["size"])), 30, Art.INK_SOFT, true)
 	size_l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	info.add_child(size_l)
-	info.add_child(Views.chip("coin", NumFormat.short(float(fish["value"])), 32))
+	info.add_child(Views.chip("coin", NumFormat.short(Fishing.value_of(fish)), 32))
 	box.add_child(info)
 	var perfect := int(fish.get("perfect", 0))
 	if perfect > 0:
@@ -979,7 +979,7 @@ func _build_bucket(m: Modal) -> void:
 		v.add_child(sl)
 		var sell := Button.new()
 		sell.theme_type_variation = &"GoldButton"
-		sell.text = NumFormat.short(float(f["value"]))
+		sell.text = NumFormat.short(Fishing.value_of(f))
 		sell.icon = Icons.get_icon("coin", 30)
 		sell.custom_minimum_size = Vector2(0, 62)
 		sell.focus_mode = Control.FOCUS_NONE

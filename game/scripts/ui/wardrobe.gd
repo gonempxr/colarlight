@@ -262,12 +262,25 @@ static func _shop(m: Modal, main: Node) -> void:
 		h.add_child(Views.icon(o[0], 64))
 		var l := Views.label(o[1], 23, Art.INK, true)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(l)
+		if o[0] == "coin":
+			var col := VBoxContainer.new()
+			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			col.alignment = BoxContainer.ALIGNMENT_CENTER
+			col.add_child(l)
+			col.add_child(Views.label(t("SHOP_ONCE"), 18, Art.INK_SOFT))
+			h.add_child(col)
+		else:
+			h.add_child(l)
 		var b := Button.new()
 		b.text = str(o[2])
 		b.icon = Icons.get_icon("pearl", 30)
 		b.custom_minimum_size = Vector2(140, 68)
 		b.theme_type_variation = &"GoldButton" if Progress.pearls >= int(o[2]) else &"DarkButton"
+		if o[0] == "coin" and Progress.coins_wait() > 0.0:
+			# Once every 5 hours: the button shows when it is back.
+			b.text = NumFormat.duration(Progress.coins_wait())
+			b.icon = null
+			b.theme_type_variation = &"DarkButton"
 		var buy: Callable = o[3]
 		var shown: Dictionary = o[4]
 		b.pressed.connect(func():

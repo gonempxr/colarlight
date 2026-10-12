@@ -20,7 +20,7 @@ const ODDS: Array[float] = [60.0, 25.0, 10.0, 4.0, 1.0]
 ## Each rod level multiplies a rarity's weight by (1 + ROD_ODDS[r] * level).
 const ROD_ODDS: Array[float] = [0.0, 0.02, 0.08, 0.12, 0.16]
 ## Worth of a fish of normal size, in seconds of income.
-const PRICE_SEC: Array[float] = [10.0, 30.0, 120.0, 480.0, 1800.0]
+const PRICE_SEC: Array[float] = [4.0, 10.0, 40.0, 150.0, 500.0]
 ## Smallest and biggest fish of a species are worth this much times the base.
 const SIZE_MULT := Vector2(0.8, 1.5)
 ## Income never counts as less than this (coins/s), so a brand-new player
