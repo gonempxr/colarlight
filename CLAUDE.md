@@ -45,6 +45,13 @@ This file is the quick picture; keep it up to date when something big changes.
   invites (?ref= / CrazyGames inviteLink), exclusive Founder Cap. Firebase
   anonymous auth + Firestore rules; `Online` autoload, `window.coralightOnline`
   bridge, loaded 4 s after start; `?online=test` fakes it.
+  2026-10-12 (p-social, in worlds + beta): unique nicknames (Firestore
+  `names/{key}`, asked at the start on web), bigger name filter, weekly race
+  with prizes paid on Monday, x2 coins every Saturday (UTC), account card
+  (CrazyGames log-in on CrazyGames, Google on our site). The rules in
+  docs/online.md changed: Mark must publish them together with promoting the
+  beta to main (old clients can't send scores under the new rules).
+- Puzzle: each world has its own board (TileWorlds: lava, swamp, space).
 - Languages RU / EN / ES / ZH (Noto Sans SC subset — rerun
   `python3 tools/subset_fonts.py` after adding Chinese text; it needs the
   full font in `~/fontsrc`, otherwise merge glyphs carefully).
