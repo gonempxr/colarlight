@@ -15,12 +15,15 @@ const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "ne
 ## Kinds that give off light (a soft pulsing glow behind them).
 const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
 		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
-		"ufo", "fire_opal", "goo_king"]
+		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]
 ## Kinds that sit in a mound of rock.
-const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust"]
+const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust",
+		"turquoise", "tiger_eye"]
 ## Kinds with a big centerpiece of their own (loose pieces lie in front of it).
 const CENTERPIECE: Array[String] = ["gold", "kraken", "atlantis", "pearl", "vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart",
-		"phoenix", "goo_king", "alien_egg", "ufo"]
+		"phoenix", "goo_king", "alien_egg", "ufo", "clay", "cocoa", "old_coins", "mask", "idol", "sun_disc", "serpent", "temple_heart"]
+## The jungle's kinds (temple ruins): drawn by jungle_piece / jungle_centerpiece.
+const JUNGLE: Array[String] = ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]
 
 
 static func kind_of(depth: int) -> String:
@@ -65,6 +68,8 @@ static func deposit(ci: CanvasItem, base: Vector2, size: float, depth: int, seed
 			Art.pop(ci)
 		"vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart", "phoenix", "goo_king", "alien_egg", "ufo":
 			centerpiece(ci, kind, base, s, st, t, seed)
+		"clay", "cocoa", "old_coins", "mask", "idol", "sun_disc", "serpent", "temple_heart":
+			jungle_centerpiece(ci, kind, base, s, st, t, seed)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var order: Array[int] = []
@@ -152,6 +157,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 		"ash", "sulfur", "fire_opal", "garnet", "ember", "phoenix", "slime", "moss", "bubble", "venom", "radiant", \
 				"goo_king", "dust", "comet", "alien_egg", "ufo":
 			world_piece(ci, kind, ore, ore2, t, i)
+		"clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart":
+			jungle_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)
@@ -170,8 +177,12 @@ static func chunk(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: flo
 		"kraken", "atlantis", "time":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 1)
 		"pearl", "copper", "moon", "lava", "meteor", "sapphire", "star", "fossil", "dragon", "ash", "fire_opal", "garnet", \
-				"slime", "moss", "bubble", "dust", "comet", "ufo", "alien_egg":
+				"slime", "moss", "bubble", "dust", "comet", "ufo", "alien_egg", "turquoise", "tiger_eye", "mask", "temple_heart":
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.3, 0.0, st, 0.0, 1)
+		"clay", "old_coins", "sun_disc":
+			piece(ci, kind, Vector2(0, 18 * s), s * 1.25, 0.0, st, 0.0, 0)
+		"cocoa", "idol", "serpent":
+			piece(ci, kind, Vector2(0, 20 * s), s * 1.05, 0.0, st, 0.0, 0)
 		"crown", "void", "heart":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 0)
 		_:
@@ -186,7 +197,7 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 	var c: Color = st["ore"]
 	Art.push(ci, at, rot, Vector2(size, size) / 4.0)
 	match kind:
-		"star", "moon", "glow", "storm", "crown", "heart", "radiant", "comet", "void", "dust":
+		"star", "moon", "glow", "storm", "crown", "heart", "radiant", "comet", "void", "dust", "old_coins", "idol", "sun_disc", "temple_heart":
 			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5.0, 2.2, 4), st["ore2"], 1.2, 0.0)
 		"slime", "bubble", "venom", "goo_king":
 			Art.t_circle(ci, Vector2.ZERO, 3.0, c, 1.2, 0.0)
@@ -202,6 +213,10 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 			Art.toon(ci, _CHIP, c.lightened(0.2), 1.2, 0.0)
 		"obsidian":
 			Art.toon(ci, _CHIP, Color("2b2340"), 1.2, 0.0)
+		"clay", "cocoa":
+			Art.toon(ci, _CHIP, c.lightened(0.1), 1.2, 0.0)
+		"mask":
+			Art.toon(ci, _CHIP, Color("8e8e78"), 1.2, 0.0)
 		_:
 			Art.toon(ci, _CHIP, c, 1.2, 0.0)
 	Art.pop(ci)
@@ -216,7 +231,8 @@ static func _tilt(kind: String) -> float:
 	match kind:
 		"glow", "gold", "atlantis", "jade", "moon", "pearl", "copper", "fossil", "lava", "meteor", "star", "kraken", \
 				"vent", "whale", "dragon", "crown", "void", "time", "heart", "ash", "fire_opal", "slime", "moss", "bubble", \
-				"venom", "goo_king", "dust", "comet", "alien_egg", "ufo":
+				"venom", "goo_king", "dust", "comet", "alien_egg", "ufo", "clay", "cocoa", "turquoise", "old_coins", "mask", \
+				"tiger_eye", "idol", "sun_disc", "serpent", "temple_heart":
 			return 0.35
 	return 1.0
 
@@ -236,6 +252,10 @@ static func _mound(ci: CanvasItem, base: Vector2, s: float, st: Dictionary, kind
 			rock = Color("4a4250")
 		"dust":
 			rock = Color("8a8ea2")
+		"turquoise":
+			rock = Color("7a6448")
+		"tiger_eye":
+			rock = Color("5a3e26")
 	Art.push(ci, base + Vector2(0, 3), 0.0, Vector2(s, s))
 	Art.toon(ci, _MOUND, Art.shade_of(rock, 0.1), 2.2, 0.5)
 	Art.flat(ci, Art.ellipse_pts(Vector2(-12, -12), Vector2(6, 2.5), 10, -0.2), Color(1, 1, 1, 0.14))
@@ -1442,3 +1462,429 @@ static func _ufo(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
 	Art.t_rect(ci, Rect2(-7, -4, 14, 4), 2, Art.shade_of(c, 0.2), 1.6, 0.0)
 	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -19), Vector2(2, 3), 8, 0.4), Color(1, 1, 1, 0.7))
 
+
+
+# --- The jungle temple sites -------------------------------------------------------------
+#
+# Clay shards, cocoa pods, turquoise, ancient coins, stone masks, tiger's
+# eye, golden idols, sun discs, jade serpents and the temple's ruby heart.
+# Shapes are cached statics; motion only through Art.push or snapped values.
+
+const TERRACOTTA_DARK := Color("8a3e22")
+const JG_GOLD := Color("ffc93c")
+const JG_GOLD_DARK := Color("d0901c")
+const JG_JADE := Color("34c88a")
+const JG_STONE := Color("b4ad92")
+
+
+## One piece of a jungle kind (unit space, ~40 tall, standing on 0,0).
+static func jungle_piece(ci: CanvasItem, kind: String, c: Color, c2: Color, t: float, i: int) -> void:
+	match kind:
+		"clay":
+			if i % 3 == 0:
+				_jar(ci, c, c2, i)
+			else:
+				_pot_shard(ci, c, c2, i)
+		"cocoa":
+			_cocoa_pod(ci, c, c2, i)
+		"turquoise":
+			_turquoise(ci, c, c2, i)
+		"old_coins":
+			if i % 3 == 1:
+				_coin_stack(ci, c, c2)
+			else:
+				_old_coin(ci, c, c2, i)
+		"mask":
+			_stone_mask(ci, c, c2, t, i)
+		"tiger_eye":
+			_tiger_eye(ci, c, c2, i)
+		"idol":
+			_idol(ci, c, c2, i)
+		"sun_disc":
+			_sun_disc(ci, c, c2, t, i)
+		"serpent":
+			_serpent(ci, c, c2, t, i)
+		"temple_heart":
+			if i % 3 == 2:
+				_old_coin(ci, JG_GOLD, Color("fff1a8"), i)
+			else:
+				_ruby_heart(ci, c, c2, t, i)
+
+
+## The big piece of a jungle deposit, standing on `base`; `s` = size / 40.
+static func jungle_centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, st: Dictionary, t: float, seed: int) -> void:
+	var c: Color = st["ore"]
+	var c2: Color = st["ore2"]
+	match kind:
+		"clay":
+			# A big painted urn, leaning a little, a crack down its side.
+			Art.push(ci, base + Vector2(-6 * s, 2), -0.06, Vector2(s, s) * 1.55)
+			_jar(ci, c, c2, 1)
+			Art.line_c(ci, _JAR_CRACK, TERRACOTTA_DARK, 1.2)
+			Art.pop(ci)
+		"cocoa":
+			# A woven basket heaped with pods.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.2)
+			for k in 3:
+				Art.push(ci, Vector2(-11 + k * 11, -14 - (k % 2) * 4), -0.5 + k * 0.5, Vector2(0.62, 0.62))
+				_cocoa_pod(ci, c, c2, k)
+				Art.pop(ci)
+			Art.toon(ci, _BASKET, Color("c8924a"), 2.2, 0.5)
+			for k in 3:
+				Art.line_c(ci, _BASKET_WEAVE[k], Color("8e5a2a"), 1.4)
+			Art.t_rect(ci, Rect2(-21, -19, 42, 4), 2, Color("a8743a"), 1.8, 0.0)
+			Art.pop(ci)
+		"old_coins":
+			# A carved stone chest, lid pushed back, spilling coins.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.05)
+			Art.toon(ci, _CHEST_LID, Color("9a9478"), 2.2, 0.4)
+			Art.toon(ci, _GOLD_PILE, c, 2.0, 0.0)
+			for p: Vector2 in [Vector2(-10, -28), Vector2(4, -31), Vector2(12, -26)]:
+				Art.flat(ci, Art.ellipse_pts(p, Vector2(4.5, 2), 10), c2)
+			Art.t_rect(ci, Rect2(-24, -25, 48, 25), 3, JG_STONE, 2.2, 0.5)
+			Art.line_c(ci, _CHEST_GLYPH, Art.shade_of(JG_STONE, 0.35), 1.8)
+			Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1, 1))
+			Art.line_c(ci, _CHEST_GLYPH, Art.shade_of(JG_STONE, 0.35), 1.8)
+			Art.pop(ci)
+			Art.t_circle(ci, Vector2(0, -13), 4.5, JG_JADE, 1.6, 0.0)
+			for p: Vector3 in [Vector3(26, -3, 0.3), Vector3(-27, -2, -0.4)]:
+				Art.t_ellipse(ci, Vector2(p.x, p.y), Vector2(5, 2.2), c, 1.4, 0.0, p.z)
+			var tw := snappedf(0.5 + 0.5 * sin(t * 4.0 + seed), 0.1)
+			Art.push(ci, Vector2(8, -36), 0.0, Vector2.ONE * (0.6 + tw * 0.5))
+			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5, 1.4, 4), Color(1, 1, 1, 0.95), 0.0, 0.0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"mask":
+			# A big mask on a carved post.
+			Art.push(ci, base + Vector2(-4 * s, 2), 0.04, Vector2(s, s) * 1.3)
+			Art.t_rect(ci, Rect2(-4, -18, 8, 18), 2, Art.WOOD_DARK, 2.0, 0.3)
+			Art.push(ci, Vector2(0, -12))
+			_stone_mask(ci, c, c2, t, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"idol":
+			# The golden idol on a stepped stone pedestal.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.15)
+			Art.toon(ci, _STEPS, JG_STONE, 2.2, 0.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(-15, -5), Vector2(15, -5)]), Art.shade_of(JG_STONE, 0.3), 1.4)
+			Art.push(ci, Vector2(0, -10), 0.0, Vector2(1.15, 1.15))
+			_idol(ci, c, c2, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"sun_disc":
+			# A big sun disc on a stand, its ring of rays slowly turning.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.3)
+			Art.t_rect(ci, Rect2(-3, -16, 6, 16), 1.5, JG_GOLD_DARK, 1.8, 0.0)
+			Art.t_rect(ci, Rect2(-12, -4, 24, 4), 2, JG_STONE, 1.8, 0.0)
+			Art.push(ci, Vector2(0, -8))
+			_sun_disc(ci, c, c2, t, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"serpent":
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.35)
+			_serpent(ci, c, c2, t, 0)
+			Art.pop(ci)
+		"temple_heart":
+			# The heart on a little gold-trimmed altar, beating, rays turning.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.15)
+			Art.toon(ci, _STEPS, Color("8a7a6a"), 2.2, 0.4)
+			Art.flat(ci, _STEPS_TRIM, JG_GOLD)
+			var bob := snappedf(sin(t * 1.8 + seed) * 2.0, 0.5)
+			heart_rays(ci, Vector2(0, -30 + bob), 34.0, c2, t)
+			Art.push(ci, Vector2(0, -14 + bob), 0.0, Vector2(1.05, 1.05))
+			_ruby_heart(ci, c, c2, t, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+
+
+# clay -----------------------------------------------------------------
+
+## A little painted jar: terracotta, a cream band with a zigzag.
+static func _jar(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	if i % 2 == 1:
+		for x: float in [-12.0, 12.0]:
+			Art.t_ellipse(ci, Vector2(x, -26), Vector2(3.6, 5), c.darkened(0.1), 1.8, 0.0)
+	Art.toon(ci, _JAR, c, 2.0, 0.6)
+	Art.flat(ci, _JAR_BAND, c2)
+	Art.line_c(ci, _JAR_ZIG, TERRACOTTA_DARK, 1.4)
+	Art.flat(ci, _JAR_LOW, Art.shade_of(c, 0.2))
+	Art.t_rect(ci, Rect2(-6.5, -38, 13, 4.5), 2, c.lightened(0.08), 1.8, 0.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-7, -24), Vector2(1.8, 5), 8, 0.2), Color(1, 1, 1, 0.45))
+
+
+## A broken piece of a painted pot.
+static func _pot_shard(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _SHARD_POT, c, 2.0, 0.5)
+	Art.flat(ci, _SHARD_BAND, c2)
+	Art.line_c(ci, _SHARD_ZIG, TERRACOTTA_DARK, 1.3)
+	Art.flat(ci, _SHARD_EDGE, Art.shade_of(c, 0.3))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -17), Vector2(1.6, 4), 8, 0.4), Color(1, 1, 1, 0.45))
+	Art.pop(ci)
+
+
+static var _JAR := Art.smooth_pts(PackedVector2Array([Vector2(-5, -35), Vector2(5, -35), Vector2(6, -30), Vector2(12, -24),
+		Vector2(14, -13), Vector2(10, -3), Vector2(0, 0), Vector2(-10, -3), Vector2(-14, -13), Vector2(-12, -24), Vector2(-6, -30)]), 3)
+static var _JAR_BAND := Art.clipped(PackedVector2Array([Vector2(-20, -23), Vector2(20, -23), Vector2(20, -14), Vector2(-20, -14)]), _JAR)
+static var _JAR_LOW := Art.clipped(Art.ellipse_pts(Vector2(4, 2), Vector2(16, 8), 16), _JAR)
+static var _JAR_ZIG := PackedVector2Array([Vector2(-12, -16), Vector2(-8, -21), Vector2(-4, -16), Vector2(0, -21), Vector2(4, -16), Vector2(8, -21), Vector2(12, -16)])
+static var _JAR_CRACK := PackedVector2Array([Vector2(7, -30), Vector2(9, -24), Vector2(6, -19), Vector2(9, -12)])
+static var _SHARD_POT := PackedVector2Array([Vector2(-14, 0), Vector2(-13, -12), Vector2(-8, -22), Vector2(-2, -20), Vector2(3, -28),
+		Vector2(9, -22), Vector2(13, -10), Vector2(12, 0)])
+static var _SHARD_BAND := Art.clipped(PackedVector2Array([Vector2(-20, -14), Vector2(20, -12), Vector2(20, -6), Vector2(-20, -8)]), _SHARD_POT)
+static var _SHARD_ZIG := PackedVector2Array([Vector2(-11, -9), Vector2(-7, -13), Vector2(-3, -9), Vector2(1, -12), Vector2(5, -8), Vector2(9, -11)])
+static var _SHARD_EDGE := PackedVector2Array([Vector2(-14, 0), Vector2(12, 0), Vector2(11, -3), Vector2(-13, -3)])
+
+
+# cocoa ----------------------------------------------------------------
+
+## A ridged cocoa pod (some ripe orange, some red, some still green), or
+## one split open with its cream beans.
+static func _cocoa_pod(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	var tones: Array[Color] = [c, c.lerp(Color("d0442a"), 0.6), c.lerp(Color("b8c43a"), 0.55), c]
+	var tone: Color = tones[i % 4]
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.t_rect(ci, Rect2(-1.6, -45, 3.2, 7), 1, Color("6a4424"), 1.4, 0.0)
+	if i % 4 == 3:
+		Art.toon(ci, _POD, Art.shade_of(tone, 0.15), 2.0, 0.4)
+		Art.toon(ci, _POD_OPEN, Color("fff0d2"), 1.6, 0.0)
+		for p: Vector2 in [Vector2(-1, -27), Vector2(1, -19), Vector2(-1, -11)]:
+			Art.t_ellipse(ci, p, Vector2(3.4, 3.0), c2, 1.2, 0.0)
+	else:
+		Art.toon(ci, _POD, tone, 2.0, 0.6)
+		for r: PackedVector2Array in _POD_RIDGES:
+			Art.line_c(ci, r, Art.shade_of(tone, 0.3), 1.6)
+		Art.flat(ci, Art.ellipse_pts(Vector2(-4.5, -24), Vector2(1.8, 7), 8, 0.12), Color(1, 1, 1, 0.45))
+	Art.pop(ci)
+
+
+static var _POD := Art.smooth_pts(PackedVector2Array([Vector2(0, -40), Vector2(7, -34), Vector2(10.5, -22), Vector2(9, -9),
+		Vector2(4, -1), Vector2(0, 1), Vector2(-4, -1), Vector2(-9, -9), Vector2(-10.5, -22), Vector2(-7, -34)]), 3)
+static var _POD_OPEN := Art.smooth_pts(PackedVector2Array([Vector2(0, -34), Vector2(5, -26), Vector2(5.5, -14), Vector2(0, -5),
+		Vector2(-5.5, -14), Vector2(-5, -26)]), 3)
+static var _POD_RIDGES: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(-4, -35), Vector2(-6, -22), Vector2(-4, -6)]),
+		PackedVector2Array([Vector2(0, -38), Vector2(0, -2)]),
+		PackedVector2Array([Vector2(4, -35), Vector2(6, -22), Vector2(4, -6)])]
+static var _BASKET := Art.smooth_pts(PackedVector2Array([Vector2(-21, -17), Vector2(21, -17), Vector2(17, -4), Vector2(12, 0),
+		Vector2(-12, 0), Vector2(-17, -4)]), 2)
+static var _BASKET_WEAVE: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(-18, -12), Vector2(-10, -9), Vector2(-2, -12), Vector2(6, -9), Vector2(14, -12), Vector2(18, -10)]),
+		PackedVector2Array([Vector2(-15, -6), Vector2(-7, -3), Vector2(1, -6), Vector2(9, -3), Vector2(16, -6)]),
+		PackedVector2Array([Vector2(0, -16), Vector2(0, -1)])]
+
+
+# turquoise --------------------------------------------------------------
+
+## A lump of turquoise with a web of brown matrix.
+static func _turquoise(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0 - (i % 3) * 0.08))
+	Art.toon(ci, _NUGGET, c, 2.0, 0.6)
+	for v: PackedVector2Array in _TQ_VEINS:
+		Art.line_c(ci, v, Color("7a5434", 0.85), 1.3)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -17), Vector2(5, 2.6), 12, -0.3), Color(c2, 0.85))
+	Art.flat(ci, Art.circle_pts(Vector2(-7, -18), 1.6, 8), Color(1, 1, 1, 0.9))
+	Art.pop(ci)
+
+
+static var _TQ_VEINS: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(-14, -8), Vector2(-7, -10), Vector2(-3, -6), Vector2(4, -8), Vector2(12, -5)]),
+		PackedVector2Array([Vector2(-3, -6), Vector2(-1, -14), Vector2(6, -18)]),
+		PackedVector2Array([Vector2(4, -8), Vector2(8, -14)])]
+
+
+# old coins ---------------------------------------------------------------
+
+## An ancient gold coin on its edge: a square hole and a stamped sun.
+static func _old_coin(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.t_ellipse(ci, Vector2(2.5, -14), Vector2(12.5, 14), Art.shade_of(c, 0.3), 2.0, 0.0)
+	Art.t_ellipse(ci, Vector2(0, -14), Vector2(12.5, 14), c, 2.0, 0.4)
+	Art.arc_c(ci, Vector2(0, -14), 9.5, 0, TAU, 18, Art.shade_of(c, 0.28), 1.4)
+	Art.toon(ci, _COIN_SUN, c2, 1.2, 0.0)
+	Art.t_rect(ci, Rect2(-2.6, -16.6, 5.2, 5.2), 0.8, Art.shade_of(c, 0.45), 1.0, 0.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -21), Vector2(1.6, 3.6), 8, 0.4), Color(1, 1, 1, 0.75))
+	Art.pop(ci)
+
+
+## A short stack of coins with one on top showing its face.
+static func _coin_stack(ci: CanvasItem, c: Color, c2: Color) -> void:
+	for k in 4:
+		Art.t_ellipse(ci, Vector2((k % 2) * 1.5 - 0.5, -3 - k * 4.5), Vector2(12, 4), Art.shade_of(c, 0.12), 1.8, 0.0)
+	Art.t_ellipse(ci, Vector2(0.5, -20), Vector2(12, 4), c2, 1.8, 0.0)
+	Art.flat(ci, Art.ellipse_pts(Vector2(0.5, -20), Vector2(6, 1.8), 10), Color(c, 0.9))
+	Art.flat(ci, PackedVector2Array([Vector2(-1.2, -20.8), Vector2(2.2, -20.8), Vector2(2.2, -19.2), Vector2(-1.2, -19.2)]), Art.shade_of(c, 0.45))
+
+
+static var _COIN_SUN := Art.smooth_pts(Art.star_pts(Vector2(0, -14), 7.5, 4.6, 8), 1)
+
+
+# mask -------------------------------------------------------------------
+
+## A small carved stone mask with jade eyes and gold ear plugs.
+static func _stone_mask(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var lit := snappedf(0.7 + 0.3 * sin(t * 2.0 + i * 1.3), 0.1)
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	for x: float in [-15.0, 15.0]:
+		Art.t_circle(ci, Vector2(x, -22), 3.6, JG_GOLD, 1.6, 0.0)
+	Art.toon(ci, _MASK, c, 2.2, 0.6)
+	Art.flat(ci, _MASK_BAND, Art.shade_of(c, 0.22))
+	for k in 3:
+		Art.flat(ci, Art.circle_pts(Vector2(-7 + k * 7, -32.5), 1.6, 6), JG_GOLD)
+	for e: PackedVector2Array in _MASK_EYES:
+		Art.flat(ci, e, Color(c2, lit))
+	Art.line_c(ci, _MASK_BROW, Art.shade_of(c, 0.4), 1.6)
+	Art.line_c(ci, _MASK_NOSE, Art.shade_of(c, 0.35), 1.6)
+	Art.t_rect(ci, Rect2(-5, -10, 10, 4), 1.5, Art.shade_of(c, 0.5), 1.2, 0.0)
+	for x: float in [-2.5, 0.0, 2.5]:
+		Art.flat(ci, PackedVector2Array([Vector2(x - 0.8, -10), Vector2(x + 0.8, -10), Vector2(x, -7.5)]), Color("f4f0e0"))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-8, -26), Vector2(1.6, 4), 8, 0.3), Color(1, 1, 1, 0.35))
+	Art.pop(ci)
+
+
+static var _MASK := Art.smooth_pts(PackedVector2Array([Vector2(-13, -36), Vector2(13, -36), Vector2(15, -24), Vector2(12, -10),
+		Vector2(6, -2), Vector2(0, 0), Vector2(-6, -2), Vector2(-12, -10), Vector2(-15, -24)]), 3)
+static var _MASK_BAND := Art.clipped(PackedVector2Array([Vector2(-20, -40), Vector2(20, -40), Vector2(20, -30), Vector2(-20, -30)]), _MASK)
+static var _MASK_EYES: Array[PackedVector2Array] = [
+		Art.smooth_pts(PackedVector2Array([Vector2(-11, -22), Vector2(-7, -25.5), Vector2(-3, -22.5), Vector2(-7, -20.5)]), 2),
+		Art.smooth_pts(PackedVector2Array([Vector2(11, -22), Vector2(7, -25.5), Vector2(3, -22.5), Vector2(7, -20.5)]), 2)]
+static var _MASK_BROW := PackedVector2Array([Vector2(-11, -26.5), Vector2(-6, -28.5), Vector2(-1.5, -26), Vector2(0, -24), Vector2(1.5, -26),
+		Vector2(6, -28.5), Vector2(11, -26.5)])
+static var _MASK_NOSE := PackedVector2Array([Vector2(0, -23), Vector2(-1.5, -15), Vector2(1.5, -14)])
+
+
+# tiger's eye --------------------------------------------------------------
+
+## A polished tiger's eye: wavy golden-brown bands and a silky shine.
+static func _tiger_eye(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, (i % 3 - 1) * 0.2)
+	Art.toon(ci, _TE, c, 2.0, 0.3)
+	Art.flat(ci, _TE_BANDS[0], Color("6a3412"))
+	Art.flat(ci, _TE_BANDS[1], c2)
+	Art.flat(ci, _TE_BANDS[2], Color("8a4a1a"))
+	Art.flat(ci, _TE_SHINE, Color(1, 0.96, 0.8, 0.55))
+	Art.toon(ci, Art.star_pts(Vector2(-5, -24), 3.2, 0.9, 4), Color(1, 1, 1, 0.95), 0.0, 0.0)
+	Art.pop(ci)
+
+
+static var _TE := Art.ellipse_pts(Vector2(0, -15), Vector2(12.5, 15), 22)
+static var _TE_BANDS: Array[PackedVector2Array] = [_wave_band(-23.0, 3.6), _wave_band(-12.0, 3.0), _wave_band(-3.5, 3.6)]
+static var _TE_SHINE := _wave_band(-17.5, 1.5)
+
+
+static func _wave_band(y: float, hw: float) -> PackedVector2Array:
+	var top := PackedVector2Array()
+	var bot := PackedVector2Array()
+	for k in 9:
+		var x := lerpf(-16.0, 16.0, k / 8.0)
+		var wy := y + sin(k * 0.9) * 2.6
+		top.append(Vector2(x, wy - hw))
+		bot.append(Vector2(x, wy + hw))
+	bot.reverse()
+	top.append_array(bot)
+	return Art.clipped(top, Art.ellipse_pts(Vector2(0, -15), Vector2(11.5, 14), 22))
+
+
+# idol -----------------------------------------------------------------
+
+## A chubby little golden idol with a jade-feather headdress.
+static func _idol(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	for k in 3:
+		Art.push(ci, Vector2(0, -35), (k - 1) * 0.55)
+		Art.toon(ci, _IDOL_FEATHER, c2 if k != 1 else Color("ff5a7a"), 1.6, 0.3)
+		Art.pop(ci)
+	Art.t_rect(ci, Rect2(-11, -6, 22, 6), 2, JG_GOLD_DARK, 1.8, 0.3)
+	Art.toon(ci, _IDOL_BODY, c, 2.0, 0.6)
+	Art.t_circle(ci, Vector2(0, -27), 10, c, 2.0, 0.5)
+	Art.t_rect(ci, Rect2(-10, -37, 20, 5), 2, Art.shade_of(c, 0.2), 1.4, 0.0)
+	Art.flat(ci, Art.circle_pts(Vector2(0, -34.5), 2.2, 8), Color("ff3d6e"))
+	for x: float in [-4.0, 4.0]:
+		Art.flat(ci, Art.ellipse_pts(Vector2(x, -27), Vector2(1.6, 2.2), 8), Art.INK)
+	Art.arc_c(ci, Vector2(0, -23.5), 2.6, 0.4, PI - 0.4, 6, Art.INK, 1.3)
+	Art.line_c(ci, _IDOL_ARMS, Art.shade_of(c, 0.4), 1.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -30), Vector2(1.6, 3), 8, 0.4), Color(1, 1, 1, 0.75))
+	Art.pop(ci)
+
+
+static var _IDOL_BODY := Art.smooth_pts(PackedVector2Array([Vector2(-7, -20), Vector2(7, -20), Vector2(10, -12), Vector2(10, -6),
+		Vector2(-10, -6), Vector2(-10, -12)]), 2)
+static var _IDOL_FEATHER := Art.smooth_pts(PackedVector2Array([Vector2(-2.5, 0), Vector2(-4, -6), Vector2(0, -12), Vector2(4, -6), Vector2(2.5, 0)]), 2)
+static var _IDOL_ARMS := PackedVector2Array([Vector2(-7, -15), Vector2(-2, -12), Vector2(2, -12), Vector2(7, -15)])
+
+
+# sun disc ---------------------------------------------------------------
+
+## A golden sun disc (~34 across) with a smiling face; its rays turn.
+static func _sun_disc(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var at := Vector2(0, -17)
+	Art.push(ci, at, t * 0.3 + i * 0.4)
+	Art.toon(ci, _SUN_RAYS, Art.shade_of(c, 0.1), 2.0, 0.0)
+	Art.pop(ci)
+	Art.t_circle(ci, at, 11.5, c, 2.0, 0.5)
+	Art.arc_c(ci, at, 9.0, 0, TAU, 18, Art.shade_of(c, 0.3), 1.4)
+	Art.t_circle(ci, at, 7, c2, 1.2, 0.0)
+	for x: float in [-2.6, 2.6]:
+		Art.flat(ci, Art.ellipse_pts(at + Vector2(x, -1.2), Vector2(1.1, 1.6), 6), Art.INK)
+	Art.arc_c(ci, at + Vector2(0, 1.0), 2.4, 0.4, PI - 0.4, 6, Art.INK, 1.2)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(-6, -6), Vector2(1.6, 3), 8, 0.6), Color(1, 1, 1, 0.7))
+
+
+static var _SUN_RAYS := Art.star_pts(Vector2.ZERO, 17.5, 11.0, 12)
+
+
+# serpent --------------------------------------------------------------
+
+## A jade feathered serpent coiled on a little base, crest of feathers.
+static func _serpent(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.t_ellipse(ci, Vector2(0, -2), Vector2(13, 3.5), JG_STONE, 1.8, 0.0)
+	Art.toon(ci, _SERP_BODY, c, 2.0, 0.5)
+	for p: Vector2 in _SERP_SCALES:
+		Art.arc_c(ci, p, 3.0, 0.3, PI - 0.3, 4, Art.shade_of(c, 0.35), 1.2)
+	var sway := snappedf(sin(t * 2.0 + i) * 0.08, 0.02)
+	var cols: Array[Color] = [Color("ff5a5a"), c2, JG_GOLD]
+	for k in 3:
+		Art.push(ci, Vector2(-1, -36), -1.1 + k * 0.45 + sway)
+		Art.toon(ci, _SERP_FEATHER, cols[k], 1.4, 0.3)
+		Art.pop(ci)
+	Art.toon(ci, _SERP_HEAD, c, 2.0, 0.5)
+	Art.flat(ci, Art.circle_pts(Vector2(7, -36), 1.7, 8), Art.INK)
+	Art.flat(ci, Art.circle_pts(Vector2(6.5, -36.6), 0.6, 6), Color.WHITE)
+	Art.line_c(ci, PackedVector2Array([Vector2(14, -32), Vector2(17, -31), Vector2(19, -33)]), Color("ff5a7a"), 1.2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -20), Vector2(1.6, 4), 8, 0.3), Color(c2, 0.8))
+	Art.pop(ci)
+
+
+static var _SERP_BODY := Geometry2D.offset_polyline(Art.smooth_pts(PackedVector2Array([Vector2(-10, -4), Vector2(8, -6), Vector2(10, -14),
+		Vector2(-8, -16), Vector2(-9, -24), Vector2(4, -28), Vector2(4, -33)]), 3), 3.6, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]
+static var _SERP_HEAD := Art.smooth_pts(PackedVector2Array([Vector2(-1, -32), Vector2(3, -40), Vector2(10, -40), Vector2(16, -34),
+		Vector2(14, -31), Vector2(4, -30)]), 2)
+static var _SERP_FEATHER := Art.smooth_pts(PackedVector2Array([Vector2(-2, 0), Vector2(-3, -6), Vector2(0, -11), Vector2(3, -6), Vector2(2, 0)]), 2)
+static var _SERP_SCALES: Array[Vector2] = [Vector2(-4, -6), Vector2(3, -7), Vector2(2, -15), Vector2(-4, -16), Vector2(-3, -25)]
+
+
+# temple heart ---------------------------------------------------------
+
+## The ruby heart set in gold (~34 tall, tip on 0,0); it beats.
+static func _ruby_heart(ci: CanvasItem, c: Color, c2: Color, t: float, i: int) -> void:
+	var beat := snappedf(maxf(0.0, sin(t * 3.2 + i)) * 0.07, 0.01)
+	Art.push(ci, Vector2(0, -16), 0.0, Vector2.ONE * (1.0 + beat))
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(1.18, 1.14))
+	Art.toon(ci, HEART, JG_GOLD, 2.0, 0.3)
+	Art.pop(ci)
+	Art.toon(ci, HEART, c, 1.6, 0.0)
+	Art.flat(ci, _HEART_SHADE, Art.shade_of(c, 0.28))
+	Art.flat(ci, _HEART_IN, c.lerp(Color("ffb0c0"), 0.35))
+	Art.flat(ci, Art.circle_pts(Vector2(0, -1), 2.6, 8), c2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-8, -9), Vector2(2, 3.5), 8, 0.6), Color(1, 1, 1, 0.8))
+	Art.toon(ci, Art.star_pts(Vector2(5, -8), 3.2, 0.9, 4), Color("fff0c0"), 0.0, 0.0)
+	Art.pop(ci)
+
+
+static var _STEPS := PackedVector2Array([Vector2(-20, 0), Vector2(-20, -5), Vector2(-15, -5), Vector2(-15, -10), Vector2(15, -10),
+		Vector2(15, -5), Vector2(20, -5), Vector2(20, 0)])
+static var _STEPS_TRIM := PackedVector2Array([Vector2(-15, -10), Vector2(15, -10), Vector2(15, -8), Vector2(-15, -8)])
+static var _CHEST_LID := PackedVector2Array([Vector2(-24, -25), Vector2(24, -25), Vector2(26, -40), Vector2(-22, -44)])
+static var _CHEST_GLYPH := PackedVector2Array([Vector2(-18, -6), Vector2(-18, -19), Vector2(-10, -19), Vector2(-10, -10), Vector2(-14, -10),
+		Vector2(-14, -14)])

@@ -88,6 +88,19 @@ const SITE_STYLE := {
 	"alien_egg": {"rock": Color("365446"), "floor": Color("74948a"), "ore": Color("6aff8a"), "ore2": Color("e0ffd0"), "suit": Color("ff8a3d"), "water": Color("243e36"), "deco": "alien"},
 	"ufo": {"rock": Color("424258"), "floor": Color("8282a0"), "ore": Color("a8bcd8"), "ore2": Color("6affe8"), "suit": Color("ffd23f"), "water": Color("2c2c44"), "deco": "ufo"},
 	"cosmic_heart": {"rock": Color("242e64"), "floor": Color("5068ac"), "ore": Color("c86bff"), "ore2": Color("ffd0ff"), "suit": Color("ffc93c"), "water": Color("161e56"), "deco": "heart"},
+	# Jungle ruins: temple tunnels of golden sandstone blocks, vines and
+	# torches; deeper halls turn mossy, then jade-lit and golden. "water"
+	# is the hall's back wall, "glow" the magic light of the deep halls.
+	"clay": {"rock": Color("b08a58"), "floor": Color("dcb878"), "ore": Color("d9773e"), "ore2": Color("f6c48a"), "suit": Color("ff8a3d"), "water": Color("7a5a38"), "deco": "jg_clay", "glow": Color("ffc870")},
+	"cocoa": {"rock": Color("9a8452"), "floor": Color("c8b070"), "ore": Color("e8962a"), "ore2": Color("8a3a1e"), "suit": Color("ffd23f"), "water": Color("665a36"), "deco": "jg_cocoa", "glow": Color("ffd27a")},
+	"turquoise": {"rock": Color("8a8a64"), "floor": Color("c4bc8a"), "ore": Color("3fd6c8"), "ore2": Color("c8fff4"), "suit": Color("ff6fae"), "water": Color("4c5c48"), "deco": "jg_pool", "glow": Color("7affe8")},
+	"old_coins": {"rock": Color("a08050"), "floor": Color("d8b670"), "ore": Color("ffc93c"), "ore2": Color("fff1a8"), "suit": Color("2de2c5"), "water": Color("6a5434"), "deco": "jg_coins", "glow": Color("ffd84a")},
+	"mask": {"rock": Color("7a7a5a"), "floor": Color("aaa47a"), "ore": Color("b4b49a"), "ore2": Color("3fe0a8"), "suit": Color("ff8a3d"), "water": Color("444c38"), "deco": "jg_masks", "glow": Color("5affc0")},
+	"tiger_eye": {"rock": Color("8a6440"), "floor": Color("c09658"), "ore": Color("d4922e"), "ore2": Color("ffe28a"), "suit": Color("4fb3ee"), "water": Color("523a24"), "deco": "jg_jaguar", "glow": Color("ffc04a")},
+	"idol": {"rock": Color("6e6448"), "floor": Color("a89466"), "ore": Color("ffc93c"), "ore2": Color("3fd6c8"), "suit": Color("ff5ab4"), "water": Color("3a3628"), "deco": "jg_idol", "glow": Color("ffe07a")},
+	"sun_disc": {"rock": Color("8a5a3a"), "floor": Color("c09258"), "ore": Color("ffb02e"), "ore2": Color("fff0a0"), "suit": Color("2de2c5"), "water": Color("48301f"), "deco": "jg_sun", "glow": Color("ffcc4a")},
+	"serpent": {"rock": Color("4a6a58"), "floor": Color("6e9a7e"), "ore": Color("34c88a"), "ore2": Color("b8ffe0"), "suit": Color("ffd23f"), "water": Color("1c3630"), "deco": "jg_serpent", "glow": Color("5affb8")},
+	"temple_heart": {"rock": Color("5a4450"), "floor": Color("9a7a5a"), "ore": Color("ff3d5a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("241a28"), "deco": "jg_heart", "glow": Color("ff8a6a")},
 }
 
 

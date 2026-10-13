@@ -545,8 +545,13 @@ func _draw_crate(i: int, at: Vector2, fill: float) -> void:
 	var f := snappedf(clampf(fill, 0.0, 1.5), 0.25)
 	Art.push(self, at)
 	# A crate only changes when its ore pile steps up or down (quarters).
-	var key := hash([50, i, f])
+	var key := hash([50, i, f, WorldLook.location])
 	if not Art.cache_begin(self, key):
+		if WorldLook.world == "jungle":
+			_basket_crate(i, f)
+			Art.cache_end(self, key)
+			Art.pop(self)
+			return
 		if f > 1.0:
 			Art.crystals(self, Vector2(-24, 0), 12.0, st, 7, 2)
 			Art.crystals(self, Vector2(23, 0), 10.0, st, 9, 2)
@@ -560,6 +565,32 @@ func _draw_crate(i: int, at: Vector2, fill: float) -> void:
 		Art.t_rect(self, Rect2(12, -26, 7, 7), 1.5, Art.BRASS, 1.5, 0.0)
 		Art.cache_end(self, key)
 	Art.pop(self)
+
+
+## The jungle's crate: a woven basket heaped with the site's own ore.
+func _basket_crate(i: int, f: float) -> void:
+	if f > 1.0:
+		OreArt.chunk(self, Vector2(-25, -6), 7.0, i, -0.5)
+		OreArt.chunk(self, Vector2(24, -6), 6.5, i, 0.4)
+	if f > 0.0:
+		var n := 2 if f < 0.5 else (3 if f < 1.0 else 4)
+		for k in n:
+			var x := (k - (n - 1) / 2.0) * 10.0
+			OreArt.chunk(self, Vector2(x, -26.0 + absf(x) * 0.2 - (4.0 if k % 2 else 0.0)), 7.5, i, (k - 1) * 0.35)
+	Art.toon(self, _BASKET, Color("c8924a"), 2.5, 0.5)
+	for w: PackedVector2Array in _BASKET_WEAVE:
+		Art.line_c(self, w, Color("8e5a2a"), 1.6)
+	Art.t_rect(self, Rect2(-21, -27, 42, 5), 2.5, Color("a8743a"), 2.0, 0.0)
+	for x: float in [-21.0, 21.0]:
+		Art.t_circle(self, Vector2(x, -24), 3.2, Color("d8b878"), 1.6, 0.0)
+
+
+static var _BASKET := Art.smooth_pts(PackedVector2Array([Vector2(-20, -25), Vector2(20, -25), Vector2(18, -8), Vector2(13, 0),
+		Vector2(-13, 0), Vector2(-18, -8)]), 2)
+static var _BASKET_WEAVE: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(-18, -18), Vector2(-9, -15), Vector2(0, -18), Vector2(9, -15), Vector2(18, -18)]),
+		PackedVector2Array([Vector2(-16, -9), Vector2(-8, -6), Vector2(0, -9), Vector2(8, -6), Vector2(16, -9)]),
+		PackedVector2Array([Vector2(-7, -23), Vector2(-6, -2)]), PackedVector2Array([Vector2(7, -23), Vector2(6, -2)])]
 
 
 ## Ore hopping from a crate into the stopped cabin.
