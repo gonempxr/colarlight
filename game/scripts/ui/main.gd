@@ -283,6 +283,7 @@ func _ready() -> void:
 	add_child(_map)
 	_map.location_opened.connect(_on_location_opened)
 	_map.location_switched.connect(_on_location_switched)
+	_map.stars_requested.connect(open_stars)
 	_map.closed.connect(_on_map_closed)
 
 	_modal = Modal.new()

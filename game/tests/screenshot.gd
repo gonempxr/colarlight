@@ -14,6 +14,7 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
+## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
 ## board:<month|friends|clubs> (":admin" = as the leader) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -97,6 +98,13 @@ func _initialize() -> void:
 			gs.dock = 9.1e11
 		_:
 			gs.coins = 12.0
+	# in:N:<overlay> - any overlay in location N (e.g. in:4:room:1 = the
+	# Jungle factory, in:4:map, in:4:fishing).
+	if overlay.begins_with("in:"):
+		var ip := overlay.split(":", true, 2)
+		gs.set("max_location", maxi(int(gs.get("max_location")), int(ip[1])))
+		gs.set("location", int(ip[1]))
+		overlay = ip[2] if ip.size() > 2 else "-"
 	# ocean:N[:night][:banner] - the world after N Dives (its own colors),
 	# at night and/or with the arrival banner.
 	if overlay.begins_with("ocean:"):
@@ -209,6 +217,8 @@ func _initialize() -> void:
 			main.open_map()
 		"stars":
 			main.open_stars()
+		"stars:map":
+			main.open_map()
 		"stars:confirm":
 			main._modal.open(func(m): load("res://scripts/ui/star_view.gd").build(m, main, true))
 		"streak", "streak_back":

@@ -139,13 +139,13 @@ static func _piece(ci: CanvasItem, sl: String, level: int, r: Rect2, tt: float, 
 			var box := Rect2(r.get_center() - Vector2(sq, sq) / 2.0, Vector2(sq, sq))
 			Art.push(ci, box.position)
 			if sl == "wallpaper":
-				OfficeArt.wallpaper(ci, sq, sq, level)
+				OfficeArt.wall_in(ci, sq, sq, level, _world())
 			else:
-				OfficeArt.floor_band(ci, sq, 0.0, sq, level)
+				OfficeArt.floor_in(ci, sq, 0.0, sq, level, _world())
 			Art.pop(ci)
 			Art.polyline(ci, Art.rrect_pts(box, 10.0), Art.INK, 4.0, true)
 			return
-	var key := "%s:%d" % [sl, level]
+	var key := "%s:%d:%s" % [sl, level, _world()]
 	if not _boxes.has(key):
 		Art.measure_begin()
 		_draw_piece(null, sl, level, 0.0)
@@ -159,16 +159,9 @@ static func _piece(ci: CanvasItem, sl: String, level: int, r: Rect2, tt: float, 
 
 
 static func _draw_piece(ci: CanvasItem, sl: String, level: int, tt: float) -> void:
-	match sl:
-		"desk":
-			OfficeArt.desk(ci, level, tt)
-		"sofa":
-			OfficeArt.sofa(ci, level)
-		"aquarium":
-			OfficeArt.aquarium(ci, level, tt)
-		"lamp":
-			OfficeArt.lamp(ci, level, tt, false)
-		"trophy":
-			OfficeArt.trophy(ci, level, tt)
-		"plant":
-			OfficeArt.plant(ci, level, tt)
+	OfficeArt.piece(ci, sl, level, tt, _world(), false)
+
+
+## The current world's id (the jungle has its own office pieces).
+static func _world() -> String:
+	return GameState.world_id()
