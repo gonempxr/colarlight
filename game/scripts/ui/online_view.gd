@@ -195,6 +195,10 @@ static func board(m: Modal, main: Node) -> void:
 			add_rows.call(FIRST_ROWS, rows.size())
 			more.queue_free())
 	_account(m, main)
+	if Online.admin:
+		var lb := m.button(t("LEADER_BANS") % Online.ban_list().size(), func(): Sfx.play("click"); SocialView.open_bans(main), &"RedButton")
+		lb.icon = Icons.get_icon("people", 32)
+	_my_id(m)
 	var name_row := m.row(10)
 	var nl := Views.label(t("ONLINE_NAME") % Online.board_name(), 19, Art.INK_SOFT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -272,6 +276,30 @@ static func _account(m: Modal, main: Node) -> void:
 	if btn_text != "":
 		var b := m.button(btn_text, func(): Sfx.play("click"); go.call(), &"BlueButton")
 		b.icon = Icons.get_icon("people", 32)
+
+
+## The player's own online id with a copy button (the leader adds theirs
+## in the Firebase console; it also helps when someone asks for help).
+static func _my_id(m: Modal) -> void:
+	if Online.uid == "":
+		return
+	var row := m.row(8)
+	var l := Views.label(t("MY_ID") % Online.uid, 17, Art.INK_SOFT)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size.x = 120
+	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	var b := Button.new()
+	b.text = t("INVITE_COPY")
+	b.theme_type_variation = &"CreamButton"
+	b.custom_minimum_size = Vector2(0, 54)
+	b.add_theme_font_size_override("font_size", 19)
+	b.pressed.connect(func():
+		Sfx.play("click")
+		DisplayServer.clipboard_set(Online.uid)
+		b.text = t("COPIED"))
+	row.add_child(b)
 
 
 ## This week's race: the place, how far the next place is, the prizes.

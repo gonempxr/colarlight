@@ -230,3 +230,19 @@ BP_MIN,%d min,%d мин,%d min,%d 分钟
 BP_SHOWCASE,Level %d reward,Награда уровня %d,Premio del nivel %d,第 %d 级奖励
 BP_ONLY_HERE,Only in the Sea Pass: it can't be bought.,Только в пропуске: купить нельзя.,Solo en el pase: no se puede comprar.,仅限通行证：无法购买。
 ONLINE_MORE,Show more (%d),Показать ещё (%d),Ver más (%d),显示更多 (%d)
+LEADER_TITLE,Leader,Главарь,Líder,首领
+LEADER_HINT,Only you see this.,Это видишь только ты.,Solo tú ves esto.,只有你能看到。
+LEADER_KICK,Kick,Кикнуть,Expulsar,踢出
+LEADER_BAN,Ban,Забанить,Bloquear,封禁
+LEADER_SURE,Sure? Tap again,Точно? Ещё раз,¿Seguro? Otra vez,确定？再点一次
+LEADER_KICK_D,Removes them from all boards. They come back when they play again.,Уберёт из всех таблиц. Вернётся, когда снова сыграет.,Lo quita de todas las tablas. Vuelve cuando juegue otra vez.,从所有榜单中移除。再次游戏时会回来。
+LEADER_BAN_D,Removes them for good: their scores are no longer accepted.,Уберёт навсегда: его очки больше не принимаются.,Lo quita para siempre: sus puntos ya no se aceptan.,永久移除：不再接受其分数。
+LEADER_DONE,Done!,Готово!,¡Hecho!,完成！
+LEADER_FAIL,Didn't work. Are the new Firebase rules published?,Не вышло. Новые правила Firebase опубликованы?,No funcionó. ¿Publicaste las nuevas reglas de Firebase?,失败了。新的 Firebase 规则发布了吗？
+LEADER_FAIL_SHORT,Error,Ошибка,Error,出错
+LEADER_BANS,Bans (%d),Баны (%d),Bloqueos (%d),封禁 (%d)
+LEADER_BANS_TITLE,Banned players,Забаненные,Bloqueados,被封禁的玩家
+LEADER_NO_BANS,Nobody is banned.,Никто не забанен.,Nadie está bloqueado.,没有人被封禁。
+LEADER_UNBAN,Unban,Разбанить,Desbloquear,解封
+MY_ID,Your ID: %s,Твой ID: %s,Tu ID: %s,你的 ID：%s
+COPIED,Copied!,Скопировано!,¡Copiado!,已复制！

@@ -946,6 +946,7 @@ window.coralightFirebase = (function () {
 			d.clubs = d.clubs || {};
 			d.clubweeks = d.clubweeks || {};
 			d.puzzle = d.puzzle || {};
+			d.bans = d.bans || {};
 			return d;
 		};
 		const clubTotal = function (d, id, w) {
@@ -964,6 +965,9 @@ window.coralightFirebase = (function () {
 		api = {
 			submit: function (a) {
 				const d = fix(load());
+				if (d.bans[uid]) {
+					return deny();
+				}
 				const wk = d.weeks[a.w] || (d.weeks[a.w] = {});
 				let ok = put(d.all, { name: a.name, score: a.all, a: a.a, p: a.p }) | put(wk, { name: a.name, score: a.week, a: a.a, p: a.p });
 				if (a.m) {
@@ -1092,6 +1096,35 @@ window.coralightFirebase = (function () {
 				if (a.old && a.old !== a.key && d.names[a.old] === uid) {
 					delete d.names[a.old];
 				}
+				store(d);
+				return later('ok');
+			},
+			// The leader's tools (?online=test&admin=1 makes this player the leader).
+			admin: function () { return later(q && q.get('admin') === '1' ? 'yes' : 'no'); },
+			bans: function () {
+				const d = fix(load());
+				return later(JSON.stringify({ list: Object.keys(d.bans).map(function (k) { return { uid: k, name: d.bans[k].name, o: d.bans[k].o }; }) }));
+			},
+			kick: function (a) {
+				if (!(q && q.get('admin') === '1')) {
+					return deny();
+				}
+				const d = fix(load());
+				(a.uids || []).forEach(function (id) {
+					[d.all, d.weeks[a.w] || {}, d.months[a.m] || {}, d.puzzle[a.w] || {}].forEach(function (t) { delete t[id]; });
+					if (a.ban) {
+						d.bans[id] = { name: a.name, o: a.o || '' };
+					}
+				});
+				store(d);
+				return later('ok');
+			},
+			unban: function (a) {
+				if (!(q && q.get('admin') === '1')) {
+					return deny();
+				}
+				const d = fix(load());
+				delete d.bans[a.uid];
 				store(d);
 				return later('ok');
 			},
@@ -1290,6 +1323,35 @@ window.coralightFirebase = (function () {
 					return counted.then(function (c) { return 'r:' + (c.data().count + 1) + ':' + s; }, function () { return 'r:0:' + s; });
 				});
 			},
+			// The leader (admins/{uid}, added by hand in the Firebase console)
+			// removes a player's rows (kick) and can also ban them: bans/{uid}
+			// {name, o, t}; the rules refuse scores from a banned id.
+			admin: function () {
+				return F.db.collection('admins').doc(me()).get().then(function (d) { return d.exists ? 'yes' : 'no'; }, function () { return 'no'; });
+			},
+			bans: function () {
+				return F.db.collection('bans').limit(300).get().then(function (snap) {
+					const list = [];
+					snap.forEach(function (d) { const x = d.data(); list.push({ uid: d.id, name: String(x.name || ''), o: String(x.o || '') }); });
+					return JSON.stringify({ list: list });
+				});
+			},
+			kick: function (a) {
+				const b = F.db.batch();
+				(a.uids || []).slice(0, 8).forEach(function (id) {
+					b.delete(F.db.collection('lb_all').doc(id));
+					b.delete(weekCol(a.w).doc(id));
+					b.delete(monthCol(a.m).doc(id));
+					b.delete(puzzleCol(a.w).doc(id));
+					if (a.ban) {
+						b.set(F.db.collection('bans').doc(id), { name: String(a.name || '').slice(0, 24), o: String(a.o || '').slice(0, 12), t: ts() });
+					}
+				});
+				return b.commit().then(function () { return 'ok'; });
+			},
+			unban: function (a) {
+				return F.db.collection('bans').doc(a.uid).delete().then(function () { return 'ok'; });
+			},
 			// Clubs: clubs/{id} {name, owner, n, t}, members clubs/{id}/m/{uid}
 			// {name, s, w, t}; the weekly club board clubweeks/{w}/clubs/{id}.
 			club_create: function (a) {
@@ -1428,6 +1490,10 @@ window.coralightFirebase = (function () {
 	club_join: function (arg) { return api.club_join(JSON.parse(arg)); },
 	club_leave: function (arg) { return api.club_leave(JSON.parse(arg)); },
 	club: function (arg) { return api.club(JSON.parse(arg)); },
+		admin: function () { return api.admin(); },
+		bans: function () { return api.bans(); },
+		kick: function (arg) { return api.kick(JSON.parse(arg)); },
+		unban: function (arg) { return api.unban(JSON.parse(arg)); },
 		link: function (arg) { return linkFor(arg); },
 		share: function (arg) { return online.share(JSON.parse(arg)); },
 	};

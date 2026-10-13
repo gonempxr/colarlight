@@ -69,6 +69,11 @@ var _ref_looks := 40
 var _boards := {}
 var _after_ready_done := false
 var _begin_left := BEGIN_SEC
+## The leader (only ids added by hand to admins/ in the Firebase console):
+## can kick and ban players from the boards.
+var admin := false
+## Banned players: {uid: name} and {"o:<owner>": name}.
+var bans := {}
 
 
 func _ready() -> void:
@@ -195,6 +200,8 @@ func after_ready() -> void:
 	check_week_prize()
 	check_season_prize()
 	check_puzzle_prize()
+	check_admin()
+	load_bans()
 	submit()
 	if in_club():
 		# Keeps the club's weekly total fresh on the club board.
@@ -488,6 +495,8 @@ func fetch_board(kind: String, done: Callable) -> void:
 			"code": invite_code(), "ref": str(data["referred_by"]), "club": str(data["club"])})
 		_request("board", arg, func(res: String):
 			var board := parse_board(res, uid, kind != "clubs")
+			if board["ok"] and kind != "clubs":
+				board["rows"] = board["rows"].filter(func(r): return bool(r["you"]) or not is_banned(r))
 			if board["ok"]:
 				_boards[kind] = {"at": Time.get_ticks_msec() / 1000.0, "w": int(data["week"]), "board": board}
 			done.call(board))
@@ -547,10 +556,94 @@ static func merge_rows(rows: Array) -> Array:
 					if str(r.get("a", "")) != "":
 						g["a"] = r["a"]
 				g["you"] = bool(g["you"]) or bool(r["you"])
+				g["also"] = g.get("also", []) + [str(r["uid"])]
 				continue
 		out.append(r)
 		if k != "" and not by_owner.has(k):
 			by_owner[k] = r
+	return out
+
+
+# --- The leader: kick and ban ------------------------------------------------------------
+
+func check_admin() -> void:
+	_request("admin", "", func(res: String):
+		var was := admin
+		admin = res == "yes"
+		if admin != was:
+			state_changed.emit())
+
+
+func load_bans(done: Callable = Callable()) -> void:
+	_request("bans", "", func(res: String):
+		var d = JSON.parse_string(res) if res.begins_with("{") else null
+		if d is Dictionary and d.get("list") is Array:
+			bans = {}
+			for b in d["list"]:
+				if b is Dictionary and str(b.get("uid", "")) != "":
+					var name := OnlineRules.strip_name(str(b.get("name", "")))
+					bans[str(b["uid"])] = name
+					if OnlineRules.valid_code(str(b.get("o", ""))):
+						bans["o:" + str(b["o"])] = name
+		if done.is_valid():
+			done.call())
+
+
+## A row of a banned player: their id, or another device of the same save
+## (same owner) with the banned name or a "Diver1234" one.
+func is_banned(row: Dictionary) -> bool:
+	if bans.has(str(row.get("uid", ""))):
+		return true
+	var k := "o:" + row_owner(row)
+	if not bans.has(k):
+		return false
+	var n := str(row.get("name", ""))
+	return OnlineRules.is_fallback(n) or n == str(bans[k])
+
+
+## Takes a player's rows off every board (they come back when the player
+## plays again); with `ban` their scores are refused from then on.
+## done.call("ok" | "error").
+func kick(row: Dictionary, ban: bool, done: Callable) -> void:
+	var id := str(row.get("uid", ""))
+	if not admin or id == "" or id == uid:
+		done.call("error")
+		return
+	# A row joined from several devices: all of them go.
+	var ids: Array = [id]
+	for other in row.get("also", []):
+		if str(other) != uid and not ids.has(str(other)):
+			ids.append(str(other))
+	var arg := JSON.stringify({"uids": ids, "w": int(data["week"]), "m": int(data["month"]), "name": str(row.get("name", "")),
+		"o": row_owner(row), "ban": ban})
+	_request("kick", arg, func(res: String):
+		if res == "ok":
+			_boards = {}
+			if ban:
+				for b in ids:
+					bans[b] = str(row.get("name", ""))
+				var o := row_owner(row)
+				if OnlineRules.valid_code(o):
+					bans["o:" + o] = str(row.get("name", ""))
+		done.call("ok" if res == "ok" else "error"))
+
+
+func unban(id: String, done: Callable) -> void:
+	_request("unban", JSON.stringify({"uid": id}), func(res: String):
+		if res != "ok":
+			done.call("error")
+			return
+		_boards = {}
+		bans.erase(id)
+		load_bans(func(): done.call("ok")))
+
+
+## The banned players for the leader's list: [{uid, name}].
+func ban_list() -> Array:
+	var out := []
+	for k in bans:
+		if not str(k).begins_with("o:"):
+			out.append({"uid": str(k), "name": str(bans[k])})
 	return out
 
 

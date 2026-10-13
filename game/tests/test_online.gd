@@ -264,6 +264,38 @@ func _initialize() -> void:
 	_check(str(fresh.data["owner"]) == "AAAAaaaa", "a save from another device keeps its first online id")
 	fresh.free()
 
+	# --- The leader: kick and ban ------------------------------------------------------------------
+	var got_k := [""]
+	var victim: Dictionary = bd["rows"][0]
+	online.kick(victim, false, func(kr): got_k[0] = kr)
+	_check(got_k[0] == "error" and lb.all.has(victim["uid"]), "only the leader can kick")
+	lb.is_admin = true
+	online.check_admin()
+	_check(online.admin, "the leader is found")
+	online.kick(victim, false, func(kr): got_k[0] = kr)
+	_check(got_k[0] == "ok" and not lb.all.has(victim["uid"]) and online.bans.is_empty(), "kick takes the rows off")
+	var banee: Dictionary = bd["rows"][1]
+	online.kick(banee, true, func(kr): got_k[0] = kr)
+	_check(got_k[0] == "ok" and lb.banned.has(banee["uid"]) and online.is_banned(banee), "ban takes them off and remembers")
+	lb.all[banee["uid"]] = {"name": banee["name"], "score": 1e30, "a": "", "p": ""}
+	online._boards = {}
+	online.fetch_board("all", func(res): got[0] = res)
+	var shown := true
+	for gr in got[0]["rows"]:
+		shown = shown and gr["uid"] != banee["uid"]
+	_check(shown, "a banned player's row is hidden even if it comes back")
+	_check(online.ban_list().size() == 1, "the leader sees the ban list")
+	online.unban(banee["uid"], func(kr): got_k[0] = kr)
+	_check(got_k[0] == "ok" and not lb.banned.has(banee["uid"]) and not online.is_banned(banee), "unban")
+	var me_row := {"uid": lb.uid, "name": "Me", "score": 1.0, "you": true}
+	online.kick(me_row, true, func(kr): got_k[0] = kr)
+	_check(got_k[0] == "error", "the leader can't ban themselves")
+	var joined: Dictionary = online.parse_board(JSON.stringify({"rows": dup, "rank": 0}), "")["rows"][0]
+	_check(joined.get("also", []) == [oldA], "a joined row knows its other ids (kick takes them all)")
+	lb.is_admin = false
+	online.admin = false
+	online.bans = {}
+
 	# --- Save and load ---------------------------------------------------------------------------
 	online.data["redeemed"] = {"p1": true, "p3": true}
 	online.data["founder"] = 7

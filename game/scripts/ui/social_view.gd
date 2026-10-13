@@ -141,10 +141,10 @@ static func achievements(m: Modal, _main: Node) -> void:
 # --- Profile card --------------------------------------------------------------------------
 
 static func open_profile(main: Node, row: Dictionary) -> void:
-	main._top.open(func(m): profile(m, row))
+	main._top.open(func(m): profile(m, row, main))
 
 
-static func profile(m: Modal, row: Dictionary) -> void:
+static func profile(m: Modal, row: Dictionary, main: Node = null) -> void:
 	var you: bool = row.get("you", false)
 	var p := Online.parse_profile(Online.profile_info() if you else str(row.get("p", "")))
 	var look: Dictionary = Settings.avatar if you else OnlineView._look(str(row.get("a", "")))
@@ -179,6 +179,102 @@ static func profile(m: Modal, row: Dictionary) -> void:
 		h.add_child(l)
 		v.add_child(h)
 	m.add(c)
+	if Online.admin and not you and main != null:
+		leader_tools(m, row, main)
+	m.button(t("THANKS_OK"), func(): Sfx.play("click"); m.close(), &"BlueButton")
+
+
+## Only for the leader: kick (off the boards until they play again) or ban
+## (off for good, their scores are refused). Each needs a second tap.
+static func leader_tools(m: Modal, row: Dictionary, main: Node) -> void:
+	var c := Views.card(Color("ffe3dc"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	c.add_child(v)
+	var head := Views.label(t("LEADER_TITLE"), 22, Color("a8281e"), true)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.custom_minimum_size.x = 160
+	v.add_child(head)
+	var status := Views.label(t("LEADER_HINT"), 18, Art.INK_SOFT)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.custom_minimum_size.x = 160
+	v.add_child(status)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	v.add_child(h)
+	var busy := [false]
+	for kind in ["kick", "ban"]:
+		var b := Button.new()
+		b.text = t("LEADER_KICK") if kind == "kick" else t("LEADER_BAN")
+		b.theme_type_variation = &"GoldButton" if kind == "kick" else &"RedButton"
+		b.custom_minimum_size = Vector2(0, 64)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var armed := [false]
+		var ban: bool = kind == "ban"
+		b.pressed.connect(func():
+			Sfx.play("click")
+			if busy[0]:
+				return
+			if not armed[0]:
+				armed[0] = true
+				b.text = t("LEADER_SURE")
+				status.text = t("LEADER_KICK_D") if not ban else t("LEADER_BAN_D")
+				return
+			busy[0] = true
+			status.text = t("ONLINE_LOADING")
+			Online.kick(row, ban, func(res: String):
+				busy[0] = false
+				if res != "ok":
+					status.text = t("LEADER_FAIL")
+					status.add_theme_color_override("font_color", Color("c8372d"))
+					return
+				status.text = t("LEADER_DONE")
+				OnlineView._boards = {}
+				if main._modal.is_open():
+					main._modal.rebuild()
+				if m.is_open():
+					m.close()))
+		h.add_child(b)
+	m.add(c)
+
+
+## The leader's list of banned players, each with "Unban".
+static func open_bans(main: Node) -> void:
+	main._top.open(func(m): bans(m, main))
+
+
+static func bans(m: Modal, main: Node) -> void:
+	m.title(t("LEADER_BANS_TITLE"))
+	m.banner(UiTheme.BANNER_RED)
+	var list := Online.ban_list()
+	if list.is_empty():
+		m.text(t("LEADER_NO_BANS"), 21, Art.INK_SOFT)
+	for b in list:
+		var row := m.row(8)
+		var l := Views.label(str(b["name"]) if str(b["name"]) != "" else str(b["uid"]).left(8), 21, Art.INK, true)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.custom_minimum_size.x = 100
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(l)
+		var u := Button.new()
+		u.text = t("LEADER_UNBAN")
+		u.theme_type_variation = &"CreamButton"
+		u.custom_minimum_size = Vector2(0, 58)
+		var id := str(b["uid"])
+		u.pressed.connect(func():
+			Sfx.play("click")
+			u.disabled = true
+			Online.unban(id, func(res: String):
+				if not m.is_open():
+					return
+				if res == "ok":
+					m.rebuild()
+					if main._modal.is_open():
+						main._modal.rebuild()
+				else:
+					u.disabled = false
+					u.text = t("LEADER_FAIL_SHORT")))
+		row.add_child(u)
 	m.button(t("THANKS_OK"), func(): Sfx.play("click"); m.close(), &"BlueButton")
 
 

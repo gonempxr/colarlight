@@ -21,6 +21,9 @@ var names := {}
 ## Answer every request with this instead ("" = work normally).
 var fail := ""
 var calls: Array[String] = []
+## The leader's tools: is this player the leader, and the banned ids.
+var is_admin := false
+var banned := {}
 
 
 ## A board with `n` made-up test rows.
@@ -40,6 +43,30 @@ func request(method: String, arg: String) -> String:
 	if fail != "":
 		return fail
 	match method:
+		"admin":
+			return "yes" if is_admin else "no"
+		"bans":
+			var list := []
+			for k in banned:
+				list.append({"uid": k, "name": banned[k]["name"], "o": banned[k]["o"]})
+			return JSON.stringify({"list": list})
+		"kick":
+			if not is_admin:
+				return "error:permission-denied"
+			var a: Dictionary = JSON.parse_string(arg)
+			for id in a["uids"]:
+				for t in [all, weeks.get(int(a["w"]), {}), months.get(int(a["m"]), {}), puzzle_weeks.get(int(a["w"]), {})]:
+					t.erase(str(id))
+				if a.get("ban", false):
+					banned[str(id)] = {"name": str(a["name"]), "o": str(a.get("o", ""))}
+			return "ok"
+		"unban":
+			if not is_admin:
+				return "error:permission-denied"
+			banned.erase(str(JSON.parse_string(arg)["uid"]))
+			return "ok"
+		"submit" when banned.has(uid):
+			return "error:permission-denied"
 		"submit":
 			var a: Dictionary = JSON.parse_string(arg)
 			var wk: Dictionary = weeks.get(int(a["w"]), {})
