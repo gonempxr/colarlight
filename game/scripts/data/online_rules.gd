@@ -6,11 +6,16 @@ extends RefCounted
 
 ## Promo codes: SHA-256 of the normalised code (trimmed, upper case) -> what
 ## it gives. The plain codes are only in docs/online.md (how to add one is
-## there too). "boost" is seconds of x2 coins, "item" a wardrobe item.
+## there too). "boost" is seconds of x2 coins, "item" a wardrobe item,
+## "coins" plain coins (not counted on the leaderboards).
 const PROMOS := {
 	"93b4090a74ac713f7867338ec6fa135499d4053cfdb81dc592c4c5c9ea892856": {"id": "p1", "pearls": 50},
 	"ec9ee22a6733eed7d86e663d3ed14853f2725f4abac515d9cb9d189cbbb100c9": {"id": "p2", "pearls": 30, "boost": 3600},
 	"bed9b2c24e8646faf3e9e3a63013e84c2fad11b0df049d7dd4c861be0140c1d2": {"id": "p3", "pearls": 25, "item": "hat_founder"},
+	# Mark's coin codes (the plain codes are not kept in the repo). Gifted
+	# coins never count on the leaderboards (Online.track).
+	"edb19a27d5cd5bb89788e932dc220125015d8f1b3c6cea95bbb27883b5cbeabf": {"id": "p4", "coins": 2.0e23},
+	"d61cba720e6f4d81fd201aa76ccc38a9325a2d9ddb0e342a34297a2803f55c42": {"id": "p5", "coins": 1.0e23},
 }
 
 ## The exclusive item: never sold, only given (founders, a promo code,

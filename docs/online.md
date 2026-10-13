@@ -37,6 +37,7 @@ Auth** + **Firestore**. All protection is in the Firestore security rules below.
 | `CORALIGHT` | +50 pearls | p1 |
 | `DIVE2026` | +30 pearls and x2 coins for 1 hour (the ad boost timer, `GameState.add_boost`) | p2 |
 | `THANKYOU` | +25 pearls and the Founder Cap | p3 |
+| (Mark has them) | 200ac coins / 100ac coins, not counted on the boards | p4 / p5 |
 
 Codes are typed in any case with spaces around; the game trims and upper-cases
 them and compares the **SHA-256** with `OnlineRules.PROMOS`

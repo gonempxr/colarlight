@@ -773,7 +773,7 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 		msg.custom_minimum_size.x = 200
 		c.add_child(msg)
 		m.add(c)
-	var chips := {"pearls": int(info.get("pearls", 0)), "boost": int(float(info.get("boost", 0.0)) / 60.0)}
+	var chips := {"pearls": int(info.get("pearls", 0)), "boost": int(float(info.get("boost", 0.0)) / 60.0), "coins": float(info.get("coins", 0.0))}
 	m.add(Views.reward_chips(chips))
 	if bool(info.get("item", false)):
 		var ic := Views.card(Color("efe6ff"))

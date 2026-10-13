@@ -313,7 +313,8 @@ func track(now: float = -1.0) -> void:
 		data["month_score"] = 0.0
 		_dirty = true
 	var prof := str(Profiles.current_id)
-	var total := float(GameState.total_earned)
+	# Coins from promo codes are a gift, not play: never on the boards.
+	var total := maxf(0.0, float(GameState.total_earned) - float(Progress.stats.get("promo_coins", 0.0)))
 	if str(data["seen_profile"]) == prof and float(data["seen_total"]) >= 0.0 and total > float(data["seen_total"]):
 		data["week_score"] = float(data["week_score"]) + (total - float(data["seen_total"]))
 		data["month_score"] = float(data["month_score"]) + (total - float(data["seen_total"]))
@@ -658,7 +659,8 @@ func redeem(text: String) -> Dictionary:
 	if data["redeemed"].get(id, false):
 		return {"result": "used"}
 	data["redeemed"][id] = true
-	var info := {"kind": "promo", "pearls": int(p.get("pearls", 0)), "boost": float(p.get("boost", 0.0)), "item": p.has("item")}
+	var info := {"kind": "promo", "pearls": int(p.get("pearls", 0)), "boost": float(p.get("boost", 0.0)), "item": p.has("item"),
+		"coins": float(p.get("coins", 0.0))}
 	_grant(info)
 	save_data()
 	return {"result": "ok", "reward": info}
@@ -992,6 +994,12 @@ func _grant(info: Dictionary) -> void:
 		GameState.add_boost(float(info["boost"]))
 	if bool(info.get("item", false)):
 		give_exclusive()
+	var coins := float(info.get("coins", 0.0))
+	if coins > 0.0 and is_finite(coins):
+		# Gifted coins are left out of the scores (see track()).
+		Progress.stats["promo_coins"] = float(Progress.stats.get("promo_coins", 0.0)) + coins
+		GameState.add_coins(coins)
+		track()
 	Progress.save_game()
 	pending_thanks.append(info)
 	thanks.emit(info)

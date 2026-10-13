@@ -296,6 +296,23 @@ func _initialize() -> void:
 	online.admin = false
 	online.bans = {}
 
+	# --- Coin promo codes: coins arrive, the boards don't move -------------------------------------
+	online.track()
+	var all_before: float = online.score("all")
+	var week_before: float = online.score("week")
+	var coins_before := float(gs.coins)
+	var earned_before := float(gs.total_earned)
+	var promo_res: Dictionary = online.redeem("mpxr100ac-29wjmg ")
+	_check(promo_res["result"] == "ok" and float(gs.coins) - coins_before >= 0.99e23, "a coin code gives its coins")
+	online.track()
+	_check(online.score("all") == all_before and online.score("week") == week_before, "gifted coins never count on the boards")
+	_check(online.redeem("MPXR100AC-29WJMG")["result"] == "used", "a coin code works once per save")
+	_check(OnlineRules.promo("MPXR200AC-7WLJU9").get("coins", 0.0) == 2.0e23, "the 200ac code")
+	gs.coins = coins_before
+	gs.total_earned = earned_before
+	pr.stats.erase("promo_coins")
+	online.track()
+
 	# --- Save and load ---------------------------------------------------------------------------
 	online.data["redeemed"] = {"p1": true, "p3": true}
 	online.data["founder"] = 7
