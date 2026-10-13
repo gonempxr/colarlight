@@ -13,8 +13,8 @@ const OFFLINE_CAP_SEC := 8.0 * 3600.0
 const OFFLINE_MIN_REPORT_SEC := 60.0
 const AUTOSAVE_SEC := 10.0
 
-## The worlds, in the order they open (location L is world L % 4, tier
-## L / 4). name: i18n key; char: the worker character; sites: the ids of the
+## The worlds, in the order they open (location L is world L % 5, tier
+## L / 5). name: i18n key; char: the worker character; sites: the ids of the
 ## world's 10 work sites (keys d0..d9, name keys SITE_<ID>).
 const WORLDS: Array[Dictionary] = [
 	{"id": "ocean", "name": "WORLD_OCEAN", "char": "diver",
@@ -25,6 +25,8 @@ const WORLDS: Array[Dictionary] = [
 		"sites": ["slime", "moss", "shroom", "bubble", "venom", "amber", "radiant", "jade", "orchid", "goo_king"]},
 	{"id": "moon", "name": "WORLD_MOON", "char": "astronaut",
 		"sites": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"]},
+	{"id": "jungle", "name": "WORLD_JUNGLE", "char": "explorer",
+		"sites": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]},
 ]
 
 ## The one 10-step site ladder every location uses (ids are the ocean ones;
@@ -102,10 +104,10 @@ const GATE_GROWTH := 1.4
 const GATE_BUMP := 1.45
 ## Price to open the next location, at location 0.
 const LOCATION_PRICE := 2.4e10
-## The last location there is (the Moon): no repeats with stars after it,
+## The last location there is (the Jungle, since 2026-10-13): no repeats after it,
 ## the map shows the next worlds as "coming soon". Older saves further on
 ## are moved back to it (GameState keeps their levels).
-const LAST_LOCATION := 3
+const LAST_LOCATION := 4
 ## Worker gear: 4 levels per location (level 1 is the base look, levels
 ## 2..4 are bought with coins, in order). GameState.evo counts the levels
 ## bought (0..EVO_FORMS). EVO_PRICES: price of levels 2..4 at location 0;

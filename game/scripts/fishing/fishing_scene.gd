@@ -25,7 +25,7 @@ var _shadows: Array[Vector3] = []
 
 
 func _init(world_index: int = 0, world_look: Dictionary = {}) -> void:
-	world = posmod(world_index, 4)
+	world = posmod(world_index, 5)
 	look = world_look if not world_look.is_empty() else WorldLook.LOOKS[WorldLook.WORLDS[world]]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242 + world
