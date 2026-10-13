@@ -301,7 +301,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":2852280,"index.wasm":30453421},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":2853624,"index.wasm":30453421},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 
 // Frame budget, set before the engine starts:
@@ -961,7 +961,7 @@ window.coralightFirebase = (function () {
 			rows.sort(function (x, y) { return y.score - x.score; });
 			const at = rows.findIndex(function (r) { return r.uid === uid; });
 			const above = rows.filter(function (r) { return r.score > mine; }).length;
-			return { rows: rows.slice(0, 50), rank: at >= 0 ? at + 1 : (mine > 0 ? above + 1 : 0) };
+			return { rows: rows.slice(0, 120), rank: at >= 0 ? at + 1 : (mine > 0 ? above + 1 : 0) };
 		};
 		api = {
 			submit: function (a) {
@@ -1187,14 +1187,14 @@ window.coralightFirebase = (function () {
 					});
 				}
 				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : (a.kind === 'puzzle' ? puzzleCol(a.w) : F.db.collection('lb_all')));
-				return col.orderBy('score', 'desc').limit(50).get().then(function (snap) {
+				return col.orderBy('score', 'desc').limit(120).get().then(function (snap) {
 					const rows = [];
 					snap.forEach(function (d) { rows.push(rowOf(d)); });
 					const at = rows.findIndex(function (r) { return r.uid === me(); });
 					if (at >= 0 || !(a.score > 0)) {
 						return { rows: rows, rank: at + 1 };
 					}
-					// The player's own place below the top 50: one count query
+					// The player's own place below the top 120: one count query
 					// (a single-field index, no setup needed).
 					let counted = null;
 					try {
