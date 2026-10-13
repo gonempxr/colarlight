@@ -68,7 +68,7 @@ static func _goal(kind: String) -> float:
 
 ## Starts a new day's challenge when the day changed. Call before reading.
 static func refresh(now: float = -1.0) -> void:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	var day := day_of(t)
 	if int(Progress.stats.get("dc_day", -1)) == day:
 		return
@@ -80,7 +80,7 @@ static func refresh(now: float = -1.0) -> void:
 
 
 static func kind() -> String:
-	return kind_for(int(Progress.stats.get("dc_day", day_of(Time.get_unix_time_from_system()))))
+	return kind_for(int(Progress.stats.get("dc_day", day_of(Clock.now()))))
 
 
 ## [done so far, goal]

@@ -388,7 +388,7 @@ func save_game() -> bool:
 	var data := {
 		"version": SAVE_VERSION, "bucket": bucket, "book": book, "rods": rods, "rod": rods[0],
 		"bucket_level": bucket_level, "helper": helper, "helper_timer": helper_timer,
-		"stats": stats, "saved_at": Time.get_unix_time_from_system(),
+		"stats": stats, "saved_at": Clock.now(),
 	}
 	var tmp := save_path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -439,7 +439,7 @@ func load_game() -> bool:
 	helper_timer = clampf(_f(d.get("helper_timer")), 0.0, maxf(0.0, helper_interval()))
 	var saved_at := _f(d.get("saved_at"))
 	if helper > 0 and saved_at > 0.0:
-		var away := clampf(Time.get_unix_time_from_system() - saved_at, 0.0, FishData.OFFLINE_CAP_SEC)
+		var away := clampf(Clock.now() - saved_at, 0.0, FishData.OFFLINE_CAP_SEC)
 		_offline_catch = advance(away)
 	return true
 

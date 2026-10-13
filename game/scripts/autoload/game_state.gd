@@ -617,7 +617,7 @@ func _apply_levels(saved_levels: Dictionary, saved_managers: Dictionary) -> void
 
 ## Real time (Unix seconds); the boost runs on it.
 func now() -> float:
-	return Time.get_unix_time_from_system()
+	return Clock.now()
 
 
 ## Can a watched ad add its full 30 minutes without passing the cap?
@@ -1022,7 +1022,7 @@ func simulate_offline(seconds: float) -> float:
 func save_game() -> bool:
 	var data := {
 		"version": SAVE_VERSION,
-		"saved_at": Time.get_unix_time_from_system(),
+		"saved_at": Clock.now(),
 		"coins": coins,
 		"total_earned": total_earned,
 		"location": location,

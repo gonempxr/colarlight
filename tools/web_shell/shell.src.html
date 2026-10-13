@@ -727,6 +727,38 @@ window.coralightFirebase = (function () {
 		});
 }());
 
+// Trusted time for the game (Clock autoload): the server's clock from the
+// Date (+ Age) header of a fresh request for this page, taken before the
+// game starts. The game runs on it, so changing the device clock gives no
+// offline earnings, daily gifts or shorter waits.
+//   coralightClock.server: Unix seconds at performance.now() == at (ms)
+(function () {
+	const c = { server: 0, at: 0 };
+	window.coralightClock = c;
+	const ask = function (left) {
+		const t0 = performance.now();
+		let url = window.location.pathname;
+		try { url += (url.indexOf('?') >= 0 ? '&' : '?') + 'clock=' + Date.now(); } catch (e) { /* keep the plain path */ }
+		fetch(url, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+			const t1 = performance.now();
+			const d = Date.parse(r.headers.get('Date') || '');
+			if (!(d > 0)) {
+				throw new Error('no Date header');
+			}
+			const age = parseFloat(r.headers.get('Age') || '0') || 0;
+			// The header is whole seconds: the middle of that second, half the
+			// round trip later.
+			c.server = d / 1000 + age + 0.5;
+			c.at = (t0 + t1) / 2;
+		}).catch(function () {
+			if (left > 0) {
+				setTimeout(function () { ask(left - 1); }, 3000);
+			}
+		});
+	};
+	ask(5);
+}());
+
 // Online features: the players' leaderboard, the founder gift, invites.
 // Firebase anonymous sign-in (no UI, so allowed on CrazyGames too) and
 // Firestore, on our site and on CrazyGames; a player signed in with Google

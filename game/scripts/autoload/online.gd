@@ -280,7 +280,7 @@ func save_data() -> void:
 ## Adds the coins earned since the last look to this week's total (a new
 ## week starts from zero; switching profiles adds nothing).
 func track(now: float = -1.0) -> void:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	var w := OnlineRules.week_id(t)
 	if w != int(data["week"]):
 		data["week"] = w
@@ -327,7 +327,7 @@ func score(kind: String) -> float:
 
 ## The title won last week (OnlineRules.title_for), worn this week only.
 func title(now: float = -1.0) -> int:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	if int(data["title_week"]) != OnlineRules.week_id(t):
 		return 0
 	return clampi(int(data["title"]), 0, 3)
@@ -630,7 +630,7 @@ func share(text: String, link: String, done: Callable) -> void:
 ## Once a new week starts: the place on last week's board pays a prize
 ## (OnlineRules.WEEK_PRIZES), once per week.
 func check_week_prize(now: float = -1.0) -> void:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	var last := OnlineRules.week_id(t) - 1
 	if int(data["prize_week"]) >= last:
 		return
@@ -666,7 +666,7 @@ func on_week_rank(week: int, res: String) -> void:
 
 ## Last week's place on the puzzle board pays a small prize, once.
 func check_puzzle_prize(now: float = -1.0) -> void:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	var last := OnlineRules.week_id(t) - 1
 	if int(data["pz_prize"]) >= last:
 		return
@@ -694,7 +694,7 @@ func on_puzzle_rank(week: int, res: String) -> void:
 
 ## Once a new month starts: last month's place pays the season prize.
 func check_season_prize(now: float = -1.0) -> void:
-	var t := now if now >= 0.0 else Time.get_unix_time_from_system()
+	var t := now if now >= 0.0 else Clock.now()
 	var last := OnlineRules.prev_month(OnlineRules.month_id(t))
 	if int(data["season_prize"]) >= last:
 		return
