@@ -116,7 +116,9 @@ const LAST_LOCATION := 4
 ## quicker) and STAR_GROWTH per further star. Every star owned adds
 ## STAR_BONUS to the income of every world (added up). sim.py --stars: about
 ## 70 min for the first stars, then 35-60 min each, slowly longer.
-const STAR_LOCS := 5
+const STAR_LOCS := 1
+## A world can hold at most MAX_STARS stars (keeps numbers inside a double).
+const MAX_STARS := 50
 const STAR_GATE := 0.6
 const STAR_GROWTH := 2.0
 const STAR_BONUS := 0.25

@@ -36,6 +36,9 @@ const SAVE_PATH := "user://online.json"
 ## (The rules refuse a second write within 30 s.)
 const SUBMIT_SEC := 300.0
 const SUBMIT_GAP_SEC := 60.0
+## The Firestore rules accept scores up to 1e60 (docs/online.md); world stars
+## can push the totals past it, so the boards stop just under it.
+const SCORE_CAP := 9.9e59
 ## A board read is kept this long (50 reads each; 50 000 a day are free).
 const BOARD_CACHE_SEC := 60.0
 const TIMEOUT_SEC := 12.0
@@ -338,12 +341,12 @@ func track(now: float = -1.0) -> void:
 func score(kind: String) -> float:
 	match kind:
 		"week", "clubs":
-			return float(data["week_score"])
+			return minf(float(data["week_score"]), SCORE_CAP)
 		"month":
-			return float(data["month_score"])
+			return minf(float(data["month_score"]), SCORE_CAP)
 		"puzzle":
 			return float(data["pz_score"])
-	return float(data["all_best"])
+	return minf(float(data["all_best"]), SCORE_CAP)
 
 
 ## The title won last week (OnlineRules.title_for), worn this week only.

@@ -87,7 +87,7 @@ def loc_gate_scale(L: int) -> float:
 # STAR_GROWTH per further star (so the growing bonus doesn't make runs trivial). Every star the
 # player owns adds STAR_BONUS to the income of every world.
 LAST_LOCATION = 4
-STAR_LOCS = 5
+STAR_LOCS = 1
 STAR_GATE = 0.6
 STAR_GROWTH = 2.0
 STAR_BONUS = 0.25

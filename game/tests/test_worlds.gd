@@ -460,7 +460,11 @@ func test_stars() -> void:
 	check(near(gs.income_mult() / mult0, Balance.star_scale(0, 1) * Balance.star_mult(1)), "numbers grow, plus the star bonus")
 	check(near(gs.upgrade_cost("d0"), Balance.upgrade_cost(Balance.DEPTHS[0]["cost0"], 1) * Balance.star_scale(0, 1)), "level prices grow with the star")
 	check(near(gs.manager_cost("d0"), Balance.DEPTHS[0]["manager"] * Balance.star_gate_scale(0, 1)), "gate prices use the star gate scale")
-	check(gs.star_cost() > price * 1e10, "the next star costs far more")
+	check(near(gs.star_cost(), price * Balance.LOC_SCALE_STEP * Balance.STAR_GATE), "the next star costs ~600x more")
+	# A world stops at MAX_STARS; a save can't hold more.
+	gs.world_stars[str(gs.location)] = Balance.MAX_STARS
+	check(not gs.star_ready() and not gs.can_get_star(), "no star past MAX_STARS")
+	gs.world_stars[str(gs.location)] = 1
 	check(near(Balance.star_gate_scale(0, 2) / Balance.star_gate_scale(0, 1), pow(Balance.LOC_SCALE_STEP, Balance.STAR_LOCS) * Balance.STAR_GROWTH), "each further star grows the gate")
 	check(rate0 > 0.0, "the ocean earned before")
 	check(WorldLook.name_of(0).ends_with("★1"), "the name shows the star (%s)" % WorldLook.name_of(0))

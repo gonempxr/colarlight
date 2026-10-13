@@ -494,7 +494,7 @@ func star_cost() -> float:
 
 ## This world's checklist is done (stars are open): saving up for a star.
 func star_ready() -> bool:
-	return stars_unlocked() and location_ready()
+	return stars_unlocked() and location_ready() and stars_of(location) < Balance.MAX_STARS
 
 
 func can_get_star() -> bool:
@@ -1255,7 +1255,7 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 			var sl: int = str(k).to_int() if str(k).is_valid_int() else -1
 			var sn := int(_num(st[k], 0.0))
 			if sl >= 0 and sl <= Balance.LAST_LOCATION and sn > 0:
-				world_stars[str(sl)] = mini(sn, 999)
+				world_stars[str(sl)] = mini(sn, Balance.MAX_STARS)
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:
