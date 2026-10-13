@@ -35,6 +35,11 @@ for item in $TESTS; do
 	bad=0
 	echo "$line" | grep -qE "(^|[^0-9])[1-9][0-9]* (failed|broken|jumps)|FAILED" && bad=1
 	[ -z "$line" ] && bad=1 && line="(no result line: crashed or timed out)"
+	# A script that does not compile never runs its checks.
+	if echo "$out" | grep -qE "SCRIPT ERROR|Parse Error|Failed to load script"; then
+		bad=1
+		line="$(echo "$out" | grep -E "SCRIPT ERROR|Parse Error" | head -1)"
+	fi
 	if [ $bad = 1 ]; then
 		fails=$((fails + 1))
 		printf "FAIL  %-18s %s\n" "$name" "$line"

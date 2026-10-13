@@ -206,7 +206,7 @@ func _initialize() -> void:
 	# --- Scores and the board --------------------------------------------------------------------
 	var lb = load("res://tests/online_fake.gd").new()
 	lb.uid = "Ldr00001qqqqqqqqqqqqqqqqqqqq"
-	lb.seed(60)
+	lb.seed(130)
 	lb.founders = 100
 	DirAccess.remove_absolute(online.SAVE_PATH)
 	online.load_data()
@@ -217,9 +217,9 @@ func _initialize() -> void:
 	online._boards = {}
 	online.fetch_board("all", func(res): got[0] = res)
 	var bd: Dictionary = got[0]
-	_check(bd["ok"] and bd["rows"].size() == 50, "the board shows the top 50")
+	_check(bd["ok"] and bd["rows"].size() == 100, "the board shows the top 100")
 	_check(lb.all.has(lb.uid) and float(lb.all[lb.uid]["score"]) == 5000.0, "opening the board sends the score")
-	_check(int(bd["rank"]) > 50, "own place below the top 50 is known (%d)" % int(bd["rank"]))
+	_check(int(bd["rank"]) > 100, "own place below the top 100 is known (%d)" % int(bd["rank"]))
 	var sorted := true
 	for i in range(1, bd["rows"].size()):
 		sorted = sorted and float(bd["rows"][i - 1]["score"]) >= float(bd["rows"][i]["score"])
@@ -233,6 +233,36 @@ func _initialize() -> void:
 	_check(parsed["rows"][0]["name"] == OnlineRules.fallback_name("x1"), "rude names from the server are hidden too")
 	_check(parsed["rows"][1]["you"] and not parsed["rows"][0]["you"], "the player's own row is marked")
 	_check(not online.parse_board("error:x", "")["ok"] and not online.parse_board("{\"rows\": 5}", "")["ok"], "bad answers are handled")
+
+	# --- One row per player (a save on two devices / after a Google sign-in) ---------------------
+	_check(str(online.data["owner"]) != "" and JSON.parse_string(online.profile_info()).get("o") == online.data["owner"], "the save's own id goes on the profile card")
+	var oldA := "AAAAaaaa1111222233334444zzzz"
+	var dup := [
+		{"uid": "BBBBbbbb5555666677778888yyyy", "name": OnlineRules.fallback_name("BBBBbbbb5555666677778888yyyy"), "score": 900, "p": JSON.stringify({"o": "AAAAaaaa"})},
+		{"uid": oldA, "name": "l8", "score": 300, "p": ""},
+		{"uid": "CCCCcccc0000", "name": "goth", "score": 500, "p": JSON.stringify({"o": "CCCCcccc"})},
+		{"uid": "DDDDdddd0000", "name": "goth2", "score": 400, "p": JSON.stringify({"o": "CCCCcccc"})},
+		{"uid": "EEEEeeee0000", "name": "Diver0001", "score": 100, "p": JSON.stringify({"o": "CCCCcccc"})},
+	]
+	var mb: Dictionary = online.parse_board(JSON.stringify({"rows": dup, "rank": 0}), "BBBBbbbb5555666677778888yyyy")
+	var names := []
+	for mr in mb["rows"]:
+		names.append(str(mr["name"]))
+	_check(names == ["l8", "goth", "goth2"], "a player's two rows become one with the real name (%s)" % [names])
+	_check(float(mb["rows"][0]["score"]) == 900.0 and mb["rows"][0]["you"], "the joined row keeps the best score and is marked as mine")
+	_check(online.parse_board(JSON.stringify({"rows": dup, "rank": 0}), "", false)["rows"].size() == 5, "club boards are not joined")
+	var many := []
+	for i in 130:
+		many.append({"uid": "U%07dxxxx" % i, "name": "P%d" % i, "score": 1000 - i})
+	var big: Dictionary = online.parse_board(JSON.stringify({"rows": many, "rank": 0}), "")
+	_check(big["rows"].size() == 100 and str(big["rows"][0]["name"]) == "P0" and str(big["rows"][99]["name"]) == "P99", "a board shows the top 100")
+	var fresh = load("res://scripts/autoload/online.gd").new()
+	fresh.data = fresh.defaults()
+	fresh.data["claimed_by"] = oldA
+	fresh.data["code"] = "BBBBbbbb"
+	fresh._became_ready("BBBBbbbb5555666677778888yyyy")
+	_check(str(fresh.data["owner"]) == "AAAAaaaa", "a save from another device keeps its first online id")
+	fresh.free()
 
 	# --- Save and load ---------------------------------------------------------------------------
 	online.data["redeemed"] = {"p1": true, "p3": true}
