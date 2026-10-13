@@ -37,6 +37,7 @@ Auth** + **Firestore**. All protection is in the Firestore security rules below.
 | `CORALIGHT` | +50 pearls | p1 |
 | `DIVE2026` | +30 pearls and x2 coins for 1 hour (the ad boost timer, `GameState.add_boost`) | p2 |
 | `THANKYOU` | +25 pearls and the Founder Cap | p3 |
+| (Mark has them) | 200ac coins / 100ac coins, not counted on the boards | p4 / p5 |
 
 Codes are typed in any case with spaces around; the game trims and upper-cases
 them and compares the **SHA-256** with `OnlineRules.PROMOS`
@@ -83,6 +84,27 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isMe(uid) { return signedIn() && request.auth.uid == uid; }
 
+    // The leader: ids added by hand in the console (collection "admins",
+    // document id = the player's ID shown under the leaderboard).
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function banned() {
+      return exists(/databases/$(database)/documents/bans/$(request.auth.uid));
+    }
+    match /admins/{uid} {
+      allow read: if isMe(uid);
+    }
+    // Banned players: {name, o, t}; their scores are refused.
+    match /bans/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'o', 't'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 24
+        && request.resource.data.o is string && request.resource.data.o.size() <= 12;
+      allow delete: if isAdmin();
+    }
+
     // Google cloud save (unchanged).
     match /saves/{uid} {
       allow read, write: if isMe(uid);
@@ -100,6 +122,7 @@ service cloud.firestore {
         && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000.0
         && d.t == request.time
         && ownName(d.name)
+        && !banned()
         && (resource == null
             || (d.score >= resource.data.score
                 && request.time > resource.data.t + duration.value(30, 's')));
@@ -129,12 +152,14 @@ service cloud.firestore {
 
     match /lb_all/{uid} {
       allow read: if signedIn();
+      allow delete: if isAdmin();
       allow create, update: if isMe(uid) && goodScore();
     }
 
     // Weeks start on Monday 00:00 UTC; only the current week can be written.
     match /weeks/{weekId}/scores/{uid} {
       allow read: if signedIn();
+      allow delete: if isAdmin();
       allow create, update: if isMe(uid) && goodScore()
         && weekId.matches('^[0-9]{1,6}$')
         && request.time.toMillis() >= (int(weekId) * 7 + 4) * 86400000
@@ -144,6 +169,7 @@ service cloud.firestore {
     // The weekly puzzle board (stars won in the puzzle), like the weeks.
     match /puzzleweeks/{weekId}/scores/{uid} {
       allow read: if signedIn();
+      allow delete: if isAdmin();
       allow create, update: if isMe(uid) && goodScore()
         && weekId.matches('^[0-9]{1,6}$')
         && request.time.toMillis() >= (int(weekId) * 7 + 4) * 86400000
@@ -153,6 +179,7 @@ service cloud.firestore {
     // Seasons: one calendar month (UTC); only the current month is written.
     match /months/{monthId}/scores/{uid} {
       allow read: if signedIn();
+      allow delete: if isAdmin();
       allow create, update: if isMe(uid) && goodScore()
         && monthId.matches('^[0-9]{6}$')
         && int(monthId) == request.time.year() * 100 + request.time.month();

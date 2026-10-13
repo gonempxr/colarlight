@@ -25,6 +25,10 @@ signal thanks(info: Dictionary)
 ## scores): the game asks for another one. Once per name.
 signal name_taken(name: String)
 
+## Rows asked for (a few more than shown: one player's rows from several
+## devices are joined into one) and rows shown on a board.
+const BOARD_FETCH := 120
+const BOARD_ROWS := 100
 const SAVE_PATH := "user://online.json"
 ## Scores go out every few minutes and at important moments (a new world,
 ## the page hidden, the board opened), never twice within a minute: the
@@ -65,6 +69,11 @@ var _ref_looks := 40
 var _boards := {}
 var _after_ready_done := false
 var _begin_left := BEGIN_SEC
+## The leader (only ids added by hand to admins/ in the Firebase console):
+## can kick and ban players from the boards.
+var admin := false
+## Banned players: {uid: name} and {"o:<owner>": name}.
+var bans := {}
 
 
 func _ready() -> void:
@@ -159,6 +168,15 @@ func use_backend(fake: Object) -> void:
 func _became_ready(new_uid: String) -> void:
 	uid = new_uid
 	state = "ready"
+	# The save's own online id: the first one it was played with. It goes
+	# with the save to other devices (CrazyGames, Google), so the rows one
+	# player leaves from several devices are shown as one on the boards.
+	if str(data.get("owner", "")) == "":
+		var first := OnlineRules.code_of(str(data.get("claimed_by", "")))
+		if first == "":
+			first = str(data.get("code", ""))
+		data["owner"] = first if OnlineRules.valid_code(first) else OnlineRules.code_of(uid)
+		_dirty = true
 	# The invite code follows the online id (signing in with Google can
 	# change it); friends already paid are counted per code.
 	var code := OnlineRules.code_of(uid)
@@ -182,6 +200,8 @@ func after_ready() -> void:
 	check_week_prize()
 	check_season_prize()
 	check_puzzle_prize()
+	check_admin()
+	load_bans()
 	submit()
 	if in_club():
 		# Keeps the club's weekly total fresh on the club board.
@@ -230,7 +250,7 @@ func defaults() -> Dictionary:
 		"ref_done": false, "paid": {}, "exclusive": false, "week": -1, "week_score": 0.0, "all_best": 0.0,
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
-		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1}
+		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1, "owner": ""}
 
 
 func load_data() -> void:
@@ -293,7 +313,8 @@ func track(now: float = -1.0) -> void:
 		data["month_score"] = 0.0
 		_dirty = true
 	var prof := str(Profiles.current_id)
-	var total := float(GameState.total_earned)
+	# Coins from promo codes are a gift, not play: never on the boards.
+	var total := maxf(0.0, float(GameState.total_earned) - float(Progress.stats.get("promo_coins", 0.0)))
 	if str(data["seen_profile"]) == prof and float(data["seen_total"]) >= 0.0 and total > float(data["seen_total"]):
 		data["week_score"] = float(data["week_score"]) + (total - float(data["seen_total"]))
 		data["month_score"] = float(data["month_score"]) + (total - float(data["seen_total"]))
@@ -336,6 +357,8 @@ func title(now: float = -1.0) -> int:
 ## What the profile card shows to others (the "p" field of a score row).
 func profile_info() -> String:
 	var p := {"t": title(), "b": Achievements.count(), "wo": int(GameState.max_location) + 1}
+	if OnlineRules.valid_code(str(data.get("owner", ""))):
+		p["o"] = str(data["owner"])
 	if str(data["club_name"]) != "":
 		p["c"] = str(data["club_name"])
 	if int(data["founder"]) > 0:
@@ -472,20 +495,22 @@ func fetch_board(kind: String, done: Callable) -> void:
 		var arg := JSON.stringify({"kind": kind, "w": int(data["week"]), "m": int(data["month"]), "score": score(kind),
 			"code": invite_code(), "ref": str(data["referred_by"]), "club": str(data["club"])})
 		_request("board", arg, func(res: String):
-			var board := parse_board(res, uid)
+			var board := parse_board(res, uid, kind != "clubs")
+			if board["ok"] and kind != "clubs":
+				board["rows"] = board["rows"].filter(func(r): return bool(r["you"]) or not is_banned(r))
 			if board["ok"]:
 				_boards[kind] = {"at": Time.get_ticks_msec() / 1000.0, "w": int(data["week"]), "board": board}
 			done.call(board))
 	submit(ask)
 
 
-static func parse_board(res: String, me: String) -> Dictionary:
+static func parse_board(res: String, me: String, merge := true) -> Dictionary:
 	var d = JSON.parse_string(res) if res.begins_with("{") else null
 	if not d is Dictionary or not d.get("rows") is Array:
 		return {"ok": false, "rows": [], "rank": 0}
 	var rows: Array = []
 	for r in d["rows"]:
-		if not r is Dictionary or rows.size() >= 50:
+		if not r is Dictionary or rows.size() >= BOARD_FETCH:
 			continue
 		var id := str(r.get("uid", ""))
 		var s := float(r.get("score", 0)) if (r.get("score") is float or r.get("score") is int) else 0.0
@@ -493,7 +518,134 @@ static func parse_board(res: String, me: String) -> Dictionary:
 		rows.append({"uid": id, "name": OnlineRules.board_name(str(r.get("name", "")), id), "score": maxf(0.0, s),
 			"a": str(r.get("a", "")), "p": str(r.get("p", "")), "n": int(n) if (n is float or n is int) else 0,
 			"you": id == me and me != ""})
+	rows.sort_custom(func(x, y): return float(x["score"]) > float(y["score"]))
+	if merge:
+		rows = merge_rows(rows)
+	if rows.size() > BOARD_ROWS:
+		rows.resize(BOARD_ROWS)
 	return {"ok": true, "rows": rows, "rank": maxi(0, int(d.get("rank", 0)))}
+
+
+## Which player a row belongs to: the save's own id ("o" in the profile
+## card) or, for rows from older versions, the start of the row's id.
+static func row_owner(row: Dictionary) -> String:
+	var p := str(row.get("p", ""))
+	if p.begins_with("{") and p.length() <= 300:
+		var d = JSON.parse_string(p)
+		if d is Dictionary and d.get("o") is String and OnlineRules.valid_code(str(d["o"])):
+			return str(d["o"])
+	return OnlineRules.code_of(str(row.get("uid", "")))
+
+
+## One row per player: a save played on two devices (or after a Google
+## sign-in) leaves two rows, one with the name and one "Diver1234". They
+## become one row with the best score and the real name. Rows with two
+## different real names are never joined (an "o" copied from someone else
+## can't hide them). Rows must be sorted by score, best first.
+static func merge_rows(rows: Array) -> Array:
+	var out: Array = []
+	var by_owner := {}
+	for r in rows:
+		var k := row_owner(r)
+		if k != "" and by_owner.has(k):
+			var g: Dictionary = by_owner[k]
+			var gn := str(g["name"])
+			var rn := str(r["name"])
+			if gn == rn or OnlineRules.is_fallback(gn) or OnlineRules.is_fallback(rn):
+				if OnlineRules.is_fallback(gn) and not OnlineRules.is_fallback(rn):
+					g["name"] = rn
+					if str(r.get("a", "")) != "":
+						g["a"] = r["a"]
+				g["you"] = bool(g["you"]) or bool(r["you"])
+				g["also"] = g.get("also", []) + [str(r["uid"])]
+				continue
+		out.append(r)
+		if k != "" and not by_owner.has(k):
+			by_owner[k] = r
+	return out
+
+
+# --- The leader: kick and ban ------------------------------------------------------------
+
+func check_admin() -> void:
+	_request("admin", "", func(res: String):
+		var was := admin
+		admin = res == "yes"
+		if admin != was:
+			state_changed.emit())
+
+
+func load_bans(done: Callable = Callable()) -> void:
+	_request("bans", "", func(res: String):
+		var d = JSON.parse_string(res) if res.begins_with("{") else null
+		if d is Dictionary and d.get("list") is Array:
+			bans = {}
+			for b in d["list"]:
+				if b is Dictionary and str(b.get("uid", "")) != "":
+					var name := OnlineRules.strip_name(str(b.get("name", "")))
+					bans[str(b["uid"])] = name
+					if OnlineRules.valid_code(str(b.get("o", ""))):
+						bans["o:" + str(b["o"])] = name
+		if done.is_valid():
+			done.call())
+
+
+## A row of a banned player: their id, or another device of the same save
+## (same owner) with the banned name or a "Diver1234" one.
+func is_banned(row: Dictionary) -> bool:
+	if bans.has(str(row.get("uid", ""))):
+		return true
+	var k := "o:" + row_owner(row)
+	if not bans.has(k):
+		return false
+	var n := str(row.get("name", ""))
+	return OnlineRules.is_fallback(n) or n == str(bans[k])
+
+
+## Takes a player's rows off every board (they come back when the player
+## plays again); with `ban` their scores are refused from then on.
+## done.call("ok" | "error").
+func kick(row: Dictionary, ban: bool, done: Callable) -> void:
+	var id := str(row.get("uid", ""))
+	if not admin or id == "" or id == uid:
+		done.call("error")
+		return
+	# A row joined from several devices: all of them go.
+	var ids: Array = [id]
+	for other in row.get("also", []):
+		if str(other) != uid and not ids.has(str(other)):
+			ids.append(str(other))
+	var arg := JSON.stringify({"uids": ids, "w": int(data["week"]), "m": int(data["month"]), "name": str(row.get("name", "")),
+		"o": row_owner(row), "ban": ban})
+	_request("kick", arg, func(res: String):
+		if res == "ok":
+			_boards = {}
+			if ban:
+				for b in ids:
+					bans[b] = str(row.get("name", ""))
+				var o := row_owner(row)
+				if OnlineRules.valid_code(o):
+					bans["o:" + o] = str(row.get("name", ""))
+		done.call("ok" if res == "ok" else "error"))
+
+
+func unban(id: String, done: Callable) -> void:
+	_request("unban", JSON.stringify({"uid": id}), func(res: String):
+		if res != "ok":
+			done.call("error")
+			return
+		_boards = {}
+		bans.erase(id)
+		load_bans(func(): done.call("ok")))
+
+
+## The banned players for the leader's list: [{uid, name}].
+func ban_list() -> Array:
+	var out := []
+	for k in bans:
+		if not str(k).begins_with("o:"):
+			out.append({"uid": str(k), "name": str(bans[k])})
+	return out
 
 
 # --- Promo codes ------------------------------------------------------------------------
@@ -507,7 +659,8 @@ func redeem(text: String) -> Dictionary:
 	if data["redeemed"].get(id, false):
 		return {"result": "used"}
 	data["redeemed"][id] = true
-	var info := {"kind": "promo", "pearls": int(p.get("pearls", 0)), "boost": float(p.get("boost", 0.0)), "item": p.has("item")}
+	var info := {"kind": "promo", "pearls": int(p.get("pearls", 0)), "boost": float(p.get("boost", 0.0)), "item": p.has("item"),
+		"coins": float(p.get("coins", 0.0))}
 	_grant(info)
 	save_data()
 	return {"result": "ok", "reward": info}
@@ -841,6 +994,12 @@ func _grant(info: Dictionary) -> void:
 		GameState.add_boost(float(info["boost"]))
 	if bool(info.get("item", false)):
 		give_exclusive()
+	var coins := float(info.get("coins", 0.0))
+	if coins > 0.0 and is_finite(coins):
+		# Gifted coins are left out of the scores (see track()).
+		Progress.stats["promo_coins"] = float(Progress.stats.get("promo_coins", 0.0)) + coins
+		GameState.add_coins(coins)
+		track()
 	Progress.save_game()
 	pending_thanks.append(info)
 	thanks.emit(info)

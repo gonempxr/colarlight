@@ -14,7 +14,7 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
-## board:<month|friends|clubs> | ach (achievements) | card (a player's card) | club[:none] (clubs).
+## board:<month|friends|clubs> (":admin" = as the leader) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -344,6 +344,9 @@ func _online_overlay(main: Node, overlay: String) -> void:
 	if "taken" in parts:
 		fake.names[OnlineRules.name_key(OnlineRules.board_name(root.get_node("Profiles").player_name(), fake.uid))] = "Other001xxxxxxxxxxxxxxxxxxxx"
 	if not "off" in parts:
+		if "admin" in overlay.split(":"):
+			fake.is_admin = true
+			fake.banned["Bad00001xxxxxxxxxxxxxxxxxxxx"] = {"name": "Cheater", "o": ""}
 		online.use_backend(fake)
 		online.claim_name()
 		online.data["paid"] = {"Shot0001": 2}

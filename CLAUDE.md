@@ -90,6 +90,16 @@ This file is the quick picture; keep it up to date when something big changes.
   `gh-pages:crazygames/coralight-crazygames.zip` = latest main build (Mark
   uploads it himself via "Submit new version", files unzipped, answer
   "Yes, using the Data Module" for saves). Firestore rules v4 are published.
+- Leaderboard (2026-10-13, live on main + beta + CG zip): top 100 (asks 120
+  rows); one row per player: the save keeps `owner` (its first online id,
+  sent as `o` in the profile card) and `Online.merge_rows` joins a player's
+  rows from several devices / Google sign-in (never two different real
+  names). Beta also has the new board look (podium, `OnlineView._podium`).
+- Leader tools (2026-10-13, worlds/beta + CG zip): Mark only. `admins/{uid}`
+  docs are added by hand in the Firebase console; kick/ban on a player's card,
+  ban list under the board, own ID + Copy under the board. Needs rules v5
+  (docs/online.md) published. Since 2026-10-13 the CrazyGames upload is a
+  normal (non-beta) export of `worlds`, not `main` (Mark wanted the beta look).
 - Beta / `worlds` only (not yet approved for main): new dialog look (striped
   title banner, light-blue panels, `Modal.banner()`), profile as big tiles
   (`Views.tiles`), Sea Pass on its own screen (`PassScreen`, two tracks:
