@@ -17,11 +17,18 @@ const SIL := Color("46406e")
 
 static var _sil := false
 ## The world the fish live in (0 ocean, 1 volcano: fire fish, 2 acid swamp:
-## slimy greens, 3 moon: space fish). Colors are turned into the world's
-## range and a little world effect is added around them.
+## slimy greens, 3 moon: space fish, 4 jungle: tropical river fish). Colors
+## are turned into the world's range and a little world effect is added
+## around them.
 static var world := 0
-## Hue ranges the colors are squeezed into, per world.
-const WORLD_HUES := [Vector2(0.0, 1.0), Vector2(-0.03, 0.13), Vector2(0.17, 0.42), Vector2(0.5, 0.86)]
+const JUNGLE := 4
+## Hue ranges the colors are squeezed into, per world (the jungle maps hues
+## with TROPICAL instead).
+const WORLD_HUES := [Vector2(0.0, 1.0), Vector2(-0.03, 0.13), Vector2(0.17, 0.42), Vector2(0.5, 0.86), Vector2(0.0, 1.0)]
+## Jungle river fish: [from hue, to hue] stops. Reds turn coral, yellows
+## stay sunny, greens go lime, blues become turquoise, purples magenta.
+const TROPICAL := [Vector2(0.0, -0.03), Vector2(0.06, 0.05), Vector2(0.15, 0.13), Vector2(0.3, 0.27), Vector2(0.45, 0.42),
+		Vector2(0.58, 0.48), Vector2(0.68, 0.5), Vector2(0.76, 0.86), Vector2(0.9, 0.93), Vector2(1.0, 0.97)]
 
 
 ## facing: 1 = right, -1 = left. silhouette = dark shape without details.
@@ -64,13 +71,24 @@ static func draw(ci: CanvasItem, id: String, t: float, facing: float = 1.0, happ
 static func _w(col: Color) -> Color:
 	if world == 0 or col.s < 0.12:
 		return col
+	if world == JUNGLE:
+		return Color.from_hsv(fposmod(_tropical(col.h), 1.0), minf(1.0, col.s * 1.15), minf(1.0, col.v * 1.04), col.a)
 	var r: Vector2 = WORLD_HUES[world]
 	var s := minf(1.0, col.s * 1.05 + (0.08 if world == 1 else 0.0))
 	return Color.from_hsv(fposmod(r.x + col.h * (r.y - r.x), 1.0), s, col.v, col.a)
 
 
+static func _tropical(h: float) -> float:
+	for i in range(1, TROPICAL.size()):
+		var b: Vector2 = TROPICAL[i]
+		if h <= b.x:
+			var a: Vector2 = TROPICAL[i - 1]
+			return lerpf(a.y, b.y, (h - a.x) / maxf(0.001, b.x - a.x))
+	return h
+
+
 static func _world_back(ci: CanvasItem, t: float) -> void:
-	var g: Color = [Color.WHITE, Color(1.0, 0.55, 0.15, 0.12), Color(0.6, 1.0, 0.3, 0.1), Color(0.55, 0.8, 1.0, 0.14)][world]
+	var g: Color = [Color.WHITE, Color(1.0, 0.55, 0.15, 0.12), Color(0.6, 1.0, 0.3, 0.1), Color(0.55, 0.8, 1.0, 0.14), Color(0.3, 1.0, 0.85, 0.12)][world]
 	Art.flat(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(56, 32), 20), g)
 
 
@@ -89,6 +107,14 @@ static func _world_front(ci: CanvasItem, t: float) -> void:
 				# Tiny stars circling a space fish.
 				var ang := t * 1.2 + TAU * i / 3.0
 				Art.flat(ci, Art.star_pts(Vector2(cos(ang) * 46.0, sin(ang) * 22.0), 4.0, 1.4, 4), Color(1.0, 1.0, 0.85, 0.85))
+			4:
+				# River drops falling off a jungle fish, a petal circling it.
+				Art.disc(ci, Vector2(-12.0 + i * 12.0, 10.0 + f * 22.0), snappedf(2.6 - f * 1.2, 0.2), Color(0.6, 1.0, 0.95, a))
+				if i == 0:
+					var ang := snappedf(t * 1.1, 0.05)
+					Art.push(ci, Vector2(cos(ang) * 44.0, sin(ang) * 20.0 - 4.0), ang * 2.0)
+					Art.toon(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(5.0, 2.6), 10), Color("ff8ac0"), 1.4, 0.0)
+					Art.pop(ci)
 
 
 ## Soft glow and turning rays behind a fish (catch card, book), in the

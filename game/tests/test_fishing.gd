@@ -337,7 +337,8 @@ func test_corrupted_save() -> void:
 func test_translations() -> void:
 	var keys := ["FISHING_CAST", "FISHING_PRESS_CAST", "FISHING_KEEP", "FISH_R_LEGENDARY", "DOCK_FISHING", "FEATURE_FISHING_DESC",
 			"FISHING_PERFECT", "FISHING_ROD_NEXT", "FISHING_ROD_LADDER", "FISHING_STAT_RARE", "FISHING_PERFECT_BONUS"]
-	for w in 4:
+	check(RodArt.KEYS.size() == WorldLook.WORLDS.size() and RodArt.PAL.size() == WorldLook.WORLDS.size(), "a rod ladder for every world")
+	for w in RodArt.KEYS.size():
 		keys.append(RodArt.name_key(w))
 		for lv in 20:
 			keys.append(RodArt.level_key(w, lv + 1))

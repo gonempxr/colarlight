@@ -10,6 +10,8 @@ var screen: Control
 ## Loaded at run time: the screen uses autoloads that don't exist yet when
 ## this script compiles.
 var PuzzleScreen: GDScript
+## The world the next screen opens in (each world has its own board).
+var open_world := 0
 var results: Array = []
 
 
@@ -50,6 +52,15 @@ func _initialize() -> void:
 	await test_layout("wide")
 	await test_swaps()
 	await test_win()
+	await test_worlds()
+	# The jungle board (world 4) plays like the others.
+	open_world = 4
+	root.size = Vector2i(390, 844)
+	await _frames(4)
+	await test_layout("jungle phone")
+	await test_swaps()
+	await test_win()
+	open_world = 0
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute("user://test_puzzle_ui_save.json")
 	quit(1 if _failures > 0 else 0)
@@ -66,6 +77,7 @@ func _open(n: int) -> void:
 		await _frames(2)
 	results.clear()
 	screen = PuzzleScreen.new()
+	screen.world = open_world
 	root.add_child(screen)
 	screen.setup(PuzzleLevels.level(n), func(r: Dictionary) -> Array: return [["coin", "+%d" % (r["fragments"] * 100)]])
 	screen.finished.connect(func(r: Dictionary): results.append(r))
@@ -133,6 +145,29 @@ func _center(c: Control) -> Vector2:
 
 
 # --- Tests -----------------------------------------------------------------------------------
+
+## Every world has a board look and its own six pieces (color and shape).
+func test_worlds() -> void:
+	var n := WorldLook.WORLDS.size()
+	check(PuzzleScreen.LOOKS.size() >= n, "every world has a board look")
+	for w in range(1, n):
+		var cols: Array = TileWorlds.COLORS.get(w, [])
+		var distinct := {}
+		for c: Color in cols:
+			distinct[c.to_html()] = true
+		check(cols.size() == TileArt.KINDS.size() and distinct.size() == cols.size(), "world %d: six pieces in six colors" % w)
+		check(TileWorlds.block_colors(w)[0] != Art.SAND and TileWorlds.bubble_colors(w).size() == 2, "world %d: own blocker colors" % w)
+	for w in n:
+		open_world = w
+		await _open(3)
+		check(TileArt.world == w and screen.world == w, "world %d: the board draws that world's pieces" % w)
+		for i in TileArt.KINDS.size():
+			check(TileArt.kind_color(i).a > 0.5, "world %d: piece %d has a color" % [w, i])
+	open_world = 0
+	screen.queue_free()
+	await _frames(2)
+	check(TileArt.world == 0, "closing the board resets the piece world")
+
 
 func test_layout(label: String) -> void:
 	await _open(12)
