@@ -215,7 +215,7 @@ func buy_boost() -> bool:
 ## Seconds until coins can be bought for pearls again (0 = now).
 func coins_wait() -> float:
 	var last := float(stats.get("coins_bought_at", 0.0))
-	var now := Time.get_unix_time_from_system()
+	var now := Clock.now()
 	if last > now + 60.0:
 		# A clock moved back: never lock the shop for longer than the cooldown.
 		last = now
@@ -226,7 +226,7 @@ func buy_coins() -> bool:
 	if coins_wait() > 0.0 or not spend_pearls(Content.COINS_PRICE):
 		return false
 	GameState.add_coins(coins_for_minutes(Content.COINS_MIN))
-	stats["coins_bought_at"] = Time.get_unix_time_from_system()
+	stats["coins_bought_at"] = Clock.now()
 	save_game()
 	return true
 
@@ -490,7 +490,7 @@ func open_chest() -> Dictionary:
 # --- Daily gift --------------------------------------------------------------------
 
 static func today() -> String:
-	return Time.get_date_string_from_system()
+	return Clock.today()
 
 
 func daily_ready() -> bool:

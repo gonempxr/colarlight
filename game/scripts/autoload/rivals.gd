@@ -114,7 +114,7 @@ func _notification(what: int) -> void:
 # --- Time ------------------------------------------------------------------------
 
 func now() -> float:
-	return Time.get_unix_time_from_system() + time_offset
+	return Clock.now() + time_offset
 
 
 ## Local time zone, so the week turns at the player's Monday midnight.
