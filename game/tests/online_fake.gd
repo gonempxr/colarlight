@@ -94,7 +94,7 @@ func request(method: String, arg: String) -> String:
 				if float(rows[i]["score"]) > float(a["score"]):
 					above += 1
 			var rank := at + 1 if at >= 0 else (above + 1 if float(a["score"]) > 0.0 else 0)
-			return JSON.stringify({"rows": rows.slice(0, 50), "rank": rank})
+			return JSON.stringify({"rows": rows.slice(0, 120), "rank": rank})
 		"founder":
 			if founder_of.has(uid):
 				return "already:%d" % founder_of[uid]
