@@ -24,8 +24,10 @@ func _initialize() -> void:
 	var ma: GDScript = load("res://scripts/ui/map_art.gd")
 	var mv: GDScript = load("res://scripts/ui/map_view.gd")
 	# World chain and tiers.
-	check(ma.world_of(0) == "ocean" and ma.world_of(1) == "volcano" and ma.world_of(2) == "acid" and ma.world_of(3) == "moon", "world order")
-	check(mv.tier_of(3) == 0, "no stars")
+	check(ma.world_of(0) == "ocean" and ma.world_of(1) == "volcano" and ma.world_of(2) == "acid" and ma.world_of(3) == "moon"
+			and ma.world_of(4) == "jungle", "world order")
+	check(ma.WORLDS.size() == Balance.WORLDS.size(), "one island per world")
+	check(mv.tier_of(3) == 0 and mv.tier_of(4) == 0, "no stars")
 	# Boat: waits at the mine, reaches the factory, comes back.
 	for w in ma.WORLDS:
 		var route: Array = ma.spots(w)["boat"]
@@ -79,22 +81,35 @@ func _initialize() -> void:
 	check(mv.cur_location() == 1, "location advanced")
 	v.call("close")
 	check(closed[0] and not v.visible, "closed signal")
-	# Exactly four worlds, then two "Soon!" islands; no gate on the Moon.
-	check(not mv.is_soon(3) and mv.is_soon(4) and mv.is_soon(5), "islands after the Moon are coming soon")
-	check(mv.world_of(4) == "ice" and mv.world_of(5) == "sky" and mv.world_name(4) == "???", "soon islands: ice castle, sky city, no name")
-	check(mv.tier_of(4) == 0 and not mv.world_name(3).contains("★"), "no ★2 repeats")
+	# Exactly five worlds, then one "Soon!" island (the ice castle); no gate
+	# on the Jungle.
+	check(not mv.is_soon(3) and not mv.is_soon(4) and mv.is_soon(5), "the island after the Jungle is coming soon")
+	check(mv.world_of(4) == "jungle" and mv.world_name(4) != "???", "the Jungle is a real world")
+	check(ma.SOON_WORLDS.size() == 1 and mv.world_of(5) == "ice" and mv.world_name(5) == "???", "one soon island: the ice castle, no name")
+	check(mv.tier_of(5) == 0 and not mv.world_name(4).contains("★"), "no ★2 repeats")
+	check(TranslationServer.translate("MAP_HINT_JUNGLE") != "MAP_HINT_JUNGLE" and TranslationServer.translate("MAP_W_JUNGLE") != "MAP_W_JUNGLE", "jungle strings")
+	check(ma.sil_polys("jungle").size() >= 8, "jungle: silhouette shapes")
 	for w in ma.SOON_WORLDS:
 		check(ma.sil_polys(w).size() >= 8, w + ": soon silhouette shapes")
-	mv.set("demo", {"location": 3, "goals": goals, "cost": 100.0, "coins": 1.0e9, "can": false, "boat": -1.0, "boat2": -2.0})
+	# The Moon is no longer the end: its panel offers the Jungle.
+	mv.set("demo", {"location": 3, "goals": goals, "cost": 100.0, "coins": 1.0e9, "can": true, "boat": -1.0, "boat2": -2.0})
+	var vm: Control = mv.new()
+	host.add_child(vm)
+	await process_frame
+	check(vm.call("_state", 4, 3) == ma.NEXT and vm.call("_state", 5, 3) == ma.SOON, "after the Moon: the Jungle next, then soon")
+	gold = _buttons(vm).filter(func(b): return b.theme_type_variation == &"GoldButton")
+	check(gold.size() == 1 and String(gold[0].text).contains(mv.world_name(4)), "the Moon's open button goes to the Jungle")
+	vm.queue_free()
+	mv.set("demo", {"location": 4, "goals": goals, "cost": 100.0, "coins": 1.0e9, "can": false, "boat": -1.0, "boat2": -2.0})
 	var v3: Control = mv.new()
 	host.add_child(v3)
 	await process_frame
-	check(v3.get("_last") == 5 and v3.get("_first") == 0, "the map shows the four worlds and two soon islands")
-	check(v3.call("_state", 4, 3) == ma.SOON and v3.call("_state", 2, 3) == ma.DONE, "soon state")
+	check(v3.get("_last") == 5 and v3.get("_first") == 0, "the map shows the five worlds and one soon island")
+	check(v3.call("_state", 5, 4) == ma.SOON and v3.call("_state", 3, 4) == ma.DONE, "soon state")
 	gold = _buttons(v3).filter(func(b): return b.theme_type_variation == &"GoldButton")
-	check(gold.is_empty(), "no open button on the Moon")
+	check(gold.is_empty(), "no open button on the Jungle")
 	var texts := v3.find_children("*", "Label", true, false).map(func(l): return String(l.text))
-	check(texts.has(TranslationServer.translate("MAP_SOON_TITLE")), "the Moon's panel says new worlds are coming")
+	check(texts.has(TranslationServer.translate("MAP_SOON_TITLE")), "the Jungle's panel says a new world is coming")
 	v3.queue_free()
 	# Mini-map tap.
 	var mm: Control = load("res://scripts/ui/mini_map.gd").new()

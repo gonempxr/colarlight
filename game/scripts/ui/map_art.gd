@@ -1,7 +1,7 @@
 class_name MapArt
 extends RefCounted
 ## Drawings of the world map: one floating island per world (ocean, volcano,
-## acid swamp, moon), the bridges and glowing paths between them, the boats
+## acid swamp, moon, jungle ruins), the bridges and glowing paths between them, the boats
 ## and the markers. Locked islands are dark silhouettes that keep their
 ## telling outline (the volcano cone, the mushroom caps, the dome) with a
 ## big "?" and a padlock.
@@ -11,7 +11,7 @@ extends RefCounted
 ## static part is cached as one piece (Art.cache_begin); only small things
 ## move (waterfalls, smoke, bubbles, boats).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle"]
 
 ## Island states on the map.
 const DONE := 0
@@ -19,12 +19,13 @@ const CURRENT := 1
 const NEXT := 2
 const LOCKED := 3
 ## A world that is not in the game yet ("Soon!"): a dark silhouette after
-## the Moon.
+## the Jungle.
 const SOON := 4
 
-## The "coming soon" islands after the last world, in map order: a frozen
-## castle and a city in the clouds (only their silhouettes exist).
-const SOON_WORLDS: Array[String] = ["ice", "sky"]
+## The "coming soon" island after the last world: a frozen castle (only
+## its silhouette exists). "sky" (a city in the clouds) keeps its drawing
+## for a later update.
+const SOON_WORLDS: Array[String] = ["ice"]
 ## The glow around their silhouettes, a hint of what they hold.
 const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a")}
 
@@ -59,6 +60,9 @@ const LOOK := {
 	"moon": {"top": Color("d6d3e6"), "side": Color("aaa5c4"), "under": Color("858099"), "under2": Color("9a95b0"),
 		"med": Color("8c87b8"), "med_rim": Color("5d5890"), "path": Color("7ff0ff"), "tease": Color("8ad8ff"),
 		"boat": Color("f2f4ff"), "boat2": Color("ffd23f")},
+	"jungle": {"top": Color("4fc463"), "side": Color("c99a58"), "under": Color("9c8456"), "under2": Color("bba271"),
+		"med": Color("3fd6c0"), "med_rim": Color("13857f"), "path": Color("ffe27a"), "tease": Color("5ee07a"),
+		"boat": Color("b8743a"), "boat2": Color("e8603c")},
 }
 
 ## Where things stand on each island (local coordinates): the mine, the
@@ -76,6 +80,9 @@ const SPOTS := {
 	"moon": {"mine": Vector2(-126, -6), "factory": Vector2(118, -14), "office": Vector2(-30, -58),
 		"boat": [Vector2(-98, 12), Vector2(-40, 22), Vector2(26, 20), Vector2(86, 6)],
 		"nodes": [Vector2(-140, 50), Vector2(-50, 72), Vector2(42, 72), Vector2(130, 52)]},
+	"jungle": {"mine": Vector2(-128, -10), "factory": Vector2(122, -8), "office": Vector2(150, -58),
+		"boat": [Vector2(-96, 12), Vector2(-40, 24), Vector2(24, 22), Vector2(88, 10)],
+		"nodes": [Vector2(-140, 52), Vector2(-56, 72), Vector2(40, 74), Vector2(128, 54)]},
 }
 
 ## Small hue turn for the repeats (tier 1+), so a second ocean looks new.
@@ -208,7 +215,8 @@ static func _debris(ci: CanvasItem, col: Color, spots_list: Array, rim: float = 
 
 const OBS_SCALE := 1.35
 ## How tall each building is (for the pins over them).
-const PIN_H := {"ocean": [44.0, 58.0, 62.0], "volcano": [44.0, 58.0, 50.0], "acid": [44.0, 60.0, 52.0], "moon": [64.0, 74.0, 100.0]}
+const PIN_H := {"ocean": [44.0, 58.0, 62.0], "volcano": [44.0, 58.0, 50.0], "acid": [44.0, 60.0, 52.0], "moon": [64.0, 74.0, 100.0],
+		"jungle": [50.0, 62.0, 58.0]}
 const DEBRIS := [[Vector2(-212, 96), 13.0], [Vector2(214, 120), 10.0], [Vector2(-170, 210), 9.0], [Vector2(186, 220), 12.0]]
 
 
@@ -565,6 +573,284 @@ static func _moon(ci: CanvasItem) -> void:
 	_debris(ci, _c(lk["under"]), DEBRIS)
 
 
+# --- Jungle ruins --------------------------------------------------------------------------
+
+const J_STONE := Color("e6c47e")
+const J_STONE_DARK := Color("b98f50")
+const J_MOSS := Color("5cb84a")
+const J_LEAF := Color("3fae4e")
+const J_LEAF_LIGHT := Color("6fd45c")
+const J_LEAF_DARK := Color("23804a")
+const J_WATER := Color("3fd6c0")
+const J_FLOWERS: Array[Color] = [Color("ff8a2a"), Color("ff4fa8"), Color("ffd23f"), Color("ff5a5a")]
+## The front waterfall: where it leaves the river and how far it falls.
+const J_FALL_X := -34.0
+const J_FALL_TOP := 96.0
+const J_FALL_BOT := 286.0
+## The pyramid's base (the middle of its front foot).
+const J_PYRAMID := Vector2(6, -46)
+const J_PYR_S := 0.92
+## The workshop's water wheel and the torch at the temple mine (local).
+const J_WHEEL := Vector2(158, -14)
+const J_TORCH := Vector2(-153, -50)
+
+
+## A stepped temple pyramid, base at `base` (front middle of its foot).
+static func _pyramid(ci: CanvasItem, base: Vector2, s: float) -> void:
+	Art.push(ci, base, 0.0, Vector2(s, s))
+	var widths := [168.0, 138.0, 108.0, 80.0, 56.0]
+	var th := 21.0
+	for i in widths.size():
+		var w: float = widths[i]
+		var y0 := -i * th
+		var tier := PackedVector2Array([Vector2(-w / 2.0, y0), Vector2(w / 2.0, y0), Vector2(w / 2.0 - 7, y0 - th), Vector2(-w / 2.0 + 7, y0 - th)])
+		Art.toon(ci, tier, _c(J_STONE), 3.0, 0.7)
+		# The top ledge of each step catches the sun, the blocks have seams.
+		Art.line_c(ci, PackedVector2Array([Vector2(-w / 2.0 + 9, y0 - th + 4), Vector2(w / 2.0 - 9, y0 - th + 4)]), Color(1, 1, 1, 0.4), 2.5)
+		var x := -w / 2.0 + 14.0 + (i % 2) * 9.0
+		while x < w / 2.0 - 10.0:
+			if absf(x) > 18.0:
+				Art.line_c(ci, PackedVector2Array([Vector2(x, y0 - 3), Vector2(x, y0 - th + 6)]), _c(J_STONE_DARK), 2.0)
+			x += 22.0
+		# Moss on the step corners.
+		for side: float in [-1.0, 1.0]:
+			if (i + int(side > 0)) % 2 == 0:
+				Art.flat(ci, Art.ellipse_pts(Vector2(side * (w / 2.0 - 12.0), y0 - th + 3), Vector2(13, 4.5), 10), _c(J_MOSS))
+	# The great stairs up the front.
+	var top := -th * widths.size()
+	Art.toon(ci, PackedVector2Array([Vector2(-17, 0), Vector2(17, 0), Vector2(11, top), Vector2(-11, top)]), _c(Color("f3dba0")), 2.5, 0.4)
+	var y := -5.0
+	while y > top + 2.0:
+		var hw := lerpf(17.0, 11.0, y / top)
+		Art.line_c(ci, PackedVector2Array([Vector2(-hw + 2, y), Vector2(hw - 2, y)]), _c(J_STONE_DARK), 1.8)
+		y -= 6.0
+	# The shrine on top with its dark door and a golden sun.
+	Art.t_rect(ci, Rect2(-26, top - 30, 52, 30), 3, _c(J_STONE), 3.0, 0.6)
+	Art.t_rect(ci, Rect2(-9, top - 22, 18, 22), 8, Color("2a1c24"), 2.5, 0.0)
+	Art.t_rect(ci, Rect2(-33, top - 38, 66, 10), 3, _c(J_STONE_DARK), 3.0, 0.4)
+	for k in 5:
+		Art.t_rect(ci, Rect2(-30 + k * 13, top - 45, 8, 8), 2, _c(J_STONE), 2.0, 0.3)
+	var sun := Vector2(0, top - 62)
+	Art.stroke(ci, PackedVector2Array([sun + Vector2(0, 11), Vector2(0, top - 45)]), Art.GOLD_DARK, 3.0, 1.5)
+	for k in 8:
+		var a := k * TAU / 8.0
+		Art.toon(ci, PackedVector2Array([sun + Vector2(cos(a - 0.2), sin(a - 0.2)) * 11, sun + Vector2(cos(a), sin(a)) * 19, sun + Vector2(cos(a + 0.2), sin(a + 0.2)) * 11]), Art.GOLD, 2.0, 0.0)
+	Art.t_circle(ci, sun, 11, Art.GOLD, 2.5, 0.5)
+	Art.t_circle(ci, sun, 5, Art.GOLD_DARK, 0.0, 0.0)
+	# Turquoise glyph stones beside the door.
+	for sx: float in [-18.0, 18.0]:
+		Art.t_rect(ci, Rect2(sx - 4, top - 24, 8, 8), 2, _c(J_WATER), 1.8, 0.0)
+	# Vines spilling down the steps.
+	for v in [[Vector2(-56, -44), 34.0], [Vector2(46, -64), 26.0], [Vector2(-30, -86), 22.0]]:
+		_vine(ci, v[0], v[1], 0.0)
+	Art.pop(ci)
+
+
+## A hanging vine with leaves from `top`, `len` long.
+static func _vine(ci: CanvasItem, top: Vector2, len: float, sway: float) -> void:
+	var pts := PackedVector2Array()
+	for i in 6:
+		var f := i / 5.0
+		pts.append(top + Vector2(sin(f * 3.0 + top.x) * 4.0 + sway * f * f, f * len))
+	Art.stroke(ci, pts, _c(Color("3a9a48")), 3.0, 1.5)
+	for i in range(1, 6):
+		var p := pts[i]
+		var side := 1.0 if i % 2 == 0 else -1.0
+		Art.toon(ci, Art.ellipse_pts(p + Vector2(side * 5.0, -1), Vector2(6, 3.2), 10, side * 0.6), _c(J_LEAF_LIGHT if i % 2 == 0 else J_LEAF), 1.8, 0.3)
+
+
+## A big round jungle bush: layered leaves with lighter tips and flowers.
+static func _jbush(ci: CanvasItem, at: Vector2, s: float, flowers: int) -> void:
+	var pts := Art.union([Art.circle_pts(at + Vector2(-s * 0.7, 0), s * 0.62, 14), Art.circle_pts(at + Vector2(0, -s * 0.45), s * 0.8, 16),
+			Art.circle_pts(at + Vector2(s * 0.7, -s * 0.05), s * 0.6, 14)])
+	Art.toon(ci, pts, _c(J_LEAF), 2.5, 0.8)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(-s * 0.2, -s * 0.75), Vector2(s * 0.45, s * 0.2), 12, -0.2), _c(J_LEAF_LIGHT))
+	for k in flowers:
+		var p := at + Vector2((k - (flowers - 1) / 2.0) * s * 0.6, -s * (0.25 + 0.3 * float(k % 2)))
+		_flower(ci, p, s * 0.18, J_FLOWERS[(k + int(absf(at.x))) % J_FLOWERS.size()])
+
+
+static func _flower(ci: CanvasItem, at: Vector2, r: float, col: Color) -> void:
+	for k in 5:
+		Art.flat(ci, Art.circle_pts(at + Vector2(0, -r).rotated(k * TAU / 5.0), r * 0.75, 8), _c(col))
+	Art.disc(ci, at, r * 0.55, Color("fff1a8"))
+
+
+## A broad jungle leaf from `base` pointing at angle `a`.
+static func _big_leaf(ci: CanvasItem, base: Vector2, len: float, a: float, col: Color) -> void:
+	Art.push(ci, base, a)
+	var leaf := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(len * 0.35, -len * 0.3), Vector2(len, -len * 0.04),
+			Vector2(len * 0.4, len * 0.28)]), 4)
+	Art.toon(ci, leaf, _c(col), 2.2, 0.5)
+	Art.line_c(ci, PackedVector2Array([Vector2(2, 0), Vector2(len * 0.9, -len * 0.04)]), Art.shade_of(_c(col), 0.3), 1.6)
+	Art.pop(ci)
+
+
+## A carved stone gate into a mossy hill: the jungle's mine (temple tunnels).
+static func _temple_mine(ci: CanvasItem, at: Vector2, s: float) -> void:
+	Art.push(ci, at, 0.0, Vector2(s, s))
+	var mound := Art.union([Art.ellipse_pts(Vector2(0, -22), Vector2(42, 32), 22), Art.ellipse_pts(Vector2(-26, -6), Vector2(24, 16), 16),
+			Art.ellipse_pts(Vector2(26, -8), Vector2(22, 16), 16)])
+	Art.toon(ci, mound, _c(Color("8f9a62")), 3.0, 0.9)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-6, -46), Vector2(30, 9), 16), _c(J_MOSS))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-20, -30), Vector2(10, 5), 10), _c(J_MOSS))
+	# The doorway: two carved posts, a lintel with a face, darkness inside.
+	Art.t_rect(ci, Rect2(-13, -38, 26, 38), 10, Color("1a1226"), 0.0, 0.0)
+	for x: float in [-21.0, 13.0]:
+		Art.t_rect(ci, Rect2(x, -40, 9, 40), 2, _c(J_STONE), 2.5, 0.5)
+		Art.line_c(ci, PackedVector2Array([Vector2(x + 2, -28), Vector2(x + 7, -28)]), _c(J_STONE_DARK), 1.6)
+		Art.line_c(ci, PackedVector2Array([Vector2(x + 2, -16), Vector2(x + 7, -16)]), _c(J_STONE_DARK), 1.6)
+	Art.t_rect(ci, Rect2(-27, -52, 54, 13), 3, _c(J_STONE), 2.8, 0.5)
+	Art.disc(ci, Vector2(-7, -46), 2.4, _c(J_WATER))
+	Art.disc(ci, Vector2(7, -46), 2.4, _c(J_WATER))
+	Art.line_c(ci, PackedVector2Array([Vector2(-5, -42), Vector2(0, -40), Vector2(5, -42)]), _c(J_STONE_DARK), 1.6)
+	_vine(ci, Vector2(18, -50), 22, 0.0)
+	# Rails out of the door and a cart of gold and turquoise.
+	Art.line_c(ci, PackedVector2Array([Vector2(-8, 0), Vector2(-14, 16)]), Art.INK, 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(8, 0), Vector2(16, 16)]), Art.INK, 2.0)
+	Art.push(ci, Vector2(24, 12))
+	Art.crystals(ci, Vector2(0, -10), 15, {"ore": Color("ffd23f"), "ore2": Color("3fd6c0")}, 5, 3)
+	Art.toon(ci, PackedVector2Array([Vector2(-13, -12), Vector2(13, -12), Vector2(10, 0), Vector2(-10, 0)]), Art.WOOD, 2.5, 0.6)
+	Art.t_circle(ci, Vector2(-6, 1), 3.5, Art.INK, 0.0, 0.0)
+	Art.t_circle(ci, Vector2(6, 1), 3.5, Art.INK, 0.0, 0.0)
+	Art.pop(ci)
+	# A torch by the door (its flame flickers in _fx).
+	Art.stroke(ci, PackedVector2Array([Vector2(-28, 2), Vector2(-26, -40)]), Art.WOOD_DARK, 3.0, 1.5)
+	Art.pop(ci)
+
+
+## A stone and thatch workshop with a water wheel: the jungle's factory.
+static func _workshop(ci: CanvasItem, at: Vector2, s: float) -> void:
+	Art.push(ci, at, 0.0, Vector2(s, s))
+	Art.t_rect(ci, Rect2(14, -70, 12, 36), 2, _c(J_STONE_DARK), 2.5, 0.5)
+	Art.t_rect(ci, Rect2(-34, -34, 68, 34), 3, _c(J_STONE), 3.0, 0.7)
+	for i in 2:
+		Art.line_c(ci, PackedVector2Array([Vector2(-32, -23 + i * 11), Vector2(32, -23 + i * 11)]), _c(J_STONE_DARK), 1.6)
+	var roof := PackedVector2Array([Vector2(-44, -28), Vector2(-24, -62), Vector2(24, -62), Vector2(44, -28), Vector2(36, -24), Vector2(-36, -24)])
+	Art.toon(ci, roof, _c(Color("e9b95a")), 3.0, 0.8)
+	for i in 6:
+		Art.line_c(ci, PackedVector2Array([Vector2(-22 + i * 9, -60), Vector2(-38 + i * 15, -28)]), _c(Color("c48a32")), 1.6)
+	Art.toon(ci, PackedVector2Array([Vector2(-28, -60), Vector2(28, -60), Vector2(22, -66), Vector2(-22, -66)]), _c(J_LEAF), 2.2, 0.4)
+	Art.t_rect(ci, Rect2(-9, -20, 18, 20), 7, Color("4a2e1c"), 2.5, 0.0)
+	Art.t_rect(ci, Rect2(-28, -22, 12, 9), 2, Color("ffd27a"), 2.0, 0.0)
+	Art.t_rect(ci, Rect2(16, -22, 12, 9), 2, Color("ffd27a"), 2.0, 0.0)
+	Art.gear(ci, Vector2(0, -42), 6.5, Art.GOLD, 0.2, 8)
+	Art.pop(ci)
+	# The bamboo spout over the wheel (the wheel itself turns in _fx).
+	Art.stroke(ci, PackedVector2Array([J_WHEEL + Vector2(30, -44), J_WHEEL + Vector2(4, -26)]), _c(Color("c9c060")), 5.0, 2.0)
+
+
+## The water wheel's rim, paddles and spokes turned by `rot` (origin at its hub).
+static func _wheel(ci: CanvasItem, rot: float, r: float) -> void:
+	Art.push(ci, Vector2.ZERO, rot)
+	for k in 8:
+		Art.push(ci, Vector2.ZERO, k * TAU / 8.0)
+		Art.t_rect(ci, Rect2(r - 3, -4, 9, 8), 1.5, Art.WOOD_DARK, 1.8, 0.0)
+		Art.line_c(ci, PackedVector2Array([Vector2(3, 0), Vector2(r, 0)]), Art.WOOD_DARK, 2.5)
+		Art.pop(ci)
+	Art.pop(ci)
+	Art.arc_c(ci, Vector2.ZERO, r, 0.0, TAU, 20, Art.INK, 5.0)
+	Art.arc_c(ci, Vector2.ZERO, r, 0.0, TAU, 20, Art.WOOD, 2.5)
+	Art.t_circle(ci, Vector2.ZERO, 4, Art.GOLD, 1.8, 0.0)
+
+
+## The explorers' camp: a safari tent with a flag and supplies: the office.
+static func _camp(ci: CanvasItem, at: Vector2, s: float) -> void:
+	Art.push(ci, at, 0.0, Vector2(s, s))
+	Art.stroke(ci, PackedVector2Array([Vector2(26, 0), Vector2(26, -62)]), Art.WOOD_DARK, 3.0, 1.5)
+	Art.toon(ci, PackedVector2Array([Vector2(28, -62), Vector2(48, -56), Vector2(28, -48)]), Art.GREEN, 2.2, 0.3)
+	Art.toon(ci, PackedVector2Array([Vector2(-38, 0), Vector2(-4, -50), Vector2(30, 0)]), _c(Color("ead7a2")), 3.0, 0.8)
+	Art.toon(ci, PackedVector2Array([Vector2(-4, -50), Vector2(30, 0), Vector2(36, -4), Vector2(4, -50)]), _c(Color("c9b27a")), 2.5, 0.3)
+	Art.toon(ci, PackedVector2Array([Vector2(-14, 0), Vector2(-4, -30), Vector2(6, 0)]), Color("5a4630"), 2.2, 0.0)
+	Art.toon(ci, PackedVector2Array([Vector2(-4, -30), Vector2(6, 0), Vector2(14, 0)]), _c(Color("f6e8c0")), 2.0, 0.2)
+	for p: Vector2 in [Vector2(-38, 0), Vector2(36, -4)]:
+		Art.line_c(ci, PackedVector2Array([p + Vector2(0, -2), p + Vector2(signf(p.x) * 10, 4)]), Art.INK_SOFT, 1.6)
+	_star_badge(ci, Vector2(-4, -54), 8.0, Art.GOLD)
+	Art.t_rect(ci, Rect2(-46, -12, 14, 12), 2, Art.WOOD, 2.0, 0.3)
+	Art.t_rect(ci, Rect2(-44, -20, 10, 8), 2, Color("d9b27a"), 1.8, 0.2)
+	Art.pop(ci)
+
+
+static func _jungle(ci: CanvasItem) -> void:
+	_body(ci, "jungle", 53)
+	var lk := look("jungle")
+	# Carved glyph stones and vines on the hanging rock.
+	for g in [[Vector2(-110, 112), 0], [Vector2(-10, 186), 1], [Vector2(96, 120), 2]]:
+		var c: Vector2 = g[0]
+		Art.t_rect(ci, Rect2(c - Vector2(13, 13), Vector2(26, 26)), 3, _c(Color("d8b874")), 2.2, 0.4)
+		match int(g[1]):
+			0:
+				Art.t_circle(ci, c, 7, Art.GOLD, 1.8, 0.3)
+			1:
+				Art.ring(ci, Art.rrect_pts(Rect2(c - Vector2(7, 7), Vector2(14, 14)), 2), _c(Color("8a6a3a")), 2.0)
+				Art.disc(ci, c, 2.5, _c(J_WATER))
+			2:
+				Art.line_c(ci, PackedVector2Array([c + Vector2(-7, 5), c + Vector2(0, -6), c + Vector2(7, 5)]), _c(Color("8a6a3a")), 2.2)
+	for v in [[Vector2(-168, 66), 64.0], [Vector2(-128, 96), 104.0], [Vector2(60, 118), 92.0], [Vector2(118, 100), 58.0],
+			[Vector2(168, 66), 52.0], [Vector2(-74, 112), 54.0]]:
+		_vine(ci, v[0], v[1], 0.0)
+	# The waterfall pours off the front edge down the rock (its streaks move in _fx).
+	var fall := PackedVector2Array([Vector2(J_FALL_X - 16, J_FALL_TOP - 4), Vector2(J_FALL_X + 16, J_FALL_TOP - 4),
+			Vector2(J_FALL_X + 20, J_FALL_BOT), Vector2(J_FALL_X - 20, J_FALL_BOT)])
+	Art.toon(ci, fall, _c(Color("7fe8f0")), 2.5, 0.0, Art.shade_of(_c(lk["med_rim"]), 0.2))
+	Art.flat(ci, PackedVector2Array([Vector2(J_FALL_X - 6, J_FALL_TOP), Vector2(J_FALL_X + 2, J_FALL_TOP), Vector2(J_FALL_X + 4, J_FALL_BOT),
+			Vector2(J_FALL_X - 6, J_FALL_BOT)]), Color(1, 1, 1, 0.45))
+	# The canopy along the back rim: the deep jungle.
+	for b in [[Vector2(-150, -74), 34.0], [Vector2(-100, -96), 36.0], [Vector2(100, -96), 34.0], [Vector2(152, -80), 32.0]]:
+		var bc: Vector2 = b[0]
+		var br: float = b[1]
+		var pts := Art.union([Art.circle_pts(bc + Vector2(-br * 0.6, 4), br * 0.7, 14), Art.circle_pts(bc, br, 16),
+				Art.circle_pts(bc + Vector2(br * 0.65, 6), br * 0.66, 14)])
+		Art.toon(ci, pts, _c(J_LEAF_DARK), 3.0, 0.6)
+		Art.flat(ci, Art.ellipse_pts(bc + Vector2(-6, -br * 0.55), Vector2(br * 0.5, br * 0.18), 12), _c(J_LEAF))
+	_palm(ci, Vector2(-62, -86), 62, 0.2)
+	_palm(ci, Vector2(84, -84), 58, -0.25)
+	_pyramid(ci, J_PYRAMID, J_PYR_S)
+	# The river from the mine to the workshop, with lily pads, and the
+	# stream that feeds the waterfall.
+	var stream := PackedVector2Array([Vector2(J_FALL_X - 18, 20), Vector2(J_FALL_X + 20, 20), Vector2(J_FALL_X + 17, J_FALL_TOP + 2), Vector2(J_FALL_X - 17, J_FALL_TOP + 2)])
+	Art.toon(ci, stream, _c(lk["med"]), 3.0, 0.0, Art.shade_of(_c(lk["med_rim"]), 0.3))
+	_medium(ci, "jungle", [[Vector2(-84, 14), Vector2(48, 16)], [Vector2(-12, 24), Vector2(60, 17)], [Vector2(64, 14), Vector2(46, 15)]])
+	Art.flat(ci, Art.ellipse_pts(Vector2(-16, 20), Vector2(28, 5), 14), Color(1, 1, 1, 0.3))
+	for p in [[Vector2(-64, 28), 0.0], [Vector2(46, 26), 1.0], [Vector2(-118, 14), 1.0], [Vector2(8, 8), 0.0]]:
+		var c: Vector2 = p[0]
+		Art.toon(ci, Art.ellipse_pts(c, Vector2(8, 3.5), 12), _c(J_LEAF_LIGHT), 1.6, 0.2)
+		if p[1] > 0.5:
+			Art.disc(ci, c + Vector2(2, -2), 2.6, Color("ff7ab8"))
+	_temple_mine(ci, spots("jungle")["mine"], 0.95)
+	_workshop(ci, spots("jungle")["factory"], 0.9)
+	_camp(ci, spots("jungle")["office"], 0.95)
+	_palm(ci, Vector2(-184, -18), 70, -0.3)
+	_palm(ci, Vector2(188, -10), 62, 0.3)
+	_jbush(ci, Vector2(-176, 36), 16, 2)
+	_jbush(ci, Vector2(178, 40), 15, 2)
+	_jbush(ci, Vector2(-92, -50), 13, 1)
+	_jbush(ci, Vector2(76, -46), 12, 1)
+	_big_leaf(ci, Vector2(-194, 12), 26, -2.4, J_LEAF_LIGHT)
+	_big_leaf(ci, Vector2(198, 16), 24, -0.6, J_LEAF_LIGHT)
+	for f in [Vector2(-100, 56), Vector2(-4, 60), Vector2(88, 66), Vector2(160, 8), Vector2(-162, 0), Vector2(14, 92)]:
+		_flower(ci, f, 3.6, J_FLOWERS[int(absf(f.x)) % J_FLOWERS.size()])
+	_parrot(ci, Vector2(-108, -128), 1.0, 1.0)
+	_parrot(ci, Vector2(118, -126), 0.85, -1.0, true)
+	_debris(ci, _c(lk["under"]), DEBRIS)
+
+
+## A parrot perched on the canopy (red macaw, or a blue-and-gold one).
+static func _parrot(ci: CanvasItem, at: Vector2, s: float, facing: float, blue: bool = false) -> void:
+	Art.push(ci, at, 0.0, Vector2(facing * s, s))
+	var body := Color("2f8ae0") if blue else Color("ef3e3e")
+	var belly := Color("ffd23f") if blue else Color("ff7a3c")
+	Art.toon(ci, PackedVector2Array([Vector2(-2, 2), Vector2(-10, 24), Vector2(-4, 26), Vector2(4, 4)]), Color("1f5ab0") if blue else Color("3a7ae0"), 2.0, 0.2)
+	Art.t_ellipse(ci, Vector2(0, -2), Vector2(7, 10), body, 2.4, 0.5)
+	Art.flat(ci, Art.ellipse_pts(Vector2(2, 1), Vector2(4, 6), 10), belly)
+	Art.toon(ci, PackedVector2Array([Vector2(-6, -4), Vector2(2, -2), Vector2(-2, 10), Vector2(-8, 8)]), Color("2fb8a0") if blue else Color("ffd23f"), 2.0, 0.3)
+	Art.t_circle(ci, Vector2(3, -12), 6, body, 2.4, 0.4)
+	Art.flat(ci, Art.ellipse_pts(Vector2(5, -12), Vector2(3, 2.4), 8), Art.WHITE)
+	Art.disc(ci, Vector2(5.5, -12.5), 1.3, Art.INK)
+	Art.toon(ci, PackedVector2Array([Vector2(8, -14), Vector2(13, -11), Vector2(9, -7)]), Color("3a3040"), 1.6, 0.0)
+	Art.pop(ci)
+
+
 # --- Silhouettes ----------------------------------------------------------------------------
 
 ## The shapes whose outline tells what the locked island is.
@@ -619,6 +905,8 @@ static func sil_polys(world: String) -> Array:
 				var up := Vector2(0, -1).rotated(c[1])
 				var rt := Vector2(1, 0).rotated(c[1])
 				polys.append(PackedVector2Array([bb - rt * 10 + up * -2, bb - rt * 10 + up * 20, bb + up * 30, bb + rt * 10 + up * 20, bb + rt * 10 + up * -2]))
+		"jungle":
+			_jungle_sil(polys)
 		"ice":
 			_ice_castle(polys)
 		"sky":
@@ -700,6 +988,72 @@ static func _sky_city(polys: Array) -> void:
 				Art.circle_pts(at + Vector2(14, -16) * k, 24 * k, 16)]))
 
 
+## The jungle's locked outline: the stepped pyramid with its sun, palm
+## tufts, the canopy and the explorers' tent.
+static func _jungle_sil(polys: Array) -> void:
+	var b := J_PYRAMID
+	var widths := [168.0, 138.0, 108.0, 80.0, 56.0]
+	for i in widths.size():
+		var w: float = widths[i]
+		var y0 := b.y - i * 21.0 + 2.0
+		polys.append(PackedVector2Array([Vector2(b.x - w / 2.0, y0), Vector2(b.x + w / 2.0, y0), Vector2(b.x + w / 2.0 - 7, y0 - 23), Vector2(b.x - w / 2.0 + 7, y0 - 23)]))
+	var top := b.y - 105.0
+	polys.append(Art.rrect_pts(Rect2(b.x - 33, top - 46, 66, 48), 3))
+	polys.append(Art.star_pts(Vector2(b.x, top - 62), 21, 12, 8))
+	for p in [Vector2(-184, -88), Vector2(-62, -148), Vector2(84, -142), Vector2(188, -72)]:
+		polys.append(Art.union([Art.ellipse_pts(p, Vector2(34, 13), 16), Art.ellipse_pts(p + Vector2(-22, 10), Vector2(18, 11), 12),
+				Art.ellipse_pts(p + Vector2(22, 10), Vector2(18, 11), 12)]))
+		polys.append(Art.rrect_pts(Rect2(p + Vector2(-4, 0), Vector2(8, 70)), 3))
+	for c in [[Vector2(-150, -74), 34.0], [Vector2(-100, -96), 36.0], [Vector2(100, -96), 34.0], [Vector2(152, -80), 32.0]]:
+		polys.append(Art.circle_pts(c[0], c[1], 16))
+	var o: Vector2 = spots("jungle")["office"]
+	polys.append(PackedVector2Array([o + Vector2(-38, 2), o + Vector2(-4, -50), o + Vector2(32, 2)]))
+	polys.append(PackedVector2Array([Vector2(J_FALL_X - 16, J_FALL_TOP), Vector2(J_FALL_X + 16, J_FALL_TOP), Vector2(J_FALL_X + 20, J_FALL_BOT), Vector2(J_FALL_X - 20, J_FALL_BOT)]))
+
+
+## The jungle's moving bits: the waterfall and its mist, the turning water
+## wheel, the torch at the temple gate, butterflies and the sun's glint.
+static func _jungle_fx(ci: CanvasItem, t: float) -> void:
+	# Streaks running down the waterfall.
+	for i in 4:
+		var f := fposmod(t * 0.7 + i / 4.0, 1.0)
+		var y := snappedf(lerpf(J_FALL_TOP + 4.0, J_FALL_BOT - 34.0, f), 1.0)
+		Art.push(ci, Vector2(J_FALL_X - 9.0 + (i % 3) * 8.0, y))
+		Art.flat(ci, Art.rrect_pts(Rect2(-1.5, 0, 3, 30), 1.5), Color(1, 1, 1, 0.7))
+		Art.pop(ci)
+	# Mist where it lands.
+	for i in 4:
+		var f := fposmod(t * 0.5 + i / 4.0, 1.0)
+		Art.dot(ci, Vector2(J_FALL_X - 18.0 + i * 12.0 + sin(i * 2.0) * 4.0, J_FALL_BOT + 6.0 - f * 16.0), 7.0 + f * 9.0, Color(1, 1, 1, 0.7 * (1.0 - f)))
+	# The water wheel, turned by the spout.
+	Art.push(ci, J_WHEEL)
+	_wheel(ci, snappedf(t * 1.1, 0.05), 15.0)
+	Art.pop(ci)
+	for i in 3:
+		var f := fposmod(t * 1.6 + i / 3.0, 1.0)
+		Art.dot(ci, J_WHEEL + Vector2(6.0 - f * 2.0, -26.0 + f * 14.0), 2.2, Color(0.7, 0.97, 1.0, 1.0 - f * 0.6))
+	# The torch.
+	var fl := Props._q(0.85 + 0.15 * sin(t * 11.0), 6)
+	Art.glow(ci, J_TORCH, 20, Color(1.0, 0.7, 0.25, 0.35 + 0.15 * fl))
+	Art.push(ci, J_TORCH, 0.0, Vector2(1.0, fl))
+	Art.toon(ci, PackedVector2Array([Vector2(-5, 2), Vector2(-3, -6), Vector2(0, -12), Vector2(3, -6), Vector2(5, 2)]), Color("ff8a2a"), 1.8, 0.0)
+	Art.flat(ci, PackedVector2Array([Vector2(-2, 1), Vector2(0, -6), Vector2(2, 1)]), Color("fff1a8"))
+	Art.pop(ci)
+	# The pyramid's sun glints.
+	var g := 0.5 + 0.5 * sin(t * 1.7)
+	Art.glow(ci, J_PYRAMID + Vector2(0, -167.0 * J_PYR_S), 30, Color(1.0, 0.9, 0.4, 0.2 + 0.25 * g))
+	# Butterflies around the pyramid and the camp.
+	for i in 3:
+		var ph := t * (0.35 + i * 0.07) + i * 2.1
+		var p := Vector2([-60.0, 70.0, 150.0][i], [-120.0, -150.0, -110.0][i]) + Vector2(cos(ph) * 34.0, sin(ph * 1.7) * 14.0)
+		var flap := Props._q(absf(sin(t * 12.0 + i * 1.3)), 4) * 0.7 + 0.3
+		Art.push(ci, p.round(), 0.0, Vector2(flap, 1.0))
+		var wc: Color = [Color("ff8a2a"), Color("3aa6f0"), Color("ff4fa8")][i]
+		Art.toon(ci, PackedVector2Array([Vector2(0, 0), Vector2(-7, -6), Vector2(-6, 2)]), wc, 1.5, 0.0)
+		Art.toon(ci, PackedVector2Array([Vector2(0, 0), Vector2(7, -6), Vector2(6, 2)]), wc, 1.5, 0.0)
+		Art.pop(ci)
+
+
 ## Dark silhouette: one rim pass under all the shapes, then the fill, so the
 ## overlaps read as one outline.
 static func _silhouette(ci: CanvasItem, world: String, rim: Color) -> void:
@@ -736,6 +1090,7 @@ static func island(ci: CanvasItem, world: String, state: int, t: float, tier: in
 				"volcano": _volcano(ci)
 				"acid": _acid(ci)
 				"moon": _moon(ci)
+				"jungle": _jungle(ci)
 				_: _ocean(ci)
 		Art.cache_end(ci, key)
 	if not dark:
@@ -793,6 +1148,8 @@ static func _fx(ci: CanvasItem, world: String, t: float) -> void:
 			var b := 0.5 + 0.5 * sin(t * 3.0)
 			Art.dot(ci, spots("moon")["factory"] + Vector2(27, -59), 3.0, Color(1.0, 0.3, 0.3, 0.4 + 0.6 * b))
 			Art.glow(ci, spots("moon")["office"] + Vector2(-38, -130), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
+		"jungle":
+			_jungle_fx(ci, t)
 
 
 ## "?" and padlock over a locked island; `pulse` makes the next one breathe.
@@ -819,6 +1176,11 @@ static func soon_tag(ci: CanvasItem, at: Vector2, label: String, t: float, size:
 	Art.pop(ci)
 
 
+## Height (local y) of the tag over an island: above the tallest thing on it.
+static func tag_y(world: String) -> float:
+	return -246.0 if world == "jungle" else -205.0
+
+
 ## A bobbing speech-bubble tag pointing down at an island: "You are here"
 ## (gold) over the active world, "Go?" style (green) over a picked one.
 static func here_tag(ci: CanvasItem, at: Vector2, label: String, t: float, fill: Color = Art.GOLD, size: int = 28) -> void:
@@ -836,7 +1198,8 @@ static func here_tag(ci: CanvasItem, at: Vector2, label: String, t: float, fill:
 
 
 ## Planted flag on a finished island.
-const FLAG_AT := {"ocean": Vector2(-150, 12), "volcano": Vector2(-168, 30), "acid": Vector2(-150, 20), "moon": Vector2(-150, 22)}
+const FLAG_AT := {"ocean": Vector2(-150, 12), "volcano": Vector2(-168, 30), "acid": Vector2(-150, 20), "moon": Vector2(-150, 22),
+		"jungle": Vector2(-168, 26)}
 
 
 static func done_mark(ci: CanvasItem, world: String, t: float) -> void:
@@ -911,6 +1274,10 @@ static func boat(ci: CanvasItem, at: Vector2, facing: float, world: String, load
 	var s := (0.82 if second else 1.0) * size
 	var bob := sin(t * 3.0 + (1.0 if second else 0.0)) * 1.2 if not still else 0.0
 	Art.push(ci, at + Vector2(0, bob), 0.0, Vector2(facing * s, s))
+	if world == "jungle":
+		_dugout(ci, hull, loaded, second)
+		Art.pop(ci)
+		return
 	if world == "moon":
 		Art.glow(ci, Vector2(0, 6), 22, Color(0.5, 0.95, 1.0, 0.45))
 	else:
@@ -923,6 +1290,23 @@ static func boat(ci: CanvasItem, at: Vector2, facing: float, world: String, load
 	Art.toon(ci, PackedVector2Array([Vector2(-18, -9), Vector2(20, -9), Vector2(13, 4), Vector2(-14, 4)]), hull, 2.5, 0.6)
 	Art.line(ci, Vector2(-16, -4), Vector2(17, -4), Art.WHITE, 2.0)
 	Art.pop(ci)
+
+
+## The jungle's river boat: a long dugout canoe under a little thatched
+## awning, crates of gold when loaded.
+static func _dugout(ci: CanvasItem, hull: Color, loaded: bool, second: bool) -> void:
+	Art.flat_now(ci, Art.ellipse_pts(Vector2(-4, 3), Vector2(26, 4), 12), Color(1, 1, 1, 0.45))
+	if loaded:
+		Art.t_rect(ci, Rect2(-15, -15, 9, 9), 2, Art.GOLD, 2.0, 0.0)
+		Art.t_rect(ci, Rect2(-7, -13, 8, 7), 2, Color("3fd6c0"), 2.0, 0.0)
+	# Awning on two poles.
+	Art.line_c(ci, PackedVector2Array([Vector2(4, -6), Vector2(4, -20)]), Art.WOOD_DARK, 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(16, -6), Vector2(16, -20)]), Art.WOOD_DARK, 2.0)
+	Art.toon(ci, PackedVector2Array([Vector2(0, -19), Vector2(20, -19), Vector2(16, -26), Vector2(4, -26)]), Color("e9b95a") if not second else Color("6fd45c"), 2.2, 0.3)
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(-24, -10), Vector2(-10, -7), Vector2(12, -7), Vector2(26, -11), Vector2(18, 3), Vector2(-17, 3)]), 3)
+	Art.toon(ci, body, hull, 2.5, 0.6)
+	Art.line(ci, Vector2(-15, -4), Vector2(17, -4), Art.shade_of(hull, 0.35), 2.0)
+	Art.disc(ci, Vector2(-20, -7), 1.8, Art.GOLD)
 
 
 ## Rope bridge (wooden planks) or a glowing path between two islands.
@@ -1079,6 +1463,7 @@ static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, 
 			"volcano": _volcano(ci)
 			"acid": _acid(ci)
 			"moon": _moon(ci)
+			"jungle": _jungle(ci)
 			_: _ocean(ci)
 		Art.pop(ci)
 		Art.fit_recorded(start, Vector2.ZERO, radius - 1.0, Vector2.ZERO, 1.0)
