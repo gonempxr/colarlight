@@ -36,3 +36,8 @@ GOAL_STARS_15,Own 15 world stars,Собери 15 звёзд миров,Consigue 
 GOAL_STARS_25,Own 25 world stars,Собери 25 звёзд миров,Consigue 25 estrellas,获得25颗世界之星
 HINT_STAR_SAVE,Save %s coins for this world's next star!,Накопи %s монет на следующую звезду этого мира!,¡Ahorra %s monedas para la próxima estrella de este mundo!,攒够%s金币，获得这个世界的下一颗星！
 STAR_PRICE,Star price:,Цена звезды:,Precio:,星星价格：
+GUIDE_JUNGLE,New world: Jungle!,Новый мир: Джунгли!,¡Nuevo mundo: la Selva!,新世界：丛林！
+GUIDE_JUNGLE_D,"A turquoise river, golden idols and an ancient temple: the fifth world opens after the Moon.","Бирюзовая река, золотые идолы и древний храм: пятый мир открывается после Луны.","Un río turquesa, ídolos dorados y un templo antiguo: el quinto mundo se abre tras la Luna.",碧绿河流、黄金神像与古老神殿：第五个世界在月球之后开启。
+GUIDE_STARS,World stars ★,Звёзды миров ★,Estrellas de mundos ★,世界之星★
+GUIDE_STARS_D,"Finish any world again and again for stars: each one gives +25% income in all worlds and gifts.","Проходи миры снова и снова ради звёзд: каждая даёт +25% дохода во всех мирах и подарки.","Completa los mundos una y otra vez por estrellas: cada una da +25% de ingresos y regalos.",反复完成世界获得星星：每颗星让所有世界收入+25%，还有礼物。
+GUIDE_STARS_LOCK,Opens when you reach the Jungle.,"Откроется, когда доберёшься до джунглей.",Se abre al llegar a la Selva.,抵达丛林后开启。
