@@ -4,7 +4,8 @@ extends RefCounted
 ##   ocean   - a wooden pier over the sea,
 ##   volcano - a basalt ledge over thick glowing magma (with fire fish),
 ##   acid    - a mossy boardwalk over a bubbling swamp with lily pads,
-##   moon    - the rim of a crater full of starry space goo.
+##   moon    - the rim of a crater full of starry space goo,
+##   jungle  - a wooden temple pier on a turquoise jungle river (JungleRiver).
 ## FishingScreen draws the sky and the "water" with back(), the ledge the
 ## player stands on with ledge(), the fisherman's raft with raft(), and asks
 ## for the splash, ripple and fish-shadow colors.
@@ -13,6 +14,7 @@ const OCEAN := 0
 const VOLCANO := 1
 const ACID := 2
 const MOON := 3
+const JUNGLE := 4
 
 var world := OCEAN
 var look: Dictionary = {}
@@ -25,7 +27,7 @@ var _shadows: Array[Vector3] = []
 
 
 func _init(world_index: int = 0, world_look: Dictionary = {}) -> void:
-	world = posmod(world_index, 5)
+	world = posmod(world_index, WorldLook.WORLDS.size())
 	look = world_look if not world_look.is_empty() else WorldLook.LOOKS[WorldLook.WORLDS[world]]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242 + world
@@ -60,12 +62,12 @@ func sky(i: int) -> Color:
 
 ## Splash drops.
 func drop_color() -> Color:
-	return [Color(0.85, 0.97, 1.0), Color(1.0, 0.78, 0.3), Color(0.78, 1.0, 0.45), Color(0.82, 0.78, 1.0)][world]
+	return [Color(0.85, 0.97, 1.0), Color(1.0, 0.78, 0.3), Color(0.78, 1.0, 0.45), Color(0.82, 0.78, 1.0), Color(0.8, 1.0, 0.96)][world]
 
 
 ## Ripple rings on the surface.
 func ring_color() -> Color:
-	return [Color(1, 1, 1), Color(1.0, 0.9, 0.55), Color(0.9, 1.0, 0.7), Color(0.8, 0.75, 1.0)][world]
+	return [Color(1, 1, 1), Color(1.0, 0.9, 0.55), Color(0.9, 1.0, 0.7), Color(0.8, 0.75, 1.0), Color(0.92, 1.0, 0.97)][world]
 
 
 func shadow_color(alpha: float) -> Color:
@@ -76,6 +78,8 @@ func shadow_color(alpha: float) -> Color:
 			return Color(0.05, 0.18, 0.08, alpha * 1.3)
 		MOON:
 			return Color(0.75, 0.85, 1.0, alpha * 0.8)
+		JUNGLE:
+			return Color(0.02, 0.24, 0.22, alpha * 1.3)
 	return Color(0.03, 0.12, 0.3, alpha)
 
 
@@ -97,7 +101,11 @@ func back(ci: CanvasItem, v: Vector2, hz: float, t: float, k: float) -> void:
 			_swamp(ci, v, hz, t, k)
 		MOON:
 			_crater(ci, v, hz, t, k)
+		JUNGLE:
+			JungleRiver.river(self, ci, v, hz, t, k)
 	_fish_shadows(ci, v, hz, t, k)
+	if world == JUNGLE:
+		JungleRiver.idol_glow(ci, v, hz, t, k)
 
 
 func _band(ci: CanvasItem, x0: float, x1: float, y0: float, y1: float, c0: Color, c1: Color) -> void:
@@ -142,6 +150,8 @@ func _sky(ci: CanvasItem, v: Vector2, hz: float, t: float, k: float) -> void:
 				Art.pop(ci)
 			_earth(ci, Vector2(v.x * 0.8, hz * 0.38), 30.0 * k, t)
 			_crater_far(ci, v, hz, k)
+		JUNGLE:
+			JungleRiver.sky(self, ci, v, hz, t, k)
 
 
 func _clouds_draw(ci: CanvasItem, v: Vector2, hz: float, t: float, k: float, fill: Color, line: Color) -> void:
@@ -429,6 +439,9 @@ func ledge(ci: CanvasItem, d: Rect2, v: Vector2, t: float, k: float) -> void:
 			_pier(ci, d, v, t, k, Color("8a6a44"), Color("5c4430"), true)
 		MOON:
 			_moon_rock(ci, d, v, t, k)
+		JUNGLE:
+			JungleRiver.pier(self, ci, d, v, t, k)
+			JungleRiver.canopy(ci, v, t, k)
 
 
 func _pier(ci: CanvasItem, d: Rect2, v: Vector2, t: float, k: float, wood: Color, dark: Color, mossy: bool) -> void:
@@ -560,7 +573,7 @@ func _moon_rock(ci: CanvasItem, d: Rect2, v: Vector2, t: float, k: float) -> voi
 # --- The fisherman's raft ---------------------------------------------------------------
 
 ## His boat (ocean), a basalt raft (volcano), a lily pad (acid), a hover disc
-## (moon); origin at the waterline, in the screen's scale k.
+## (moon), a bamboo raft (jungle); origin at the waterline, in the screen's scale k.
 func raft(ci: CanvasItem, base: Vector2, rock: float, t: float, k: float) -> void:
 	Art.push(ci, base, rock, Vector2.ONE * k)
 	match world:
@@ -586,4 +599,6 @@ func raft(ci: CanvasItem, base: Vector2, rock: float, t: float, k: float) -> voi
 			Art.t_ellipse(ci, Vector2(0, -22), Vector2(80, 10), Color("dfe6f5"), 2.5, 0.0)
 			for i in 5:
 				Art.disc(ci, Vector2(-60 + i * 30, -8), 4.0, Color("7ff0ff") if int(t * 3.0) % 5 != i else Art.WHITE)
+		JUNGLE:
+			JungleRiver.raft(ci, t)
 	Art.pop(ci)
