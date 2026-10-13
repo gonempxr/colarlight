@@ -194,6 +194,7 @@ static func board(m: Modal, main: Node) -> void:
 			Sfx.play("click")
 			add_rows.call(FIRST_ROWS, rows.size())
 			more.queue_free())
+	_account(m, main)
 	var name_row := m.row(10)
 	var nl := Views.label(t("ONLINE_NAME") % Online.board_name(), 19, Art.INK_SOFT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -326,7 +327,7 @@ static func _podium(rows: Array, unit: String, main: Node) -> Control:
 	sb.content_margin_left = 4
 	sb.content_margin_right = 4
 	sb.content_margin_top = 4
-	sb.content_margin_bottom = 0
+	sb.content_margin_bottom = 4
 	card.add_theme_stylebox_override("panel", sb)
 	var stack := Control.new()
 	stack.custom_minimum_size = Vector2(0, PODIUM_H)
@@ -375,7 +376,7 @@ static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, u
 	var tall: float = {1: 86.0, 2: 62.0, 3: 46.0}[place]
 	var fill: Color = {1: Art.GOLD, 2: Color("d9e2ef"), 3: Color("e8a06a")}[place]
 	var w := minf(s.x - 6.0, 108.0)
-	var base := Rect2(Vector2((s.x - w) / 2.0, s.y - tall), Vector2(w, tall + 14.0))
+	var base := Rect2(Vector2((s.x - w) / 2.0, s.y - tall - 6.0), Vector2(w, tall))
 	Art.t_rect(ci, base, 10.0, fill, 3.0, 0.8)
 	Art.flat(ci, Art.rrect_pts(Rect2(base.position + Vector2(6, 5), Vector2(w - 12, 7)), 3.5), Color(1, 1, 1, 0.45))
 	Art.text(ci, Vector2(s.x / 2.0, base.position.y + minf(tall, 60.0) * 0.5 + 16.0), str(place), 34 if place == 1 else 28, Art.WHITE, 7)
