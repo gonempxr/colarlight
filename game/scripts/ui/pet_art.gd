@@ -573,8 +573,9 @@ static func _monkey(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
 	_mouth(ci, Vector2(6.2, -4.0), 2.2, happy)
 	# Arms holding a banana.
 	Art.push(ci, Vector2(8, 6), sin(t * 3.0) * 0.1)
-	var banana := _tube(PackedVector2Array([Vector2(-3, -2), Vector2(4, 2), Vector2(10, 0), Vector2(13, -5)]), 4.6, 2.4)
+	var banana := _tube(PackedVector2Array([Vector2(-4, -4), Vector2(4, 3), Vector2(13, 2), Vector2(18, -6)]), 7.0, 3.0)
 	Art.toon(ci, banana, Color("ffd23f"), W2, 0.3)
-	Art.t_circle(ci, Vector2(-2, 0), 3.2, fur, W2, 0.0)
-	Art.t_circle(ci, Vector2(8, 2), 3.2, fur, W2, 0.0)
+	Art.flat(ci, Art.circle_pts(Vector2(18.5, -6.5), 1.4, 6), Color("6a4a2a"))
+	Art.t_circle(ci, Vector2(-1, 0), 3.6, fur, W2, 0.0)
+	Art.t_circle(ci, Vector2(10, 3), 3.6, fur, W2, 0.0)
 	Art.pop(ci)
