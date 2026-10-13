@@ -120,8 +120,9 @@ This file is the quick picture; keep it up to date when something big changes.
 - First submission was rejected: "overall quality does not yet meet the
   expectations". Audit and plan: `docs/quality-audit.md`. Resubmitting is
   allowed after meaningful improvements (Mark decides when).
-- Full build upload (not the loader). Covers: `tools/store_art/` (vector,
-  `final_c.py` = chosen variant C), files in `docs/store/`. Keep the logo out
+- Full build upload (not the loader). Covers: `tools/store_art/` (vector);
+  since 2026-10-13 variant D of `covers_v3.py` (blue sea, orange diver, open
+  chest) after a 0.8% CTR on launch day; files in `docs/store/`. Keep the logo out
   of the top-left label zone. Videos: `gh-pages:crazygames/video/`.
 - 2026-10-11: the polished build is live on the main site, the beta and
   `main` (Mark approved). Phones start with the bigger UI size (1.12,
