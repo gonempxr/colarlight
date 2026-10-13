@@ -82,6 +82,39 @@ This file is the quick picture; keep it up to date when something big changes.
     as a kids' game).
   - Plan and status: `docs/monetization-marketing.md`.
 
+## Status 2026-10-13 (read this first in a new chat)
+- Live (main site + `main`): social pack, Sea Pass v1 dialog, puzzle board,
+  guide, trusted time (`Clock` autoload: server Date header via the web
+  shell `coralightClock`, then monotonic ticks; moving the device clock
+  gives nothing). CrazyGames: the version Active there has the social pack;
+  `gh-pages:crazygames/coralight-crazygames.zip` = latest main build (Mark
+  uploads it himself via "Submit new version", files unzipped, answer
+  "Yes, using the Data Module" for saves). Firestore rules v4 are published.
+- Beta / `worlds` only (not yet approved for main): new dialog look (striped
+  title banner, light-blue panels, `Modal.banner()`), profile as big tiles
+  (`Views.tiles`), Sea Pass on its own screen (`PassScreen`, two tracks:
+  bonus track opens after 5 challenges of the day, nothing sold), one font
+  family (Nunito ExtraBold body + Black), min text 19 px, phone cards show
+  only level + price, anti-aliasing on phones (`Art.smooth`; only governor
+  level 3 drops it).
+- Store covers: variant D of `tools/store_art/covers_v3.py` (in docs/store).
+  CTR on launch day was 0.8% (bottom 20%); check again after the new cover.
+- Open requests from Mark:
+  1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
+     style as `tools/promo_video` (he loved it) but a new meme plot:
+     "LVL 1" broke diver -> "LVL 67" rich empire (the 6-7 meme), level
+     counter ticking up, ends with logo + TRY NOW. CrazyGames version: no
+     captions/links/sound rules as in render.py "cg" mode. Higgsfield has
+     only 10 free credits and uploads are blocked by the proxy.
+  2. UI redesign phase 2 (research done: Idle Miner, Brawl Stars, Royal
+     Match): separate coin/pearl pills in the top bar, fewer round buttons
+     on the left, white outlined text on coloured panels, shorter texts,
+     one colour system for buttons. Show Mark screenshots before going live.
+  3. A NEW WORLD (5th, after Moon; replaces one "?" island) with everything
+     the other worlds have: its own look, sites, ore, workers' gear and
+     skins, factory/office looks, themed puzzle (TileWorlds) and fishing in
+     its style, map island, quests, translations (RU/EN/ES/ZH), tests.
+
 ## Rules of the code
 - All art is drawn in code through `Art.*` (art.gd) with push/pop — never
   `CanvasItem.draw_*` directly. Animated values go in steps or the shape
