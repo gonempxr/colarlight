@@ -69,17 +69,18 @@ const LOOKS := {
 		"sand": Color("c4c8d6"), "sand_dark": Color("989db2"), "grass": Color("e2e5ee"),
 		"seabed": Color("23263a"), "weed": Color("9fe0ff"), "water": false, "far": Color("5a6288"),
 	},
-	# Jungle ruins: a turquoise jungle river, emerald forest, golden temple
-	# stone; the work sites are temple tunnels (air: explorers walk).
+	# Jungle ruins: a clear turquoise jungle river, emerald forest, warm
+	# golden temple stone; the work sites are temple tunnels (air: explorers
+	# walk). Sunny and humid: a golden haze on the horizon, teal nights.
 	"jungle": {
 		"name": "WORLD_JUNGLE",
-		"sea": [Color("3fd6c0"), Color("1fa8a0"), Color("17787e"), Color("0e4652")],
+		"sea": [Color("44e0cc"), Color("20b4aa"), Color("15827f"), Color("0c4a52")],
 		"shaft": [Color("8a7a52"), Color("6e6244"), Color("564c38"), Color("3a3428")],
-		"day": [Color("3fa8e0"), Color("8cd8e8"), Color("f4f0b8")],
-		"night": [Color("0a1830"), Color("123048"), Color("24504a")],
-		"dusk": 1.0, "night_tint": Color(0.62, 0.72, 0.86),
-		"sand": Color("e8c88a"), "sand_dark": Color("c09a5a"), "grass": Color("3ec85a"),
-		"seabed": Color("2a3424"), "weed": Color("4ade6a"), "water": false, "far": Color("6ab88a"),
+		"day": [Color("2b9de2"), Color("7fd3ea"), Color("fff1b4")],
+		"night": [Color("06162a"), Color("0d2e44"), Color("1d4d4c")],
+		"dusk": 1.0, "night_tint": Color(0.58, 0.70, 0.86),
+		"sand": Color("eccb8a"), "sand_dark": Color("c49a58"), "grass": Color("36b856"),
+		"seabed": Color("2a3424"), "weed": Color("4ade6a"), "water": false, "far": Color("5fae7c"),
 	},
 }
 

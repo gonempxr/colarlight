@@ -9,7 +9,11 @@ extends Control
 ## with a palm and a lighthouse, the volcano's basalt shore with a smoking
 ## volcano behind and a lava river, the acid swamp's mossy mud with giant
 ## mushrooms and fireflies, the moon's grey regolith under a black sky with
-## the Earth hanging in it (the boats hover over its dust "sea").
+## the Earth hanging in it (the boats hover over its dust "sea"), the
+## jungle's golden temple stone by a clear turquoise river, with a hut on
+## stilts, a big palm with a parrot, a stepped pyramid and a waterfall far
+## away, vines hanging from the sky, parrots and butterflies by day and
+## fireflies at night.
 ##
 ## The shore is laid out left to right: the raft (the lift's winch and
 ## operator left of its crane post, the loader and the ore chest right of
@@ -25,8 +29,10 @@ extends Control
 ##   _sky_fx  (behind)  clouds (ash, mist, asteroids), rain, birds (fire
 ##                      birds, dragonflies, satellites), volcano smoke,
 ##                      fireflies, the lighthouse beam
-##   _far     (behind)  far islands, the volcano, ridges and the landmark
-##                      (still, repainted when the light changes)
+##   _far     (behind)  far islands, the volcano, ridges, the jungle's hills
+##                      and the landmark (still, repainted when the light
+##                      changes), the canopy leaves in the jungle's corners
+##   _falls   (behind)  the jungle's far waterfall (moves; jungle only)
 ##   _ground  (behind)  the shore and the house (still)
 ##   self               edge prop, dock, raft, boats, waves, smoke
 ##   _glow    (front)   night lights and the ore number tag (never tinted)
@@ -118,6 +124,9 @@ var _pending_throws: Array[Array] = []   # [time, kind, a, b]
 var _sky_fx: PaintLayer
 var _far: PaintLayer
 var _far_step := -1.0
+var _falls: PaintLayer
+var _falls_drawn := false
+var _falls_poke := -99.0
 var _glow_last := []
 var _ground: PaintLayer
 var _ground_sig := []
@@ -200,6 +209,8 @@ func _ready() -> void:
 	add_child(_sky_fx)
 	_far = PaintLayer.new(_paint_far)
 	add_child(_far)
+	_falls = PaintLayer.new(_paint_falls)
+	add_child(_falls)
 	_ground = PaintLayer.new(_paint_ground)
 	add_child(_ground)
 	# The shore scene in front of those, back to front (each layer redraws
@@ -547,7 +558,25 @@ func _volcano_h() -> float:
 func _landmark_top() -> Vector2:
 	if WorldLook.world == "volcano":
 		return _volcano_pos() + WorldArt.VOLCANO_TOP * (_volcano_h() / 220.0)
+	if WorldLook.world == "jungle":
+		return _lighthouse_pos() + WorldArt.JUNGLE_LAMP * _landmark_s()
 	return _lighthouse_pos() + Props.LIGHTHOUSE_LAMP
+
+
+## The jungle's pyramid is a little smaller on narrow screens (it stands
+## right over the boat lane there).
+func _landmark_s() -> float:
+	return 1.0 if WorldLook.world != "jungle" else clampf(size.x / 800.0, 0.72, 1.3)
+
+
+## The jungle's far waterfall: its foot on the horizon and its height.
+func _falls_pos() -> Vector2:
+	var w := size.x
+	return Vector2(lerpf(RAFT_RIGHT, _lighthouse_pos().x, 0.25) if w > 700.0 else _lighthouse_pos().x + 60.0, World.SURFACE_Y - 2.0)
+
+
+func _falls_h() -> float:
+	return 150.0 if size.x > 700.0 else 80.0
 
 
 ## Stage drawn right now: the old look stays a moment while the poof hides the swap.
@@ -699,11 +728,14 @@ func _poke_ambient(p: Vector2) -> bool:
 		var b: Dictionary = _birds[i]
 		if float(b["flee"]) < 0.0 and float(b["wait"]) <= 0.0:
 			consider.call("bird", Vector2(b["x"], b["y"]), TAP_R, i)
-	consider.call("palm", _palm_pos() + Props.PALM_TOP * _k, 56.0)
+	var crown := WorldArt.JPALM_TOP if WorldLook.world == "jungle" else Props.PALM_TOP
+	consider.call("palm", _palm_pos() + crown * _k, 56.0)
 	consider.call("palm", _palm_pos() + Vector2(-6, -40) * _k, TAP_R)
 	consider.call("lighthouse", _landmark_top() + Vector2(0, 30), 48.0)
 	if house_rect().has_point(p):
 		consider.call("house", p, TAP_R)
+	if WorldLook.world == "jungle":
+		consider.call("falls", _falls_pos() + Vector2(0, -_falls_h() * 0.45), 44.0)
 	var best: String = hit["name"]
 	var bi: int = hit["i"]
 	if best == "" and p.y > World.SURFACE_Y and world.is_fish_at(p):
@@ -741,11 +773,20 @@ func _poke_ambient(p: Vector2) -> bool:
 			_palm_poke = _t
 			_palm_want = 1.0
 			Sfx.play("dig", 0.8)
-			if WorldLook.world == "ocean":
+			if WorldLook.world in ["ocean", "jungle"]:
+				var jungle := WorldLook.world == "jungle"
+				if jungle and _palm_amp < 0.2:
+					# The parrot on the palm flies up in a puff of feathers.
+					var perch := _palm_pos() + (WorldArt.JPALM_TOP + Vector2(-34, -10)) * _k
+					for k in 3:
+						_feathers.append({"pos": perch + Vector2(k * 6.0 - 6.0, 0), "age": 0.0, "seed": _rng.randf() * 10.0})
+					world.divers.sparkle(perch, 6)
+					Sfx.voice("hup", 2.1)
 				if _coconuts > 0 and _coconut.is_empty():
 					_coconuts -= 1
 					_coconut_back = _t + 25.0
-					var top := _palm_pos() + Props.PALM_TOP + Vector2(4.0 if _coconuts == 1 else -4.0, 6.0)
+					var crown_at := (WorldArt.JPALM_TOP * _k) if jungle else Props.PALM_TOP
+					var top := _palm_pos() + crown_at + Vector2(4.0 if _coconuts == 1 else -4.0, 6.0)
 					_coconut = {"pos": top, "vel": Vector2(_rng.randf_range(-40, -10), -60), "age": 0.0, "rot": 0.0, "bounces": 0}
 			else:
 				world.divers.sparkle(_palm_pos() + Vector2(-30, -90) * _k, 8)
@@ -754,6 +795,16 @@ func _poke_ambient(p: Vector2) -> bool:
 			Sfx.play("pop", 0.8)
 			if WorldLook.world == "volcano":
 				Sfx.play("dig", 0.6)
+			elif WorldLook.world == "jungle":
+				# The sun disc on the temple flares up.
+				world.divers.sparkle(_landmark_top(), 10)
+				Sfx.play("upgrade", 1.25)
+		"falls":
+			# The waterfall bursts into spray.
+			_falls_poke = Motion.repoke(_falls_poke, _t, 1.6)
+			world.divers.sparkle(_falls_pos() + Vector2(0, -20), 8)
+			Sfx.play("dive", 0.9)
+			Sfx.play("pop", 1.2)
 		"house":
 			_house_poke = Motion.repoke(_house_poke, _t, 1.6)
 			_ground.queue_redraw()
@@ -858,6 +909,8 @@ func _process(delta: float) -> void:
 				_glow.queue_redraw()
 		if World.tick(World.PEOPLE) and world.is_visible_band(0.0, World.SURFACE_Y):
 			_sky_fx.queue_redraw()
+			if WorldLook.world == "jungle" or _falls_drawn:
+				_falls.queue_redraw()
 			if _t - _lighthouse_poke < 2.4:
 				_far.queue_redraw()
 	_place_boats()
@@ -920,6 +973,9 @@ func _update_sky(dt: float, wind: float) -> void:
 				else:
 					b["wait"] = 5.0
 			continue
+		# Jungle parrots and butterflies go to sleep at dusk: they fly off.
+		if WorldLook.world == "jungle" and day < 0.25 and float(b["flee"]) < 0.0:
+			b["flee"] = _t
 		var fleeing := float(b["flee"]) >= 0.0
 		var sp: float = float(b["speed"]) * (2.6 if fleeing else 1.0) * (0.7 if _calm else 1.0)
 		b["x"] = float(b["x"]) + sp * dt
@@ -954,7 +1010,7 @@ func _update_sky(dt: float, wind: float) -> void:
 		var pos: Vector2 = c["pos"]
 		v.y += 700.0 * dt
 		pos += v * dt
-		var ground := World.SURFACE_Y - 66.0
+		var ground := World.SURFACE_Y - 66.0 * _k
 		if pos.y > ground:
 			pos.y = ground
 			if absf(v.y) > 60.0:
@@ -1067,6 +1123,8 @@ func _paint_far(ci: CanvasItem) -> void:
 				Art.push(ci, Vector2(w * f.x, sy))
 				WorldArt.ridge(ci, f.y, DayNight.far_color(f.z, sp))
 				Art.pop(ci)
+		"jungle":
+			WorldArt.jungle_hills(ci, w, sy, DayNight.far_color(0.0, sp), DayNight.far_color(0.7, sp).darkened(0.12), DayNight.daylight(sp))
 		_:
 			Art.push(ci, Vector2(w * 0.2, sy))
 			Props.far_island(ci, 170, DayNight.far_color(0.0, sp))
@@ -1074,11 +1132,46 @@ func _paint_far(ci: CanvasItem) -> void:
 			Art.push(ci, Vector2(w * 0.72, sy))
 			Props.far_island(ci, 180, DayNight.far_color(0.4, sp))
 			Art.pop(ci)
-	Art.push(ci, _lighthouse_pos())
+	Art.push(ci, _lighthouse_pos(), 0.0, Vector2.ONE * _landmark_s())
 	if WorldLook.world == "ocean":
 		Props.lighthouse(ci, DayNight.far_color(0.2, sp), DayNight.far_color(0.0, sp), maxf(lights, flash))
 	else:
 		WorldArt.landmark(ci, WorldLook.world, DayNight.far_color(0.2, sp), DayNight.far_color(0.0, sp), maxf(lights, flash))
+	Art.pop(ci)
+	if WorldLook.world == "jungle":
+		# Big leaves hanging into the sky from the top corners (the right one
+		# by the scene's edge, clear of the stage cards on PC).
+		var tint := DayNight.scene_tint(sp)
+		var right := world.scene_right() if w > 900.0 else w
+		Art.push(ci, Vector2(right + 30.0, -6.0))
+		WorldArt.canopy(ci, -1.0, tint)
+		Art.pop(ci)
+		Art.push(ci, Vector2(-30.0, -10.0))
+		WorldArt.canopy(ci, 1.0, tint)
+		Art.pop(ci)
+
+
+## The jungle's far waterfall, between the hills (moves, so it has its own
+## layer; empty in the other worlds).
+func _paint_falls(ci: CanvasItem) -> void:
+	_falls_drawn = WorldLook.world == "jungle"
+	if not _falls_drawn or not world.is_visible_band(0.0, World.SURFACE_Y):
+		return
+	var sp := DayNight.stepped_phase()
+	var haze := DayNight.far_color(0.0, sp)
+	var tint := DayNight.scene_tint(sp)
+	var water := (WorldArt.RIVER_FOAM * tint).lerp(haze, 0.2)
+	var poke := clampf(1.0 - (_t - _falls_poke) / 1.6, 0.0, 1.0)
+	# Mist banks drifting slowly over the far hills.
+	var day := DayNight.daylight(sp)
+	for k in 2:
+		var x := fposmod(_t * (5.0 + k * 2.0) + k * size.x * 0.55, size.x + 320.0) - 160.0
+		Art.push(ci, Vector2(x, World.SURFACE_Y - 44.0 - k * 22.0), 0.0, Vector2(1.4 - k * 0.3, 1.0))
+		Art.flat(ci, WorldArt._MIST, Color(Color(1, 1, 1) * tint, snappedf(0.16 + 0.12 * day, 0.02)))
+		Art.pop(ci)
+	Art.push(ci, _falls_pos())
+	var rock := DayNight.far_color(0.5, sp).lerp(Color("6a7a86") * DayNight.scene_tint(sp), 0.4)
+	WorldArt.waterfall(ci, _falls_h(), rock, DayNight.far_color(0.6, sp).darkened(0.05), water, _t, Color(1, 1, 1).lerp(tint, 0.7), poke)
 	Art.pop(ci)
 
 
@@ -1101,6 +1194,17 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 		Art.polyline(ci, pts, Color(1, 1, 1, a), 2.5)
 	if wl == "volcano":
 		_draw_volcano_smoke(ci)
+	if wl == "jungle":
+		_draw_vines(ci, sp)
+		# A far flock of birds crossing over the hills by day.
+		var day := DayNight.daylight(sp)
+		if day > 0.4:
+			var fx := fposmod(-_t * 16.0, size.x + 240.0) - 120.0
+			var fc := Color(DayNight.far_color(0.9, sp).darkened(0.35), 0.8)
+			for k in 5:
+				var p := Vector2(fx + k * 13.0 + (k % 2) * 4.0, World.SURFACE_Y - 150.0 + absf(k - 2) * 6.0 + sin(_t * 0.8 + k) * 2.0)
+				var up := 3.0 if fposmod(_t * 5.0 + k * 0.4, 1.0) < 0.5 else -1.0
+				Art.polyline(ci, PackedVector2Array([p + Vector2(-5, -up), p, p + Vector2(5, -up)]), fc, 1.8)
 	var cf := DayNight.cloud_fill(sp)
 	var cl := DayNight.cloud_line(sp)
 	var wc := WorldArt.cloud_colors(wl, DayNight.daylight(sp))
@@ -1120,6 +1224,12 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 			Art.push(ci, _cloud_pos(c), spin, Vector2(s * (1.0 + puff), s * (1.0 + puff)))
 			WorldArt.asteroid(ci, int(c["seed"]), cf, cl)
 		else:
+			if wl == "jungle":
+				# After its shower a rainbow shines under the cloud for a moment.
+				var after := _t - float(c["rain"])
+				if after > -1.2 and after < 4.0 and DayNight.daylight(sp) > 0.3:
+					var fade := clampf((after + 1.2) / 1.0, 0.0, 1.0) * clampf((4.0 - after) / 1.5, 0.0, 1.0)
+					WorldArt.rainbow(ci, _cloud_pos(c) + Vector2(0, 92.0 * s), 92.0 * s, fade)
 			Art.push(ci, _cloud_pos(c), 0.0, Vector2(s * (1.0 + puff), s * (1.0 - puff * 0.7)))
 			Props.cloud(ci, int(c["seed"]), cf, cl)
 		Art.pop(ci)
@@ -1154,7 +1264,20 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 			var lamp := _lighthouse_pos() + (WorldArt.LANDMARK_LAMP if wl == "moon" else Vector2(24, -79))
 			var col := Color(1.0, 0.45, 0.45) if wl == "moon" else Color(0.8, 1.0, 0.45)
 			var blink := 1.0 if wl != "moon" else (0.5 + 0.5 * sin(_t * 4.0))
-			Props.halo(ci, lamp, 30.0, Color(col, 0.6 * glow * blink))
+			if wl == "jungle":
+				lamp = _landmark_top()
+				col = Color(1.0, 0.82, 0.35)
+				blink = 0.85 + 0.15 * sin(_t * 3.0)
+				if poke < 2.2:
+					# The sun disc flares: golden rays turning round it.
+					var k := clampf(poke / 2.2, 0.0, 1.0)
+					var rays := 1.0 - k
+					for i in 10:
+						var a := TAU * i / 10.0 + _t * 0.9
+						var len := (34.0 + (i % 2) * 16.0) * (0.6 + 0.4 * sin(minf(k * 6.0, PI)))
+						Art.grad(ci, PackedVector2Array([lamp, lamp + Vector2(cos(a - 0.12), sin(a - 0.12)) * len, lamp + Vector2(cos(a + 0.12), sin(a + 0.12)) * len]),
+								PackedColorArray([Color(1.0, 0.9, 0.5, 0.7 * rays), Color(1.0, 0.9, 0.5, 0.0), Color(1.0, 0.9, 0.5, 0.0)]))
+			Props.halo(ci, lamp, 30.0 if wl != "jungle" else 40.0, Color(col, 0.6 * glow * blink))
 			if wl == "moon" and poke < 2.2:
 				# A ping ring from the radar.
 				var f := fposmod(poke, 0.7) / 0.7
@@ -1174,6 +1297,17 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 				WorldArt.dragonfly(ci, sin(_t * 30.0 + float(b["phase"])), Color("5ad8c8") if int(b["phase"] * 10.0) % 2 == 0 else Color("c86bff"))
 			"moon":
 				WorldArt.satellite(ci, _t, fposmod(_t + float(b["phase"]), 1.4) < 0.5)
+			"jungle":
+				if _birds.find(b) % 2 == 0:
+					Art.push(ci, Vector2.ZERO, 0.0, Vector2.ONE * 1.3)
+					WorldArt.parrot(ci, flap)
+					Art.pop(ci)
+				else:
+					# A big blue butterfly fluttering along.
+					Art.pop(ci)
+					var bob := sin(_t * 2.3 + float(b["phase"])) * 9.0
+					Art.push(ci, Vector2(b["x"], float(b["y"]) + bob), sin(_t * 1.7 + float(b["phase"])) * 0.25, Vector2.ONE * 1.5)
+					WorldArt.butterfly(ci, absf(sin(_t * (16.0 if fleeing else 9.0) + float(b["phase"]))), Color("5cc8ff"))
 			_:
 				Props.gull(ci, flap, Color(bird_c, 1.0))
 		Art.pop(ci)
@@ -1188,10 +1322,17 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 				Art.pop(ci)
 			"volcano":
 				Art.dot(ci, at, 3.0, Color(1.0, 0.7, 0.3, a))
+			"jungle":
+				var fc: Color = [Color("e8323c"), Color("ffd23f"), Color("2f7ef0")][int(float(f["seed"]) * 3.0) % 3]
+				Art.push(ci, at, sin(age * 3.0 + float(f["seed"])) * 0.6)
+				Art.flat_now(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(7, 2.5), 10), Color(fc, a))
+				Art.pop(ci)
 			_:
 				Art.dot(ci, at, 2.2, Color(1, 1, 1, a))
 	if wl == "acid":
 		_draw_fireflies(ci, night)
+	elif wl == "jungle" and night > 0.3:
+		_draw_fireflies(ci, smoothstep(0.3, 0.9, night), Color(1.0, 0.86, 0.3), 16)
 	elif wl == "volcano":
 		# Embers drifting up from the lava river.
 		for k in 8:
@@ -1228,14 +1369,27 @@ static var _PUFF := Art.circle_pts(Vector2.ZERO, 20.0, 18)
 
 
 ## Fireflies wandering over the swamp (brighter at night).
-func _draw_fireflies(ci: CanvasItem, night: float) -> void:
-	var a := 0.35 + 0.65 * night
-	for k in 9:
+func _draw_fireflies(ci: CanvasItem, night: float, glow := Color(0.85, 1.0, 0.4), count := 9) -> void:
+	var a := 0.35 + 0.65 * night if glow.g > 0.95 else night
+	for k in count:
 		var base := Vector2(fposmod(k * 0.41 + 0.07, 1.0) * size.x, World.SURFACE_Y - 40.0 - (k * 53 % 220))
 		var p := base + Vector2(sin(_t * 0.6 + k * 2.1) * 30.0, sin(_t * 0.9 + k) * 16.0)
 		var tw := 0.5 + 0.5 * sin(_t * 3.0 + k * 1.7)
-		Props.halo(ci, p, 14.0, Color(0.85, 1.0, 0.4, 0.4 * a * tw), 12)
+		Props.halo(ci, p, 14.0 if count < 10 else 18.0, Color(glow, (0.4 if count < 10 else 0.55) * a * tw), 12)
 		Art.dot(ci, p, 2.4, Color(1.0, 1.0, 0.7, a * (0.5 + 0.5 * tw)))
+
+
+## Vines hanging from the top of the jungle's sky, swaying in the wind.
+func _draw_vines(ci: CanvasItem, sp: float) -> void:
+	if not world.is_visible_band(0.0, 240.0):
+		return
+	var tint := DayNight.scene_tint(sp)
+	var w := world.scene_right() if size.x > 900.0 else size.x
+	for v: Vector3 in [Vector3(0.04, 0, 0.0), Vector3(0.16, 1, 1.3), Vector3(0.66, 3, 2.1), Vector3(0.8, 2, 0.6), Vector3(0.92, 4, 2.8)]:
+		var sway := snappedf(sin(_t * 0.8 + v.z) * (0.03 + DayNight.wind * 0.04), 0.005)
+		Art.push(ci, Vector2(w * v.x, -4.0), sway)
+		WorldArt.vine(ci, int(v.y), tint)
+		Art.pop(ci)
 
 
 func _redraw_scene() -> void:
@@ -1253,10 +1407,28 @@ func _paint_back(ci: CanvasItem) -> void:
 	Art.push(_ci, _palm_pos(), 0.0, Vector2(_k, _k))
 	if wl == "ocean":
 		Props.palm(_ci, _t, Props.wind, _palm_amp, _coconuts)
+	elif wl == "jungle":
+		WorldArt.jungle_palm(_ci, _t, Props.wind, _palm_amp, _coconuts)
 	else:
 		WorldArt.edge_prop(_ci, wl, _t, Props.wind, _palm_amp)
 	Art.pop(self)
+	if wl == "jungle":
+		_draw_shore_life()
 
+
+## Little butterflies over the jungle's shore by day, around the flowers.
+func _draw_shore_life() -> void:
+	var day := DayNight.daylight()
+	if day < 0.3:
+		return
+	var gy := _ground_y()
+	for i in 2:
+		var cx := _at(250.0 + i * 70.0) if i == 0 else _at(30.0)
+		var ph := _t * (0.7 + i * 0.2) + i * 2.0
+		var p := Vector2(cx + sin(ph) * 34.0 * _k, gy - (30.0 + 16.0 * sin(ph * 1.7)) * _k - 10.0)
+		Art.push(_ci, p, sin(ph * 2.0) * 0.3, Vector2.ONE * 0.6)
+		WorldArt.butterfly(_ci, absf(sin(_t * 10.0 + i)), [Color("ffb43a"), Color("ff6fd0")][i])
+		Art.pop(_ci)
 
 ## Between the two boats: the dock and the raft with its loader.
 func _paint_mid(ci: CanvasItem) -> void:
@@ -1287,12 +1459,20 @@ func _paint_front(ci: CanvasItem) -> void:
 		"moon":
 			amp = 0.6
 			speed = 0.3
+		"jungle":
+			amp *= 0.7
+			speed = 0.8
 	var wave := PackedVector2Array()
 	for i in 41:
 		var x := w * i / 40.0
 		var u := i * 1.2
 		wave.append(Vector2(x, sy + sin(_t * 1.6 * speed + u * 0.62) * amp + sin(_t * 2.3 * speed - u * 1.1) * amp * 0.45))
 	WorldArt.surface_front(_ci, wl, wave, w, sy, _t)
+	if wl == "jungle":
+		# Reeds and cattails at the foot of the shore wall.
+		Art.push(_ci, Vector2(_at(232.0), sy + 6), 0.0, Vector2(_k, _k))
+		WorldArt.reeds(_ci, Vector2.ZERO, _t, DayNight.wind)
+		Art.pop(_ci)
 	# Little glints riding the crests.
 	if wl == "ocean":
 		var glint := DayNight.glint()
@@ -1364,7 +1544,7 @@ func _paint_wake(ci: CanvasItem, key: String) -> void:
 		_draw_back_water(bp, bs)
 	if _sailing(key):
 		var facing := _facing(key)
-		var foam := Color(1, 1, 1) if wl in ["ocean", "acid"] else (Color(1.0, 0.8, 0.4) if wl == "volcano" else Color(0.85, 0.87, 0.95))
+		var foam := Color(1, 1, 1) if wl in ["ocean", "acid", "jungle"] else (Color(1.0, 0.8, 0.4) if wl == "volcano" else Color(0.85, 0.87, 0.95))
 		for i in 3:
 			var f := fposmod(_t * 1.5 + i / 3.0, 1.0)
 			var at := bp + Vector2(-facing * (82.0 + f * 47.0) * bs, 2 + (HOVER + 6.0 if wl == "moon" else 0.0))
@@ -1425,7 +1605,15 @@ func _draw_pier(lights: float) -> void:
 		Props.buoy(_ci, lights)
 		Art.pop(_ci)
 	Art.push(_ci, tip, 0.0, Vector2(_k, _k))
-	Props.pier(_ci, PIER_W, h, true)
+	Props.pier(_ci, PIER_W, h, WorldLook.world != "jungle")
+	if WorldLook.world == "jungle":
+		# Rope lashings on the posts and a tiki torch at the tip.
+		for x: float in [7.0, PIER_W * 0.36, PIER_W * 0.68, PIER_W - 9.0]:
+			for k in 2:
+				Art.line(_ci, Vector2(x - 5.0, -h + 15.0 + k * 4.0), Vector2(x + 5.0, -h + 12.0 + k * 4.0), Color("e8cf8a"), 2.0)
+		Art.push(_ci, Vector2(6, -h + 2.0))
+		WorldArt.torch(_ci, _t)
+		Art.pop(_ci)
 	Art.pop(_ci)
 	if boat2 == "sale":
 		_draw_sign("boat2")
@@ -1509,8 +1697,9 @@ func _draw_back_water(bp: Vector2, _bs: float) -> void:
 		Art.flat_now(_ci, sea, WorldArt.unlit(WorldArt.MAGMA_SKIN, _tint))
 		Art.polyline(_ci, line, WorldArt.unlit(WorldArt.MAGMA_HOT, _tint), 3.0)
 		return
-	Art.flat_now(_ci, sea, Color(Art.calm(Art.sea_cols[0]), 0.85 if wl == "ocean" else 0.95))
-	Art.polyline(_ci, line, Color(1, 1, 1, 0.75) if wl == "ocean" else Color(Art.sea_cols[0].lightened(0.4), 0.9), 2.5)
+	var clear := wl in ["ocean", "jungle"]
+	Art.flat_now(_ci, sea, Color(Art.calm(Art.sea_cols[0]), 0.85 if clear else 0.95))
+	Art.polyline(_ci, line, Color(1, 1, 1, 0.75) if clear else Color(Art.sea_cols[0].lightened(0.4), 0.9), 2.5)
 
 
 func _draw_sign(key: String) -> void:
@@ -1570,6 +1759,10 @@ func _draw_glow(ci: CanvasItem) -> void:
 		var lamp := raft_pos() + Vector2(0, _raft_bob()) + Props.RAFT_LAMP + Vector2(sin(_t * 1.7) * 1.5, 0)
 		Props.halo(ci, lamp, 34.0, Color(1.0, 0.85, 0.45, 0.45 * lights))
 		Art.disc(ci, lamp, 4.0, Color(1.0, 0.95, 0.7, 0.9 * lights))
+	if WorldLook.world == "jungle":
+		var flame := Vector2(_tip, World.SURFACE_Y) + Vector2(6, -(World.SURFACE_Y - _pier_y()) / _k + 2.0 - WorldArt.TORCH_H - 14.0) * _k
+		var flick := 0.85 + 0.15 * sin(_t * 11.0)
+		Props.halo(ci, flame, 46.0 * _k + 10.0, Color(1.0, 0.7, 0.3, (0.18 + 0.4 * lights) * flick))
 	# The lava river glows a little on the scene above it.
 	if WorldLook.world == "volcano":
 		Props.halo(ci, Vector2(size.x * 0.3, World.SURFACE_Y + 6.0), 160.0, Color(1.0, 0.55, 0.2, 0.12 + 0.12 * lights), 16)

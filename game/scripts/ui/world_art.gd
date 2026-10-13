@@ -1,12 +1,14 @@
 class_name WorldArt
 extends RefCounted
-## Scenery of the four worlds in the toon style (thick INK outline, soft
+## Scenery of the five worlds in the toon style (thick INK outline, soft
 ## shading), drawn in local space and placed with Art.push / Art.pop like
 ## Props. The surface of each world:
 ##   ocean    sandy beach, palm, lighthouse, wooden hut (Props has most of it)
 ##   volcano  basalt shore, a smoking volcano behind, lava river, stone hut
 ##   acid     mossy mud shore, giant mushrooms, twisted trees, mushroom house
 ##   moon     grey regolith with craters, Earth in a black sky, dome base
+##   jungle   golden temple stone, a turquoise river, a hut on stilts, a
+##            stepped pyramid and a waterfall far away (see "Jungle ruins")
 ## Shapes are built once (static vars) and moved with Art.push, so the
 ## geometry cache stays small.
 
@@ -249,6 +251,8 @@ static func island(ci: CanvasItem, world: String, width: float) -> void:
 				Art.toon(ci, Art.moved(_DRIP, Vector2(x, -54.0 + (5.0 if i % 2 == 0 else 0.0))), top, 2.0, 0.0)
 			for p: Vector2 in [Vector2(40, -20), Vector2(110, -36)]:
 				Art.t_ellipse(ci, p, Vector2(8, 4), WorldLook.color("sand_dark"), 1.8, 0.0)
+		"jungle":
+			_jungle_shore(ci, width, base, top, crust)
 		"moon":
 			Art.toon(ci, Art.smooth_pts(crust, 3), top, 3.0, 0.4)
 			for p: Vector3 in [Vector3(44, -20, 0.5), Vector3(118, -36, 0.4), Vector3(width * 0.6, -63, 0.55)]:
@@ -274,6 +278,8 @@ static func house(ci: CanvasItem, world: String, t: float, lit: float, door: flo
 			_mushroom_house(ci, t, lit, door)
 		"moon":
 			_dome_base(ci, t, lit, door)
+		"jungle":
+			_stilt_hut(ci, t, lit, door)
 		_:
 			_beach_hut(ci, t, lit, door)
 
@@ -287,6 +293,8 @@ static func house_lights(world: String) -> Array[Vector3]:
 			return [Vector3(48, -62, 26), Vector3(104, -62, 26)]
 		"moon":
 			return [Vector3(54, -54, 26), Vector3(96, -54, 26), Vector3(140, -128, 18)]
+		"jungle":
+			return [Vector3(98, -87, 28), Vector3(146, -96, 20)]
 	return [Vector3(102, -64, 28), Vector3(16, -100, 18)]
 
 
@@ -444,6 +452,8 @@ static func edge_prop(ci: CanvasItem, world: String, t: float, wind: float, shak
 			Props.flag(ci, Vector2.ZERO, 92, Color("ff5a7a"), 0.0, 1.2)
 			Props.downwind = d
 			Art.pop(ci)
+		"jungle":
+			jungle_palm(ci, t, wind, shake, 2)
 		_:
 			Props.palm(ci, t, wind, shake)
 
@@ -537,6 +547,8 @@ static func landmark(ci: CanvasItem, world: String, rock: Color, haze: Color, li
 			Art.toon(ci, _DISH, metal, 2.0, 0.0, ink)
 			Art.pop(ci)
 			Art.toon(ci, Art.circle_pts(Vector2(0, -122), 5, 12), Props.LAMP_OFF.lerp(Color("ff6a6a"), Props._q(lit, 6.0)), 2.0, 0.0, ink)
+		"jungle":
+			pyramid(ci, rock, haze, lit)
 
 
 const LANDMARK_LAMP := Vector2(0, -122)
@@ -557,6 +569,8 @@ static func surface_front(ci: CanvasItem, world: String, wave: PackedVector2Arra
 			goo_front(ci, w, sy, t)
 		"moon":
 			dust_front(ci, w, sy, t)
+		"jungle":
+			river_front(ci, wave, w, sy, t)
 		_:
 			Art.flat_now(ci, front, Color(Art.calm(Art.sea_cols[0]), 0.6))
 			Art.polyline(ci, wave, Art.WHITE, 4.0)
@@ -578,6 +592,11 @@ static func hull_trim(ci: CanvasItem, world: String, e: Vector2, t: float) -> vo
 			for k in 3:
 				var x := lerpf(-e.x + 20, e.y - 30, k / 2.0)
 				Art.toon(ci, Art.moved(_DRIP, Vector2(x, -6)), Color("8ae04a"), 1.6, 0.0)
+		"jungle":
+			# A garland of flowers along the gunwale.
+			for k in 4:
+				var x := lerpf(-e.x + 22, e.y - 34, k / 3.0)
+				hibiscus(ci, Vector2(x, -9 + (k % 2) * 2), FLOWERS[k % FLOWERS.size()], 0.8)
 		"moon":
 			for x: float in [-e.x * 0.55, e.y * 0.5]:
 				Art.t_rect(ci, Rect2(x - 10, 2, 20, 8), 3, Color("9aa2b8"), 2.0, 0.3)
@@ -1092,3 +1111,808 @@ static var _MILKY := Art.union([Art.ellipse_pts(Vector2.ZERO, Vector2(560, 50), 
 		Art.ellipse_pts(Vector2(200, -6), Vector2(220, 58), 24)])
 static var _MILKY_CORE := Art.ellipse_pts(Vector2(0, 2), Vector2(420, 18), 28)
 static var _NEBULA := Art.union([Art.ellipse_pts(Vector2(120, -10), Vector2(70, 34), 20), Art.ellipse_pts(Vector2(160, 14), Vector2(50, 24), 16)])
+
+
+# --- Jungle ruins --------------------------------------------------------------------------
+## A clear turquoise jungle river under a warm sunny sky: emerald rainforest
+## hills and a waterfall far away, a stepped temple pyramid with a glowing
+## sun disc, a golden-stone shore with temple steps, a hut on bamboo stilts,
+## a big palm with coconuts and a parrot, lily pads and lotus flowers
+## drifting on the current, fish leaping, parrots and butterflies by day,
+## fireflies at night. Every shape is built once and placed with Art.push.
+
+const LEAF := Color("2fae4e")
+const LEAF_DARK := Color("1f8442")
+const LEAF_LIGHT := Color("6ad65a")
+const TEMPLE := Color("e2c07c")
+const BAMBOO := Color("d2a650")
+const BAMBOO_DARK := Color("9a7432")
+const THATCH := Color("e4b252")
+const RIVER_FOAM := Color("e6fff8")
+const PAD := Color("48c25a")
+const LOTUS := Color("ff9fd0")
+const FLOWERS: Array[Color] = [Color("ff4f6e"), Color("ff8a3d"), Color("ffd23f"), Color("ff6fd0"), Color("b06bff")]
+## Where the pyramid's sun disc glows (landmark-local, like LANDMARK_LAMP).
+const JUNGLE_LAMP := Vector2(0, -124)
+## The jungle palm's crown (edge-prop local).
+const JPALM_TOP := Vector2(-20, -132)
+
+
+## A broad leaf pointing +x from its stem (about 48 long at s = 1).
+static func leaf(ci: CanvasItem, at: Vector2, rot: float, s: float, fill: Color) -> void:
+	Art.push(ci, at, rot, Vector2(s, s))
+	Art.toon(ci, _LEAF, fill, 2.2, 0.5)
+	Art.line_c(ci, _LEAF_RIB, Art.shade_of(fill, 0.28), 1.6)
+	Art.pop(ci)
+
+
+static var _LEAF := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(10, -8), Vector2(26, -10), Vector2(40, -5), Vector2(50, 1),
+		Vector2(38, 6), Vector2(22, 8), Vector2(8, 5)]), 3)
+static var _LEAF_RIB := PackedVector2Array([Vector2(3, 0), Vector2(22, -1), Vector2(42, 1)])
+
+
+## A serrated palm frond along +x (its tip droops by `droop`).
+static func _frond_pts(length: float, width: float, droop: float, n: int) -> PackedVector2Array:
+	var top := PackedVector2Array()
+	var bot := PackedVector2Array()
+	for i in n + 1:
+		var f := float(i) / n
+		var x := f * length + (3.0 if i % 2 == 1 else 0.0)
+		var y := droop * f * f
+		var wd := width * sin(PI * pow(f, 0.75))
+		var notch := 0.5 if i % 2 == 1 else 1.0
+		top.append(Vector2(x, y - wd * notch))
+		bot.append(Vector2(x, y + wd * notch * 0.75))
+	bot.reverse()
+	top.append_array(bot)
+	return top
+
+
+static func _rib(length: float, droop: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 6:
+		var f := i / 5.0
+		pts.append(Vector2(f * length * 0.95, droop * f * f))
+	return pts
+
+
+static var _FRONDS: Array[PackedVector2Array] = [_frond_pts(66, 12, 18, 16), _frond_pts(56, 11, 22, 14), _frond_pts(46, 9, 12, 12)]
+static var _FROND_RIBS: Array[PackedVector2Array] = [_rib(66, 18), _rib(56, 22), _rib(46, 12)]
+
+
+## One palm frond from `at` towards angle `a` (mirrored on the left, so it
+## always droops down).
+static func frond(ci: CanvasItem, at: Vector2, a: float, k: int, fill: Color, s: float = 1.0) -> void:
+	var left := cos(a) < 0.0
+	Art.push(ci, at, a, Vector2(s, -s if left else s))
+	Art.toon(ci, _FRONDS[k % 3], fill, 2.2, 0.45)
+	Art.line_c(ci, _FROND_RIBS[k % 3], Art.shade_of(fill, 0.3), 1.8)
+	Art.pop(ci)
+
+
+## A small fern (four fronds) standing on the ground; origin at its foot.
+static func fern(ci: CanvasItem, s: float, fill: Color = LEAF) -> void:
+	for a: float in [-2.5, -1.95, -1.2, -0.65]:
+		frond(ci, Vector2.ZERO, a, 2, fill if a < -1.5 else fill.lightened(0.08), s * 0.62)
+
+
+## Hibiscus flower (five round petals and a yellow heart).
+static func hibiscus(ci: CanvasItem, at: Vector2, c: Color, s: float = 1.0) -> void:
+	Art.push(ci, at, 0.0, Vector2(s, s))
+	Art.toon(ci, _HIBISCUS, c, 1.8, 0.35)
+	Art.disc(ci, Vector2.ZERO, 2.4, Color("ffe36a"))
+	Art.pop(ci)
+
+
+static func _petals(n: int, d: float, r: float) -> PackedVector2Array:
+	var parts := []
+	for i in n:
+		var a := TAU * i / n - PI / 2.0
+		parts.append(Art.circle_pts(Vector2(cos(a), sin(a)) * d, r, 12))
+	return Art.union(parts)
+
+
+static var _HIBISCUS := _petals(5, 4.6, 4.4)
+
+
+## A pink lotus flower (sits on a lily pad); origin at its foot.
+static func lotus(ci: CanvasItem, c: Color = LOTUS) -> void:
+	for a: float in [-1.15, 1.15, -0.6, 0.6, 0.0]:
+		Art.push(ci, Vector2.ZERO, a)
+		Art.toon(ci, _PETAL, c if absf(a) > 0.1 else c.lightened(0.2), 1.6, 0.3)
+		Art.pop(ci)
+	Art.disc(ci, Vector2(0, -3), 2.4, Color("ffe36a"))
+
+
+static var _PETAL := Art.smooth_pts(PackedVector2Array([Vector2(0, 1), Vector2(-4, -5), Vector2(0, -12), Vector2(4, -5)]), 2)
+
+
+## A lily pad (with its notch) lying on the water; origin at its middle.
+static func lily_pad(ci: CanvasItem, fill: Color = PAD) -> void:
+	Art.toon(ci, _PAD, fill, 2.0, 0.4)
+	Art.line_c(ci, _PAD_VEINS, Art.shade_of(fill, 0.22), 1.2)
+
+
+static var _PAD_VEINS := PackedVector2Array([Vector2(-11, -1), Vector2(0, 0), Vector2(9, -2.5), Vector2(0, 0), Vector2(8, 2.5)])
+
+
+# --- Jungle sky -----------------------------------------------------------------------------
+
+## The jungle's sky extras (a still layer): golden humid haze over the
+## horizon and soft sunbeams fanning down from the sun.
+static func jungle_sky(ci: CanvasItem, w: float, sy: float, sun: Vector2, day: float, warm: float) -> void:
+	if day < 0.05:
+		return
+	var haze := Color(1.0, 0.94, 0.66, 0.0)
+	Art.grad(ci, PackedVector2Array([Vector2(0, sy - 150), Vector2(w, sy - 150), Vector2(w, sy + 2), Vector2(0, sy + 2)]),
+			PackedColorArray([haze, haze, Color(haze, 0.3 * day), Color(haze, 0.3 * day)]))
+	if sun.y > sy:
+		return
+	var a := Props._q(day * (1.0 - warm * 0.5), 8.0) * 0.16
+	for i in 6:
+		var ang := 0.55 + i * 0.36
+		var len := 640.0
+		var c := Color(1.0, 0.97, 0.78, a * (1.0 if i % 2 == 0 else 0.6))
+		var clear := Color(c, 0.0)
+		var spread := 0.05 + (i % 3) * 0.02
+		Art.grad(ci, PackedVector2Array([sun, sun + Vector2(cos(ang - spread), sin(ang - spread)) * len, sun + Vector2(cos(ang + spread), sin(ang + spread)) * len]),
+				PackedColorArray([c, clear, clear]))
+
+
+## A vine hanging from the top edge with leaves along it; origin at its top.
+## `k` picks one of the vines; sway is done by the caller's push.
+static func vine(ci: CanvasItem, k: int, tint: Color) -> void:
+	var v: Array = _VINES[k % _VINES.size()]
+	Art.line_c(ci, v[0], Color("3d7a32") * tint, 3.4)
+	for l: Vector3 in v[1]:
+		leaf(ci, Vector2(l.x, l.y), l.z, 0.42, (LEAF if int(l.y) % 3 != 0 else LEAF_LIGHT) * tint)
+	if v.size() > 2:
+		var f: Vector3 = v[2]
+		hibiscus(ci, Vector2(f.x, f.y), FLOWERS[int(f.z)] * tint, 0.8)
+
+
+static func _vine_shape(len: float, seed: float, flower: int) -> Array:
+	var pts := PackedVector2Array()
+	var leaves := []
+	var n := int(len / 12.0)
+	for i in n + 1:
+		var f := float(i) / n
+		pts.append(Vector2(sin(f * 5.0 + seed) * 6.0 * f, f * len))
+	for i in range(1, n + 1, 2):
+		var p := pts[i]
+		var side := 1.0 if (i / 2) % 2 == 0 else -1.0
+		leaves.append(Vector3(p.x, p.y, (0.55 if side > 0 else PI - 0.55) + sin(seed + i) * 0.2))
+	var out := [pts, leaves]
+	if flower >= 0:
+		out.append(Vector3(pts[n].x, pts[n].y + 2.0, flower))
+	return out
+
+
+static var _VINES: Array = [_vine_shape(150, 0.0, 1), _vine_shape(96, 1.3, 3), _vine_shape(210, 2.2, 0), _vine_shape(70, 3.1, -1), _vine_shape(130, 4.4, 2)]
+
+
+## A cluster of big leaves hanging into the sky from a top corner (the
+## canopy); `side` -1 for the left corner, +1 for the right one.
+static func canopy(ci: CanvasItem, side: float, tint: Color) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(side, 1))
+	for l: Vector4 in _CANOPY:
+		var c: Color = [LEAF_DARK, LEAF, LEAF_LIGHT][int(l.w)] * tint
+		Art.push(ci, Vector2(l.x, l.y), l.z, Vector2(1.5, 1.5))
+		Art.toon(ci, _LEAF, c, 2.4, 0.5)
+		Art.line_c(ci, _LEAF_RIB, Art.shade_of(c, 0.28), 1.4)
+		Art.pop(ci)
+	Art.pop(ci)
+
+
+const _CANOPY: Array[Vector4] = [Vector4(-10, -14, 0.9, 0), Vector4(30, -18, 1.3, 0), Vector4(70, -16, 1.6, 0), Vector4(-6, 8, 0.45, 1),
+		Vector4(40, -6, 1.05, 1), Vector4(84, -10, 1.75, 1), Vector4(14, 20, 1.2, 2), Vector4(110, -16, 1.4, 1), Vector4(56, 6, 1.9, 2)]
+
+
+## A scarlet macaw flying +x (wings beat with `flap` -1..1).
+static func parrot(ci: CanvasItem, flap: float) -> void:
+	var up := flap * 12.0
+	Art.toon(ci, _MACAW_TAIL, Color("e8323c"), 1.8, 0.2)
+	Art.flat(ci, _MACAW_TAIL_TIP, Color("2f7ef0"))
+	for side: float in [1.0, -1.0]:
+		var tipy := -4.0 - up
+		var wing := PackedVector2Array([Vector2(-6, -1), Vector2(-4 + side * 2.0, tipy * 0.5 - 3.0), Vector2(-14 + side * 4.0, tipy - 6.0),
+				Vector2(-20 + side * 3.0, tipy - 3.0), Vector2(-12, 3)])
+		if side > 0.0:
+			# The far wing first, a little darker.
+			Props.live(ci, Art.moved(wing, Vector2(5, -1)), Color("2f6ad8"), 1.8)
+		else:
+			Props.live(ci, wing, Color("2f7ef0"), 2.0)
+			var inner := PackedVector2Array([wing[0], wing[1], wing[1].lerp(wing[2], 0.55), wing[4].lerp(wing[3], 0.45), wing[4]])
+			Art.flat_now(ci, inner, Color("ffd23f"))
+			Art.flat_now(ci, PackedVector2Array([wing[0], wing[1], wing[1].lerp(wing[4], 0.5)]), Color("e8323c"))
+	Art.t_ellipse(ci, Vector2(0, 1), Vector2(10, 5.5), Color("e8323c"), 2.0, 0.4)
+	Art.t_circle(ci, Vector2(10, -3), 5.5, Color("ef3a40"), 2.0, 0.3)
+	Art.t_ellipse(ci, Vector2(11.5, -3), Vector2(3.0, 2.6), Art.WHITE, 0.0, 0.0)
+	Art.disc(ci, Vector2(12, -3.5), 1.3, INK)
+	Art.toon(ci, _MACAW_BEAK, Color("3a3040"), 1.4, 0.0)
+	Art.flat(ci, _MACAW_BEAK_TOP, Color("f4eadc"))
+
+
+static var _MACAW_TAIL := PackedVector2Array([Vector2(-6, -1), Vector2(-30, 3), Vector2(-33, 7), Vector2(-28, 8), Vector2(-6, 4)])
+static var _MACAW_TAIL_TIP := Art.clipped(Art.rrect_pts(Rect2(-34, 0, 9, 10), 1), _MACAW_TAIL)
+static var _MACAW_BEAK := Art.smooth_pts(PackedVector2Array([Vector2(14, -6), Vector2(19, -5), Vector2(20, -1), Vector2(17, 1), Vector2(14, -1)]), 2)
+static var _MACAW_BEAK_TOP := PackedVector2Array([Vector2(14.5, -5.5), Vector2(18.5, -4.8), Vector2(19, -3), Vector2(15, -3)])
+
+
+## A macaw sitting (on the palm), looking left; origin at its feet.
+static func parrot_sitting(ci: CanvasItem, blink: bool) -> void:
+	Art.toon(ci, _SIT_TAIL, Color("e8323c"), 1.8, 0.2)
+	Art.flat(ci, _SIT_TAIL_TIP, Color("2f7ef0"))
+	Art.t_ellipse(ci, Vector2(0, -12), Vector2(7, 11), Color("e8323c"), 2.0, 0.45)
+	Art.toon(ci, _SIT_WING, Color("2f7ef0"), 1.8, 0.3)
+	Art.flat(ci, _SIT_WING_BAND, Color("ffd23f"))
+	Art.t_circle(ci, Vector2(-2, -25), 6.5, Color("ef3a40"), 2.0, 0.3)
+	Art.t_ellipse(ci, Vector2(-4, -25), Vector2(3.4, 3.0), Art.WHITE, 0.0, 0.0)
+	if blink:
+		Art.line(ci, Vector2(-5.5, -25), Vector2(-2.5, -25), INK, 1.4)
+	else:
+		Art.disc(ci, Vector2(-4, -25.5), 1.4, INK)
+	Art.push(ci, Vector2(6, -22), 0.0, Vector2(-1, 1))
+	Art.toon(ci, _MACAW_BEAK, Color("3a3040"), 1.4, 0.0)
+	Art.flat(ci, _MACAW_BEAK_TOP, Color("f4eadc"))
+	Art.pop(ci)
+	for x: float in [-3.0, 3.0]:
+		Art.line(ci, Vector2(x, -2), Vector2(x, 1), Color("3a3040"), 2.0)
+
+
+static var _SIT_TAIL := PackedVector2Array([Vector2(-2, -6), Vector2(4, -6), Vector2(8, 18), Vector2(4, 20)])
+static var _SIT_TAIL_TIP := Art.clipped(Art.rrect_pts(Rect2(0, 10, 12, 12), 1), _SIT_TAIL)
+static var _SIT_WING := Art.smooth_pts(PackedVector2Array([Vector2(1, -20), Vector2(8, -16), Vector2(9, -4), Vector2(5, 2), Vector2(1, -6)]), 2)
+static var _SIT_WING_BAND := Art.clipped(Art.rrect_pts(Rect2(0, -20, 12, 6), 1), _SIT_WING)
+
+
+## A blue morpho butterfly; `open` 0..1 how far its wings are spread.
+static func butterfly(ci: CanvasItem, open: float, c: Color) -> void:
+	var o := maxf(0.3, snappedf(open, 0.1))
+	for side: float in [-1.0, 1.0]:
+		Art.push(ci, Vector2.ZERO, 0.0, Vector2(side * o, 1.0))
+		Art.toon(ci, _BF_LOW, c.darkened(0.12), 1.8, 0.2)
+		Art.toon(ci, _BF_UP, c, 1.8, 0.2)
+		Art.flat(ci, _BF_EDGE, Color(0.12, 0.08, 0.2, 0.45))
+		Art.disc(ci, Vector2(10, -7), 1.6, Art.WHITE)
+		Art.pop(ci)
+	Art.t_ellipse(ci, Vector2(0, 0), Vector2(1.8, 6), Color("2a2238"), 1.2, 0.0)
+	Art.line(ci, Vector2(0, -5), Vector2(-3, -11), INK, 1.2)
+	Art.line(ci, Vector2(0, -5), Vector2(3, -11), INK, 1.2)
+
+
+static var _BF_UP := Art.smooth_pts(PackedVector2Array([Vector2(1, -2), Vector2(4, -10), Vector2(12, -12), Vector2(15, -6), Vector2(10, 0), Vector2(2, 1)]), 2)
+static var _BF_LOW := Art.smooth_pts(PackedVector2Array([Vector2(1, 0), Vector2(9, 1), Vector2(11, 7), Vector2(6, 10), Vector2(2, 6)]), 2)
+static var _BF_EDGE := _bf_edge()
+
+
+static func _bf_edge() -> PackedVector2Array:
+	# The dark rim of the upper wing: the wing minus a smaller copy of it.
+	var inner := PackedVector2Array()
+	var c := Vector2(5, -5)
+	for p in _BF_UP:
+		inner.append(c + (p - c) * 0.8)
+	var g := Geometry2D.clip_polygons(_BF_UP, inner)
+	return g[0] if g.size() > 0 else PackedVector2Array()
+
+
+## A rainbow arc (after a rain shower); `a` 0..1 fades it.
+static func rainbow(ci: CanvasItem, c: Vector2, r: float, a: float) -> void:
+	if a < 0.02:
+		return
+	var cols: Array[Color] = [Color("ff5a5a"), Color("ffa040"), Color("ffe14a"), Color("6ad65a"), Color("4fb3ee"), Color("9a7aff")]
+	for i in cols.size():
+		Art.arc(ci, c, r - i * 4.0, PI * 1.08, PI * 1.92, 22, Color(cols[i], snappedf(0.5 * a, 0.05)), 4.2)
+
+
+# --- Jungle far away -------------------------------------------------------------------------
+
+## Rainforest hills on the horizon (a still layer), three layers fading
+## into the humid haze: a far misty ridge with tall kapok trees standing
+## over it, a middle canopy of round crowns, and a darker near canopy with
+## palms sticking out of it. Mist lies between the layers.
+static func jungle_hills(ci: CanvasItem, w: float, sy: float, far_c: Color, near_c: Color, mist: float) -> void:
+	var mid_c := far_c.lerp(near_c, 0.5)
+	var m := Color(1.0, 0.98, 0.9, 0.0)
+	Art.flat(ci, _canopy_line(w, sy, 76.0, 30.0, 12.0, 0.0045, 0.035, 1.2, 8.0), far_c)
+	for f: Vector3 in [Vector3(0.06, 0.95, 0), Vector3(0.24, 1.15, 1), Vector3(0.43, 0.85, 0), Vector3(0.62, 1.05, 1), Vector3(0.83, 0.9, 0), Vector3(0.97, 1.1, 1)]:
+		var tx := w * f.x
+		Art.push(ci, Vector2(tx, _line_y(tx, sy, 76.0, 30.0, 12.0, 0.0045, 0.035, 1.2) + 8.0), 0.0, Vector2(f.y, f.y))
+		Art.flat(ci, _KAPOK[int(f.z)], far_c)
+		Art.pop(ci)
+	Art.grad(ci, PackedVector2Array([Vector2(0, sy - 96), Vector2(w, sy - 96), Vector2(w, sy - 40), Vector2(0, sy - 40)]),
+			PackedColorArray([m, m, Color(m, 0.3 * mist), Color(m, 0.3 * mist)]))
+	Art.flat(ci, _canopy_line(w, sy, 44.0, 16.0, 14.0, 0.008, 0.052, 0.4, 7.0), mid_c)
+	Art.grad(ci, PackedVector2Array([Vector2(0, sy - 52), Vector2(w, sy - 52), Vector2(w, sy - 14), Vector2(0, sy - 14)]),
+			PackedColorArray([m, m, Color(m, 0.26 * mist), Color(m, 0.26 * mist)]))
+	for f: Vector3 in [Vector3(0.12, 0.9, 1), Vector3(0.35, 0.75, -1), Vector3(0.55, 1.0, 1), Vector3(0.78, 0.8, -1), Vector3(0.9, 0.95, 1)]:
+		var tx := w * f.x
+		Art.push(ci, Vector2(tx, _line_y(tx, sy, 22.0, 10.0, 12.0, 0.011, 0.07, 2.1) + 6.0), 0.0, Vector2(f.y * f.z, f.y))
+		Art.flat(ci, _FAR_PALM, near_c)
+		Art.pop(ci)
+	Art.flat(ci, _canopy_line(w, sy, 22.0, 10.0, 12.0, 0.011, 0.07, 2.1, 6.0), near_c)
+
+
+## A canopy silhouette: a slow swell with round tree crowns along its top.
+static func _canopy_line(w: float, sy: float, base: float, swell: float, crowns: float, f1: float, f2: float, ph: float, step: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var x := -10.0
+	while x <= w + 10.0:
+		pts.append(Vector2(x, _line_y(x, sy, base, swell, crowns, f1, f2, ph)))
+		x += step
+	pts.append(Vector2(w + 10, sy + 2))
+	pts.append(Vector2(-10, sy + 2))
+	return pts
+
+
+static func _line_y(x: float, sy: float, base: float, swell: float, crowns: float, f1: float, f2: float, ph: float) -> float:
+	# Crowns of uneven size: two bumpy waves, the bigger one wins.
+	var c := maxf(absf(sin(x * f2 + ph)), 0.8 * absf(sin(x * f2 * 1.618 + ph * 2.0)))
+	return sy - base - swell * (0.5 + 0.5 * sin(x * f1 + ph)) - crowns * sqrt(c)
+
+
+static var _KAPOK: Array[PackedVector2Array] = [
+	Art.union([Art.rrect_pts(Rect2(-3, -50, 6, 54), 2), Art.ellipse_pts(Vector2(0, -56), Vector2(30, 10), 18), Art.ellipse_pts(Vector2(-16, -62), Vector2(15, 8), 12),
+		Art.ellipse_pts(Vector2(12, -64), Vector2(16, 9), 12), Art.ellipse_pts(Vector2(-2, -66), Vector2(10, 7), 10)]),
+	Art.union([Art.rrect_pts(Rect2(-2.5, -40, 5, 44), 2), Art.ellipse_pts(Vector2(0, -46), Vector2(22, 8), 16), Art.ellipse_pts(Vector2(10, -51), Vector2(12, 7), 12),
+		Art.ellipse_pts(Vector2(-9, -50), Vector2(11, 6), 10)]),
+]
+static var _FAR_PALM := _far_palm()
+
+
+static func _far_palm() -> PackedVector2Array:
+	var parts := [Geometry2D.offset_polyline(PackedVector2Array([Vector2(0, 2), Vector2(3, -16), Vector2(8, -32)]), 2.2, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]]
+	for a: float in [-2.7, -2.0, -1.3, -0.6, 0.1]:
+		var d := Vector2(cos(a), sin(a))
+		parts.append(Art.ellipse_pts(Vector2(8, -32) + d * 12.0 + Vector2(0, 3.0 * absf(d.x)), Vector2(13, 3.5), 12, a + (0.35 if d.x > 0.0 else -0.35)))
+	return Art.union(parts)
+
+
+## A waterfall far away: a mossy cliff with trees on top, the water pouring
+## over its lip in two strands with streaks running down, a white foam cloud
+## at its foot and spray drifting up. Origin at its foot, `h` tall.
+static func waterfall(ci: CanvasItem, h: float, rock: Color, canopy_c: Color, water: Color, t: float, foam: Color = Color.WHITE, poke: float = 0.0) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(h / 120.0, h / 120.0))
+	Art.flat(ci, _FALL_CLIFF, rock)
+	Art.flat(ci, _FALL_SHADE, rock.darkened(0.14))
+	for p: Vector3 in [Vector3(-44, -112, 20), Vector3(-20, -124, 18), Vector3(22, -124, 20), Vector3(46, -110, 18), Vector3(-56, -80, 12), Vector3(58, -74, 12)]:
+		Art.flat(ci, Art.ellipse_pts(Vector2(p.x, p.y), Vector2(p.z, p.z * 0.6), 14), canopy_c)
+	Art.flat(ci, _FALL_SHEET, water)
+	Art.flat(ci, _FALL_LIGHT, water.lightened(0.35))
+	Art.pop(ci)
+	var s := h / 120.0
+	# Streaks running down the two strands.
+	for k in 6:
+		var x := (-12.0 + k * 4.6 + (3.0 if k > 2 else 0.0)) * s
+		var f := fposmod(t * 0.85 + k * 0.29, 1.0)
+		var y0 := -h + 4.0 + f * (h - 18.0)
+		Art.line(ci, Vector2(x * (1.0 + f * 0.25), y0), Vector2(x * (1.0 + f * 0.3), minf(y0 + 18.0, -10.0)), Color(foam, 0.8), 2.2)
+	Art.polyline(ci, PackedVector2Array([Vector2(-17 * s, -h + 3), Vector2(-6 * s, -h - 1), Vector2(6 * s, -h - 1), Vector2(17 * s, -h + 3)]), Color(foam, 0.95), 3.0)
+	# The foam cloud at its foot and spray rising off it.
+	var puff := 1.0 + snappedf(poke, 0.05) * 0.5
+	Art.push(ci, Vector2(0, -4), 0.0, Vector2(s * puff, s * puff))
+	Art.flat(ci, _FOAM, Color(foam, 0.9))
+	Art.pop(ci)
+	for k in 6:
+		var f := fposmod(t * 0.3 + k / 6.0, 1.0)
+		var p := Vector2((-24.0 + k * 10.0) * s * puff + sin(t + k) * 3.0, -10.0 - f * 26.0 * puff)
+		Art.dot(ci, p, (6.0 + f * 8.0) * s * puff, Color(foam, snappedf(0.4 * (1.0 - f) + poke * 0.3, 0.05)))
+
+
+static var _FALL_CLIFF := Art.smooth_pts(PackedVector2Array([Vector2(-74, 2), Vector2(-66, -50), Vector2(-52, -104), Vector2(-24, -122),
+		Vector2(18, -122), Vector2(46, -106), Vector2(62, -58), Vector2(80, 2)]), 3)
+static var _FALL_SHADE := Art.clipped(Art.smooth_pts(PackedVector2Array([Vector2(18, -130), Vector2(34, -80), Vector2(44, -30), Vector2(90, 4),
+		Vector2(100, -140)]), 2), _FALL_CLIFF)
+static var _FALL_SHEET := Art.union([PackedVector2Array([Vector2(-16, -120), Vector2(-2, -120), Vector2(-4, -2), Vector2(-20, -2)]),
+		PackedVector2Array([Vector2(3, -120), Vector2(16, -120), Vector2(20, -2), Vector2(4, -2)])])
+static var _FALL_LIGHT := PackedVector2Array([Vector2(-16, -120), Vector2(-11, -120), Vector2(-14, -2), Vector2(-20, -2)])
+static var _FOAM := Art.union([Art.ellipse_pts(Vector2(0, 0), Vector2(30, 8), 18), Art.circle_pts(Vector2(-14, -6), 9, 12),
+		Art.circle_pts(Vector2(2, -9), 11, 12), Art.circle_pts(Vector2(17, -5), 8, 12)])
+
+
+## The stepped temple pyramid far out on the river (the jungle's landmark):
+## four tiers, a stair up the middle, a shrine with a sun disc on top
+## (glows at JUNGLE_LAMP when `lit`), vines and trees around its foot.
+static func pyramid(ci: CanvasItem, rock: Color, haze: Color, lit: float) -> void:
+	var ink := INK.lerp(haze, 0.35)
+	var stone := TEMPLE.lerp(haze, 0.4)
+	var shade := Art.shade_of(stone, 0.2)
+	Art.flat(ci, Art.smooth_pts(PackedVector2Array([Vector2(-96, 2), Vector2(-70, -14), Vector2(-20, -22), Vector2(40, -20), Vector2(84, -10), Vector2(104, 2)]), 3), rock)
+	for i in 4:
+		var hw := 72.0 - i * 15.0
+		var y := -14.0 - i * 21.0
+		var tier := PackedVector2Array([Vector2(-hw, y), Vector2(hw, y), Vector2(hw - 6.0, y - 21.0), Vector2(-hw + 6.0, y - 21.0)])
+		Art.toon(ci, tier, stone, 2.0, 0.0, ink)
+		Art.flat(ci, PackedVector2Array([Vector2(hw * 0.45, y - 1.0), Vector2(hw - 1.0, y - 1.0), Vector2(hw - 6.5, y - 20.0), Vector2(hw * 0.45 - 3.0, y - 20.0)]), shade)
+		Art.line(ci, Vector2(-hw + 3.0, y - 7.0), Vector2(hw - 3.0, y - 7.0), Color(ink, 0.25), 1.2)
+	# The stair up the middle.
+	Art.toon(ci, PackedVector2Array([Vector2(-11, -14), Vector2(11, -14), Vector2(7, -98), Vector2(-7, -98)]), stone.lightened(0.12), 1.8, 0.0, ink)
+	for k in 12:
+		var y := -18.0 - k * 7.0
+		var hw := 10.5 - k * 0.3
+		Art.line(ci, Vector2(-hw, y), Vector2(hw, y), Color(ink, 0.45), 1.2)
+	# The shrine and its sun disc.
+	Art.toon(ci, Art.rrect_pts(Rect2(-15, -114, 30, 18), 2), stone, 2.0, 0.0, ink)
+	Art.toon(ci, PackedVector2Array([Vector2(-19, -112), Vector2(19, -112), Vector2(15, -118), Vector2(-15, -118)]), shade, 1.8, 0.0, ink)
+	Art.flat(ci, Art.rrect_pts(Rect2(-5, -110, 10, 14), 4), Color(ink, 0.6))
+	var gold := Props.LAMP_OFF.lerp(Color("ffcf3a"), 0.55 + 0.45 * Props._q(lit, 6.0)).lerp(haze, 0.15)
+	Art.push(ci, JUNGLE_LAMP)
+	Art.toon(ci, _SUN_RAYS, gold.darkened(0.08), 1.6, 0.0, ink)
+	Art.toon(ci, Art.circle_pts(Vector2.ZERO, 7.5, 16), gold, 1.8, 0.0, ink)
+	Art.disc(ci, Vector2(-2, -2), 2.2, Color(1, 1, 1, 0.6))
+	Art.pop(ci)
+	# Vines over the tiers and trees at its foot.
+	var vine_c := Color("3f9a4a").lerp(haze, 0.4)
+	for v: PackedVector2Array in _PYR_VINES:
+		Art.line_c(ci, v, vine_c, 2.2)
+	var tree := LEAF.lerp(haze, 0.45)
+	for p: Vector3 in [Vector3(-74, -16, 22), Vector3(-52, -10, 16), Vector3(62, -14, 20), Vector3(84, -8, 16), Vector3(-90, -4, 12)]:
+		Art.toon(ci, Art.ellipse_pts(Vector2(p.x, p.y), Vector2(p.z, p.z * 0.7), 14), tree, 1.8, 0.0, ink)
+
+
+static var _SUN_RAYS := Art.star_pts(Vector2.ZERO, 14, 8, 10)
+static var _PYR_VINES: Array[PackedVector2Array] = [
+	PackedVector2Array([Vector2(-50, -56), Vector2(-48, -44), Vector2(-52, -34), Vector2(-49, -22)]),
+	PackedVector2Array([Vector2(36, -77), Vector2(38, -64), Vector2(35, -52), Vector2(39, -40)]),
+	PackedVector2Array([Vector2(-26, -98), Vector2(-25, -88), Vector2(-28, -80)]),
+]
+
+
+# --- Jungle shore -----------------------------------------------------------------------------
+
+## The golden temple-stone shore: carved blocks in its face, temple steps
+## down to the river, a mossy top with vines over the edge, ferns, flowers
+## and a broken column (island-local, see island()).
+static func _jungle_shore(ci: CanvasItem, width: float, base: Color, top: Color, crust: PackedVector2Array) -> void:
+	# Carved blocks in the face.
+	var block := base.lightened(0.06)
+	var groove := Art.shade_of(base, 0.3)
+	for r: Rect2 in [Rect2(36, -40, 34, 18), Rect2(74, -50, 40, 20), Rect2(118, -52, 36, 20), Rect2(158, -52, 44, 20), Rect2(206, -52, 38, 20),
+			Rect2(52, -18, 40, 18), Rect2(96, -28, 44, 20), Rect2(144, -30, 40, 20), Rect2(188, -30, 44, 20), Rect2(236, -30, 40, 20),
+			Rect2(120, -8, 42, 14), Rect2(166, -8, 40, 14), Rect2(210, -8, 44, 14)]:
+		if r.position.x > width + 20.0:
+			continue
+		Art.t_rect(ci, r, 3, block, 1.6, 0.0)
+	# Glyphs carved in two blocks.
+	for p: Vector2 in [Vector2(94, -40), Vector2(166, -20)]:
+		if p.x < width:
+			Art.line_c(ci, Art.moved(_GLYPH, p), groove, 1.8)
+	# Temple steps down into the water.
+	for i in 5:
+		var x := 2.0 + i * 11.0
+		var y := -8.0 - i * 11.0
+		Art.t_rect(ci, Rect2(x, y, 34.0 - i * 2.0, 12), 2, TEMPLE.lerp(base, 0.4) if i % 2 == 0 else TEMPLE, 2.0, 0.3)
+	Art.toon(ci, Art.smooth_pts(crust, 3), top, 3.0, 0.6)
+	# Moss and vines over the edge.
+	for i in 7:
+		var x := 72.0 + i * (width - 60.0) / 7.0
+		var y := -54.0 + (5.0 if i % 2 == 0 else 0.0)
+		Art.toon(ci, Art.moved(_DRIP, Vector2(x, y)), top, 2.0, 0.0)
+		if i % 2 == 1:
+			Art.line_c(ci, Art.moved(_EDGE_VINE, Vector2(x + 8.0, y)), LEAF_DARK, 2.2)
+			leaf(ci, Vector2(x + 10.0, y + 18.0), 1.2, 0.3, LEAF)
+			leaf(ci, Vector2(x + 7.0, y + 30.0), 1.9, 0.28, LEAF_LIGHT)
+	# A broken column among the ferns, flowers in front.
+	if width > 270.0:
+		_column(ci, Vector2(width - 40.0, -64.0), 54.0, TEMPLE, 1)
+	Art.push(ci, Vector2(44, -48))
+	fern(ci, 0.9, LEAF)
+	Art.pop(ci)
+	for p: Vector3 in [Vector3(206, -66, 1.2), Vector3(246, -66, 0.9), Vector3(width - 6.0, -66, 1.3)]:
+		if p.x < width + 10.0:
+			Art.push(ci, Vector2(p.x, p.y))
+			fern(ci, p.z, LEAF if int(p.x) % 2 == 0 else LEAF_DARK)
+			Art.pop(ci)
+	for p: Vector3 in [Vector3(214, -70, 0), Vector3(222, -64, 1), Vector3(252, -72, 3), Vector3(50, -54, 2), Vector3(width - 14.0, -70, 4)]:
+		if p.x < width + 10.0:
+			hibiscus(ci, Vector2(p.x, p.y), FLOWERS[int(p.z)], 0.9)
+
+
+static var _GLYPH := PackedVector2Array([Vector2(-8, 6), Vector2(-8, -6), Vector2(8, -6), Vector2(8, 4), Vector2(-3, 4), Vector2(-3, -2), Vector2(3, -2)])
+static var _EDGE_VINE := PackedVector2Array([Vector2(0, 0), Vector2(3, 10), Vector2(0, 22), Vector2(2, 34)])
+
+
+## A temple column (broken at the top when `broken` is 1); origin at its foot.
+static func _column(ci: CanvasItem, at: Vector2, h: float, stone: Color, broken: int) -> void:
+	Art.push(ci, at)
+	Art.t_rect(ci, Rect2(-15, -8, 30, 8), 2, stone.darkened(0.08), 2.2, 0.3)
+	var body := Art.rrect_pts(Rect2(-11, -h, 22, h - 8), 1)
+	if broken == 1:
+		body = PackedVector2Array([Vector2(-11, -8), Vector2(11, -8), Vector2(11, -h + 6), Vector2(6, -h), Vector2(1, -h + 7), Vector2(-4, -h + 2), Vector2(-11, -h + 9)])
+	Art.toon(ci, body, stone, 2.4, 0.6)
+	for x: float in [-5.0, 0.0, 5.0]:
+		Art.line(ci, Vector2(x, -12), Vector2(x, -h + 12), Art.shade_of(stone, 0.22), 1.4)
+	if broken != 1:
+		Art.t_rect(ci, Rect2(-15, -h - 6, 30, 7), 2, stone.darkened(0.08), 2.2, 0.3)
+	Art.line_c(ci, PackedVector2Array([Vector2(-11, -h * 0.55), Vector2(-6, -h * 0.5), Vector2(-9, -h * 0.35), Vector2(-4, -h * 0.25)]), LEAF_DARK, 2.0)
+	leaf(ci, Vector2(-8, -h * 0.4), 2.4, 0.3, LEAF)
+	Art.pop(ci)
+
+
+## The workers' hut on bamboo stilts: bamboo walls, a thick thatch of
+## leaves, a ladder, a porch with a lantern and flowers. When the door
+## opens (a tap) a little monkey peeks out.
+static func _stilt_hut(ci: CanvasItem, t: float, lit: float, door: float) -> void:
+	# Stilts and braces.
+	Art.line(ci, Vector2(18, -6), Vector2(62, -44), BAMBOO_DARK, 3.0)
+	Art.line(ci, Vector2(104, -44), Vector2(138, -6), BAMBOO_DARK, 3.0)
+	for x: float in [18.0, 62.0, 104.0, 138.0]:
+		Art.t_rect(ci, Rect2(x - 4.5, -48, 9, 50), 3, BAMBOO, 2.2, 0.3)
+		for y: float in [-34.0, -16.0]:
+			Art.line(ci, Vector2(x - 4.5, y), Vector2(x + 4.5, y), BAMBOO_DARK, 1.8)
+	# The deck.
+	Art.t_rect(ci, Rect2(2, -56, 152, 11), 3, Art.WOOD, 2.6, 0.4)
+	# Bamboo walls.
+	Art.t_rect(ci, Rect2(14, -112, 122, 58), 4, Color("e8c272"), 2.8, 0.6)
+	for i in 9:
+		var x := 26.0 + i * 12.5
+		Art.line(ci, Vector2(x, -110), Vector2(x, -56), Color("c49a48"), 1.8)
+	for y: float in [-98.0, -74.0]:
+		Art.line(ci, Vector2(16, y), Vector2(134, y), Color(BAMBOO_DARK, 0.55), 1.4)
+	# The door (a monkey peeks out when it opens).
+	if door > 0.3:
+		_monkey_face(ci, Vector2(41, -84), door)
+	_door(ci, Rect2(26, -102, 30, 46), Color("8e552c"), door)
+	# Round window with leaf shutters.
+	Art.t_circle(ci, Vector2(98, -86), 18, BAMBOO_DARK, 2.4, 0.3)
+	Art.t_circle(ci, Vector2(98, -86), 13, Art.GLASS.lerp(Props.LIT, Props._q(lit, 8.0)), 2.2, 0.0)
+	Art.line(ci, Vector2(85, -86), Vector2(111, -86), BAMBOO_DARK, 2.4)
+	Art.line(ci, Vector2(98, -99), Vector2(98, -73), BAMBOO_DARK, 2.4)
+	if lit < 0.5:
+		Art.flat(ci, _WIN_SHINE, Color(1, 1, 1, 0.6))
+	leaf(ci, Vector2(80, -88), PI - 0.2, 0.36, LEAF)
+	leaf(ci, Vector2(116, -88), 0.2, 0.36, LEAF)
+	# The porch rail and a hanging lantern.
+	Art.line(ci, Vector2(136, -74), Vector2(152, -74), BAMBOO_DARK, 2.6)
+	Art.t_rect(ci, Rect2(149, -76, 5, 22), 2, BAMBOO, 1.8, 0.0)
+	Art.line(ci, Vector2(146, -118), Vector2(146, -106), INK, 1.6)
+	Props.lamp(ci, Vector2(146, -96), lit)
+	# Flower pots on the deck.
+	for p: Vector3 in [Vector3(68, -56, 0), Vector3(128, -56, 3)]:
+		Art.push(ci, Vector2(p.x, p.y - 10))
+		fern(ci, 0.55, LEAF)
+		Art.pop(ci)
+		Art.toon(ci, Art.moved(_POT, Vector2(p.x, p.y)), Color("d0713c"), 1.8, 0.4)
+		hibiscus(ci, Vector2(p.x + 2, p.y - 18), FLOWERS[int(p.z)], 0.75)
+	# The thatch: straw under layers of big leaves.
+	Art.toon(ci, _THATCH, THATCH, 3.0, 0.6)
+	for i in 7:
+		var x := -2.0 + i * 25.0
+		Art.line(ci, Vector2(x, -104), Vector2(x - 4.0, -96), Color("b8862e"), 2.0)
+	for f: Vector4 in _ROOF_LEAVES:
+		frond(ci, Vector2(f.x, f.y), f.z, int(f.w), [LEAF_DARK, LEAF, LEAF_LIGHT][int(f.w)], 0.9)
+	# A carved sun ornament on the ridge.
+	Art.push(ci, Vector2(76, -160))
+	Art.toon(ci, _SUN_RAYS, Art.GOLD_DARK, 1.8, 0.0)
+	Art.t_circle(ci, Vector2.ZERO, 7, Art.GOLD, 2.0, 0.3)
+	Art.pop(ci)
+	# The ladder down to the ground.
+	for x: float in [-6.0, 8.0]:
+		Art.line(ci, Vector2(x + 6.0, -54), Vector2(x, 2), BAMBOO_DARK, 3.0)
+	for k in 4:
+		var y := -44.0 + k * 12.0
+		var dx := (y + 54.0) / 56.0 * -6.0 + 6.0
+		Art.line(ci, Vector2(dx - 6.0, y), Vector2(dx + 8.0, y), BAMBOO, 2.6)
+
+
+static var _WIN_SHINE := Art.clipped(Art.ellipse_pts(Vector2(92, -92), Vector2(4, 2.4), 10, -0.7), Art.circle_pts(Vector2(98, -86), 12, 20))
+static var _THATCH := Art.smooth_pts(PackedVector2Array([Vector2(-12, -100), Vector2(18, -138), Vector2(76, -164), Vector2(134, -138),
+		Vector2(164, -100), Vector2(76, -108)]), 3)
+static var _POT := PackedVector2Array([Vector2(-7, -11), Vector2(7, -11), Vector2(5, 0), Vector2(-5, 0)])
+## Fronds laid over the thatch: x, y, angle, kind (and color).
+const _ROOF_LEAVES: Array[Vector4] = [Vector4(76, -160, PI - 0.55, 0), Vector4(76, -160, 0.55, 0), Vector4(48, -146, PI - 0.7, 1),
+		Vector4(104, -146, 0.7, 1), Vector4(22, -128, PI - 0.85, 2), Vector4(130, -128, 0.85, 2), Vector4(76, -156, PI - 1.1, 1), Vector4(76, -156, 1.1, 2)]
+
+
+static func _monkey_face(ci: CanvasItem, at: Vector2, k: float) -> void:
+	Art.push(ci, at + Vector2(0, (1.0 - k) * 8.0))
+	Art.t_circle(ci, Vector2(-9, -2), 4, Color("8a5a34"), 1.8, 0.0)
+	Art.t_circle(ci, Vector2(9, -2), 4, Color("8a5a34"), 1.8, 0.0)
+	Art.t_circle(ci, Vector2.ZERO, 9, Color("8a5a34"), 2.0, 0.3)
+	Art.t_ellipse(ci, Vector2(0, 2), Vector2(6.5, 5.5), Color("f0c89a"), 0.0, 0.0)
+	Art.disc(ci, Vector2(-3, -1), 1.4, INK)
+	Art.disc(ci, Vector2(3, -1), 1.4, INK)
+	Art.arc(ci, Vector2(0, 3), 2.6, 0.4, PI - 0.4, 6, INK, 1.4)
+	Art.pop(ci)
+
+
+## The jungle's big palm at the screen edge with coconuts, a parrot on it
+## (gone while it shakes) and big leaves at its foot; origin at its foot.
+static func jungle_palm(ci: CanvasItem, t: float, wind: float, shake: float, coconuts: int) -> void:
+	var sway := sin(t * 1.15) * (0.02 + wind * 0.03) + wind * 0.035 + sin(t * 14.0) * shake * 0.11
+	var trunk := PackedVector2Array()
+	for i in 9:
+		var f := i / 8.0
+		trunk.append(Vector2(-sin(f * 1.4) * 14.0 - f * 6.0 + sway * 110.0 * f * f, -f * 132.0))
+	for i in 8:
+		var a := atan2(trunk[i + 1].x - trunk[i].x, -(trunk[i + 1].y - trunk[i].y))
+		Art.push(ci, trunk[i], a)
+		Art.toon(ci, _TRUNK[i], Color("b07a40"), 2.3, 0.3)
+		Art.line(ci, Vector2(-_TRUNK_W[i], -2), Vector2(_TRUNK_W[i], -4), Color("7e5228"), 1.6)
+		Art.pop(ci)
+	var top := trunk[8]
+	# Back fronds, coconuts, front fronds.
+	for i in 5:
+		var a := -PI + 0.15 + i * (PI - 0.3) / 4.0 + sin(t * 1.5 + i) * (0.04 + wind * 0.04) + sway * 1.3 + sin(t * 16.0 + i) * shake * 0.18
+		frond(ci, top, a - 0.25, i, LEAF_DARK, 1.05)
+	for i in coconuts:
+		Art.t_circle(ci, top + Vector2(-6 + i * 9, 6 + (i % 2) * 2), 5.5, Color("7a4e26"), 2.0, 0.3)
+	for i in 6:
+		var a := -PI + 0.05 + i * (PI - 0.1) / 5.0 + sin(t * 1.3 + i * 1.7) * (0.05 + wind * 0.05) + sway * 1.5 + sin(t * 15.0 + i) * shake * 0.2
+		frond(ci, top, a + (0.35 if cos(a) > 0.0 else 0.1), i + 1, LEAF if i % 2 == 0 else LEAF_LIGHT.darkened(0.08), 1.0)
+	if shake < 0.08:
+		Art.push(ci, top + Vector2(-34, 8))
+		parrot_sitting(ci, fposmod(t, 4.0) < 0.15)
+		Art.pop(ci)
+	# Big leaves at its foot.
+	for l: Vector3 in [Vector3(-40, -6, -2.6), Vector3(-26, -4, -2.1), Vector3(-6, -4, -1.0), Vector3(-50, 0, -3.0)]:
+		var wob := sin(t * 1.4 + l.x) * 0.04 * (0.5 + wind)
+		leaf(ci, Vector2(l.x, l.y), l.z + wob, 0.9, LEAF if l.x > -30.0 else LEAF_DARK)
+	for p: Vector3 in [Vector3(-34, -16, 0), Vector3(-18, -12, 3)]:
+		hibiscus(ci, Vector2(p.x, p.y), FLOWERS[int(p.z)], 1.0)
+
+
+const _TRUNK_W: Array[float] = [9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5]
+static var _TRUNK: Array[PackedVector2Array] = _trunk_parts()
+
+
+static func _trunk_parts() -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for i in 8:
+		var w0: float = 9.0 - i * 0.5
+		out.append(PackedVector2Array([Vector2(-w0, 1), Vector2(w0, 1), Vector2(w0 - 0.5, -17.5), Vector2(-w0 + 0.5, -17.5)]))
+	return out
+
+
+## The tiki torch on the dock (a flame that flickers); origin at its foot.
+const TORCH_H := 46.0
+
+
+static func torch(ci: CanvasItem, t: float, h: float = TORCH_H) -> void:
+	Art.t_rect(ci, Rect2(-3, -h, 6, h), 2, BAMBOO, 2.0, 0.3)
+	for y: float in [-h * 0.35, -h * 0.7]:
+		Art.line(ci, Vector2(-3, y), Vector2(3, y), BAMBOO_DARK, 1.6)
+	Art.toon(ci, Art.moved(_BOWL, Vector2(0, -h)), Color("6a4a3a"), 2.0, 0.3)
+	var f := snappedf(0.85 + 0.15 * sin(t * 11.0) + 0.08 * sin(t * 17.0 + 1.0), 0.05)
+	Art.push(ci, Vector2(0, -h - 6), snappedf(sin(t * 7.0) * 0.08, 0.02), Vector2(1.0, f))
+	Art.toon(ci, _FLAME, Color("ff8a2a"), 1.8, 0.0)
+	Art.flat(ci, _FLAME_CORE, Color("ffe36a"))
+	Art.pop(ci)
+
+
+static var _BOWL := PackedVector2Array([Vector2(-8, -8), Vector2(8, -8), Vector2(5, 0), Vector2(-5, 0)])
+static var _FLAME := Art.smooth_pts(PackedVector2Array([Vector2(-7, 0), Vector2(-6, -8), Vector2(-1, -13), Vector2(0, -20), Vector2(4, -12), Vector2(7, -6), Vector2(6, 0)]), 2)
+static var _FLAME_CORE := Art.smooth_pts(PackedVector2Array([Vector2(-3, 0), Vector2(-3, -5), Vector2(0, -10), Vector2(3, -5), Vector2(3, 0)]), 2)
+
+
+# --- Jungle river -----------------------------------------------------------------------------
+
+## The river's front at the surface (over the hulls): clear turquoise with a
+## bright crest, current streaks flowing right, lily pads and lotus flowers
+## drifting with ripples around them, sunny glitter and a fish leaping now
+## and then.
+static func river_front(ci: CanvasItem, wave: PackedVector2Array, w: float, sy: float, t: float) -> void:
+	var front := wave.duplicate()
+	front.append(Vector2(w, sy + 16))
+	front.append(Vector2(0, sy + 16))
+	Art.flat_now(ci, front, Color(Art.calm(Art.sea_cols[0]), 0.55))
+	Art.polyline(ci, wave, RIVER_FOAM, 3.5)
+	var day := DayNight.daylight()
+	# Current streaks.
+	for i in 8:
+		var f := fposmod(t * 0.045 + i / 8.0, 1.0)
+		var x := f * (w + 80.0) - 40.0
+		var y := sy + 7.0 + float(i % 3) * 3.5
+		Art.line(ci, Vector2(x - 11, y), Vector2(x + 11, y), Color(1, 1, 1, snappedf(sin(f * PI) * 0.55, 0.05)), 2.0)
+	# Lily pads and lotus flowers drifting on the current.
+	for i in 5:
+		var x := fposmod(t * (3.0 + float(i % 2)) + i * (w + 90.0) / 5.0, w + 90.0) - 45.0
+		var y := sy + 4.0 + float(i % 2) * 4.0 + sin(t * 1.3 + i * 2.0) * 0.8
+		var ring := fposmod(t * 0.45 + i * 0.31, 1.0)
+		Art.push(ci, Vector2(x, y + 2.0), 0.0, Vector2(1.0, 0.32))
+		Art.arc(ci, Vector2.ZERO, 16.0 + ring * 18.0, 0.0, TAU, 20, Color(1, 1, 1, snappedf(0.5 * (1.0 - ring), 0.05)), 4.0)
+		Art.pop(ci)
+		Art.push(ci, Vector2(x, y), sin(t * 0.5 + i) * 0.08, Vector2.ONE * (0.9 + float(i % 3) * 0.12))
+		lily_pad(ci, PAD if i % 2 == 0 else PAD.darkened(0.08))
+		if i == 1 or i == 3:
+			Art.push(ci, Vector2(-2, -1))
+			lotus(ci, LOTUS if i == 1 else Color("fff0f6"))
+			Art.pop(ci)
+		Art.pop(ci)
+	# Glitter of the sun on the water.
+	if day > 0.2:
+		var g := DayNight.glint()
+		for i in 9:
+			var tw := snappedf(0.5 + 0.5 * sin(t * 2.4 + i * 2.3), 0.1)
+			if tw < 0.6:
+				continue
+			var p := Vector2(fposmod(i * 0.137 + 0.05 + t * 0.004, 1.0) * w, sy + 5.0 + float(i * 5 % 11))
+			Art.push(ci, p, 0.0, Vector2.ONE * (tw - 0.45) * 1.6)
+			Art.flat(ci, _GLINT, Color(g, snappedf(0.95 * day, 0.1)))
+			Art.pop(ci)
+	# A fish leaps out of the river and splashes back.
+	var cyc := t / 7.0
+	var f := fposmod(cyc, 1.0) / 0.16
+	if f < 1.4:
+		var n := int(floorf(cyc))
+		var x0 := w * (0.12 + 0.76 * fposmod(n * 0.618, 1.0))
+		var dir := 1.0 if n % 2 == 0 else -1.0
+		if f < 1.0:
+			var p := Vector2(x0 + dir * f * 46.0, sy - sin(f * PI) * 38.0)
+			var ang := atan2(-cos(f * PI) * 38.0 * PI, 46.0)
+			Art.push(ci, p, ang * dir)
+			Art.fish(ci, Vector2.ZERO, 10.0, [Color("ff9a3d"), Color("ffd23f"), Color("5ad8ff")][posmod(n, 3)], dir, t)
+			Art.pop(ci)
+		for e: float in [0.0, 1.0]:
+			var k := (f - e * 0.9) / 0.45
+			if k <= 0.0 or k >= 1.0:
+				continue
+			var at := Vector2(x0 + dir * e * 46.0, sy + 1.0)
+			for j in 4:
+				var a := -PI / 2.0 + (j - 1.5) * 0.5
+				Art.dot(ci, at + Vector2(cos(a), sin(a)) * 20.0 * k + Vector2(0, 30.0 * k * k), 2.6 * (1.0 - k * 0.5), Color(1, 1, 1, 1.0 - k))
+			Art.push(ci, at, 0.0, Vector2(1.0, 0.35))
+			Art.arc(ci, Vector2.ZERO, 6.0 + k * 16.0, 0.0, TAU, 16, Color(1, 1, 1, snappedf(0.8 * (1.0 - k), 0.05)), 4.0)
+			Art.pop(ci)
+
+
+# --- Jungle riverbed and depths ----------------------------------------------------------------
+
+## A carved temple block half sunk in the riverbed; origin at its foot.
+static func glyph_block(ci: CanvasItem, stone: Color) -> void:
+	Art.push(ci, Vector2.ZERO, -0.12)
+	Art.t_rect(ci, Rect2(-18, -24, 36, 26), 3, stone, 2.4, 0.6)
+	var groove := Art.shade_of(stone, 0.35)
+	Art.line_c(ci, _FACE_GLYPH, groove, 2.0)
+	Art.disc(ci, Vector2(-6, -14), 2.0, groove)
+	Art.disc(ci, Vector2(6, -14), 2.0, groove)
+	Art.line_c(ci, PackedVector2Array([Vector2(-18, -16), Vector2(-10, -18), Vector2(-14, -10)]), Color("3fae5a"), 2.4)
+	Art.pop(ci)
+
+
+static var _FACE_GLYPH := PackedVector2Array([Vector2(-12, -20), Vector2(12, -20), Vector2(12, -4), Vector2(-12, -4), Vector2(-12, -20)])
+
+
+## Smooth river stones; origin on the bed.
+static func river_stones(ci: CanvasItem, tint: Color) -> void:
+	Art.t_ellipse(ci, Vector2(-10, -4), Vector2(11, 6.5), Color("9aa8a0") * tint, 2.2, 0.6)
+	Art.t_ellipse(ci, Vector2(8, -3), Vector2(8, 5), Color("c2b89a") * tint, 2.2, 0.6)
+	Art.t_ellipse(ci, Vector2(2, -9), Vector2(6, 4), Color("7f9a94") * tint, 2.0, 0.6)
+
+
+## An old clay pot lying on the riverbed; origin at its foot.
+static func clay_pot(ci: CanvasItem, tint: Color) -> void:
+	Art.push(ci, Vector2(0, -8), 1.2)
+	Art.toon(ci, Art.moved(_CLAY_POT, Vector2(0, 12)), Color("d0713c") * tint, 2.4, 0.6)
+	Art.line(ci, Vector2(-8, 0), Vector2(8, 0), Color("8a3e22") * tint, 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(-6, 4), Vector2(-3, 6), Vector2(0, 4), Vector2(3, 6), Vector2(6, 4)]), Color("ffd890") * tint, 1.6)
+	Art.pop(ci)
+
+
+static var _CLAY_POT := Art.smooth_pts(PackedVector2Array([Vector2(-5, -24), Vector2(5, -24), Vector2(4, -20), Vector2(10, -14), Vector2(9, -4),
+		Vector2(4, 0), Vector2(-4, 0), Vector2(-9, -4), Vector2(-10, -14), Vector2(-4, -20)]), 2)
+
+
+## A temple column standing in the deep (the floor under the last site).
+static func column(ci: CanvasItem, at: Vector2, h: float, stone: Color, broken: int) -> void:
+	_column(ci, at, h, stone, broken)
+
+
+## Reeds and cattails standing in the water, swaying; origin at their foot.
+static func reeds(ci: CanvasItem, at: Vector2, t: float, wind: float) -> void:
+	for r: Vector4 in _REEDS:
+		var sway := snappedf(sin(t * 1.3 + r.w) * (0.03 + wind * 0.04), 0.005)
+		Art.push(ci, at + Vector2(r.x, 0), r.z + sway)
+		Art.stroke(ci, PackedVector2Array([Vector2.ZERO, Vector2(0, -r.y)]), Color("4caa3e"), 3.0, 1.6)
+		if int(r.w) % 2 == 0:
+			Art.t_rect(ci, Rect2(-3.5, -r.y - 14.0, 7, 16), 3.5, Color("8a5a34"), 1.8, 0.4)
+			Art.line(ci, Vector2(0, -r.y - 14.0), Vector2(0, -r.y - 20.0), Color("4caa3e"), 2.0)
+		Art.pop(ci)
+	for l: Vector3 in [Vector3(14, -4, -1.2), Vector3(26, -2, -0.6), Vector3(4, -2, -1.9)]:
+		Art.push(ci, at + Vector2(l.x, l.y), l.z + snappedf(sin(t * 1.1 + l.x) * 0.04, 0.01), Vector2(0.75, 0.22))
+		Art.toon(ci, _LEAF, LEAF, 1.6, 0.3)
+		Art.pop(ci)
+
+
+## Reeds: x, height, lean, seed (even seeds carry a cattail).
+const _REEDS: Array[Vector4] = [Vector4(0, 44, -0.08, 0), Vector4(8, 58, 0.02, 1), Vector4(16, 50, 0.1, 2), Vector4(24, 34, 0.18, 3), Vector4(30, 40, 0.22, 4)]
