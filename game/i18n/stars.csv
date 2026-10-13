@@ -1,0 +1,38 @@
+keys,en,ru,es,zh
+STAR_TITLE,World Stars,Звёзды миров,Estrellas de mundos,世界之星
+STAR_LOCKED,Reach the Jungle to unlock world stars!,Доберись до джунглей — и откроются звёзды миров!,¡Llega a la Selva para desbloquear las estrellas!,抵达丛林即可解锁世界之星！
+STAR_INTRO,"Finish a world and get a star: the world starts over with much bigger numbers, and every star adds +%d%% income in ALL worlds.","Пройди мир и получи звезду: мир начнётся заново с огромными числами, а каждая звезда даёт +%d%% дохода во ВСЕХ мирах.","Completa un mundo y gana una estrella: el mundo empieza de nuevo con números mucho mayores y cada estrella da +%d%% de ingresos en TODOS los mundos.",完成一个世界即可获得一颗星：该世界重新开始，数字大得多，每颗星让所有世界收入+%d%%。
+STAR_BONUS_NOW,Star bonus: +%d%% income everywhere,Бонус звёзд: +%d%% дохода везде,Bono de estrellas: +%d%% de ingresos,星星加成：所有收入+%d%%
+STAR_NEXT,%s: star ★%d,%s: звезда ★%d,%s: estrella ★%d,%s：第★%d颗星
+STAR_GOALS_FIRST,First finish this world:,Сначала пройди этот мир:,Primero completa este mundo:,先完成这个世界：
+STAR_GAIN,"You get: %d pearls and +%d%% income in all worlds","Награда: %d жемчужин и +%d%% дохода во всех мирах","Ganas: %d perlas y +%d%% de ingresos en todos los mundos",奖励：%d颗珍珠，所有世界收入+%d%%
+STAR_CONFIRM,"%s starts over: levels and helpers of the sites reset, the lift, boat, factory and vault managers stay. Go?","Мир «%s» начнётся заново: уровни и бригадиры сбросятся, а управляющие лифта, лодок, фабрик и сейфа останутся. Вперёд?","%s empieza de nuevo: los niveles y capataces se reinician; los gerentes del ascensor, barcos, fábricas y caja fuerte se quedan. ¿Vamos?",%s将重新开始：等级和工头会重置，电梯、船、工厂和金库的经理保留。出发吗？
+STAR_YES,Get the star!,Получить звезду!,¡Ganar la estrella!,获得星星！
+STAR_GET,Get a star,Получить звезду,Ganar una estrella,获得星星
+STAR_OTHER_WORLDS,Stars are earned in every world: switch worlds on the map.,Звёзды можно получать в каждом мире: переключай миры на карте.,Puedes ganar estrellas en cada mundo: cambia de mundo en el mapa.,每个世界都能获得星星：在地图上切换世界。
+STAR_GIFTS,Gifts for stars,Подарки за звёзды,Regalos por estrellas,星星奖励
+STAR_TOAST,%s got star ★%d! Income +%d%% in all worlds,Мир «%s» получил звезду ★%d! Доход +%d%% во всех мирах,¡%s ganó la estrella ★%d! Ingresos +%d%% en todos los mundos,%s获得第★%d颗星！所有世界收入+%d%%
+STAR_READY,This world is finished: get a star!,Мир пройден: получи звезду!,¡Mundo completado: gana una estrella!,世界已完成：去获得星星！
+STAR_BTN,Stars,Звёзды,Estrellas,星星
+ACH_WORLD_5,Into the Jungle!,В джунгли!,¡A la Selva!,深入丛林！
+ACH_WORLD_5_D,Reach the Jungle,Доберись до джунглей,Llega a la Selva,抵达丛林
+ACH_STAR_1,First Star,Первая звезда,Primera estrella,第一颗星
+ACH_STAR_1_D,Get a star in any world,Получи звезду в любом мире,Gana una estrella en cualquier mundo,在任意世界获得一颗星
+ACH_STAR_10,Star Collector,Собиратель звёзд,Coleccionista de estrellas,集星达人
+ACH_STAR_10_D,Own 10 stars,Собери 10 звёзд,Consigue 10 estrellas,拥有10颗星
+ACH_STAR_25,Star Legend,Звёздная легенда,Leyenda estelar,星之传奇
+ACH_STAR_25_D,Own 25 stars,Собери 25 звёзд,Consigue 25 estrellas,拥有25颗星
+ITEM_BOAT_STARLIGHT,Starlight Boat,Звёздная лодка,Barco Estelar,星光船
+ITEM_HAT_EXPLORER,Explorer Helmet,Шлем исследователя,Casco de explorador,探险家帽
+ITEM_PET_PARROT,Parrot,Попугай,Loro,鹦鹉
+ITEM_BOAT_TEMPLE,Temple Gold Boat,Золотая храмовая лодка,Barco del Templo,神殿金船
+ITEM_HAT_STAR_CROWN,Star Crown,Звёздная корона,Corona Estelar,星之王冠
+ITEM_PET_MONKEY,Monkey,Обезьянка,Monito,小猴子
+GOAL_STARS_1,Own 1 world star,Получи 1 звезду мира,Consigue 1 estrella,获得1颗世界之星
+GOAL_STARS_3,Own 3 world stars,Собери 3 звезды миров,Consigue 3 estrellas,获得3颗世界之星
+GOAL_STARS_5,Own 5 world stars,Собери 5 звёзд миров,Consigue 5 estrellas,获得5颗世界之星
+GOAL_STARS_10,Own 10 world stars,Собери 10 звёзд миров,Consigue 10 estrellas,获得10颗世界之星
+GOAL_STARS_15,Own 15 world stars,Собери 15 звёзд миров,Consigue 15 estrellas,获得15颗世界之星
+GOAL_STARS_25,Own 25 world stars,Собери 25 звёзд миров,Consigue 25 estrellas,获得25颗世界之星
+HINT_STAR_SAVE,Save %s coins for this world's next star!,Накопи %s монет на следующую звезду этого мира!,¡Ahorra %s monedas para la próxima estrella de este mundo!,攒够%s金币，获得这个世界的下一颗星！
+STAR_PRICE,Star price:,Цена звезды:,Precio:,星星价格：

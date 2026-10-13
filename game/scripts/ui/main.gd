@@ -1149,6 +1149,35 @@ func _settle_switch(location: int) -> void:
 	Sfx.play("coins")
 
 
+## World stars (the endgame): the dialog with every world's stars, this
+## world's checklist and the "Get a star" button.
+func open_stars() -> void:
+	if _map.visible:
+		_map.close()
+	_modal.open(func(m): StarView.build(m, self))
+
+
+## A star was taken (StarView): the world starts over with bigger numbers,
+## so everything follows like a new world, with a bigger party.
+func on_star_gained() -> void:
+	var l := GameState.location
+	_room_key = ["d0", "plant", ""]
+	show_room(MINE, false)
+	_scroller.scroll_to(0.0)
+	if _sheet_open:
+		_close_sheet()
+	_panel.show_stage("d0")
+	for c in [_side_lift, _side_boat, _side_plant, _factory_card, _world.surface.boat_card]:
+		c.show_unit(c.base)
+	_refresh()
+	var v := get_viewport_rect().size
+	_fx.burst(v / 2.0, 90)
+	_fx.float_text(v / 2.0 + Vector2(0, -60), "★ %d" % GameState.stars_of(l), Color("ffd23f"), 56)
+	_show_toast(tr("STAR_TOAST") % [WorldLook.name_of(l), GameState.stars_of(l), int(round((GameState.star_mult() - 1.0) * 100.0))])
+	if _world.has_method("show_world_name"):
+		_world.show_world_name(l)
+
+
 func open_evolution() -> void:
 	if not _map.visible:
 		_modal.open(func(m): EvoPanel.build(m, self), {"wide": true})

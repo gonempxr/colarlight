@@ -55,6 +55,8 @@ static func pick(main: Node) -> Dictionary:
 		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
 			return _hint("foreman", t("HINT_FOREMAN") % Views.stage_name(k), true, func(): return _control(card._manager), "")
+	if gs.can_get_star():
+		return _hint("star", t("STAR_READY"), true, Callable(), "stars")
 	if gs.can_advance_location():
 		return _hint("map", t("HINT_MAP_READY"), true, Callable(), "map")
 	if gs.can_buy_evo():
@@ -83,6 +85,8 @@ static func pick(main: Node) -> Dictionary:
 				if card.key != k:
 					card.show_unit(k)
 				return _control(card._manager), "", main.room_of(k))
+	if gs.star_ready():
+		return _hint("star_save", t("HINT_STAR_SAVE") % NumFormat.short(gs.star_cost()), false, Callable(), "stars")
 	if gs.location_ready() and not gs.is_last_location():
 		return _hint("map_save", t("HINT_MAP_SAVE") % NumFormat.short(gs.next_location_cost()), false, Callable(), "map")
 	if next != "":
@@ -150,6 +154,8 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 			Sfx.play("click")
 			m.close()
 			match open:
+				"stars":
+					main.open_stars()
 				"map":
 					main.open_map()
 				"ach":

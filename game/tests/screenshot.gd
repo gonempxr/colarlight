@@ -113,6 +113,18 @@ func _initialize() -> void:
 		else:
 			gs.prestige_count = int(parts[1])
 		load("res://scripts/ui/day_night.gd").fixed_phase = 0.75 if "night" in parts else (0.47 if "dusk" in parts else 0.2)
+	# stars | stars:confirm - the world stars dialog (the endgame): in the
+	# Jungle with a finished checklist, a few stars owned.
+	if overlay.begins_with("stars"):
+		gs.set("max_location", 4)
+		gs.set("location", 4)
+		gs.world_stars = {"0": 2, "1": 1, "3": 1}
+		for key in gs.stage_keys():
+			gs.levels[key] = maxi(1, gs.levels[key])
+			gs.managers[key] = true
+		gs.managers["vault"] = true
+		gs.set("location", 4)
+		gs.coins = gs.star_cost() * 1.3
 	if overlay == "second":
 		gs.levels.merge({"boat2": 3, "plant2": 2}, true)
 		gs.managers["boat2"] = false
@@ -195,6 +207,10 @@ func _initialize() -> void:
 			main.open_evolution()
 		"map":
 			main.open_map()
+		"stars":
+			main.open_stars()
+		"stars:confirm":
+			main._modal.open(func(m): load("res://scripts/ui/star_view.gd").build(m, main, true))
 		"streak", "streak_back":
 			main.open_streak()
 		"streakpop":

@@ -151,7 +151,13 @@ static func _hue(c: Color, shift: float) -> Color:
 static func name_of(l: int) -> String:
 	var base := TranslationServer.translate(str(LOOKS[world_of(l)]["name"]))
 	var t := tier_of(l)
-	return base if t == 0 else "%s ★%d" % [base, t + 1]
+	if t > 0:
+		return "%s ★%d" % [base, t + 1]
+	# World stars (the endgame): "Ocean ★3".
+	var tree := Engine.get_main_loop() as SceneTree
+	var gs: Node = tree.root.get_node_or_null("GameState") if tree else null
+	var n: int = gs.stars_of(l) if gs and gs.has_method("stars_of") else 0
+	return base if n <= 0 else "%s ★%d" % [base, n]
 
 
 ## Switches the drawing colors to location l. True when they changed.

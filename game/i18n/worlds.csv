@@ -3,6 +3,7 @@ WORLD_OCEAN,Ocean,Океан,Océano,海洋
 WORLD_VOLCANO,Volcano,Вулкан,Volcán,火山
 WORLD_ACID,Acid Swamp,Кислотное болото,Pantano Ácido,酸液沼泽
 WORLD_MOON,Moon,Луна,Luna,月球
+WORLD_JUNGLE,Jungle Ruins,Джунгли,Ruinas de la Selva,丛林遗迹
 LOCATION_N,Location %d,Локация %d,Lugar %d,第%d区
 SITE_SHELLS,Shell Shallows,Ракушечная отмель,Bajío de Conchas,贝壳浅滩
 SITE_CORAL,Coral Garden,Коралловый сад,Jardín de Coral,珊瑚花园
@@ -44,7 +45,18 @@ SITE_NEBULA,Nebula Grotto,Туманный грот,Gruta Nebulosa,星云洞窟
 SITE_ALIEN_EGG,Alien Nest,Гнездо пришельцев,Nido Alienígena,外星巢穴
 SITE_UFO,UFO Crash Site,Место крушения НЛО,Ovni Estrellado,飞碟坠毁点
 SITE_COSMIC_HEART,Cosmic Heart,Космическое сердце,Corazón Cósmico,宇宙之心
+SITE_CLAY,Clay Shards,Глиняные черепки,Fragmentos de Arcilla,陶土碎片
+SITE_COCOA,Cocoa Grove,Какаовая роща,Bosque de Cacao,可可林
+SITE_TURQUOISE,Turquoise Vein,Бирюзовая жила,Veta de Turquesa,绿松石矿脉
+SITE_OLD_COINS,Ancient Coins,Древние монеты,Monedas Antiguas,古代金币
+SITE_MASK,Hall of Masks,Зал масок,Sala de Máscaras,面具大厅
+SITE_TIGER_EYE,Tiger's Eye Cave,Пещера тигрового глаза,Cueva del Ojo de Tigre,虎眼石洞
+SITE_IDOL,Golden Idols,Золотые идолы,Ídolos Dorados,黄金神像
+SITE_SUN_DISC,Sun Disc Shrine,Святилище солнца,Santuario del Sol,太阳圆盘神殿
+SITE_SERPENT,Feathered Serpent,Пернатый змей,Serpiente Emplumada,羽蛇
+SITE_TEMPLE_HEART,Heart of the Temple,Сердце храма,Corazón del Templo,神殿之心
 WORLD_OCEAN_FLAVOR,Sandy beach and deep blue sea,Песчаный пляж и синее море,Playa de arena y mar azul,沙滩与蔚蓝大海
 WORLD_VOLCANO_FLAVOR,A river of lava under a smoking volcano,Лавовая река у дымящего вулкана,Un río de lava junto a un volcán humeante,冒烟火山下的熔岩河
 WORLD_ACID_FLAVOR,Bubbling green swamp with giant mushrooms,Бурлящее зелёное болото с огромными грибами,Pantano verde burbujeante con hongos gigantes,冒泡的绿色沼泽和巨大蘑菇
 WORLD_MOON_FLAVOR,Craters and a sea of dust under the stars,Кратеры и море пыли под звёздами,Cráteres y un mar de polvo bajo las estrellas,星空下的陨坑与尘埃之海
+WORLD_JUNGLE_FLAVOR,A turquoise river and an ancient golden temple,Бирюзовая река и древний золотой храм,Un río turquesa y un antiguo templo dorado,碧绿河流与古老的黄金神殿

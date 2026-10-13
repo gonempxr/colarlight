@@ -14,6 +14,10 @@ const LIST := [
 	["coins_1aa", "coin", 2, 1e15, 30],
 	["world_2", "play", 0, 2, 10],
 	["world_4", "play", 2, 4, 25],
+	["world_5", "play", 2, 5, 30],
+	["star_1", "star", 1, 1, 20],
+	["star_10", "star", 2, 10, 40],
+	["star_25", "star", 2, 25, 60],
 	["puzzle_10", "puzzle", 0, 10, 10],
 	["puzzle_50", "puzzle", 1, 50, 20],
 	["fish_10", "fishing", 0, 10, 5],
@@ -74,7 +78,9 @@ static func _value(id: String) -> float:
 	match id:
 		"coins_1m", "coins_1b", "coins_1t", "coins_1aa":
 			return maxf(float(GameState.total_earned), float(Online.data.get("all_best", 0.0)))
-		"world_2", "world_4":
+		"star_1", "star_10", "star_25":
+			return float(maxi(int(GameState.total_stars()), int(Progress.stats.get("stars", 0))))
+		"world_2", "world_4", "world_5":
 			return float(maxi(int(GameState.max_location), int(Progress.stats.get("location", 0))) + 1)
 		"puzzle_10", "puzzle_50":
 			return float(Progress.stats.get("puzzles_won", 0))

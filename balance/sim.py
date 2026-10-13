@@ -79,8 +79,36 @@ def loc_gate_scale(L: int) -> float:
     return loc_scale(L) * GATE_GROWTH ** L * (GATE_BUMP if L > 0 else 1.0)
 
 
-def evo_cost(L: int, form: int) -> float:
-    return EVO_PRICES[form - 1] * loc_gate_scale(L)
+# --- World stars (the endgame, 2026-10-13) ---
+# Once the last world is open, any finished world can take a star: its run
+# restarts (automation kept) and its numbers grow like STAR_LOCS locations;
+# its gate prices grow the same way (without the per-location GATE_GROWTH)
+# times STAR_GATE (< 1: a world you know goes a bit quicker) and
+# STAR_GROWTH per further star (so the growing bonus doesn't make runs trivial). Every star the
+# player owns adds STAR_BONUS to the income of every world.
+LAST_LOCATION = 4
+STAR_LOCS = 5
+STAR_GATE = 0.6
+STAR_GROWTH = 2.0
+STAR_BONUS = 0.25
+
+
+def star_scale(L: int, n: int) -> float:
+    return loc_scale(L + STAR_LOCS * n)
+
+
+def star_gate_scale(L: int, n: int) -> float:
+    if n <= 0:
+        return loc_gate_scale(L)
+    return loc_gate_scale(L) * LOC_SCALE_STEP ** (STAR_LOCS * n) * STAR_GATE * STAR_GROWTH ** (n - 1)
+
+
+def star_mult(total: int) -> float:
+    return 1.0 + STAR_BONUS * total
+
+
+def evo_cost(L: int, form: int, n: int = 0) -> float:
+    return EVO_PRICES[form - 1] * star_gate_scale(L, n)
 
 
 def location_cost(L: int) -> float:
@@ -114,9 +142,12 @@ def up_cost(cost0: float, level: int, growth: float = GROWTH) -> float:
 
 
 class Game:
-    def __init__(self, L: int = 0, keep=()):
+    def __init__(self, L: int = 0, keep=(), n: int = 0, total: int = 0):
         self.L = L
-        self.s = loc_scale(L)
+        self.n = n
+        self.bonus = star_mult(total)
+        self.s = star_scale(L, n)
+        self.gs = star_gate_scale(L, n)
         self.coins = 0.0
         self.vault = 0.0
         self.depth_lv = [1] + [0] * (len(DEPTHS) - 1)
@@ -126,7 +157,7 @@ class Game:
 
     @property
     def mult(self) -> float:
-        return GEAR_MULT[self.evo]
+        return GEAR_MULT[self.evo] * self.bonus
 
     def stage_rates(self):
         dives = 0.0
@@ -153,7 +184,7 @@ class Game:
     def options(self):
         """(label, cost, action, is_gate_item) for every purchase available now."""
         s = self.s
-        gs = loc_gate_scale(self.L)
+        gs = self.gs
         opts = []
         for k, d in enumerate(DEPTHS):
             lv = self.depth_lv[k]
@@ -176,7 +207,7 @@ class Game:
         if "vault" not in self.managers:
             opts.append(("accountant (vault manager)", VAULT_MANAGER * s, ("mgr", "vault"), False))
         if self.evo < EVO_FORMS:
-            opts.append((f"gear level {self.evo + 2}", evo_cost(self.L, self.evo + 1), ("evo",), False))
+            opts.append((f"gear level {self.evo + 2}", evo_cost(self.L, self.evo + 1, self.n), ("evo",), False))
         return opts
 
     def apply(self, action):
@@ -254,8 +285,9 @@ def best_option(g: Game):
     return best
 
 
-def run(L: int, keep=(), trace: bool = False, max_t: float = 24 * 3600):
-    g = Game(L, keep)
+def run(L: int, keep=(), trace: bool = False, max_t: float = 24 * 3600, n: int = 0, total: int = 0):
+    g = Game(L, keep, n, total)
+    price = LOCATION_PRICE * g.gs
     t = 0.0
     events = []
     target = best_option(g)
@@ -265,9 +297,9 @@ def run(L: int, keep=(), trace: bool = False, max_t: float = 24 * 3600):
             gate_t = t
             events.append((t, "GATE met (all sites, foremen, managers)"))
             target = None
-        if gate_t is not None and g.coins >= location_cost(L):
-            g.coins -= location_cost(L)
-            events.append((t, f"LOCATION done (paid {location_cost(L):.3g})"))
+        if gate_t is not None and g.coins >= price:
+            g.coins -= price
+            events.append((t, f"LOCATION done (paid {price:.3g})"))
             return t, events, g
         earned = g.income() * DT
         if "vault" in g.managers:
@@ -290,7 +322,7 @@ def run(L: int, keep=(), trace: bool = False, max_t: float = 24 * 3600):
         if gate_t is not None and target is None and int(t) % 10 == 0:
             # Saving for the location: only buy what costs under 5% of what is still needed.
             cand = best_option(g)
-            need = location_cost(L) - g.coins
+            need = price - g.coins
             if cand and cand[1] <= 0.05 * max(need, 0):
                 target = cand
     return None, events, g
@@ -300,7 +332,24 @@ def fmt(t: float) -> str:
     return f"{int(t // 3600)}:{int(t % 3600 // 60):02d}:{int(t % 60):02d}"
 
 
+def stars_main():
+    """--stars: after the 5 worlds, the player takes stars round-robin
+    (ocean, volcano, ... jungle, ocean...). Minutes per star run."""
+    keep = ("lift", "boat", "plant", "boat2", "plant2", "vault")
+    total = 0
+    print("=== Star runs (all managers kept) ===")
+    for k in range(int(sys.argv[sys.argv.index("--stars") + 1])):
+        L = k % (LAST_LOCATION + 1)
+        n = k // (LAST_LOCATION + 1) + 1
+        t, events, g = run(L, keep, n=n, total=total)
+        total += 1
+        print(f"  star {total:2d}: world {L} -> ★{n + 1}  {t / 60 if t else -1:6.1f} min  bonus x{star_mult(total - 1):.2f}  income {g.income():.3g}/s")
+
+
 def main():
+    if "--stars" in sys.argv:
+        stars_main()
+        return
     trace = "--trace" in sys.argv
     locs = 12
     if "--locs" in sys.argv:

@@ -130,6 +130,13 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "boat_royal", "slot": "boat", "art": "royal", "unlock": "goal", "goal": "prestige_1", "rarity": 3},
 	{"id": "boat_flame", "slot": "boat", "art": "flame", "unlock": "goal", "goal": "streak_14", "rarity": 2},
 	{"id": "boat_reef", "slot": "boat", "art": "reef", "unlock": "pass", "rarity": 2},
+	# Gifts for world stars owned in all (Balance.STAR_GIFTS).
+	{"id": "boat_starlight", "slot": "boat", "art": "starlight", "unlock": "goal", "goal": "stars_1", "rarity": 2},
+	{"id": "hat_explorer", "slot": "hat", "art": "explorer", "unlock": "goal", "goal": "stars_3", "rarity": 2},
+	{"id": "pet_parrot", "slot": "pet", "art": "parrot", "unlock": "goal", "goal": "stars_5", "rarity": 2},
+	{"id": "boat_temple", "slot": "boat", "art": "temple", "unlock": "goal", "goal": "stars_10", "rarity": 3},
+	{"id": "hat_star_crown", "slot": "hat", "art": "star_crown", "unlock": "goal", "goal": "stars_15", "rarity": 3},
+	{"id": "pet_monkey", "slot": "pet", "art": "monkey", "unlock": "goal", "goal": "stars_25", "rarity": 3},
 	# Player outfits (room 3). Pearls or goals only, never real money.
 	{"id": "outfit_casual", "slot": "outfit", "art": "casual", "unlock": "free", "rarity": 0},
 	{"id": "outfit_captain", "slot": "outfit", "art": "captain", "unlock": "pearls", "price": 60, "rarity": 0},
@@ -154,6 +161,8 @@ const BOAT_PAINTS := {
 	"royal": [Color("2a4fb8"), Color("ffd84a"), Color("ffd84a"), Color("ffd84a"), Color("d8363c")],
 	"flame": [Color("ff6a2b"), Color("ffd23f"), Color("d8363c"), Color("ffb347"), Color("ffe36b")],
 	"reef": [Color("2fd6b5"), Color("ff7f8f"), Color("ff7f8f"), Color("fff6f0"), Color("ffd23f")],
+	"starlight": [Color("23246e"), Color("ffd23f"), Color("6a5ae0"), Color("ffd23f"), Color("9fe8ff")],
+	"temple": [Color("e8a81e"), Color("2fb87a"), Color("2fb87a"), Color("8a5a2a"), Color("e8483a")],
 }
 ## The diver suits are gone (worker evolution replaced them). Pearls spent
 ## on them are refunded once on load (Progress). Old id -> pearl price.
@@ -189,6 +198,12 @@ const GOALS := {
 	"prestige_1": ["prestiges", 1],
 	"streak_14": ["streak_best", 14],
 	"streak_30": ["streak_best", 30],
+	"stars_1": ["stars", 1],
+	"stars_3": ["stars", 3],
+	"stars_5": ["stars", 5],
+	"stars_10": ["stars", 10],
+	"stars_15": ["stars", 15],
+	"stars_25": ["stars", 25],
 }
 
 # --- Worker skins --------------------------------------------------------------------
