@@ -7,6 +7,8 @@ extends RefCounted
 ## Everything waits for the network without blocking: a "Loading…" line,
 ## then the content, or "Online is not available right now".
 
+## Rows built when a board opens (the rest after "Show more").
+const FIRST_ROWS := 30
 ## Leaderboard tab: "week" or "all".
 static var tab := "week"
 ## Boards and invite info being fetched / fetched for the open dialog.
@@ -71,22 +73,17 @@ static func open_invite(main: Node) -> void:
 
 static func board(m: Modal, main: Node) -> void:
 	m.title(t("ONLINE_BOARD"))
-	_account(m, main)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	head.alignment = BoxContainer.ALIGNMENT_CENTER
-	head.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): FounderArt.podium(ci, s / 2.0 + Vector2(0, 10), 1.5, tt), Vector2(120, 92), true))
-	var sub := VBoxContainer.new()
-	sub.add_theme_constant_override("separation", 6)
-	sub.alignment = BoxContainer.ALIGNMENT_CENTER
-	sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m.banner(UiTheme.BANNER_GOLD)
 	# Real people only (the Rivals League's computer characters have their
 	# own board): a green "Real players" tag and a line saying so.
-	sub.add_child(_real_tag())
-	var sl := Views.label(t("ONLINE_BOARD_SUB"), 20, Art.INK_SOFT)
-	sl.custom_minimum_size.x = 160
-	sub.add_child(sl)
-	head.add_child(sub)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	head.add_child(_real_tag())
+	var sl := Views.label(t("ONLINE_BOARD_SUB"), 17, Art.INK_SOFT)
+	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sl.custom_minimum_size.x = 120
+	sl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(sl)
 	m.add(head)
 	if not Online.available():
 		_offline(m, func(): open_board(main))
@@ -148,36 +145,55 @@ static func board(m: Modal, main: Node) -> void:
 		my.icon = Icons.get_icon("people", 34)
 		SocialView.club_rows(m, main, got)
 		return
-	if kind == "week":
-		var my_rank := int(got.get("rank", 0))
-		for i in rows.size():
-			if rows[i]["you"]:
-				my_rank = i + 1
-		m.add(_race(rows, my_rank, Online.score("week")))
-	var list := VBoxContainer.new()
-	list.add_theme_constant_override("separation", 6)
-	var mine_shown := false
+	var unit := "star" if kind == "puzzle" else "coin"
+	var my_at := -1
 	for i in rows.size():
-		var r: Dictionary = rows[i]
-		mine_shown = mine_shown or r["you"]
-		var card := _row(i + 1, r, "star" if kind == "puzzle" else "coin")
-		SocialView.on_tap(card, func(): SocialView.open_profile(main, r))
-		list.add_child(card)
+		if rows[i]["you"]:
+			my_at = i
 	if rows.size() <= 1 and kind == "friends":
 		m.text(t("FRIENDS_EMPTY"), 22, Art.INK)
 	elif rows.is_empty():
 		m.text(t("ONLINE_EMPTY"), 22, Art.INK)
 	else:
-		m.text(t("CARD_TAP"), 17, Art.INK_SOFT)
-	m.add(list)
-	if not mine_shown and kind != "friends":
+		m.add(_podium(rows, unit, main))
+	if kind == "week":
+		m.add(_race(rows, my_at + 1 if my_at >= 0 else int(got.get("rank", 0)), Online.score("week")))
+	# The player's own place right under the podium (the list is long).
+	if my_at >= 3:
+		m.text(t("ONLINE_YOUR_PLACE") % (my_at + 1), 20, Art.INK)
+		m.add(_row(my_at + 1, rows[my_at], unit))
+	elif my_at < 0 and kind != "friends":
 		var me := {"uid": Online.uid, "name": Online.board_name(), "score": Online.score(kind), "a": "", "you": true}
 		var rank := int(got.get("rank", 0))
 		if rank > 0:
-			m.text(t("ONLINE_YOUR_PLACE") % rank, 21, Art.INK)
-			m.add(_row(rank, me, "star" if kind == "puzzle" else "coin"))
+			m.text(t("ONLINE_YOUR_PLACE") % rank, 20, Art.INK)
+			m.add(_row(rank, me, unit))
 		else:
-			m.text(t("ONLINE_YOUR_SCORE") % NumFormat.short(Online.score(kind)), 21, Art.INK)
+			m.text(t("ONLINE_YOUR_SCORE") % NumFormat.short(Online.score(kind)), 20, Art.INK)
+	if rows.size() > 3:
+		m.text(t("CARD_TAP"), 17, Art.INK_SOFT)
+	# Places 4 to 100: the first ones at once, the rest on a tap (a phone
+	# builds them in a moment, without a hitch when the board opens).
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 5)
+	m.add(list)
+	var add_rows := func(from: int, to: int) -> void:
+		for i in range(from, mini(to, rows.size())):
+			var r: Dictionary = rows[i]
+			var card := _row(i + 1, r, unit)
+			SocialView.on_tap(card, func(): SocialView.open_profile(main, r))
+			list.add_child(card)
+	add_rows.call(3, FIRST_ROWS)
+	if rows.size() > FIRST_ROWS:
+		var more := Button.new()
+		more.text = t("ONLINE_MORE") % (rows.size() - FIRST_ROWS)
+		more.theme_type_variation = &"CreamButton"
+		more.custom_minimum_size.y = 68
+		m.add(more)
+		more.pressed.connect(func():
+			Sfx.play("click")
+			add_rows.call(FIRST_ROWS, rows.size())
+			more.queue_free())
 	var name_row := m.row(10)
 	var nl := Views.label(t("ONLINE_NAME") % Online.board_name(), 19, Art.INK_SOFT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -301,24 +317,143 @@ static func _center(l: Label) -> Label:
 	return l
 
 
+## The top three on pedestals: gold in the middle with a crown, silver on
+## the left, bronze on the right. Tap one for the player's card.
+static func _podium(rows: Array, unit: String, main: Node) -> Control:
+	var card := PanelContainer.new()
+	var sb := UiTheme.panel_box(Color("3a6fd8"), 18, 4)
+	sb.shadow = 0.0
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 0
+	card.add_theme_stylebox_override("panel", sb)
+	var stack := Control.new()
+	stack.custom_minimum_size = Vector2(0, PODIUM_H)
+	card.add_child(stack)
+	var rays := ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_back(ci, s), Vector2(0, PODIUM_H))
+	rays.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rays.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(rays)
+	var h := HBoxContainer.new()
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.add_theme_constant_override("separation", 0)
+	stack.add_child(h)
+	for place in [2, 1, 3]:
+		var col: Control
+		if place <= rows.size():
+			var r: Dictionary = rows[place - 1]
+			col = ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_col(ci, s, place, r, unit), Vector2(0, PODIUM_H))
+			SocialView.on_tap(col, func(): SocialView.open_profile(main, r))
+		else:
+			col = ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_col(ci, s, place, {}, unit), Vector2(0, PODIUM_H))
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.size_flags_stretch_ratio = 1.15 if place == 1 else 1.0
+		h.add_child(col)
+	return card
+
+
+const PODIUM_H := 268.0
+
+
+## Sun rays and sparkles behind the winners.
+static func _podium_back(ci: CanvasItem, s: Vector2) -> void:
+	var c := Vector2(s.x / 2.0, 92.0)
+	var n := 14
+	for i in n:
+		var a0 := TAU * float(i) / float(n)
+		var a1 := a0 + TAU / float(n) * 0.5
+		var far := s.length()
+		Art.flat(ci, PackedVector2Array([c, c + Vector2.from_angle(a0) * far, c + Vector2.from_angle(a1) * far]), Color(1, 1, 1, 0.08))
+	Art.flat(ci, Art.circle_pts(c, 70.0, 28), Color(1, 0.95, 0.6, 0.16))
+	for p in [Vector2(0.12, 0.16), Vector2(0.86, 0.12), Vector2(0.94, 0.42), Vector2(0.05, 0.47), Vector2(0.3, 0.07), Vector2(0.7, 0.3)]:
+		Art.flat(ci, Art.star_pts(Vector2(p.x * s.x, p.y * s.y), 6.0, 2.2, 4), Color(1, 1, 0.85, 0.7))
+
+
+## One winner: portrait (crown or medal), name, score and the pedestal.
+static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, unit: String) -> void:
+	var tall: float = {1: 86.0, 2: 62.0, 3: 46.0}[place]
+	var fill: Color = {1: Art.GOLD, 2: Color("d9e2ef"), 3: Color("e8a06a")}[place]
+	var w := minf(s.x - 6.0, 108.0)
+	var base := Rect2(Vector2((s.x - w) / 2.0, s.y - tall), Vector2(w, tall + 14.0))
+	Art.t_rect(ci, base, 10.0, fill, 3.0, 0.8)
+	Art.flat(ci, Art.rrect_pts(Rect2(base.position + Vector2(6, 5), Vector2(w - 12, 7)), 3.5), Color(1, 1, 1, 0.45))
+	Art.text(ci, Vector2(s.x / 2.0, base.position.y + minf(tall, 60.0) * 0.5 + 16.0), str(place), 34 if place == 1 else 28, Art.WHITE, 7)
+	if r.is_empty():
+		return
+	var you := bool(r.get("you", false))
+	var pr := 40.0 if place == 1 else 32.0
+	var score_y := base.position.y - 12.0
+	var name_y := score_y - 30.0
+	var pc := Vector2(s.x / 2.0, name_y - 24.0 - pr)
+	var look := Settings.avatar if you else _look(str(r.get("a", "")))
+	Chars.portrait(ci, pc, pr, look, "happy", false, Color("ffd98a") if you else Color("bfe8ff"))
+	Art.ring(ci, Art.circle_pts(pc, pr + 1.5, 32), fill, 4.0)
+	if place == 1:
+		_crown(ci, pc + Vector2(0, -pr - 6.0), 1.0)
+	else:
+		Art.t_circle(ci, pc + Vector2(pr * 0.72, pr * 0.72), 11.0, fill, 2.5, 0.6)
+	var name := str(r.get("name", ""))
+	if you:
+		name = t("ONLINE_YOU")
+	Art.text(ci, Vector2(s.x / 2.0, name_y), _fit(name, s.x - 6.0, 19), 19, Color("fff3a8") if you else Art.WHITE, 6)
+	# The score on a dark pill.
+	var txt := NumFormat.short(float(r.get("score", 0.0)))
+	var tw := UiTheme.heavy_font().get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	var pw := minf(tw + 38.0, s.x - 4.0)
+	var pill := Rect2(Vector2((s.x - pw) / 2.0, score_y - 19.0), Vector2(pw, 26.0))
+	Art.t_rect(ci, pill, 13.0, Color("1d3f86"), 2.5, 0.0)
+	var ic := pill.position + Vector2(14.0, 13.0)
+	if unit == "star":
+		Art.toon(ci, Art.star_pts(ic, 10.0, 4.5, 5), Art.GOLD, 2.0, 0.0)
+	else:
+		Art.coin(ci, ic, 9.0)
+	Art.text(ci, Vector2(pill.position.x + 26.0 + (pw - 30.0) / 2.0, score_y), txt, 18, Art.WHITE, 0)
+
+
+## A gold crown with three points and jewels.
+static func _crown(ci: CanvasItem, c: Vector2, k: float) -> void:
+	Art.push(ci, c, 0.0, Vector2.ONE * k)
+	var pts := PackedVector2Array([Vector2(-20, 4), Vector2(-24, -16), Vector2(-10, -6), Vector2(0, -22),
+		Vector2(10, -6), Vector2(24, -16), Vector2(20, 4)])
+	Art.toon(ci, pts, Art.GOLD, 3.0, 0.6)
+	for p in [Vector2(-24, -16), Vector2(0, -22), Vector2(24, -16)]:
+		Art.t_circle(ci, p, 3.5, Color("ff7f8f"), 2.0, 0.0)
+	Art.t_circle(ci, Vector2(0, -3), 3.5, Color("5fd0ff"), 2.0, 0.0)
+	Art.pop(ci)
+
+
+## The text cut with "…" to fit `w` pixels.
+static func _fit(text: String, w: float, px: int) -> String:
+	var f := UiTheme.heavy_font()
+	if f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x <= w:
+		return text
+	var cut := text
+	while cut.length() > 1 and f.get_string_size(cut + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > w:
+		cut = cut.left(cut.length() - 1)
+	return cut + "…"
+
+
 static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	var you: bool = row["you"]
-	var card := Views.card(Color("ffe9a0") if you else Color("fffaf0"))
+	var card := Views.card(Color("ffe9a0") if you else (Color("fffaf0") if place % 2 == 0 else Color("eef5ff")))
 	var sb: ToonBox = card.get_theme_stylebox("panel")
 	sb.content_margin_top = 4
 	sb.content_margin_bottom = 6
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
 	if you:
 		sb.line = Art.GOLD_DARK.darkened(0.35)
 		sb.line_w = 5.0
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 8)
+	h.add_theme_constant_override("separation", 6)
 	card.add_child(h)
-	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): RivalsView._draw_place(ci, s / 2.0, place),
-			Vector2(46 if place < 100 else 64, 56)))
+	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _draw_rank(ci, s / 2.0, place),
+			Vector2(44 if place < 100 else 58, 50)))
 	var look := Settings.avatar if you else _look(str(row.get("a", "")))
 	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float):
 		Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, look, "happy", false, Color("ffd98a") if you else Color("bfe8ff")),
-			Vector2(54, 54)))
+			Vector2(48, 48)))
 	var text := str(row["name"])
 	if you:
 		text = t("ONLINE_YOU") + " · " + text
@@ -327,7 +462,7 @@ static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	nv.add_theme_constant_override("separation", 0)
 	nv.alignment = BoxContainer.ALIGNMENT_CENTER
 	nv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var name := Views.label(text, 21, Art.INK, true)
+	var name := Views.label(text, 20, Art.INK, true)
 	name.autowrap_mode = TextServer.AUTOWRAP_OFF
 	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name.custom_minimum_size.x = 60
@@ -337,12 +472,38 @@ static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	if tier > 0:
 		nv.add_child(SocialView.title_pill(tier, 14))
 	h.add_child(nv)
-	var score := Views.label(NumFormat.short(float(row["score"])), 22, Color("1c7fb8") if not you else Art.INK, true)
+	# The score on a pill.
+	var pill := PanelContainer.new()
+	var psb := UiTheme.panel_box(Color("dcebff") if not you else Color("fff6d0"), 12, 0)
+	psb.shadow = 0.0
+	psb.line_w = 2.0
+	psb.content_margin_left = 4
+	psb.content_margin_right = 8
+	psb.content_margin_top = 0
+	psb.content_margin_bottom = 1
+	pill.add_theme_stylebox_override("panel", psb)
+	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ph := HBoxContainer.new()
+	ph.add_theme_constant_override("separation", 3)
+	pill.add_child(ph)
+	ph.add_child(Views.icon(unit, 26))
+	var score := Views.label(NumFormat.short(float(row["score"])), 20, Color("1c5fa8") if not you else Art.INK, true)
 	score.autowrap_mode = TextServer.AUTOWRAP_OFF
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	h.add_child(Views.icon(unit, 30))
-	h.add_child(score)
+	ph.add_child(score)
+	h.add_child(pill)
 	return card
+
+
+## The place: a medal for the top three, a number on a round badge after.
+static func _draw_rank(ci: CanvasItem, c: Vector2, place: int) -> void:
+	if place <= 3:
+		RivalsView._draw_place(ci, c, place)
+		return
+	var w := 34.0 if place < 100 else 48.0
+	Art.t_rect(ci, Rect2(c - Vector2(w / 2.0, 15.0), Vector2(w, 30.0)), 15.0, Color("4a7fe0") if place <= 10 else Color("9fb4d6"), 2.5, 0.0)
+	Art.text(ci, c + Vector2(0, 8), str(place), 19, Art.WHITE, 5)
 
 
 static var _looks := {}
