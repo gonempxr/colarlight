@@ -271,6 +271,19 @@ const SKINS: Array[Dictionary] = [
 	{"id": "moon_nebula", "world": "moon", "rarity": 3, "form": 8},
 	{"id": "moon_dragon", "world": "moon", "rarity": 3, "form": 11},
 	{"id": "moon_king", "world": "moon", "rarity": 3, "form": 12},
+	{"id": "jungle_leaf", "world": "jungle", "rarity": 1},
+	{"id": "jungle_banana", "world": "jungle", "rarity": 1},
+	{"id": "jungle_flowers", "world": "jungle", "rarity": 1},
+	{"id": "jungle_jade", "world": "jungle", "rarity": 2},
+	{"id": "jungle_tiger", "world": "jungle", "rarity": 2},
+	{"id": "jungle_glyphs", "world": "jungle", "rarity": 2},
+	{"id": "jungle_monkey", "world": "jungle", "rarity": 2, "form": 1},
+	{"id": "jungle_frog", "world": "jungle", "rarity": 2, "form": 4},
+	{"id": "jungle_toucan", "world": "jungle", "rarity": 2, "form": 5},
+	{"id": "jungle_jaguar", "world": "jungle", "rarity": 3, "form": 3},
+	{"id": "jungle_guardian", "world": "jungle", "rarity": 3, "form": 9},
+	{"id": "jungle_serpent", "world": "jungle", "rarity": 3, "form": 11},
+	{"id": "jungle_king", "world": "jungle", "rarity": 3, "form": 12},
 ]
 
 

@@ -25,7 +25,7 @@ class Sheet extends Control:
 	func _draw() -> void:
 		Art.push(self, Vector2.ZERO, 0.0, Vector2(zoom, zoom))
 		Art.push(self, -origin)
-		var bg: Color = {"ocean": Color("7fc8e8"), "volcano": Color("e8a07f"), "acid": Color("a8d890"), "moon": Color("8a90c0")}.get(world, Color("7fc8e8"))
+		var bg: Color = {"ocean": Color("7fc8e8"), "volcano": Color("e8a07f"), "acid": Color("a8d890"), "moon": Color("8a90c0"), "jungle": Color("8fcf9a")}.get(world, Color("7fc8e8"))
 		Art.flat(self, PackedVector2Array([Vector2(-50, -50), Vector2(4000, -50), Vector2(4000, 4000), Vector2(-50, 4000)]), bg)
 		match mode:
 			"forms":
@@ -61,13 +61,13 @@ class Sheet extends Control:
 		return out
 
 	func _gear() -> void:
-		for wi in 4:
+		for wi in WorkerLooks.WORLDS.size():
 			var w: String = WorkerLooks.WORLDS[wi]
 			for g in WorkerLooks.GEARS:
 				var x := 110.0 + g * 380.0
-				var y := 200.0 + wi * 215.0
-				_w(Vector2(x, y), 1.9, WorkerLooks.code(g), "idle", 0.0, false, "happy", w)
-				_w(Vector2(x + 170, y), 1.3, WorkerLooks.code(g), "dig", fposmod(t * 0.7 + g * 0.13, 1.0), false, "focus", w)
+				var y := 175.0 + wi * 178.0
+				_w(Vector2(x, y), 1.6, WorkerLooks.code(g), "idle", 0.0, false, "happy", w)
+				_w(Vector2(x + 170, y), 1.2, WorkerLooks.code(g), "dig", fposmod(t * 0.7 + g * 0.13, 1.0), false, "focus", w)
 
 	func _skins() -> void:
 		var list := Content.skins_of(world)
@@ -107,7 +107,7 @@ class Sheet extends Control:
 			WorkerLooks.draw_card(self, c, 60, world, f, n <= 4, t)
 
 	func _small() -> void:
-		for wi in 4:
+		for wi in WorkerLooks.WORLDS.size():
 			var w: String = WorkerLooks.WORLDS[wi]
 			var codes: Array[int] = []
 			for g in WorkerLooks.GEARS:
@@ -117,8 +117,8 @@ class Sheet extends Control:
 			for n in codes.size():
 				var f: int = codes[n]
 				var x := 40.0 + n * 72.0
-				_w(Vector2(x, 100 + wi * 200), 0.62, f, "dig", fposmod(t * 0.7 + f * 0.13, 1.0), false, "focus", w)
-				_w(Vector2(x + 20, 190 + wi * 200), 0.62, f, "swim" if w == "ocean" else "walk", 0.0, f % 2 == 0, "happy", w, -1.0)
+				_w(Vector2(x, 90 + wi * 178), 0.62, f, "dig", fposmod(t * 0.7 + f * 0.13, 1.0), false, "focus", w)
+				_w(Vector2(x + 20, 170 + wi * 178), 0.62, f, "swim" if w == "ocean" else "walk", 0.0, f % 2 == 0, "happy", w, -1.0)
 
 	func _poses() -> void:
 		var arms := ["idle", "dig", "pick", "swim", "walk", "rope", "cheer", "show"]

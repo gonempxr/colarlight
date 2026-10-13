@@ -1,6 +1,6 @@
 class_name WorkerLooks
 extends RefCounted
-## The workers of the four worlds: 4 gear levels each (bought with coins,
+## The workers of the five worlds: 4 gear levels each (bought with coins,
 ## GameState.evo) and skins (bought with pearls, Content.SKINS), drawn with
 ## the Art toon kit in the diver's space: feet at 0,0, facing +x, about
 ## 90 px tall at scale 1 (crowns, wings and ears stick out above that).
@@ -24,7 +24,7 @@ extends RefCounted
 ## swing, upright). Workers whose legs are a tail, tentacles, a blob or a
 ## wisp glide instead of stepping.
 
-const WORLDS := ["ocean", "volcano", "acid", "moon"]
+const WORLDS := ["ocean", "volcano", "acid", "moon", "jungle"]
 ## Gear levels per world.
 const GEARS := 4
 ## Look codes per world (gear + 4 * slot, slot 0..15).
@@ -36,7 +36,7 @@ const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b0
 ## Color of each gear level's badge (level 1..4).
 const GEAR_COLORS: Array[Color] = [Color("8ec9f0"), Color("5cd05f"), Color("ff9a2e"), Color("ffc93c")]
 ## Soft rim light of each world's silhouettes.
-const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff")]
+const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff"), Color("ffd86a")]
 ## Heads of the gear looks are a bit bigger than the old forms' (the
 ## reference sheets: big round heads on small bodies).
 const GEAR_HEAD := 1.16
@@ -443,6 +443,66 @@ const FORMS_MOON: Array[Dictionary] = [
 	"orb_shape": "star", "fx": ["sparkles"], "glow": Color("ffd23f")},
 ]
 
+const FORMS_JUNGLE: Array[Dictionary] = [
+	# 0 young explorer: pith helmet, khaki vest, a red neckerchief
+	{"head": "explorer", "hc": Color("f0dfae"), "hc2": Color("7a5a34"), "hair": "short", "hair_c": Color("8a4a24"),
+	"suit": Color("fff4dc"), "vest": Color("c9a25e"), "scarf": Color("ef5a3a"), "arms": "short", "arm_c": Color("fff4dc"),
+	"legs": "shorts", "leg_c": Color("b88f52"), "sock": Color("fff4dc"), "boot": Color("7a4a2a"), "back": ["satchel"],
+	"bc": Color("a8643a"), "tool": "pick", "tc": Color("c8d0dc"), "th": Color("c98249")},
+	# 1 monkey in a tiny pith helmet
+	{"head": "creature", "cs": "monkey", "hc": Color("9a6038"), "skin": Color("f6d2a2"), "top": ["mini_pith"], "suit": Color("9a6038"),
+	"belly": Color("f6d2a2"), "scarf": Color("ffd23f"), "glove": Color("f6d2a2"), "legs": "paws", "leg_c": Color("9a6038"),
+	"boot": Color("f6d2a2"), "back": ["monkey_tail"], "bc": Color("9a6038"), "tc": Color("ffe066"), "th": Color("8e552c")},
+	# 2 parrot
+	{"head": "creature", "cs": "parrot", "hc": Color("ef3a3a"), "hc2": Color("f4ead0"), "suit": Color("ef3a3a"), "belly": Color("ffd23f"),
+	"glove": Color("2a7aff"), "legs": "bird", "leg_c": Color("8a94a8"), "boot": Color("6a7488"), "back": ["wings_parrot", "tail_feathers"],
+	"bc": Color("2a7aff"), "bc2": Color("ffd23f"), "tc": Color("ffd23f"), "th": Color("8e552c")},
+	# 3 jaguar
+	{"head": "creature", "cs": "jaguar", "hc": Color("f4a83a"), "skin": Color("fff4e0"), "suit": Color("f4a83a"), "pattern": "rosettes",
+	"pc": Color("5a341a"), "belly": Color("fff4e0"), "emblem": "gem", "ec": Color("2ad0a0"), "glove": Color("fff4e0"), "legs": "paws",
+	"leg_c": Color("f4a83a"), "boot": Color("fff4e0"), "back": ["jaguar_tail"], "bc": Color("f4a83a"), "bc2": Color("3a2414"),
+	"tc": Color("6af0c8"), "th": Color("5a341a"), "fx": ["sparkles"], "glow": Color("ffe066")},
+	# 4 blue poison frog under a leaf hat
+	{"head": "hood", "hc": Color("2f7cff"), "hc2": Color("ff9ac0"), "top": ["frog_eyes", "head_spots"], "suit": Color("2f7cff"),
+	"belly": Color("9ad8ff"), "pattern": "spots", "pc": Color("1a1a3a"), "glove": Color("1e50d0"), "legs": "frog", "leg_c": Color("2f7cff"),
+	"boot": Color("1e50d0"), "back": ["leaf_umbrella"], "tc": Color("ffd23f"), "th": Color("3a7a3a")},
+	# 5 toucan
+	{"head": "creature", "cs": "toucan", "hc": Color("2a2638"), "hc2": Color("fff2b8"), "suit": Color("2a2638"), "belly": Color("fff2b8"),
+	"arm_c": Color("3c3852"), "glove": Color("3c3852"), "legs": "bird", "leg_c": Color("4ab0ff"), "boot": Color("3a8ae0"), "back": ["tail_feathers"],
+	"bc": Color("2a2638"), "bc2": Color("ef3a3a"), "tc": Color("ff9a2e"), "th": Color("6a3a20")},
+	# 6 sloth
+	{"head": "creature", "cs": "sloth", "hc": Color("b8946a"), "skin": Color("f2e2c4"), "top": ["leaf_hat"], "suit": Color("b8946a"),
+	"belly": Color("e0c8a0"), "glove": Color("6a4a30"), "legs": "paws", "leg_c": Color("b8946a"), "boot": Color("6a4a30"),
+	"tc": Color("c8d0dc"), "th": Color("8e552c")},
+	# 7 tiki mask
+	{"head": "creature", "cs": "tiki", "hc": Color("b0703a"), "hc2": Color("ffd23f"), "top": ["leaf_crown"], "suit": Color("7ac04a"),
+	"pattern": "leaves", "pc": Color("4a9a3a"), "belt": Color("8e552c"), "glove": Color("c98249"), "legs": "boots", "leg_c": Color("c98249"),
+	"boot": Color("8e552c"), "tool": "hammer", "tc": Color("8a7a5a"), "th": Color("6a3a20")},
+	# 8 chameleon
+	{"head": "hood", "hc": Color("5ad04a"), "hc2": Color("ffd23f"), "top": ["spikes"], "suit": Color("5ad04a"), "belly": Color("d8ff8a"),
+	"pattern": "stripes_diag", "pc": Color("2fa0c0"), "glove": Color("3a9a3a"), "legs": "paws", "leg_c": Color("5ad04a"), "boot": Color("3a9a3a"),
+	"back": ["cat_tail"], "bc": Color("5ad04a"), "bc2": Color("2fa0c0")},
+	# 9 temple guardian: a mossy stone golem with jade eyes
+	{"head": "creature", "cs": "temple", "size": 1.06, "hc": Color("d2b47e"), "face": "glow", "eye": Color("5affb0"), "torso": "rock",
+	"suit": Color("c8a874"), "pc": Color("5affb0"), "arms": "rock", "arm_c": Color("c8a874"), "legs": "rock", "leg_c": Color("c8a874"),
+	"tool": "hammer", "tc": Color("8ad8b0"), "th": Color("6a5034"), "fx": ["fireflies"], "glow": Color("9cff8a")},
+	# 10 vine spirit
+	{"head": "creature", "cs": "ghost", "hc": Color("9af0b0"), "skin": Color("9af0b0"), "top": ["leaf_hat"], "torso": "ghost",
+	"suit": Color("9af0b0"), "arms": "blob", "arm_c": Color("9af0b0"), "glove": Color("9af0b0"), "legs": "wisp", "tool": "staff",
+	"th": Color("6a5034"), "orb": Color("ffd23f"), "fx": ["fireflies"], "glow": Color("d0ff6a")},
+	# 11 feathered serpent
+	{"head": "hood", "hc": Color("1fae6a"), "hc2": Color("ffd23f"), "top": ["feather_ruff", "head_spots"], "suit": Color("1fae6a"),
+	"belly": Color("ffe27a"), "pattern": "scales", "pc": Color("0f7a4a"), "glove": Color("0f7a4a"), "legs": "serpent",
+	"leg_c": Color("1fae6a"), "boot": Color("ef3a4a"), "back": ["wings_quetzal"], "bc": Color("1fc0a0"), "bc2": Color("ef3a4a"),
+	"tool": "staff", "th": Color("0f5a3a"), "orb": Color("5affd0"), "fx": ["sparkles"], "glow": Color("aaffd8")},
+	# 12 golden idol king
+	{"head": "creature", "cs": "idol", "hc": Color("ffc93c"), "hc2": Color("2ad0c0"), "top": ["sun_headdress"], "torso": "armor",
+	"suit": Color("1f7a70"), "plate": Color("ffc93c"), "emblem": "sun_disc", "ec": Color("2ad0c0"), "arms": "pauldron", "arm_c": Color("1f7a70"),
+	"glove": Color("ffc93c"), "legs": "boots", "leg_c": Color("1f7a70"), "boot": Color("ffc93c"), "cuff": Color("2ad0c0"),
+	"back": ["feather_cape"], "bc": Color("1fae6a"), "bc2": Color("ef3a4a"), "tool": "staff", "th": Color("ffc93c"), "orb": Color("ffd23f"),
+	"orb_shape": "sun", "fx": ["sparkles"], "glow": Color("ffd23f")},
+]
+
 # --- Gear levels (the reference sheets: level 1..4 per world) -------------------------
 #
 # Extra recipe keys of the gear looks:
@@ -545,6 +605,37 @@ const GEAR_MOON: Array[Dictionary] = [
 	"mk": ["suit", "hc", "arm_c", "leg_c", "plate"]},
 ]
 
+## Jungle extras: head "explorer" (a kid face under a pith helmet; lamp: a
+## head lamp, badge: sun | leaf on the band); vest (an open vest over the
+## shirt `suit`), scarf (a neckerchief), sock (shorts legs), trim (glowing
+## seams), wrap (bands on the tool's handle).
+const GEAR_JUNGLE: Array[Dictionary] = [
+	# 1 pith helmet, khaki vest and shorts, a satchel, a red neckerchief
+	{"head": "explorer", "hc": Color("f0dfae"), "hc2": Color("7a5a34"), "hair": "short", "hair_c": Color("8a4a24"),
+	"suit": Color("fff4dc"), "vest": Color("c9a25e"), "scarf": Color("ef5a3a"), "arms": "short", "arm_c": Color("fff4dc"),
+	"legs": "shorts", "leg_c": Color("b88f52"), "sock": Color("fff4dc"), "boot": Color("7a4a2a"), "back": ["satchel"],
+	"bc": Color("a8643a"), "tool": "pick", "tc": Color("c8d0dc"), "th": Color("c98249"), "mk": ["vest", "hc", "leg_c"]},
+	# 2 climbing gear: a rope coil, a head lamp, gloves, climbing boots
+	{"head": "explorer", "hc": Color("f0dfae"), "hc2": Color("7a5a34"), "lamp": true, "hair": "short", "hair_c": Color("8a4a24"),
+	"suit": Color("fff4dc"), "vest": Color("7f9c46"), "scarf": Color("ef5a3a"), "arm_c": Color("e8dcc0"), "glove": Color("7a4a2a"),
+	"cuff": Color("5a3a20"), "legs": "boots", "leg_c": Color("b88f52"), "pad": Color("6a5a40"), "boot": Color("6a3e22"),
+	"toe": Color("ffcf33"), "back": ["rope", "satchel"], "bc": Color("a8643a"), "tool": "pick", "tc": Color("dfe6f0"),
+	"th": Color("c98249"), "wrap": Color("ef5a3a"), "mk": ["vest", "hc", "leg_c"]},
+	# 3 bright jungle suit: leaf pattern, glowing trim and lamp
+	{"head": "explorer", "hc": Color("ff9a2e"), "hc2": Color("1e5a44"), "lamp": true, "badge": "leaf", "hair": "short",
+	"hair_c": Color("8a4a24"), "suit": Color("2fc070"), "pattern": "monstera", "pc": Color("1a9a58"), "trim": Color("8affe8"),
+	"belt": Color("1e5a44"), "arm_c": Color("2fc070"), "glove": Color("1e5a44"), "cuff": Color("8affe8"), "legs": "boots",
+	"leg_c": Color("2fc070"), "boot": Color("1e5a44"), "toe": Color("8affe8"), "back": ["satchel"], "bc": Color("e0782a"),
+	"tool": "pick", "tc": Color("6af0c8"), "th": Color("1e5a44"), "wrap": Color("8affe8"), "mk": ["suit", "arm_c", "leg_c", "hc"]},
+	# 4 golden temple armour: a sun-disc chest plate and a feather crest
+	{"head": "explorer", "hc": Color("ffc93c"), "hc2": Color("2ad0c0"), "badge": "sun", "top": ["quetzal"], "hair": "short",
+	"hair_c": Color("8a4a24"), "torso": "armor", "suit": Color("1f7a70"), "plate": Color("ffc93c"), "emblem": "sun_disc",
+	"ec": Color("2ad0c0"), "belt": Color("a0641e"), "pouch": Color("c07a2a"), "arms": "pauldron", "arm_c": Color("1f7a70"),
+	"glove": Color("ffc93c"), "cuff": Color("2ad0c0"), "legs": "boots", "leg_c": Color("1f7a70"), "boot": Color("ffc93c"),
+	"back": ["feather_cape"], "bc": Color("1fae6a"), "bc2": Color("ef3a4a"), "tool": "pick", "tc": Color("ffd23f"),
+	"th": Color("1e4a44"), "wrap": Color("2ad0c0"), "fx": ["sparkles"], "glow": Color("ffd23f"), "mk": ["suit", "arm_c", "leg_c"]},
+]
+
 # --- Pattern skins ----------------------------------------------------------------------
 # main: the suit color (MAIN_KEYS of the gear); motif + mc / mc2: what is
 # drawn over the helmet, suit, sleeves and legs; set: other keys to change.
@@ -576,6 +667,12 @@ const SKIN_ART := {
 	"moon_galaxy": {"main": Color("3a2a9a"), "motif": "galaxy", "mc": Color("ff6ad8"), "mc2": Color("5af0ff")},
 	"moon_aurora": {"main": Color("1a5a4a"), "motif": "aurora", "mc": Color("5affb0"), "mc2": Color("d0fff0")},
 	"moon_gold": {"main": Color("1e1a2e"), "motif": "constellation", "mc": Color("ffc93c"), "mc2": Color("fff0b0")},
+	"jungle_leaf": {"main": Color("5a9a3a"), "motif": "leafcamo", "mc": Color("2f6e2a"), "mc2": Color("9ad05a")},
+	"jungle_banana": {"main": Color("2aa88a"), "motif": "banana", "mc": Color("ffe04a"), "mc2": Color("6a4a2a")},
+	"jungle_flowers": {"main": Color("2a8ad8"), "motif": "flowers", "mc": Color("ff5a8a"), "mc2": Color("ffe04a")},
+	"jungle_jade": {"main": Color("22a882"), "motif": "jadeveins", "mc": Color("9af5d0"), "mc2": Color("147a5c")},
+	"jungle_tiger": {"main": Color("ff9a2e"), "motif": "tiger", "mc": Color("2a1c1c"), "mc2": Color("fff0d0")},
+	"jungle_glyphs": {"main": Color("1e4a4e"), "motif": "glyphs", "mc": Color("ffc93c"), "mc2": Color("fff0b0")},
 }
 
 ## Back parts that are the gear's tanks (costume skins keep them).
@@ -594,8 +691,8 @@ static func _spec(w: int, form: int) -> Dictionary:
 	var s = _specs.get(k)
 	if s != null:
 		return s
-	w = clampi(w, 0, 3)
-	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON]
+	w = clampi(w, 0, WORLDS.size() - 1)
+	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON, GEAR_JUNGLE]
 	var g: Dictionary = gears[w][gear_of(form)]
 	var d: Dictionary = DEFAULT.duplicate()
 	d.merge(g, true)
@@ -603,7 +700,7 @@ static func _spec(w: int, form: int) -> Dictionary:
 	var sk := skin_entry(WORLDS[w], form)
 	if sk.has("form"):
 		# A costume: the old form, with the gear's tanks on its back.
-		var lists: Array = [FORMS_OCEAN, FORMS_VOLCANO, FORMS_ACID, FORMS_MOON]
+		var lists: Array = [FORMS_OCEAN, FORMS_VOLCANO, FORMS_ACID, FORMS_MOON, FORMS_JUNGLE]
 		var c: Dictionary = DEFAULT.duplicate()
 		c.merge(lists[w][clampi(int(sk["form"]), 0, FORMS - 1)], true)
 		var own: Array = c["back"]
@@ -632,6 +729,9 @@ static func _spec(w: int, form: int) -> Dictionary:
 			d["cap"] = true
 		if d["pattern"] == "stripes":
 			d["pc"] = main.lightened(0.5)
+		elif d["pattern"] == "monstera":
+			# The motif takes over: the big leaves would fight with it.
+			d["pattern"] = ""
 		if g.has("plate") and not ("plate" in g.get("mk", MAIN_KEYS)):
 			# Armor plates: a lighter shade of the skin, patterned too.
 			d["plate"] = main.lightened(0.28)
@@ -670,7 +770,8 @@ static func _use(world: String, form: int) -> void:
 
 ## Part cache key: the part, the look, the drawing size and two small numbers.
 static func _k(part: int, a: int = 0, b: int = 0) -> int:
-	return (part << 56) | (_wf << 48) | (int(Chars._small) << 47) | (int(Art.fringe_min < 1.0) << 46) \
+	# _wf (world * CODES + form) takes 9 bits: 5 worlds * 64 codes = 320.
+	return (part << 57) | ((_wf & 0x1FF) << 48) | (int(Chars._small) << 47) | (int(Art.fringe_min < 1.0) << 46) \
 			| ((a & 0x3FFFFF) << 24) | (b & 0xFFFFFF)
 
 
@@ -722,7 +823,7 @@ static func draw(ci: CanvasItem, pos: Vector2, scale: float, world: String, form
 	var sx := facing * (1.0 if turn >= 0.0 else -1.0) * maxf(0.08, absf(turn))
 	var kick_amp: float = pose.get("kick_amp", 0.0 if kick == 0.0 else 1.0)
 	var legs: String = _sp["legs"]
-	var glide := legs in ["mermaid", "tentacles", "blob", "wisp", "wheel", "treads"]
+	var glide := legs in ["mermaid", "serpent", "tentacles", "blob", "wisp", "wheel", "treads"]
 	var walking := arm == "walk"
 	var breathe := sin(t * 2.2) * 0.012 if arm != "swim" else 0.0
 	var bob := 0.0
@@ -837,6 +938,20 @@ static func _clip(pts: PackedVector2Array, shape: PackedVector2Array) -> PackedV
 	return Art.clipped(pts, shape)
 
 
+## A pointed leaf (a lens) centered at `p`, along angle `rot`.
+static func _leaf_pts(p: Vector2, length: float, width: float, rot: float, n: int = 6) -> PackedVector2Array:
+	var d := Vector2.from_angle(rot)
+	var o := d.orthogonal()
+	var pts := PackedVector2Array()
+	for i in n + 1:
+		var f := float(i) / n
+		pts.append(p + d * (f - 0.5) * length + o * sin(f * PI) * width * 0.5)
+	for i in range(n - 1, 0, -1):
+		var f := float(i) / n
+		pts.append(p + d * (f - 0.5) * length - o * sin(f * PI) * width * 0.5 * 0.8)
+	return pts
+
+
 # --- Back (behind and on top of the body) ---------------------------------------------
 
 ## Things on the back. `front` false: the parts behind the body (drawn
@@ -854,8 +969,12 @@ static func _back(ci: CanvasItem, t: float, moving: bool, front: bool) -> void:
 				dyn = roundi((sin(t * 2.0) * 0.04 + (0.2 if moving else 0.0)) / 0.04)
 			"wings_fire", "wings_bat", "wings_fin", "wings_star":
 				dyn = roundi((sin(t * (6.0 if moving else 2.0)) * 0.5 + 0.5) * 4.0)
-			"jelly_frills", "tentacles_back", "hydra_heads", "fox_tail", "cat_tail", "comet", "leaves":
+			"jelly_frills", "tentacles_back", "hydra_heads", "fox_tail", "cat_tail", "comet", "leaves", "monkey_tail", "jaguar_tail":
 				dyn = int(fposmod(t * 0.8, 1.0) * 8.0)
+			"feather_cape":
+				dyn = roundi((sin(t * 2.0) * 0.04 + (0.2 if moving else 0.0)) / 0.04)
+			"wings_quetzal", "wings_parrot":
+				dyn = roundi((sin(t * (6.0 if moving else 2.0)) * 0.5 + 0.5) * 4.0)
 	var key := _k(10 + int(front), dyn)
 	if not Art.cache_begin(ci, key):
 		for p: String in parts:
@@ -895,6 +1014,31 @@ static func _back_front(ci: CanvasItem, p: String) -> void:
 			Art.pop(ci)
 		"hydra_heads":
 			pass
+		"rope":
+			# The coil's end across the chest, a carabiner at the hip.
+			Art.line_c(ci, _ROPE_SASH, Art.INK, 5.6)
+			Art.line_c(ci, _ROPE_SASH, ROPE_C, 3.2)
+			for i in range(1, _ROPE_SASH.size() - 1, 2):
+				var d := (_ROPE_SASH[i + 1] - _ROPE_SASH[i - 1]).normalized().orthogonal()
+				Art.line_c(ci, PackedVector2Array([_ROPE_SASH[i] - d * 1.4, _ROPE_SASH[i] + d * 1.4]), Art.shade_of(ROPE_C, 0.35), 0.9)
+			Art.arc_c(ci, Vector2(12, -21), 3.0, 0, TAU, 10, Art.INK, 3.6)
+			Art.arc_c(ci, Vector2(12, -21), 3.0, 0, TAU, 10, Color("c8d0dc"), 1.6)
+		"satchel":
+			var bc := _c("bc")
+			Art.line_c(ci, _SATCHEL_STRAP, Art.INK, 5.6)
+			Art.line_c(ci, _SATCHEL_STRAP, Art.shade_of(bc, 0.2), 3.2)
+			Art.toon(ci, _SATCHEL_BAG, bc, 2.2, 0.6)
+			Art.toon(ci, _SATCHEL_FLAP, Art.shade_of(bc, 0.16), 1.8, 0.3)
+			Art.line_c(ci, PackedVector2Array([Vector2(-24, -29), Vector2(-10, -29)]), Color(1, 1, 1, 0.3), 1.0)
+			Art.t_rect(ci, Rect2(-19, -25.5, 4.6, 4.2), 1.2, Art.GOLD, 1.3, 0.0)
+
+
+const ROPE_C := Color("f0c46a")
+static var _ROPE_SASH := Art.smooth_pts(PackedVector2Array([Vector2(-11, -50), Vector2(-2, -40), Vector2(7, -30), Vector2(12, -23)]), 2)
+static var _SATCHEL_STRAP := PackedVector2Array([Vector2(10, -49), Vector2(1, -40), Vector2(-9, -30)])
+static var _SATCHEL_BAG := Art.rrect_pts(Rect2(-25, -31, 16, 14), 4)
+static var _SATCHEL_FLAP := Art.smooth_pts(PackedVector2Array([Vector2(-25.5, -31.5), Vector2(-8.5, -31.5), Vector2(-9, -24),
+		Vector2(-17, -21.5), Vector2(-25, -24)]), 2)
 
 
 static var _PARROT_TAIL := PackedVector2Array([Vector2(-3, -2), Vector2(2, -2), Vector2(-4, 14), Vector2(-9, 12)])
@@ -1025,12 +1169,66 @@ static func _back_part(ci: CanvasItem, p: String, dyn: int) -> void:
 			var ph := dyn * TAU / 8.0
 			_hydra_head(ci, _curl(Vector2(-6, -50), -PI * 0.62 + sin(ph) * 0.05, 34, -1.4, 7), bc, bc2)
 			_hydra_head(ci, _curl(Vector2(-12, -42), -PI * 0.92 + sin(ph + 1.5) * 0.05, 30, 1.0, 7), Art.shade_of(bc, 0.15), bc2)
+		"rope":
+			# A coil of climbing rope on the back.
+			for k in 3:
+				var ring := Art.ellipse_pts(Vector2(-19 + k * 1.6, -39 + k * 1.2), Vector2(10.5 - k * 0.6, 13.0 - k * 0.6), 20, 0.3)
+				Art.ring(ci, ring, Art.INK, 5.4)
+				Art.ring(ci, ring, ROPE_C if k != 1 else Art.shade_of(ROPE_C, 0.15), 3.0)
+			Art.t_rect(ci, Rect2(-23, -44, 8, 9), 2, Color("6a3e22"), 1.6, 0.0)
+		"monkey_tail":
+			var pts := _curl(Vector2(-9, -22), PI * 0.78, 40, -3.4 + sin(dyn * TAU / 8.0) * 0.35, 12)
+			Art.toon(ci, _taper(pts, 6.0, 4.0), bc, 2.2, 0.3)
+		"jaguar_tail":
+			var pts := _curl(Vector2(-10, -22), PI * 0.82, 40, 1.9 + sin(dyn * TAU / 8.0) * 0.35, 10)
+			Art.toon(ci, _taper(pts, 7.5, 5.0), bc, 2.2, 0.3)
+			for i in [3, 5, 7]:
+				Art.arc_c(ci, pts[i], 1.8, 0, TAU, 8, bc2, 1.2)
+			Art.t_circle(ci, pts[10], 3.2, bc2, 2.0, 0.0)
+		"tail_feathers":
+			for k in 3:
+				Art.push(ci, Vector2(-9, -23), PI * 0.3 + k * 0.2)
+				Art.toon(ci, _TAIL_FEATHER, bc if k != 1 else Art.shade_of(bc, 0.2), 2.0, 0.3)
+				Art.pop(ci)
+			Art.toon(ci, Art.ellipse_pts(Vector2(-12, -18), Vector2(6, 4), 12, 0.4), bc2, 1.8, 0.0)
+		"feather_cape":
+			Art.push(ci, Vector2(-8, -53), dyn * 0.04)
+			Art.toon(ci, Chars._CAPE, bc, 2.4, 0.0)
+			Art.flat(ci, Chars._CAPE_LINING, Art.shade_of(bc, 0.4))
+			# Rows of feathers, the longest ones red-tipped at the hem.
+			for row in 3:
+				var col: Color = [Color("2ad0c0"), bc.lightened(0.15), bc2][row]
+				for i in 5:
+					var fp := Vector2(-30 + i * 6.5 + (row % 2) * 3.2, 14 + row * 12)
+					var lf := _clip(_leaf_pts(fp, 16.0, 7.0, PI / 2.0), Chars._CAPE)
+					if lf.size() > 2:
+						Art.toon(ci, lf, col, 1.2, 0.0)
+			Art.flat(ci, _clip(Art.rrect_pts(Rect2(-34, 2, 40, 4), 1), Chars._CAPE), Art.GOLD)
+			Art.pop(ci)
+		"wings_quetzal", "wings_parrot":
+			_wings(ci, p, dyn, bc, bc2)
+		"leaf_umbrella":
+			# A big leaf held over the head like an umbrella, stem over the shoulder.
+			Art.line_c(ci, _UMB_STEM, Art.INK, 4.6)
+			Art.line_c(ci, _UMB_STEM, Color("4a9a3a"), 2.6)
+			Art.toon(ci, _UMB_LEAF, Color("3fbf50"), 2.4, 0.5)
+			Art.line_c(ci, _UMB_VEIN, Color("2a8a3a"), 1.4)
+			for k in 4:
+				var x := -36.0 + k * 13.0
+				Art.line_c(ci, PackedVector2Array([Vector2(x + 4, -104 + absf(x + 10) * 0.12), Vector2(x, -96 + absf(x + 10) * 0.2)]), Color("2a8a3a"), 1.1)
+			Art.flat(ci, _clip(Art.ellipse_pts(Vector2(-20, -108), Vector2(10, 3), 12, -0.2), _UMB_LEAF), Color(1, 1, 1, 0.3))
 		"comet":
 			Art.toon(ci, _COMET_OUT, Color(bc, 0.55), 0.0, 0.0)
 			Art.toon(ci, _COMET_MID, Color(bc.lightened(0.4), 0.8), 0.0, 0.0)
 			Art.toon(ci, _COMET_CORE, Color(1, 1, 1, 0.95), 0.0, 0.0)
 
 
+static var _UMB_STEM := Art.smooth_pts(PackedVector2Array([Vector2(-12, -34), Vector2(-16, -60), Vector2(-14, -86), Vector2(-8, -104)]), 2)
+static var _UMB_LEAF := Art.smooth_pts(PackedVector2Array([Vector2(-46, -88), Vector2(-40, -104), Vector2(-24, -115), Vector2(-4, -117), Vector2(14, -110),
+		Vector2(26, -96), Vector2(28, -84), Vector2(18, -92), Vector2(10, -88), Vector2(2, -94), Vector2(-8, -90), Vector2(-18, -96), Vector2(-28, -90),
+		Vector2(-36, -94)]), 2)
+static var _UMB_VEIN := Art.smooth_pts(PackedVector2Array([Vector2(-40, -94), Vector2(-24, -106), Vector2(-4, -109), Vector2(14, -102), Vector2(24, -90)]), 2)
+static var _TAIL_FEATHER := Art.smooth_pts(PackedVector2Array([Vector2(-3, 0), Vector2(3, 0), Vector2(4.5, 12), Vector2(0, 22), Vector2(-4.5, 12)]), 2)
 static var _BLADE := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(3, -4), Vector2(4, -12), Vector2(0, -14), Vector2(-3, -8)]), 2)
 static var _SHARK_TAIL := Art.smooth_pts(PackedVector2Array([Vector2(-10, -30), Vector2(-26, -28), Vector2(-36, -44), Vector2(-38, -40),
 		Vector2(-32, -24), Vector2(-40, -10), Vector2(-36, -8), Vector2(-24, -18), Vector2(-10, -18)]), 2)
@@ -1074,7 +1272,7 @@ static func _wings(ci: CanvasItem, kind: String, dyn: int, c1: Color, c2: Color)
 	var flap := (dyn - 2) * 0.07
 	var shape: PackedVector2Array
 	match kind:
-		"wings_fire":
+		"wings_fire", "wings_quetzal", "wings_parrot":
 			shape = _WING_FEATHER
 		"wings_fin":
 			shape = _WING_FIN
@@ -1088,6 +1286,12 @@ static func _wings(ci: CanvasItem, kind: String, dyn: int, c1: Color, c2: Color)
 			"wings_fire":
 				Art.flat(ci, _clip(_WING_FEATHER_IN, shape), c2)
 				Art.flat(ci, _clip(_WING_FEATHER_CORE, shape), Color("fff6c2"))
+			"wings_quetzal", "wings_parrot":
+				# Rainbow bands of feathers: tips, middle, a bright shoulder.
+				Art.flat(ci, _clip(_WING_FEATHER_IN, shape), c2 if kind == "wings_quetzal" else Color("ffd23f"))
+				Art.flat(ci, _clip(_WING_FEATHER_CORE, shape), Color("ffd23f") if kind == "wings_quetzal" else Color("ef3a3a"))
+				for b: Vector2 in [Vector2(-40, -34), Vector2(-44, -24), Vector2(-40, -12)]:
+					Art.line_c(ci, PackedVector2Array([Vector2(-14, -8), b * 0.86]), Art.shade_of(col, 0.35), 1.3)
 			"wings_fin":
 				for r in [0.3, 0.55, 0.8]:
 					Art.line_c(ci, PackedVector2Array([Vector2(0, 0), _WING_FIN_TIP * r + Vector2(0, 0)]), Art.shade_of(col, 0.3), 1.6)
@@ -1121,8 +1325,8 @@ static var _WING_FIN_EDGE := Art.smooth_pts(PackedVector2Array([Vector2(-34, -40
 static func _legs(ci: CanvasItem, kick: float, t: float, amp: float, walking: bool) -> void:
 	var legs: String = _sp["legs"]
 	match legs:
-		"tentacles", "mermaid", "wisp", "treads", "wheel", "robe", "blob":
-			var ph := int(fposmod(t * 0.9 + kick * 0.3, 1.0) * 8.0) if legs in ["tentacles", "mermaid", "wisp"] else 0
+		"tentacles", "mermaid", "serpent", "wisp", "treads", "wheel", "robe", "blob":
+			var ph := int(fposmod(t * 0.9 + kick * 0.3, 1.0) * 8.0) if legs in ["tentacles", "mermaid", "serpent", "wisp"] else 0
 			if legs in ["treads", "wheel"]:
 				ph = int(fposmod(kick * 2.0, 1.0) * 6.0)
 			if legs == "robe" and walking and amp > 0.3:
@@ -1165,6 +1369,17 @@ static func _leg(ci: CanvasItem, legs: String, near: bool) -> void:
 		"roots":
 			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, lc, 2.2, 0.0)
 			Art.flat(ci, Art.rrect_pts(Rect2(-4.5, 4, 9, 3), 1), Art.shade_of(_c("leg_c"), k + 0.3))
+		"shorts":
+			# Bare knees, long socks and turned-up khaki shorts.
+			Art.t_rect(ci, Rect2(-4, -2, 8, 14), 4, Art.shade_of(SKIN, k), 2.2, 0.0)
+			Art.t_rect(ci, Rect2(-4.6, 5, 9.2, 7), 2.5, Art.shade_of(_c("sock"), k), 1.8, 0.0)
+			Art.flat(ci, Art.rrect_pts(Rect2(-4.6, 5, 9.2, 1.6), 0.8), Art.shade_of(_c("sock"), k + 0.25))
+			Art.t_rect(ci, Rect2(-5.5, -4, 11, 7.5), 3, lc, 2.2, 0.0)
+			_motif(ci, _SHORTS_J)
+			Art.t_rect(ci, Rect2(-5.8, 1.2, 11.6, 2.6), 1.2, Art.shade_of(lc, 0.12), 1.4, 0.0)
+		"bird":
+			Art.t_rect(ci, Rect2(-2.3, 0, 4.6, 12), 2.3, lc, 2.0, 0.0)
+			Art.t_ellipse(ci, Vector2(0, -0.5), Vector2(5.5, 5.0), Art.shade_of(_c("suit"), k), 2.0, 0.0)
 		_:
 			Art.t_rect(ci, Rect2(-4.5, -2, 9, 14), 4, lc, 2.2, 0.0)
 			_motif(ci, _LEG)
@@ -1190,6 +1405,10 @@ static func _foot(ci: CanvasItem, legs: String, near: bool) -> void:
 				Art.toon(ci, PackedVector2Array([Vector2(x, 6.5), Vector2(x + 3.5, 8.5), Vector2(x, 10)]), Art.shade_of(Color.WHITE, k), 1.2, 0.0)
 		"frog":
 			Art.toon(ci, _FROG_FOOT, b, 2.2, 0.0)
+		"bird":
+			Art.toon(ci, _BIRD_FOOT, b, 2.0, 0.0)
+			for x: float in [9.0, 13.5]:
+				Art.line_c(ci, PackedVector2Array([Vector2(x, 6.5), Vector2(x + 1.5, 9)]), Art.shade_of(b, 0.35), 1.0)
 		"rock":
 			Art.toon(ci, _ROCK_FOOT, Art.shade_of(_c("leg_c"), k + 0.1), 2.4, 0.0)
 		"roots":
@@ -1205,6 +1424,8 @@ static func _foot(ci: CanvasItem, legs: String, near: bool) -> void:
 					Art.t_rect(ci, Rect2(x - 0.8, 3.5 + (x - 5.0) * 0.2, 1.8, 3.2), 0.8, Art.shade_of(_c("toe"), k), 0.0, 0.0)
 
 
+static var _BIRD_FOOT := Art.smooth_pts(PackedVector2Array([Vector2(-2, 1), Vector2(2, 1), Vector2(5, 5), Vector2(11, 4.5), Vector2(17, 7),
+		Vector2(16, 10), Vector2(-7, 10), Vector2(-8, 7.5), Vector2(-3, 6)]), 2)
 static var _PAW := Art.smooth_pts(PackedVector2Array([Vector2(-6, -2), Vector2(6, -2), Vector2(9, 2), Vector2(17, 4), Vector2(17, 10), Vector2(-6, 10)]), 2)
 static var _FROG_FOOT := Art.smooth_pts(PackedVector2Array([Vector2(-5, -2), Vector2(5, -2), Vector2(10, 3), Vector2(22, 2), Vector2(18, 7),
 		Vector2(24, 9), Vector2(16, 11), Vector2(-5, 10)]), 2)
@@ -1234,6 +1455,20 @@ static func _lower_body(ci: CanvasItem, legs: String, ph: int) -> void:
 			Art.push(ci, tip, d.angle())
 			Art.toon(ci, _TAIL_FIN, _c("boot"), 2.2, 0.3)
 			Art.pop(ci)
+		"serpent":
+			# A coiled snake body that ends in a tuft of feathers.
+			var sw := sin(a) * 0.3
+			var pts := _curl(Vector2(0, -22), PI * 0.5, 40, 2.6 + sw, 10)
+			Art.toon(ci, _taper(pts, 21, 5), lc, 2.4, 0.5)
+			Art.flat(ci, _clip(_taper(_curl(Vector2(4, -22), PI * 0.5, 34, 2.6 + sw, 8), 7, 2), _taper(pts, 21, 5)), _c("belly"))
+			for i in [2, 4, 6]:
+				Art.arc_c(ci, pts[i] + Vector2(0, -3), 3.6, 0.3, PI - 0.3, 6, Art.shade_of(lc, 0.3), 1.4)
+			var tip := pts[10]
+			var d := (pts[10] - pts[9]).normalized()
+			for k in 3:
+				Art.push(ci, tip, d.angle() - PI / 2.0 + (k - 1) * 0.5)
+				Art.toon(ci, _TAIL_FEATHER, [_c("boot"), Color("ffd23f"), Color("2ad0c0")][k], 1.8, 0.0)
+				Art.pop(ci)
 		"wisp":
 			var sw := sin(a) * 0.3
 			var pts := _curl(Vector2(0, -26), PI * 0.55, 30, 1.4 + sw, 8)
@@ -1270,7 +1505,7 @@ static var _TAIL_FIN := Art.smooth_pts(PackedVector2Array([Vector2(-2, 0), Vecto
 
 static func _torso(ci: CanvasItem, t: float) -> void:
 	var dyn := 0
-	if _sp["pattern"] in ["cracks", "dots_glow"] or _sp["torso"] in ["robot", "rock"]:
+	if _sp["pattern"] in ["cracks", "dots_glow"] or _sp["torso"] in ["robot", "rock"] or _sp.has("trim"):
 		dyn = roundi((0.6 + 0.4 * sin(t * 3.0)) * 5.0)
 	var key := _k(2, dyn)
 	if Art.cache_begin(ci, key):
@@ -1346,7 +1581,10 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 	if _sp.has("belly"):
 		Art.flat(ci, _clip(Art.ellipse_pts(Vector2(2, -28), Vector2(9, 13), 16), shape), _c("belly"))
 	_pattern(ci, shape, pulse)
-	_motif(ci, shape)
+	if _sp.has("vest"):
+		_vest(ci, shape)
+	else:
+		_motif(ci, shape)
 	if kind == "armor":
 		Art.toon(ci, _CUIRASS, _c("plate"), 2.2, 0.6)
 		_motif(ci, _CUIRASS)
@@ -1357,10 +1595,12 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 			for x: float in [-12.5, 6.0]:
 				Art.t_rect(ci, Rect2(x, -26, 7, 8), 2, _c("pouch"), 1.6, 0.3)
 		Art.t_rect(ci, Rect2(-3, -25, 6, 7), 1.5, Art.GOLD, 1.2, 0.0)
+	if _sp.has("trim"):
+		_trim(ci, shape, pulse)
 	_emblem(ci, _sp["emblem"], _c("ec"))
 	# Collar: a helmet ring, or a little neck band under a bare head.
 	match _sp["head"]:
-		"kid", "creature":
+		"kid", "creature", "explorer":
 			if kind != "robe":
 				Art.flat(ci, _clip(Art.ellipse_pts(Vector2(1, -47), Vector2(9, 4), 12), shape), Art.shade_of(suit, 0.3))
 		"lamp":
@@ -1370,6 +1610,54 @@ static func _torso_draw(ci: CanvasItem, pulse: float) -> void:
 			if kind == "armor":
 				cc = _c("plate")
 			Art.t_rect(ci, Rect2(-16, -53, 34, 9), 4, cc, 2.5, 0.3)
+	if _sp.has("scarf"):
+		# A neckerchief knotted under the chin.
+		var sc := _c("scarf")
+		Art.toon(ci, _SCARF, sc, 2.0, 0.4)
+		Art.toon(ci, _SCARF_TIP, Art.shade_of(sc, 0.12), 1.8, 0.0)
+		Art.t_circle(ci, Vector2(3, -46), 2.6, Art.shade_of(sc, 0.2), 1.6, 0.0)
+		if not Chars._small:
+			for d: Vector2 in [Vector2(-4, -48), Vector2(9, -48), Vector2(2.5, -40.5)]:
+				Art.disc(ci, d, 0.8, Color(1, 1, 1, 0.75))
+
+
+static var _SCARF := Art.smooth_pts(PackedVector2Array([Vector2(-9, -51), Vector2(3, -48), Vector2(14, -51), Vector2(13, -46),
+		Vector2(3, -43.5), Vector2(-8, -46)]), 2)
+static var _SCARF_TIP := PackedVector2Array([Vector2(-1, -46), Vector2(7, -46), Vector2(3, -37.5)])
+static var _VEST_L := PackedVector2Array([Vector2(-16, -50), Vector2(-3, -50), Vector2(-1, -42), Vector2(-2.5, -20), Vector2(-16, -20)])
+static var _VEST_R := PackedVector2Array([Vector2(5, -50), Vector2(16, -50), Vector2(16, -20), Vector2(4.5, -20), Vector2(3.5, -42)])
+
+
+## An open vest over the shirt: two panels with pockets (patterned by skins).
+static func _vest(ci: CanvasItem, shape: PackedVector2Array) -> void:
+	var vc := _c("vest")
+	for panel: PackedVector2Array in [_VEST_L, _VEST_R]:
+		var vp := _clip(panel, shape)
+		if vp.size() > 2:
+			Art.toon(ci, vp, vc, 1.8, 0.5)
+			_motif(ci, vp)
+	var pk := Art.shade_of(vc, 0.14)
+	for r: Rect2 in [Rect2(-12, -33, 7.5, 7), Rect2(6, -33, 7, 7)]:
+		Art.t_rect(ci, r, 1.5, pk, 1.4, 0.0)
+		Art.flat(ci, Art.rrect_pts(Rect2(r.position.x, r.position.y, r.size.x, 2.4), 0.8), Art.shade_of(vc, 0.3))
+	if not Chars._small:
+		for y: float in [-46.0, -38.0, -28.0]:
+			Art.disc(ci, Vector2(5.5, y), 0.9, Color("6a4a2a"))
+
+
+## Glowing seams of the jungle suit (pulse: 0..1, the slow breathing glow).
+static func _trim(ci: CanvasItem, shape: PackedVector2Array, pulse: float) -> void:
+	var tc := _c("trim")
+	var a := 0.55 + 0.45 * pulse
+	for line: PackedVector2Array in [_TRIM_ZIP, _TRIM_HEM]:
+		for piece in Geometry2D.intersect_polyline_with_polygon(line, shape):
+			if piece.size() > 1:
+				Art.line_c(ci, piece, Color(tc, 0.3 * a), 5.0)
+				Art.line_c(ci, piece, tc.lerp(Color.WHITE, 0.3 * pulse), 1.6)
+
+
+static var _TRIM_ZIP := PackedVector2Array([Vector2(2, -50), Vector2(1.5, -36), Vector2(2, -14)])
+static var _TRIM_HEM := PackedVector2Array([Vector2(-20, -18.5), Vector2(20, -18.5)])
 
 
 static func _pattern(ci: CanvasItem, shape: PackedVector2Array, pulse: float) -> void:
@@ -1433,6 +1721,19 @@ static func _pattern(ci: CanvasItem, shape: PackedVector2Array, pulse: float) ->
 			for i in 3:
 				var x := -9.0 + i * 9.0
 				Art.flat(ci, _clip(PackedVector2Array([Vector2(x - 5, -14), Vector2(x - 2, -26), Vector2(x, -22), Vector2(x + 2, -32), Vector2(x + 5, -14)]), shape), pc)
+		"monstera":
+			for l: Array in [[Vector2(-5, -37), -0.7, 1.0], [Vector2(8, -25), 2.3, 0.9], [Vector2(-9, -22), 0.5, 0.6]]:
+				var lp := _leaf_pts(l[0], 12.0 * l[2], 8.0 * l[2], l[1])
+				Art.flat(ci, _clip(lp, shape), pc)
+				var dd := Vector2.from_angle(l[1])
+				Art.line_c(ci, _clip_line(PackedVector2Array([l[0] - dd * 5.0 * l[2], l[0] + dd * 5.0 * l[2]])), Art.shade_of(pc, 0.3), 1.0)
+				for sd: float in [-1.0, 1.0]:
+					var n := dd.orthogonal() * sd
+					Art.line_c(ci, _clip_line(PackedVector2Array([l[0] + n * 1.2 * l[2], l[0] + n * 3.6 * l[2] + dd * 1.5 * l[2]])), _c("suit"), 1.2)
+		"rosettes":
+			for p: Vector2 in [Vector2(-8, -41), Vector2(6, -43), Vector2(9, -29), Vector2(-7, -27), Vector2(1, -35)]:
+				Art.arc_c(ci, p, 2.6, 0, TAU, 10, pc, 1.5)
+				Art.disc(ci, p, 1.0, Art.shade_of(_c("suit"), 0.15))
 		"leaves":
 			for p: Vector2 in [Vector2(-6, -38), Vector2(6, -28), Vector2(-4, -22)]:
 				Art.flat(ci, _clip(Art.ellipse_pts(p, Vector2(5, 2.4), 10, -0.6), shape), pc)
@@ -1486,6 +1787,15 @@ static func _emblem(ci: CanvasItem, kind: String, col: Color) -> void:
 			Art.flat(ci, PackedVector2Array([c + Vector2(-3.4, 2), c + Vector2(3.4, 2), c + Vector2(4.3, 4.3), c + Vector2(-4.3, 4.3)]), col)
 		"flame":
 			Art.toon(ci, PackedVector2Array([c + Vector2(0, -7), c + Vector2(4, -1), c + Vector2(4, 3), c + Vector2(0, 6), c + Vector2(-4, 3), c + Vector2(-3, -2), c + Vector2(-1, 0)]), col, 1.4, 0.0)
+		"sun_disc":
+			# The temple's sun: gold rays, a gold disc, a turquoise heart.
+			var sc := c + Vector2(0, 1)
+			Art.toon(ci, Art.star_pts(sc, 11.0, 7.4, 12, 0.0), Art.GOLD_DARK, 1.6, 0.0)
+			Art.t_circle(ci, sc, 7.4, Color("ffd84a"), 1.8, 0.5)
+			Art.t_circle(ci, sc, 4.0, col, 1.4, 0.0)
+			Art.flat(ci, Art.circle_pts(sc + Vector2(-1.2, -1.4), 1.3, 6), Color(1, 1, 1, 0.8))
+			if not Chars._small:
+				Art.arc_c(ci, sc, 5.7, 0, TAU, 16, Art.GOLD_DARK, 0.8)
 
 
 static func _clip_moon(c: Vector2, r: float) -> PackedVector2Array:
@@ -1512,7 +1822,8 @@ static func _motif(ci: CanvasItem, shape: PackedVector2Array) -> void:
 	var b := Art._bounds(shape)
 	_mb = b
 	var step: float = {"speckle": 6.0, "stars": 8.0, "camo": 10.0, "bubbles": 9.0, "spots": 9.0, "cracks": 13.0,
-			"bands": 7.0, "galaxy": 14.0, "aurora": 9.0, "circuit": 13.0, "bolts": 13.0}.get(m, 11.0)
+			"bands": 7.0, "galaxy": 14.0, "aurora": 9.0, "circuit": 13.0, "bolts": 13.0, "leafcamo": 8.0, "banana": 10.0,
+			"flowers": 10.0, "jadeveins": 11.0, "tiger": 7.0, "glyphs": 9.0}.get(m, 11.0)
 	var i0 := floori(b.position.x / step) - 1
 	var j0 := floori(b.position.y / step) - 1
 	var i1 := ceili(b.end.x / step)
@@ -1655,6 +1966,69 @@ static func _motif_at(ci: CanvasItem, m: String, p: Vector2, r: float, step: flo
 				var x := p.x - step * 0.6 + k * step * 0.4
 				wave.append(Vector2(x, p.y + sin(x * 0.4 + r * 3.0) * 1.8))
 			_mglow(ci, wave, mc if r < 0.6 else mc2, Color(1, 1, 1, 0.8), 0.9, shape)
+		"leafcamo":
+			_mfill(ci, _leaf_pts(p, step * 1.15, step * 0.55, rot), mc if r < 0.5 else mc2, shape)
+		"banana":
+			if r < 0.3:
+				_mfill(ci, Art.circle_pts(p, 0.8, 6), Color(mc, 0.6), shape)
+				return
+			# A little banana: a crescent with dark tips.
+			var a0 := rot * 0.4 - 0.4
+			var outer := PackedVector2Array()
+			var inner := PackedVector2Array()
+			for k in 6:
+				var a := a0 + k * 0.42
+				outer.append(p + Vector2(cos(a), sin(a)) * 4.4)
+				inner.append(p + Vector2(0.6, -1.2) + Vector2(cos(a), sin(a)) * 3.0)
+			inner.reverse()
+			_mfill(ci, outer + inner, mc, shape)
+			_mfill(ci, Art.circle_pts(outer[0], 0.8, 5), mc2, shape)
+			_mfill(ci, Art.circle_pts(outer[5], 0.7, 5), mc2, shape)
+		"flowers":
+			if r < 0.3:
+				_mfill(ci, _leaf_pts(p, 4.0, 2.0, rot), Color("5ad06a"), shape)
+				return
+			# A hibiscus: five round petals and a yellow heart.
+			for k in 5:
+				var a := rot + TAU * k / 5.0
+				_mfill(ci, Art.circle_pts(p + Vector2(cos(a), sin(a)) * 2.0, 1.7, 7), mc if r < 0.7 else Color("ffffff"), shape)
+			_mfill(ci, Art.circle_pts(p, 1.0, 6), mc2, shape)
+		"jadeveins":
+			var pts := PackedVector2Array()
+			for k in 5:
+				var x := -step * 0.55 + k * step * 0.28
+				pts.append(p + Vector2(x, sin(x * 0.6 + r * 6.0) * 2.0).rotated(rot * 0.5))
+			_mline(ci, pts, Color(mc, 0.85), 0.8, shape)
+			if r > 0.55:
+				_mfill(ci, Art.circle_pts(p + Vector2(2, 2.5), 1.3, 7), mc2, shape)
+				_mfill(ci, Art.circle_pts(p + Vector2(1.6, 2.1), 0.5, 5), Color(1, 1, 1, 0.8), shape)
+		"tiger":
+			if posmod(floori(p.y / step) + floori(p.x / step), 2) == 0 and r < 0.6:
+				return
+			var sd := 1.0 if r < 0.5 else -1.0
+			var pts := _curl(p + Vector2(-step * 0.5 * sd, -1.0), (0.0 if sd > 0 else PI) + 0.15 * sd, step * 0.9, 0.5 * sd, 4)
+			_mfill(ci, _taper(pts, 2.6, 0.4), mc, shape)
+		"glyphs":
+			# Carved temple signs in gold, one of four per square.
+			var g := int(r * 4.0)
+			var col := mc if (int(r * 40.0) % 3) != 0 else mc2
+			match g:
+				0:
+					var pts := PackedVector2Array()
+					for k in 9:
+						pts.append(p + Vector2.from_angle(k * 0.8) * (0.4 + k * 0.32))
+					_mline(ci, pts, col, 0.8, shape)
+				1:
+					_mline(ci, Art.circle_pts(p, 1.6, 8) + PackedVector2Array([p + Vector2(1.6, 0)]), col, 0.8, shape)
+					for k in 4:
+						var d := Vector2.from_angle(k * PI / 2.0 + PI / 4.0)
+						_mline(ci, PackedVector2Array([p + d * 2.3, p + d * 3.4]), col, 0.8, shape)
+				2:
+					_mline(ci, PackedVector2Array([p + Vector2(-3, 1.5), p + Vector2(-1.5, -1.5), p + Vector2(0, 1.5), p + Vector2(1.5, -1.5), p + Vector2(3, 1.5)]), col, 0.8, shape)
+				_:
+					_mline(ci, PackedVector2Array([p + Vector2(-2.6, 2.2), p + Vector2(-2.6, -0.4), p + Vector2(-0.4, -0.4), p + Vector2(-0.4, -2.6),
+							p + Vector2(2.6, -2.6)]), col, 0.8, shape)
+					_mfill(ci, Art.circle_pts(p + Vector2(1.2, 1.0), 0.8, 5), col, shape)
 		"constellation":
 			var q := p + Vector2.from_angle(rot) * step * 0.7
 			_mline(ci, PackedVector2Array([p, q]), Color(mc, 0.7), 0.6, shape)
@@ -1751,6 +2125,7 @@ static var _SLEEVE := Art.rrect_pts(Rect2(-4.5, -3, 9, 19), 4.5)
 static var _SLEEVE_SHORT := Art.rrect_pts(Rect2(-5, -4, 10, 9), 4)
 static var _LEG := Art.rrect_pts(Rect2(-4.5, -2, 9, 14), 4)
 static var _SHORTS := Art.rrect_pts(Rect2(-5, -3, 10, 7), 3)
+static var _SHORTS_J := Art.rrect_pts(Rect2(-5.5, -4, 11, 7.5), 3)
 
 
 ## Elbow pads and cuffs on a sleeve (`k` = the far arm's shade).
@@ -1821,6 +2196,9 @@ static func _swing_tool(ci: CanvasItem, tool: String) -> void:
 			_orb(ci, Vector2(0, 34))
 		_:
 			Art.t_rect(ci, Rect2(-2.6, -6, 5.2, 38), 2.6, th, 1.8, 0.0)
+			if _sp.has("wrap"):
+				for y: float in [-3.0, 3.0, 9.0]:
+					Art.t_rect(ci, Rect2(-3.4, y, 6.8, 3.2), 1.2, _c("wrap"), 1.2, 0.0)
 			Art.toon(ci, Chars._PICK_HEAD, tc, 2.0, 0.4)
 			Art.line_c(ci, PackedVector2Array([Vector2(-14, 27.6), Vector2(-4, 27.8)]), Color(1, 1, 1, 0.65), 1.4)
 			Art.t_rect(ci, Rect2(-4, 25.5, 8, 10), 2, Art.shade_of(tc, 0.25), 1.6, 0.0)
@@ -1840,6 +2218,11 @@ static func _orb(ci: CanvasItem, c: Vector2) -> void:
 			Art.disc(ci, c + Vector2(-2, 4), 1.4, Color(1, 1, 1, 0.8))
 		"star":
 			Art.toon(ci, Art.star_pts(c + Vector2(0, 3), 9.0, 4.0, 5, PI / 2.0), orb, 2.0, 0.4)
+		"sun":
+			Art.toon(ci, Art.star_pts(c + Vector2(0, 4), 11.0, 7.0, 10, 0.0), Art.GOLD_DARK, 1.8, 0.0)
+			Art.t_circle(ci, c + Vector2(0, 4), 7.0, orb, 2.0, 0.5)
+			Art.t_circle(ci, c + Vector2(0, 4), 3.4, Color("2ad0c0"), 1.4, 0.0)
+			Art.flat(ci, Art.circle_pts(c + Vector2(-1, 3), 1.2, 6), Color(1, 1, 1, 0.85))
 		"lantern":
 			Art.t_rect(ci, Rect2(c.x - 6, c.y - 2, 12, 13), 3, Color(orb, 0.9), 2.0, 0.0)
 			Art.t_rect(ci, Rect2(c.x - 7, c.y - 4, 14, 3), 1, Color("6a5a3a"), 1.6, 0.0)
@@ -1887,7 +2270,7 @@ static func _gun(ci: CanvasItem, tool: String, t: float, on: bool) -> void:
 ## Head center and radius of each head kind (things on top use them).
 static func _head_box() -> Array:
 	match _sp["head"]:
-		"kid", "lamp":
+		"kid", "lamp", "explorer":
 			return [Vector2(3, -68), 18.0]
 		"miner":
 			return [Vector2(2, -69), 20.0]
@@ -1907,6 +2290,10 @@ static func _head_box() -> Array:
 					return [Vector2(3, -66), 20.0]
 				"alien":
 					return [Vector2(3, -71), 20.0]
+				"toucan", "parrot":
+					return [Vector2(3, -69), 18.0]
+				"temple", "idol", "tiki":
+					return [Vector2(3, -70), 20.0]
 			return [Vector2(3, -67), 19.0]
 	return [Vector2(2, -69), 20.0]
 
@@ -1915,7 +2302,7 @@ static func _head(ci: CanvasItem, emotion: String, blink: bool, t: float) -> voi
 	var dyn := 0
 	if _sp["head"] == "creature" and _sp["cs"] in ["flame", "volcano"]:
 		dyn = int(fposmod(t * 2.0, 1.0) * 4.0)
-	elif "planet" in (_sp["top"] as Array):
+	elif "planet" in (_sp["top"] as Array) or "quetzal" in (_sp["top"] as Array):
 		dyn = roundi(sin(t * 2.0) * 2.0) + 2
 	var hs: float = _sp.get("hs", 1.0)
 	if hs != 1.0:
@@ -1933,6 +2320,10 @@ static func _head(ci: CanvasItem, emotion: String, blink: bool, t: float) -> voi
 		Art.pop(ci)
 
 
+## Tops drawn behind the head.
+const BEHIND_HEAD := ["octo_mantle", "feather_ruff", "sun_headdress", "quetzal"]
+
+
 ## Where the head sits on the body (it grows from here, see "hs").
 const NECK := Vector2(2, -49)
 
@@ -1945,13 +2336,17 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 	var skin := _c("skin")
 	var tops: Array = _sp["top"]
 	# Behind the head.
-	if "octo_mantle" in tops:
-		_top(ci, "octo_mantle", c, r, dyn)
-	if "frog_eyes" in tops:
-		pass
+	for tp: String in tops:
+		if tp in BEHIND_HEAD:
+			_top(ci, tp, c, r, dyn)
 	match _sp["head"]:
 		"kid", "lamp":
 			_kid_head(ci, c, emotion, blink)
+		"explorer":
+			_kid_head(ci, c, emotion, blink)
+			Art.push(ci, c + Vector2(0, 1), 0.0, Vector2(0.9, 0.9))
+			_pith(ci, _c("hc"), _c("hc2"), true)
+			Art.pop(ci)
 		"hood", "gasmask", "miner":
 			Art.t_circle(ci, c, r, hc, 2.6, 0.5)
 			_motif(ci, Art.circle_pts(c, r, 28))
@@ -2042,7 +2437,7 @@ static func _head_draw(ci: CanvasItem, emotion: String, blink: bool, dyn: int) -
 		"creature":
 			_creature_head(ci, c, r, emotion, blink, dyn)
 	for tp: String in tops:
-		if tp != "octo_mantle":
+		if not (tp in BEHIND_HEAD):
 			_top(ci, tp, c, r, dyn)
 
 
@@ -2071,7 +2466,7 @@ static func _kid_head(ci: CanvasItem, c: Vector2, emotion: String, blink: bool) 
 		Art.toon(ci, PackedVector2Array([Vector2(-4, 11.5), Vector2(4.5, 11.5), Vector2(3, 14.5), Vector2(0.5, 15.5), Vector2(-2.5, 14.5)]), Color("7a1f33"), 1.2, 0.0)
 		Art.pop(ci)
 	var tops: Array = _sp["top"]
-	var covered: bool = _sp["head"] == "lamp" or "mushroom_cap" in tops or "dwarf_helm" in tops or "wizard_crown" in tops or "alch_hat" in tops or "jelly_bell" in tops
+	var covered: bool = _sp["head"] in ["lamp", "explorer"] or "mushroom_cap" in tops or "dwarf_helm" in tops or "wizard_crown" in tops or "alch_hat" in tops or "jelly_bell" in tops
 	if hair != "bald" and not covered:
 		Art.push(ci, c, 0.0, Vector2(0.9, 0.9))
 		Chars._hair_front(ci, hair, hc)
@@ -2107,6 +2502,83 @@ static func _swim_mask(ci: CanvasItem, fc: Vector2, s: float) -> void:
 	if _sp.get("reg", false):
 		Art.line_c(ci, PackedVector2Array([fc + Vector2(-2, 12), fc + Vector2(-10, 15), fc + Vector2(-20, 14)]), Art.INK, 5.2)
 		Art.line_c(ci, PackedVector2Array([fc + Vector2(-2, 12), fc + Vector2(-10, 15), fc + Vector2(-20, 14)]), Color("3a3f5c"), 2.4)
+
+
+## The explorer's pith helmet around the head center (head space at 0.9).
+## deco: the band's badge, the head lamp (the recipe's "badge" and "lamp").
+static func _pith(ci: CanvasItem, hc: Color, hc2: Color, deco: bool) -> void:
+	Art.toon(ci, _PITH_BRIM, Art.shade_of(hc, 0.1), 2.4, 0.3)
+	Art.flat(ci, _clip(_PITH_BRIM_UNDER, _PITH_BRIM), Art.shade_of(hc, 0.3))
+	Art.toon(ci, _PITH_DOME, hc, 2.5, 0.6)
+	if deco:
+		_motif(ci, _PITH_DOME)
+	Art.flat(ci, _clip(_PITH_BAND, _PITH_DOME), hc2)
+	Art.line_c(ci, _PITH_SEAM_A, Art.shade_of(hc, 0.28), 1.2)
+	Art.line_c(ci, _PITH_SEAM_B, Art.shade_of(hc, 0.28), 1.2)
+	Art.flat(ci, _clip(_PITH_SHINE, _PITH_DOME), Color(1, 1, 1, 0.42))
+	Art.t_ellipse(ci, Vector2(-1, -35.5), Vector2(4.2, 2.4), Art.shade_of(hc, 0.12), 1.8, 0.0)
+	if not deco:
+		return
+	match _sp.get("badge", ""):
+		"sun":
+			Art.toon(ci, Art.star_pts(Vector2(10, -15), 6.6, 4.4, 10, 0.0), Art.GOLD_DARK, 1.4, 0.0)
+			Art.t_circle(ci, Vector2(10, -15), 4.4, Color("ffe066"), 1.4, 0.0)
+			Art.t_circle(ci, Vector2(10, -15), 2.2, Color("2ad0c0"), 1.0, 0.0)
+		"leaf":
+			Art.toon(ci, _leaf_pts(Vector2(-6, -16.5), 11.0, 6.0, -0.35), Color("5ad06a"), 1.4, 0.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(-11, -15), Vector2(-1, -18.5)]), Color("2a8a4a"), 0.9)
+	if _sp.get("lamp", false):
+		var lc := _c("trim") if _sp.has("trim") else Color("fff2a8")
+		if not Chars._small:
+			Art.flat(ci, _LAMP_BEAM, Color(lc, 0.16))
+		Art.t_rect(ci, Rect2(9, -21, 9, 10), 3, Color("4a4f6a"), 1.8, 0.0)
+		Art.t_circle(ci, Vector2(17, -16), 4.6, Color("dfe6f0"), 1.8, 0.0)
+		Art.t_circle(ci, Vector2(17, -16), 3.0, lc, 0.0, 0.0)
+		Art.flat(ci, Art.circle_pts(Vector2(16, -17), 1.1, 6), Color.WHITE)
+
+
+static var _PITH_BRIM := Art.ellipse_pts(Vector2(1, -11.5), Vector2(28, 7.2), 28, 0.05)
+static var _PITH_BRIM_UNDER := Art.ellipse_pts(Vector2(2, -7.5), Vector2(28, 5.0), 24, 0.05)
+static var _PITH_DOME := _dome_pts()
+static var _PITH_BAND := Art.rrect_pts(Rect2(-24, -19.5, 48, 6.5), 1)
+static var _PITH_SEAM_A := Art.smooth_pts(PackedVector2Array([Vector2(-1, -35), Vector2(5, -28), Vector2(7.5, -20)]), 2)
+static var _PITH_SEAM_B := Art.smooth_pts(PackedVector2Array([Vector2(-1, -35), Vector2(-8, -28), Vector2(-11, -20)]), 2)
+static var _PITH_SHINE := Art.ellipse_pts(Vector2(-9, -26), Vector2(3.6, 7.5), 12, 0.55)
+static var _LAMP_BEAM := PackedVector2Array([Vector2(19, -19), Vector2(52, -30), Vector2(54, -4), Vector2(19, -13)])
+
+
+static func _dome_pts() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 19:
+		var a := PI + PI * i / 18.0
+		pts.append(Vector2(cos(a) * 20.5, -13.0 + sin(a) * 23.0))
+	pts.append(Vector2(18, -10.5))
+	pts.append(Vector2(-18, -10.5))
+	return pts
+
+
+## Two round bird eyes (toucan, parrot) at `a` and `b` with rings of `ring`.
+static func _bird_eyes(ci: CanvasItem, eyes: Array, ring: Color, emotion: String, blink: bool) -> void:
+	var e: Array = Chars.EMOTIONS.get(emotion, Chars.EMOTIONS["happy"])
+	var kind: String = e[0]
+	if blink and kind in ["open", "wide", "narrow", "star"]:
+		kind = "closed"
+	for p: Vector2 in eyes:
+		Art.t_circle(ci, p, 5.4, ring, 1.8, 0.0)
+		match kind:
+			"closed":
+				Art.arc_c(ci, p + Vector2(0, -1), 3.2, 0.3, PI - 0.3, 6, Art.INK, 2.0)
+			"arc":
+				Art.arc_c(ci, p + Vector2(0, 2), 3.2, PI + 0.3, TAU - 0.3, 6, Art.INK, 2.0)
+			"x":
+				Art.line_c(ci, PackedVector2Array([p + Vector2(-2.4, -2.4), p + Vector2(2.4, 2.4)]), Art.INK, 1.8)
+				Art.line_c(ci, PackedVector2Array([p + Vector2(2.4, -2.4), p + Vector2(-2.4, 2.4)]), Art.INK, 1.8)
+			"star":
+				Art.toon(ci, Art.star_pts(p, 4.0, 1.8, 5), Art.GOLD, 1.0, 0.0)
+			_:
+				Art.t_circle(ci, p, 3.7, Color.WHITE, 1.2, 0.0)
+				Art.disc(ci, p + Vector2(0.9, 0.4), 2.2 if kind != "narrow" else 1.5, Art.INK)
+				Art.disc(ci, p + Vector2(0.1, -0.7), 0.8, Color.WHITE)
 
 
 static func _hard_hat(ci: CanvasItem, c: Vector2) -> void:
@@ -2311,6 +2783,169 @@ static func _creature_head(ci: CanvasItem, c: Vector2, r: float, emotion: String
 			_alien_face(ci, c + Vector2(3, 0), 0.8, emotion, blink)
 		"blob", "ghost":
 			_face(ci, c + Vector2(4, 6), 0.9, emotion, blink, _c("skin"))
+		"monkey":
+			var skin := _c("skin")
+			for sx: float in [-1.0, 1.0]:
+				var e := c + Vector2(sx * 19.5 + 1.5, 1)
+				Art.t_circle(ci, e, 7.6, hc if sx > 0 else Art.shade_of(hc, 0.15), 2.4, 0.3)
+				Art.flat(ci, Art.circle_pts(e + Vector2(sx * 0.5, 0.5), 4.4, 12), Art.shade_of(skin, 0.1))
+			Art.t_circle(ci, c, r, hc, 2.6, 0.5)
+			# A tuft of hair on top.
+			Art.toon(ci, Art.moved(_MONKEY_TUFT, c + Vector2(-2, -r + 2)), Art.shade_of(hc, 0.12), 2.0, 0.0)
+			Art.toon(ci, Art.moved(_MONKEY_MASK, c), skin, 2.0, 0.25)
+			_face(ci, c + Vector2(5, 2), 0.64, emotion, blink, skin)
+			Art.flat(ci, Art.ellipse_pts(c + Vector2(4, 6.2), Vector2(1.5, 1.0), 8), Art.shade_of(skin, 0.45))
+			Art.flat(ci, Art.ellipse_pts(c + Vector2(7.4, 6.2), Vector2(1.5, 1.0), 8), Art.shade_of(skin, 0.45))
+		"sloth":
+			var skin := _c("skin")
+			Art.toon(ci, Art.ellipse_pts(c + Vector2(0, 1), Vector2(r * 1.08, r), 28), hc, 2.6, 0.5)
+			Art.toon(ci, Art.ellipse_pts(c + Vector2(5, 2), Vector2(14, 12), 24), skin, 2.0, 0.2)
+			for sx: float in [-1.0, 1.0]:
+				Art.flat(ci, Art.ellipse_pts(c + Vector2(5 + sx * 6.5, 1.5), Vector2(5.6, 3.6), 14, -0.35 * sx), Color("6a4a30"))
+			_face(ci, c + Vector2(5, 2), 0.62, "sleepy" if emotion in ["happy", "bored", "focus"] else emotion, blink, skin)
+			Art.t_ellipse(ci, c + Vector2(5, 5.5), Vector2(2.6, 1.8), Color("4a3020"), 1.0, 0.0)
+		"jaguar":
+			var skin := _c("skin")
+			for sx: float in [-1.0, 1.0]:
+				var e := c + Vector2(sx * 12 + 1, -r + 4)
+				Art.t_circle(ci, e, 6.2, hc if sx > 0 else Art.shade_of(hc, 0.2), 2.4, 0.2)
+				Art.flat(ci, Art.circle_pts(e + Vector2(0, 1.2), 3.2, 10), Color("3a2414"))
+				Art.disc(ci, e + Vector2(0, 1.6), 1.4, skin)
+			Art.t_circle(ci, c, r, hc, 2.6, 0.5)
+			for k: Vector2 in [Vector2(-11, -9), Vector2(-3, -14), Vector2(6, -13), Vector2(-15, 1), Vector2(-9, 8)]:
+				Art.arc_c(ci, c + k, 2.3, 0, TAU, 9, Color("5a341a"), 1.4)
+				Art.disc(ci, c + k, 0.9, Art.shade_of(hc, 0.2))
+			Art.toon(ci, Art.moved(_JAGUAR_MUZZLE, c), skin, 1.6, 0.1)
+			_face(ci, c + Vector2(6, 0), 0.7, emotion, blink, skin)
+			Art.toon(ci, Art.moved(_CAT_NOSE, c), Color("ff7a8a"), 1.2, 0.0)
+			if not Chars._small:
+				for sy: float in [-1.0, 1.0]:
+					Art.line_c(ci, PackedVector2Array([c + Vector2(14, 11 + sy * 1.5), c + Vector2(21, 10 + sy * 3.5)]), Color(Art.INK, 0.6), 1.0)
+					Art.line_c(ci, PackedVector2Array([c + Vector2(-2, 11 + sy * 1.5), c + Vector2(-8, 10 + sy * 3.5)]), Color(Art.INK, 0.6), 1.0)
+		"toucan", "parrot":
+			var tou: bool = _sp["cs"] == "toucan"
+			Art.t_circle(ci, c, r, hc, 2.6, 0.5)
+			if tou:
+				Art.flat(ci, _clip(Art.ellipse_pts(c + Vector2(8, 5), Vector2(13, 11), 18), Art.circle_pts(c, r, 28)), _c("hc2"))
+			else:
+				Art.toon(ci, Art.ellipse_pts(c + Vector2(8, 1), Vector2(10, 9), 18), _c("hc2"), 1.4, 0.0)
+				Art.toon(ci, Art.moved(_PARROT_CREST, c), Color("ffd23f"), 2.0, 0.0)
+			_bird_eyes(ci, [c + Vector2(1.5, -4), c + Vector2(12, -4)], Color("4ab0ff") if tou else Color("fff6e4"), emotion, blink)
+			if tou:
+				Art.toon(ci, Art.moved(_TOUCAN_BEAK, c), Color("ff9a2e"), 2.2, 0.5)
+				Art.flat(ci, _clip(Art.moved(_TOUCAN_BAND, c), Art.moved(_TOUCAN_BEAK, c)), Color("ffd84a"))
+				Art.flat(ci, _clip(Art.moved(_TOUCAN_TIP, c), Art.moved(_TOUCAN_BEAK, c)), Color("ef3a3a"))
+				Art.line_c(ci, Art.moved(_TOUCAN_MOUTH, c), Art.INK, 1.4)
+				Art.line_c(ci, Art.moved(_TOUCAN_SHINE, c), Color(1, 1, 1, 0.55), 1.4)
+			else:
+				Art.toon(ci, Art.moved(_PARROT_LOW, c), Color("4a4f6a"), 1.8, 0.0)
+				Art.toon(ci, Art.moved(_PARROT_HOOK, c), Color("fff0c8"), 2.2, 0.4)
+			var blush := Color(1.0, 0.45, 0.6, 0.45)
+			Art.flat(ci, Art.ellipse_pts(c + Vector2(-5, 5), Vector2(3.2, 2.0), 10), blush)
+		"temple":
+			var block := Art.rrect_pts(Rect2(c.x - 19, c.y - 18, 40, 37), 8)
+			Art.toon(ci, block, hc, 2.8, 0.7)
+			Art.line_c(ci, PackedVector2Array([c + Vector2(-17, -5), c + Vector2(19, -5)]), Art.shade_of(hc, 0.3), 1.6)
+			Art.line_c(ci, PackedVector2Array([c + Vector2(-17, 13), c + Vector2(19, 13)]), Art.shade_of(hc, 0.3), 1.4)
+			for k: Vector2 in [Vector2(-14, 5), Vector2(16, 5)]:
+				Art.arc_c(ci, c + k, 3.0, 0, TAU * 0.8, 8, Art.shade_of(hc, 0.32), 1.3)
+			_glow_face(ci, c + Vector2(3, 3), 0.8, emotion, blink, _c("eye"))
+			Art.toon(ci, Art.moved(_MOSS, c), Color("4aa84a"), 2.0, 0.3)
+			for k: Vector2 in [Vector2(-10, -20), Vector2(4, -22), Vector2(14, -19)]:
+				Art.disc(ci, c + k, 1.4, Color("9ae07a"))
+			Art.line_c(ci, Art.moved(_VINE, c), Art.INK, 3.6)
+			Art.line_c(ci, Art.moved(_VINE, c), Color("3a9a3a"), 1.8)
+			for k: Array in [[Vector2(-20, -2), 0.6], [Vector2(-19, 9), -0.5]]:
+				Art.toon(ci, _leaf_pts(c + (k[0] as Vector2), 7.0, 4.0, k[1]), Color("5ac04a"), 1.2, 0.0)
+		"idol":
+			var face := Art.moved(_IDOL_FACE, c)
+			for sx: float in [-1.0, 1.0]:
+				var e := c + Vector2(sx * 20 + 2, 2)
+				Art.t_circle(ci, e, 5.4, Art.shade_of(hc, 0.12 if sx > 0 else 0.3), 2.2, 0.3)
+				Art.t_circle(ci, e, 2.4, _c("hc2"), 1.2, 0.0)
+			Art.toon(ci, face, hc, 2.8, 0.7)
+			Art.flat(ci, _clip(Art.rrect_pts(Rect2(c.x - 22, c.y - 20, 46, 6), 1), face), _c("hc2"))
+			for x: float in [-10.0, -2.0, 6.0, 14.0]:
+				Art.disc(ci, c + Vector2(x, -17), 1.2, Color("ffe8a0"))
+			_idol_face(ci, c + Vector2(4, 0), emotion, blink)
+			Art.flat(ci, _clip(Art.ellipse_pts(c + Vector2(-9, -6), Vector2(3, 8), 10, 0.4), face), Color(1, 1, 1, 0.4))
+		"tiki":
+			var mask := Art.rrect_pts(Rect2(c.x - 16, c.y - 22, 38, 44), 9)
+			Art.toon(ci, mask, hc, 2.8, 0.6)
+			for y: float in [-14.0, 16.0]:
+				Art.line_c(ci, PackedVector2Array([c + Vector2(-12, y), c + Vector2(18, y + 1)]), Art.shade_of(hc, 0.3), 1.2)
+			for sx: float in [-1.0, 1.0]:
+				var e := c + Vector2(4 + sx * 8, -3)
+				Art.t_rect(ci, Rect2(e.x - 6, e.y - 9, 12, 4), 1.5, Art.shade_of(hc, 0.3), 1.4, 0.0)
+				Art.t_ellipse(ci, e, Vector2(5, 5.6), Color("fff0d0"), 1.6, 0.0)
+				if blink:
+					Art.line_c(ci, PackedVector2Array([e + Vector2(-4, 0), e + Vector2(4, 0)]), Art.INK, 1.8)
+				else:
+					Art.disc(ci, e + Vector2(1, 0.5), 2.4, Art.INK)
+			Art.t_rect(ci, Rect2(c.x - 6, c.y + 6, 20, 10), 4, Color("4a2414"), 1.8, 0.0)
+			for k in 4:
+				Art.flat(ci, PackedVector2Array([c + Vector2(-4 + k * 4.5, 6.5), c + Vector2(-0.5 + k * 4.5, 6.5), c + Vector2(-2.2 + k * 4.5, 10)]), Color.WHITE)
+			Art.t_rect(ci, Rect2(c.x + 1, c.y - 1, 6, 7), 2, Art.shade_of(hc, 0.2), 1.4, 0.0)
+
+
+static var _MONKEY_TUFT := PackedVector2Array([Vector2(-7, 4), Vector2(-6, -4), Vector2(-2, 0), Vector2(1, -7), Vector2(4, 0), Vector2(9, -3), Vector2(8, 5)])
+static var _MONKEY_MASK := Art.union([Art.circle_pts(Vector2(0.5, -1.5), 8.2, 18), Art.circle_pts(Vector2(10, -1.5), 8.2, 18),
+		Art.ellipse_pts(Vector2(5.5, 6.5), Vector2(12, 8.6), 22)])
+static var _JAGUAR_MUZZLE := Art.union([Art.ellipse_pts(Vector2(2.6, 11), Vector2(5.4, 4.4), 16), Art.ellipse_pts(Vector2(9.4, 11), Vector2(5.4, 4.4), 16),
+		Art.ellipse_pts(Vector2(6, 14), Vector2(4.2, 3.0), 12)])
+static var _CAT_NOSE := Art.smooth_pts(PackedVector2Array([Vector2(3.4, 7.2), Vector2(8.6, 7.2), Vector2(6, 10)]), 1)
+static var _PARROT_CREST := PackedVector2Array([Vector2(-6, -16), Vector2(-14, -26), Vector2(-5, -22), Vector2(-3, -31), Vector2(2, -21), Vector2(1, -16)])
+static var _TOUCAN_BEAK := Art.smooth_pts(PackedVector2Array([Vector2(7, 0), Vector2(18, -2), Vector2(30, 0), Vector2(39, 5.5), Vector2(38, 10),
+		Vector2(26, 11), Vector2(16, 11.5), Vector2(7, 10)]), 2)
+static var _TOUCAN_BAND := PackedVector2Array([Vector2(4, -6), Vector2(14, -6), Vector2(14, 16), Vector2(4, 16)])
+static var _TOUCAN_TIP := PackedVector2Array([Vector2(32, -6), Vector2(44, -6), Vector2(44, 16), Vector2(32, 16)])
+static var _TOUCAN_MOUTH := Art.smooth_pts(PackedVector2Array([Vector2(9, 6.5), Vector2(22, 7.2), Vector2(37, 8.2)]), 2)
+static var _TOUCAN_SHINE := PackedVector2Array([Vector2(14, 1.6), Vector2(27, 1.8)])
+static var _PARROT_HOOK := Art.smooth_pts(PackedVector2Array([Vector2(8, 0), Vector2(17, -1), Vector2(23, 4), Vector2(22, 12), Vector2(19, 8.5),
+		Vector2(14, 7), Vector2(8, 6.5)]), 2)
+static var _PARROT_LOW := Art.smooth_pts(PackedVector2Array([Vector2(9, 6), Vector2(18, 7.5), Vector2(16, 11.5), Vector2(10, 11)]), 1)
+static var _MOSS := Art.smooth_pts(PackedVector2Array([Vector2(-21, -10), Vector2(-20, -19), Vector2(-12, -24), Vector2(-4, -22), Vector2(4, -26),
+		Vector2(12, -22), Vector2(20, -22), Vector2(23, -13), Vector2(18, -15), Vector2(14, -10), Vector2(8, -15), Vector2(2, -13), Vector2(-4, -16),
+		Vector2(-10, -11), Vector2(-16, -15)]), 2)
+static var _VINE := Art.smooth_pts(PackedVector2Array([Vector2(-17, -14), Vector2(-21, -4), Vector2(-19, 5), Vector2(-21, 14)]), 2)
+static var _IDOL_FACE := Art.smooth_pts(PackedVector2Array([Vector2(-19, -20), Vector2(23, -20), Vector2(21, 6), Vector2(13, 18), Vector2(-7, 18),
+		Vector2(-17, 6)]), 2)
+
+
+## The golden idol's carved face: turquoise eyes, a wide carved smile.
+static func _idol_face(ci: CanvasItem, at: Vector2, emotion: String, blink: bool) -> void:
+	var e: Array = Chars.EMOTIONS.get(emotion, Chars.EMOTIONS["happy"])
+	var eyes: String = e[0]
+	var mouth: String = e[1]
+	if blink and eyes in ["open", "wide", "narrow", "star"]:
+		eyes = "closed"
+	var dark := Art.shade_of(_c("hc"), 0.35)
+	for sx: float in [-1.0, 1.0]:
+		var p := at + Vector2(7.0 * sx, -4)
+		Art.t_ellipse(ci, p, Vector2(5.8, 5.2), Art.shade_of(_c("hc"), 0.2), 1.6, 0.0)
+		match eyes:
+			"closed":
+				Art.arc_c(ci, p + Vector2(0, -1), 3.6, 0.3, PI - 0.3, 6, Art.INK, 2.0)
+			"arc":
+				Art.arc_c(ci, p + Vector2(0, 2), 3.6, PI + 0.3, TAU - 0.3, 6, Art.INK, 2.0)
+			"star":
+				Art.toon(ci, Art.star_pts(p, 4.5, 2.0, 5), _c("hc2"), 1.0, 0.0)
+			_:
+				Art.t_circle(ci, p, 3.6, _c("hc2"), 1.2, 0.0)
+				Art.disc(ci, p + Vector2(0.8, 0.3), 1.7, Art.INK)
+				Art.disc(ci, p + Vector2(-0.6, -1.0), 0.9, Color.WHITE)
+	Art.t_rect(ci, Rect2(at.x - 2.6, at.y, 5.2, 5.5), 1.5, Art.shade_of(_c("hc"), 0.15), 1.3, 0.0)
+	var m := at + Vector2(0, 10)
+	match mouth:
+		"grin", "o":
+			Art.toon(ci, PackedVector2Array([m + Vector2(-7, -1.5), m + Vector2(7, -1.5), m + Vector2(4, 3.5), m + Vector2(-4, 3.5)]), Color("7a2a1a"), 1.6, 0.0)
+			Art.flat(ci, Art.rrect_pts(Rect2(m.x - 5.5, m.y - 1.2, 11, 1.8), 0.6), Color.WHITE)
+		"frown":
+			Art.arc_c(ci, m + Vector2(0, 4), 5.0, PI + 0.5, TAU - 0.5, 8, dark, 2.2)
+		_:
+			Art.arc_c(ci, m + Vector2(0, -4), 6.5, 0.35, PI - 0.35, 10, dark, 2.4)
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(-11, 5), Vector2(3.4, 2.0), 10), Color(1.0, 0.45, 0.5, 0.35))
+	Art.flat(ci, Art.ellipse_pts(at + Vector2(11, 5), Vector2(3.4, 2.0), 10), Color(1.0, 0.45, 0.5, 0.35))
 
 
 ## Things on (or behind) the head, around its center `c` and radius `r`.
@@ -2528,6 +3163,45 @@ static func _top(ci: CanvasItem, kind: String, c: Vector2, r: float, dyn: int) -
 			Art.flat(ci, _clip(Art.ellipse_pts(pc + Vector2(0, 2), Vector2(9, 2), 12), Art.circle_pts(pc, 8.0, 16)), Color("c060c0"))
 			Art.ring(ci, Art.ellipse_pts(pc, Vector2(14, 4), 20, -0.3), Art.INK, 3.6)
 			Art.ring(ci, Art.ellipse_pts(pc, Vector2(14, 4), 20, -0.3), Color("ffd23f"), 1.8)
+		"mini_pith":
+			Art.push(ci, c + Vector2(-1, -r + 9), -0.28, Vector2(0.56, 0.56))
+			Art.ink_mul *= 1.5
+			_pith(ci, Color("f0dfae"), Color("ef5a3a"), false)
+			Art.ink_mul /= 1.5
+			Art.pop(ci)
+		"quetzal":
+			var sw := (dyn - 2) * 0.05
+			var cols := [Color("1fae6a"), Color("2ad0c0"), Color("ef3a4a")]
+			for k in 3:
+				var pts := _curl(c + Vector2(-5 - k * 3, -r - 4 + k * 3), -PI * (0.6 + k * 0.11) + sw * (1 + k), 38.0 - k * 6.0, -1.0, 7)
+				Art.toon(ci, _taper(pts, 9.0 - k, 2.5), cols[k], 2.0, 0.3)
+				Art.line_c(ci, pts.slice(1, 6), Art.shade_of(cols[k], 0.35), 1.0)
+		"feather_ruff":
+			var cols := [hc2, Color("ef3a4a"), Color("2ad0c0")]
+			for k in 12:
+				var a := TAU * k / 12.0 + 0.15
+				Art.toon(ci, _leaf_pts(c + Vector2(cos(a), sin(a)) * (r + 4), 15.0, 8.0, a), cols[k % 3], 1.8, 0.2)
+		"sun_headdress":
+			var cols := [Color("1fae6a"), Color("2ad0c0"), Color("ef3a4a"), Color("ffd23f")]
+			for k in 9:
+				var a := -PI * 0.06 - PI * 0.88 * k / 8.0
+				Art.toon(ci, _leaf_pts(c + Vector2(cos(a), sin(a)) * (r + 14), 24.0, 10.0, a), cols[k % 4], 2.0, 0.3)
+			Art.toon(ci, Art.star_pts(c + Vector2(1, -1), r + 10, r + 5, 18, 0.0), Art.GOLD_DARK, 2.2, 0.2)
+			Art.t_circle(ci, c + Vector2(1, -1), r + 6, Art.GOLD, 2.2, 0.4)
+			Art.arc_c(ci, c + Vector2(1, -1), r + 3, 0, TAU, 28, Art.GOLD_DARK, 1.2)
+		"leaf_hat":
+			var base := c + Vector2(1, -r + 5)
+			var stem := PackedVector2Array([base + Vector2(0, -8), base + Vector2(-2, -14), base + Vector2(-6, -17)])
+			Art.line_c(ci, stem, Art.INK, 3.6)
+			Art.line_c(ci, stem, Color("3a8a3a"), 1.8)
+			var leaf := Art.moved(_LEAF_HAT, base)
+			Art.toon(ci, leaf, Color("3fbf50"), 2.2, 0.5)
+			Art.line_c(ci, Art.moved(_LEAF_HAT_VEIN, base), Color("2a8a3a"), 1.2)
+			Art.flat(ci, _clip(Art.ellipse_pts(base + Vector2(-8, -9), Vector2(7, 2.4), 12, -0.2), leaf), Color(1, 1, 1, 0.3))
+		"leaf_crown":
+			for k in 5:
+				var a := -PI / 2.0 + (k - 2) * 0.42
+				Art.toon(ci, _leaf_pts(c + Vector2(3, -r + 4) + Vector2(cos(a), sin(a)) * 11.0, 20.0, 8.0, a), Color("4ac04a") if k % 2 == 0 else Color("2f9a3a"), 2.0, 0.3)
 		"alien_antennae":
 			for sx: float in [-1.0, 1.0]:
 				var pts := _curl(c + Vector2(-2 + sx * 7, -r + 4), -PI / 2.0 + sx * 0.4, 18, sx * 0.9, 5)
@@ -2536,6 +3210,9 @@ static func _top(ci: CanvasItem, kind: String, c: Vector2, r: float, dyn: int) -
 				Art.t_circle(ci, pts[5], 4.0, Color("ff8fd8"), 1.8, 0.3)
 
 
+static var _LEAF_HAT := Art.smooth_pts(PackedVector2Array([Vector2(-27, 3), Vector2(-23, -7), Vector2(-11, -14), Vector2(4, -15), Vector2(18, -10),
+		Vector2(27, 1), Vector2(19, -1), Vector2(14, 2), Vector2(7, -1), Vector2(0, 1), Vector2(-7, -1), Vector2(-13, 2), Vector2(-19, -1)]), 2)
+static var _LEAF_HAT_VEIN := Art.smooth_pts(PackedVector2Array([Vector2(-23, -1), Vector2(-9, -9), Vector2(8, -9), Vector2(23, -1)]), 2)
 static var _FEATHER := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(5, -8), Vector2(4, -20), Vector2(0, -28), Vector2(-4, -20), Vector2(-4, -8)]), 2)
 
 
@@ -2580,6 +3257,13 @@ static func _fx(ci: CanvasItem, t: float, arm: String, moving: bool) -> void:
 					var p := Vector2(0, -50) + Vector2(cos(a) * 30.0, sin(a * 1.3) * 12.0 - 10.0)
 					Art.dot(ci, p, 5.0, Color(g, 0.3))
 					Art.dot(ci, p, 2.2, Color(1, 1, 0.85, 0.95))
+			"fireflies":
+				for k in 3:
+					var a := t * 0.7 + TAU * k / 3.0
+					var p := Vector2(2, -52) + Vector2(cos(a) * 30.0 + sin(a * 2.3) * 5.0, sin(a * 1.7) * 18.0 - 10.0)
+					var on := 0.5 + 0.5 * sin(t * 3.1 + k * 2.1)
+					Art.dot(ci, p, 5.0, Color(g, 0.3 * on))
+					Art.dot(ci, p, 1.8, Color(1.0, 1.0, 0.7, 0.35 + 0.6 * on))
 			"orbit":
 				for k in 3:
 					var a := t * 1.2 + TAU * k / 3.0

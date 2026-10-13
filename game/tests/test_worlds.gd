@@ -156,7 +156,7 @@ func test_evolution() -> void:
 func test_skins() -> void:
 	_fresh()
 	var ids := {}
-	for w: String in ["ocean", "volcano", "acid", "moon"]:
+	for w: String in ["ocean", "volcano", "acid", "moon", "jungle"]:
 		var list: Array = Content.skins_of(w)
 		var rar := [0, 0, 0, 0]
 		for c: Dictionary in list:
