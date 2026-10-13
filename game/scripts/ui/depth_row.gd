@@ -189,9 +189,12 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var rock_hi := rock.lightened(0.07)
 	var rock_lo := rock.darkened(0.1)
 	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), PackedColorArray([rock_hi, rock_hi, rock_lo, rock_lo]))
+	var jungle := WorldLook.world == "jungle"
 	if WorldLook.world == "volcano":
 		_basalt(ci, w, h, rock)
-	for i in (0 if WorldLook.world == "volcano" else 3):
+	elif jungle:
+		_temple_masonry(ci, w, h, rock)
+	for i in (0 if WorldLook.world == "volcano" or jungle else 3):
 		var y := 40.0 + i * 78.0
 		var band := PackedVector2Array()
 		for k in 9:
@@ -201,7 +204,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.flat(ci, band, Art.shade_of(rock, 0.1))
 	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, 7), Vector2(0, 7)]), Art.shade_of(rock, 0.3))
 	_wall_details(ci, w, h, rock)
-	_rock_texture(ci, w, h, rock)
+	if not jungle:
+		_rock_texture(ci, w, h, rock)
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
 	var f := 0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)
@@ -216,6 +220,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.flat(ci, Art.clipped(Art.ellipse_pts(cave.get_center() + Vector2(0, -20), Vector2(cave.size.x * 0.42, cave.size.y * 0.36), 30), cave_poly), inner.lightened(0.08))
 	if WorldLook.world == "volcano":
 		_magma_cave_light(ci, cave, cave_poly, inner)
+	elif jungle:
+		_temple_hall(ci, cave, cave_poly, inner, st)
 	else:
 		_light_beams(ci, cave, cave_poly)
 	Art.flat(ci, PackedVector2Array([Vector2(World.SHAFT_L + 4, 120), Vector2(World.SHAFT_R + 2, 120), Vector2(World.SHAFT_R + 2, CAVE_BOTTOM - 2), Vector2(World.SHAFT_L + 4, CAVE_BOTTOM - 2)]), inner)
@@ -225,8 +231,11 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.line(ci, Vector2(x, -2), Vector2(x, y1), Art.INK, WorldLook.EDGE)
 		if x == World.SHAFT_R:
 			Art.line(ci, Vector2(x, CAVE_BOTTOM), Vector2(x, h + 2), Art.INK, WorldLook.EDGE)
-	# Wooden brace across the shaft.
-	Art.t_rect(ci, Rect2(World.SHAFT_L - 8, 6, World.SHAFT_R - World.SHAFT_L + 16, 12), 4, Art.WOOD_DARK, 2.5, 0.3)
+	# Wooden brace across the shaft (bamboo and vines in the jungle).
+	if jungle:
+		_jungle_shaft(ci, h)
+	else:
+		Art.t_rect(ci, Rect2(World.SHAFT_L - 8, 6, World.SHAFT_R - World.SHAFT_L + 16, 12), 4, Art.WOOD_DARK, 2.5, 0.3)
 	if not GameState.is_open(key()):
 		_draw_closed(ci, cave, cave_poly)
 		return
@@ -238,20 +247,32 @@ func _draw_bg(ci: CanvasItem) -> void:
 	floor_pts.append(Vector2(World.SHAFT_L, CAVE_BOTTOM + 10))
 	_back_silhouettes(ci, cave, cave_poly, inner)
 	Art.flat(ci, Art.clipped(floor_pts, cave_poly), st["floor"])
-	_floor_texture(ci, cave, cave_poly, st["floor"])
+	if jungle:
+		_temple_floor(ci, cave, cave_poly, st["floor"])
+	else:
+		_floor_texture(ci, cave, cave_poly, st["floor"])
 	if WorldLook.world == "volcano":
 		_magma_channel(ci)
 	# Mine frame (metal supports on the moon).
 	Art.push(ci, Vector2(World.CAVE_L + 22, LEDGE_Y + 2))
 	if WorldLook.world == "moon":
 		_metal_frame(ci, 150, 76)
+	elif jungle:
+		_stone_portal(ci, 150, 76, st)
 	else:
 		Props.mine_frame(ci, 150, 76)
 	Art.pop(ci)
 	_room_furniture(ci, cave)
 	# Depth sign.
 	Art.push(ci, Vector2(World.CAVE_L + 60, CAVE_TOP + 48), -0.04)
-	Art.t_rect(ci, Rect2(-40, -17, 80, 34), 6, Art.CREAM, 3.0, 0.3)
+	if jungle:
+		# A carved stone plaque instead of a wooden sign.
+		Art.t_rect(ci, Rect2(-44, -19, 88, 38), 5, Color("cdb882"), 3.0, 0.5)
+		Art.t_rect(ci, Rect2(-39, -15, 78, 30), 4, Color("eadcae"), 0.0, 0.0)
+		for x: float in [-44.0, 44.0]:
+			Art.t_circle(ci, Vector2(x, 0), 4.0, Color("34c88a") if index < 6 else Color("ffc93c"), 1.8, 0.0)
+	else:
+		Art.t_rect(ci, Rect2(-40, -17, 80, 34), 6, Art.CREAM, 3.0, 0.3)
 	Art.text(ci, Vector2(0, 8), tr("DEPTH_METERS") % ((index + 1) * 50), 20, Art.INK, 0)
 	Art.pop(ci)
 
@@ -394,6 +415,8 @@ func _draw() -> void:
 		_magma_channel_life()
 	_draw_lamps(cave)
 	_draw_decor(st, cave)
+	if WorldLook.world == "jungle":
+		_jungle_life(st, cave)
 	# Ore vein, glowing on each delivery.
 	var dp := deposit_pos()
 	var glow := 0.12 + 0.05 * sin(_t * 2.0 + index) + _flash * 0.3
@@ -406,6 +429,8 @@ func _draw() -> void:
 func _draw_edge(ci: CanvasItem) -> void:
 	if GameState.is_open(key()):
 		_cave_edge(ci, _cave_poly())
+		if WorldLook.world == "jungle":
+			_edge_drapes(ci, cave_rect())
 
 
 func _draw_decor(st: Dictionary, cave: Rect2) -> void:
@@ -413,7 +438,7 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 	var x0 := World.CAVE_L + 130.0
 	var x1 := cave.end.x - 140.0
 	var mid := (x0 + x1) / 2.0
-	if _draw_decor_world(st, cave):
+	if _draw_decor_world(st, cave) or _draw_decor_jungle(st, cave):
 		return
 	match st["deco"]:
 		"shells":
@@ -1054,6 +1079,8 @@ func _wall_details(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
 			for k in 5:
 				var p := Vector2(rng.randf_range(10, w - 10), 6.0)
 				Art.toon(ci, Art.moved(_MOSS_TOP, p), Color("6cc24a"), 2.0, 0.3)
+		"jungle":
+			_jungle_wall(ci, w, h, rock, rng)
 		"moon":
 			for k in 4:
 				var p := Vector2(rng.randf_range(20, w - 20), rng.randf_range(16, h - 16))
@@ -1214,6 +1241,8 @@ func _room_furniture(ci: CanvasItem, cave: Rect2) -> void:
 				var strand := Art.clipped(Art.rrect_pts(Rect2(x - 3, CAVE_TOP - 4, 6, len), 3), cp)
 				Art.flat(ci, strand, Color("5ab84a"))
 				Art.disc(ci, Vector2(x, CAVE_TOP + len - 3), 3.0, Color("8ae04a"))
+		"jungle":
+			_temple_furniture(ci, cave, cp)
 		"moon":
 			# A rail along the floor for the ore carts.
 			Art.line(ci, Vector2(World.CAVE_L + 30, LEDGE_Y + 10), Vector2(cave.end.x - 40, LEDGE_Y + 10), Color("8a90a8"), 3.0)
@@ -1251,6 +1280,9 @@ func _draw_lamps(cave: Rect2) -> void:
 			Art.push(self, at + Vector2(0, 26), PI)
 			WorldArt.mushroom(self, Color("b8ff5a"), 0.0, index)
 			Art.pop(self)
+		"jungle":
+			for x: float in _torch_xs(cave):
+				_jg_torch(Vector2(x, CAVE_TOP + 80))
 		"moon":
 			Art.glow(self, at + Vector2(0, 30), 60.0, Color(0.8, 0.9, 1.0, 0.22), 16)
 			Art.line(self, at, at + Vector2(0, 14), Art.INK, 2.0)
@@ -1584,3 +1616,962 @@ static var _THORN_PLANT := Art.union([Geometry2D.offset_polyline(PackedVector2Ar
 static var _TAIL_C := PackedVector2Array([Vector2(0, -14), Vector2(110, -6), Vector2(110, 6), Vector2(0, 14)])
 static var _LEAF := Art.smooth_pts(PackedVector2Array([Vector2(1, -8), Vector2(12, -14), Vector2(18, -10), Vector2(10, -6)]), 2)
 static var _PETAL := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-5, -7), Vector2(0, -12), Vector2(5, -7)]), 2)
+
+
+# --- The jungle: temple tunnels ---------------------------------------------------------
+#
+# Golden sandstone halls built of carved blocks, glyph friezes, vines and
+# roots, torches in stone sconces. Shallow halls get daylight through cracks
+# and butterflies; deeper ones turn mossy, then jade-lit and golden, with
+# glowing glyphs and fireflies. Still parts go in the _bg / _edge layers;
+# the moving ones use cached shapes moved with Art.push.
+
+const JG_STONE := Color("cdb882")
+const JG_STONE_LIT := Color("eadcae")
+const JG_LEAF := Color("3ec85a")
+const JG_LEAF_DARK := Color("2a9a4a")
+const JG_LEAF_LIGHT := Color("7ae06a")
+const JG_VINE := Color("4a9a3a")
+const JG_ROOT := Color("8a6a44")
+## Warm dark of the halls' shadows (not the cool shade of the sea).
+const JG_DUSK := Color("2a1408")
+const JG_GOLD := Color("ffc93c")
+const JG_JADE := Color("34c88a")
+const JG_FLOWERS: Array[Color] = [Color("ff7a3a"), Color("ff4fa8"), Color("ffd23f"), Color("b06aff")]
+
+
+## Rock around the hall: courses of big carved blocks with moss on top.
+func _temple_masonry(ci: CanvasItem, w: float, h: float, rock: Color) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 131 + 17
+	var mortar := Art.shade_of(rock, 0.42)
+	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), mortar)
+	var ch := 26.0
+	var rows := int(ceil(h / ch))
+	for r in rows:
+		var y := r * ch
+		var x := -float((r * 37 + index * 11) % 50)
+		while x < w:
+			var bw := rng.randf_range(46.0, 74.0)
+			var rect := Rect2(x + 1.5, y + 1.5, bw - 3.0, ch - 3.0)
+			var tone := rock.lightened(rng.randf_range(-0.03, 0.1))
+			Art.flat(ci, Art.rrect_pts(rect, 3.0, 1), tone)
+			Art.flat(ci, PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), Vector2(rect.end.x - 2, rect.position.y + 3), rect.position + Vector2(2, 3)]), tone.lightened(0.14))
+			Art.flat(ci, PackedVector2Array([Vector2(rect.position.x + 2, rect.end.y - 4), Vector2(rect.end.x - 2, rect.end.y - 4), rect.end, Vector2(rect.position.x, rect.end.y)]), Art.shade_of(tone, 0.16))
+			var roll := rng.randf()
+			if roll < 0.12:
+				_carve(ci, _GLYPHS[rng.randi() % _GLYPHS.size()], rect.get_center(), 0.7, tone)
+			elif roll < 0.2:
+				# A cracked block.
+				var a := rect.position + Vector2(bw * 0.3, 3)
+				Art.line_c(ci, PackedVector2Array([a, a + Vector2(4, 7), a + Vector2(-1, 13), a + Vector2(5, ch - 6)]), Art.shade_of(tone, 0.4), 1.6)
+			x += bw
+	# Moss tufts along a few block tops.
+	for k in 4:
+		var p := Vector2(rng.randf_range(10, w - 10), float(rng.randi_range(0, rows - 1)) * ch + 2.0)
+		Art.toon(ci, Art.moved(_MOSS_TOP, p), Color(JG_LEAF, 0.95) if k % 2 else JG_LEAF_DARK, 1.6, 0.3)
+
+
+## Engraved line art: a dark groove with a lit lower lip.
+func _carve(ci: CanvasItem, pts: PackedVector2Array, at: Vector2, s: float, on: Color) -> void:
+	Art.push(ci, at, 0.0, Vector2(s, s))
+	Art.line_c(ci, pts, Color(1, 1, 1, 0.22), 3.0)
+	Art.push(ci, Vector2(0, -1.2))
+	Art.line_c(ci, pts, Art.shade_of(on, 0.42), 2.4)
+	Art.pop(ci)
+	Art.pop(ci)
+
+
+## Vines and leaves on the rock outside the hall.
+func _jungle_wall(ci: CanvasItem, w: float, h: float, rock: Color, rng: RandomNumberGenerator) -> void:
+	for k in 4:
+		var x := rng.randf_range(0.0, w - 20.0)
+		if x > World.SHAFT_L - 10.0 and x < World.SHAFT_R + 10.0:
+			x += 90.0
+		var v: Array = _VINES[(k + index) % _VINES.size()]
+		Art.push(ci, Vector2(x, -2), 0.0, Vector2(1.0, 0.45))
+		Art.toon(ci, v[0], JG_LEAF_DARK if k % 2 else JG_LEAF, 2.0, 0.3)
+		Art.pop(ci)
+
+
+## The lift shaft in the jungle: bamboo braces lashed with rope, a vine.
+func _jungle_shaft(ci: CanvasItem, h: float) -> void:
+	var l := World.SHAFT_L - 8.0
+	var r := World.SHAFT_R + 8.0
+	for y: float in [7.0, 15.0]:
+		Art.t_rect(ci, Rect2(l, y, r - l, 7), 3.5, Color("c4bc5a"), 2.2, 0.3)
+		for k in 3:
+			var nx := lerpf(l + 12.0, r - 12.0, k / 2.0) + (4.0 if y > 10.0 else 0.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(nx, y + 1), Vector2(nx, y + 6)]), Color("8a8a30"), 1.6)
+	for x: float in [World.SHAFT_L + 2.0, World.SHAFT_R - 2.0]:
+		Art.t_rect(ci, Rect2(x - 4, 5, 8, 19), 2, Color("b08a50"), 1.8, 0.0)
+		Art.line_c(ci, PackedVector2Array([Vector2(x - 4, 10), Vector2(x + 4, 13)]), Color("7a5a30"), 1.4)
+		Art.line_c(ci, PackedVector2Array([Vector2(x - 4, 16), Vector2(x + 4, 19)]), Color("7a5a30"), 1.4)
+	# A vine down the shaft's left wall on every other row.
+	if index % 2 == 0:
+		Art.push(ci, Vector2(World.SHAFT_L + 4, 20))
+		Art.toon(ci, _VINES[index % _VINES.size()][0], JG_LEAF, 2.0, 0.3)
+		Art.pop(ci)
+
+
+## The hall: courses of carved blocks, a glyph frieze, light pooled around
+## the torches, daylight through a crack (shallow) or magic light (deep).
+func _temple_hall(ci: CanvasItem, cave: Rect2, cp: PackedVector2Array, inner: Color, st: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 59 + 23
+	var mortar := Art.shade_of(inner, 0.38)
+	Art.flat(ci, cp, mortar)
+	var deep := index >= 6
+	var glow: Color = st.get("glow", JG_GOLD)
+	var ch := 29.0
+	var frieze_y := cave.position.y + 30.0
+	var y := cave.position.y - 4.0
+	var r := 0
+	while y < LEDGE_Y:
+		if r == 1:
+			_frieze(ci, cave, cp, frieze_y, inner, glow)
+			y = frieze_y + 22.0
+			r += 1
+			continue
+		var x := cave.position.x - 30.0 - float((r * 23 + index * 7) % 40)
+		while x < cave.end.x + 10.0:
+			var bw := rng.randf_range(48.0, 72.0)
+			var rect := Rect2(x + 1.5, y + 1.5, bw - 3.0, ch - 3.0)
+			var tone := inner.lightened(rng.randf_range(-0.02, 0.09))
+			var face := Art.clipped(Art.rrect_pts(rect, 3.0, 1), cp)
+			if face.size() >= 3:
+				Art.flat(ci, face, tone)
+				var lip := Art.clipped(PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), Vector2(rect.end.x, rect.position.y + 3), rect.position + Vector2(0, 3)]), cp)
+				if lip.size() >= 3:
+					Art.flat(ci, lip, tone.lightened(0.13))
+				var low := Art.clipped(PackedVector2Array([Vector2(rect.position.x, rect.end.y - 4), Vector2(rect.end.x, rect.end.y - 4), rect.end, Vector2(rect.position.x, rect.end.y)]), cp)
+				if low.size() >= 3:
+					Art.flat(ci, low, Art.shade_of(tone, 0.15))
+				var inside := Geometry2D.is_point_in_polygon(rect.position, cp) and Geometry2D.is_point_in_polygon(rect.end, cp)
+				var roll := rng.randf()
+				if inside and roll < 0.16:
+					_carve(ci, _GLYPHS[rng.randi() % _GLYPHS.size()], rect.get_center(), 0.75, tone)
+				elif inside and deep and roll < 0.24:
+					# Gold inlay in the deep halls.
+					Art.t_rect(ci, Rect2(rect.get_center() - Vector2(5, 5), Vector2(10, 10)), 2, JG_GOLD, 1.6, 0.3)
+			x += bw
+		y += ch
+		r += 1
+	# Light: warm pools around the torches, shade under the ceiling and
+	# down the walls.
+	for tx: float in _torch_xs(cave):
+		Art.glow(ci, Vector2(tx, CAVE_TOP + 74), 150.0, Color(1.0, 0.7, 0.32, 0.26), 20)
+		Art.glow(ci, Vector2(tx, CAVE_TOP + 74), 60.0, Color(1.0, 0.82, 0.5, 0.2), 16)
+	Art.flat(ci, Art.clipped(_wall_band(cave), cp), Color(JG_DUSK, 0.26))
+	# Shadow where the wall meets the floor.
+	var foot := PackedVector2Array([Vector2(cave.position.x + 24, LEDGE_Y - 34), Vector2(cave.end.x - 24, LEDGE_Y - 34),
+			Vector2(cave.end.x - 24, LEDGE_Y), Vector2(cave.position.x + 24, LEDGE_Y)])
+	Art.grad(ci, foot, PackedColorArray([Color(JG_DUSK, 0.0), Color(JG_DUSK, 0.0), Color(JG_DUSK, 0.3), Color(JG_DUSK, 0.3)]))
+	var top_shade := Art.clipped(PackedVector2Array([Vector2(cave.position.x - 4, cave.position.y - 4), Vector2(cave.end.x + 4, cave.position.y - 4),
+			Vector2(cave.end.x + 4, cave.position.y + 16), Vector2(cave.position.x - 4, cave.position.y + 16)]), cp)
+	Art.flat(ci, top_shade, Color(JG_DUSK, 0.26))
+	if index <= 3:
+		# Daylight falling through a crack in the ceiling.
+		var bx := lerpf(cave.position.x + 160.0, cave.end.x - 150.0, 0.35 + 0.2 * (index % 2))
+		var beam := PackedVector2Array([Vector2(bx - 8, cave.position.y - 4), Vector2(bx + 12, cave.position.y - 4),
+				Vector2(bx + 64, LEDGE_Y + 6), Vector2(bx + 6, LEDGE_Y + 6)])
+		Art.flat(ci, Art.clipped(beam, cp), Color(1.0, 0.97, 0.78, 0.16))
+		Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(bx + 36, LEDGE_Y + 2), Vector2(34, 7), 18), cp), Color(1.0, 0.95, 0.7, 0.22))
+		Art.flat(ci, Art.ellipse_pts(Vector2(bx + 2, cave.position.y + 1), Vector2(12, 3), 12), Color(1.0, 1.0, 0.85, 0.9))
+	if index >= 4:
+		# Magic light from the depths: soft pools in the site's color.
+		var a := clampf(0.08 + (index - 4) * 0.03, 0.0, 0.24)
+		Art.glow(ci, Vector2(cave.get_center().x, LEDGE_Y - 40), cave.size.x * 0.42, Color(glow, a), 24)
+
+
+## The glyph frieze: a carved band of step-frets with round glyph stones;
+## its grooves glow in the deeper halls.
+func _frieze(ci: CanvasItem, cave: Rect2, cp: PackedVector2Array, y: float, inner: Color, glow: Color) -> void:
+	var band := Art.clipped(PackedVector2Array([Vector2(cave.position.x - 4, y), Vector2(cave.end.x + 4, y),
+			Vector2(cave.end.x + 4, y + 20), Vector2(cave.position.x - 4, y + 20)]), cp)
+	var tone := inner.lightened(0.12)
+	Art.flat(ci, band, tone)
+	Art.flat(ci, Art.clipped(PackedVector2Array([Vector2(cave.position.x - 4, y), Vector2(cave.end.x + 4, y),
+			Vector2(cave.end.x + 4, y + 3), Vector2(cave.position.x - 4, y + 3)]), cp), tone.lightened(0.15))
+	Art.flat(ci, Art.clipped(PackedVector2Array([Vector2(cave.position.x - 4, y + 17), Vector2(cave.end.x + 4, y + 17),
+			Vector2(cave.end.x + 4, y + 20), Vector2(cave.position.x - 4, y + 20)]), cp), Art.shade_of(tone, 0.25))
+	var x0 := cave.position.x + 34.0
+	var x1 := cave.end.x - 34.0
+	var lit := index >= 4
+	var x := x0
+	var k := 0
+	while x + 24.0 < x1:
+		if k % 4 == 3:
+			Art.t_circle(ci, Vector2(x + 12, y + 10), 6.5, tone.lightened(0.08), 1.8, 0.3)
+			if lit:
+				Art.glow(ci, Vector2(x + 12, y + 10), 12.0, Color(glow, 0.5), 10)
+			Art.flat(ci, Art.circle_pts(Vector2(x + 12, y + 10), 2.6, 8), glow if lit else Art.shade_of(tone, 0.4))
+		else:
+			var pts := Art.moved(_FRET, Vector2(x, y + 4))
+			if lit:
+				Art.line_c(ci, pts, Color(glow, 0.35), 4.0)
+				Art.line_c(ci, pts, glow.lightened(0.3), 1.6)
+			else:
+				_carve(ci, pts, Vector2.ZERO, 1.0, tone)
+		x += 24.0
+		k += 1
+
+
+## Floor of big flagstones with grass in the seams.
+func _temple_floor(ci: CanvasItem, cave: Rect2, cp: PackedVector2Array, stone: Color) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 41 + 9
+	var seam := Art.shade_of(stone, 0.35)
+	var a := World.SHAFT_R + 6.0
+	var b := cave.end.x - 30.0
+	Art.flat(ci, Art.clipped(PackedVector2Array([Vector2(World.SHAFT_L, LEDGE_Y - 4), Vector2(cave.end.x + 10, LEDGE_Y - 4),
+			Vector2(cave.end.x + 10, LEDGE_Y + 2), Vector2(World.SHAFT_L, LEDGE_Y + 2)]), cp), stone.lightened(0.16))
+	var rows: Array[float] = [LEDGE_Y + 2.0, LEDGE_Y + 15.0, CAVE_BOTTOM - 4.0]
+	for i in 2:
+		Art.line_c(ci, PackedVector2Array([Vector2(a, rows[i + 1]), Vector2(b, rows[i + 1])]), seam, 2.0)
+		var x := a + 10.0 + float((index * 17 + i * 23) % 30)
+		while x < b - 20.0:
+			Art.line_c(ci, PackedVector2Array([Vector2(x, rows[i] + 1), Vector2(x - 2.0 - i * 2.0, rows[i + 1] - 1)]), seam, 2.0)
+			# A lit edge on each slab.
+			Art.line_c(ci, PackedVector2Array([Vector2(x + 2, rows[i] + 2), Vector2(x + 26, rows[i] + 2)]), Color(1, 1, 1, 0.16), 1.6)
+			x += rng.randf_range(44.0, 70.0)
+	# Grass and little plants in the seams, a few leaves on the floor.
+	for k in 6:
+		var p := Vector2(rng.randf_range(a + 30, b - 20), rows[1 + k % 2] - 1.0)
+		Art.push(ci, p, 0.0, Vector2.ONE * rng.randf_range(0.45, 0.7))
+		Art.toon(ci, _TUFT_J, JG_LEAF if k % 2 else JG_LEAF_LIGHT, 1.8, 0.3)
+		Art.pop(ci)
+	for k in 4:
+		var p := Vector2(rng.randf_range(a + 20, b - 10), rng.randf_range(LEDGE_Y + 5, CAVE_BOTTOM - 8))
+		Art.push(ci, p, rng.randf_range(-PI, PI), Vector2.ONE * 0.6)
+		Art.toon(ci, _LEAF_J, Color("c8a040") if k % 2 else JG_LEAF_DARK, 1.4, 0.2)
+		Art.pop(ci)
+	var foot := PackedVector2Array([Vector2(World.SHAFT_L, CAVE_BOTTOM - 14), Vector2(cave.end.x + 10, CAVE_BOTTOM - 14),
+			Vector2(cave.end.x + 10, CAVE_BOTTOM + 10), Vector2(World.SHAFT_L, CAVE_BOTTOM + 10)])
+	Art.flat(ci, Art.clipped(foot, cp), Color(seam, 0.3))
+
+
+## The doorway into the hall: two stacked stone pillars under a carved
+## lintel with a jade (gold, deeper) eye and a vine over it.
+func _stone_portal(ci: CanvasItem, h: float, w: float, st: Dictionary) -> void:
+	var stone := JG_STONE.lerp(st["floor"], 0.35)
+	var gem: Color = JG_JADE if index < 6 else JG_GOLD
+	for x: float in [0.0, w]:
+		var y := 0.0
+		var k := 0
+		while y > -h + 4.0:
+			var bh := 26.0 if k % 2 == 0 else 22.0
+			Art.t_rect(ci, Rect2(x - 9, y - bh, 18, bh), 2.5, stone if k % 2 == 0 else stone.darkened(0.06), 2.4, 0.4)
+			y -= bh
+			k += 1
+		Art.t_rect(ci, Rect2(x - 12, -8, 24, 8), 2, stone.darkened(0.1), 2.4, 0.3)
+	Art.t_rect(ci, Rect2(-20, -h - 14, w + 40, 22), 4, stone, 2.8, 0.5)
+	Art.t_rect(ci, Rect2(-16, -h - 22, w + 32, 10), 3, stone.lightened(0.06), 2.4, 0.3)
+	for k in 2:
+		_carve(ci, _FRET, Vector2(-8 + k * (w - 8.0), -h - 8), 0.8, stone)
+	Art.t_circle(ci, Vector2(w / 2.0, -h - 3), 6.5, stone.lightened(0.1), 2.0, 0.3)
+	Art.t_circle(ci, Vector2(w / 2.0, -h - 3), 3.6, gem, 1.4, 0.0)
+	Art.flat(ci, Art.circle_pts(Vector2(w / 2.0 - 1.2, -h - 4.4), 1.0, 6), Color(1, 1, 1, 0.9))
+	# A vine over the lintel.
+	Art.push(ci, Vector2(w + 16, -h - 6), 0.0, Vector2(1.0, 0.8))
+	Art.toon(ci, _VINES[(index + 1) % _VINES.size()][0], JG_LEAF, 2.0, 0.3)
+	Art.pop(ci)
+	Art.push(ci, Vector2(-16, -h - 6), 0.0, Vector2(-0.8, 0.7))
+	Art.toon(ci, _VINES[(index + 2) % _VINES.size()][0], JG_LEAF_DARK, 2.0, 0.3)
+	Art.pop(ci)
+
+
+## Still things in the hall: roots from the ceiling, ferns in the corners.
+func _temple_furniture(ci: CanvasItem, cave: Rect2, cp: PackedVector2Array) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 13 + 5
+	for k in 3:
+		var x := lerpf(World.CAVE_L + 140.0, cave.end.x - 90.0, (k + rng.randf_range(0.1, 0.8)) / 3.0)
+		var len := rng.randf_range(24.0, 46.0) * (1.3 if index >= 5 else 1.0)
+		var root := PackedVector2Array([Vector2(x, CAVE_TOP - 6), Vector2(x + 3, CAVE_TOP + len * 0.4), Vector2(x - 2, CAVE_TOP + len * 0.75), Vector2(x + 1, CAVE_TOP + len)])
+		Art.line_c(ci, root, Art.INK, 6.0)
+		Art.line_c(ci, root, JG_ROOT, 3.2)
+		var fork := PackedVector2Array([root[1], root[1] + Vector2(8, 10), root[1] + Vector2(10, 18)])
+		Art.line_c(ci, fork, Art.INK, 4.4)
+		Art.line_c(ci, fork, JG_ROOT, 2.0)
+	# Ferns at the foot of the walls.
+	for p: Vector3 in [Vector3(World.CAVE_L + 112.0, 1.0, 1.0), Vector3(cave.end.x - 16.0, 0.9, -1.0)]:
+		Art.push(ci, Vector2(p.x, LEDGE_Y + 4), 0.0, Vector2(p.z, 1.0) * p.y)
+		Art.toon(ci, _FERN, JG_LEAF_DARK, 2.0, 0.4)
+		Art.toon(ci, _FERN_FRONT, JG_LEAF, 2.0, 0.4)
+		Art.pop(ci)
+
+
+## Phones: the hall is too small for all the greenery.
+func _narrow(cave: Rect2) -> bool:
+	return cave.end.x - World.CAVE_L < 460.0
+
+
+## Torch places in the hall (one in narrow halls).
+func _torch_xs(cave: Rect2) -> Array[float]:
+	var a := World.CAVE_L + 128.0
+	var b := cave.end.x - 116.0
+	if b - a < 90.0:
+		return [a]
+	return [a, b]
+
+
+## A torch in a carved stone sconce, its flame flickering.
+func _jg_torch(at: Vector2) -> void:
+	var flick := snappedf(0.85 + 0.15 * sin(_t * 9.0 + at.x * 0.1) + 0.05 * sin(_t * 23.0 + at.x), 0.05)
+	Art.glow(self, at + Vector2(0, -16), 56.0, Color(1.0, 0.62, 0.25, 0.3 * flick), 16)
+	Art.toon(self, Art.moved(_SCONCE, at), JG_STONE, 2.2, 0.4)
+	Art.push(self, at + Vector2(0, -2), 0.0)
+	Art.t_rect(self, Rect2(-3.5, -8, 7, 16), 2, Art.WOOD_DARK, 2.0, 0.0)
+	Art.t_rect(self, Rect2(-6, -12, 12, 6), 2, Color("6a5a3a"), 2.0, 0.0)
+	Art.push(self, Vector2(0, -11), sin(_t * 7.0 + at.x) * 0.1, Vector2(1.0, flick) * 1.15)
+	Art.toon(self, _FLAME, Color("ff8a2a"), 2.0, 0.0)
+	Art.flat(self, _FLAME_IN, Color("ffe066"))
+	Art.pop(self)
+	Art.pop(self)
+	# Sparks rising from it.
+	for k in 2:
+		var f := fposmod(_t * 0.7 + k * 0.5 + at.x * 0.01, 1.0)
+		Art.dot(self, at + Vector2(sin(_t * 3.0 + k * 2.0) * 5.0 * f, -30.0 - f * 34.0), 1.6 * (1.0 - f) + 0.5, Color(1.0, 0.8, 0.35, 1.0 - f))
+
+
+## Moving life of every jungle hall: vines swaying from the ceiling,
+## daylight motes (shallow), fireflies and magic motes (deep).
+func _jungle_life(st: Dictionary, cave: Rect2) -> void:
+	var glow: Color = st.get("glow", JG_GOLD)
+	var top := CAVE_TOP - 2.0
+	var xs: Array[float] = [World.CAVE_L + 186.0, lerpf(World.CAVE_L + 170.0, cave.end.x - 70.0, 0.26 + 0.06 * (index % 3 - 1)), cave.end.x - 54.0]
+	if _narrow(cave):
+		# Phones: one vine, the hall is small.
+		xs = [cave.end.x - 64.0]
+	for k in xs.size():
+		var v: Array = _VINES[(k + index * 2) % _VINES.size()]
+		Art.push(self, Vector2(xs[k], top), sin(_t * 0.8 + k * 1.9 + index) * 0.06, Vector2(1.0 if k % 2 else -1.0, 0.8 + 0.25 * ((k + index) % 2)))
+		Art.toon(self, v[0], JG_LEAF if k != 1 else JG_LEAF_DARK, 2.0, 0.35)
+		var fl: Vector2 = v[1]
+		Art.t_circle(self, fl, 3.4, JG_FLOWERS[(k + index) % JG_FLOWERS.size()], 1.4, 0.0)
+		Art.dot(self, fl, 1.2, Color("fff2a0"))
+		Art.pop(self)
+	var x0 := World.CAVE_L + 100.0
+	var x1 := cave.end.x - 70.0
+	if index <= 3:
+		# Dust glittering in the daylight.
+		var bx := lerpf(cave.position.x + 160.0, cave.end.x - 150.0, 0.35 + 0.2 * (index % 2))
+		for k in 4:
+			var f := fposmod(_t * 0.05 + k * 0.25, 1.0)
+			var p := Vector2(bx + 6.0 + f * 40.0 + sin(_t * 0.7 + k * 2.0) * 6.0, lerpf(CAVE_TOP + 10.0, LEDGE_Y - 6.0, f))
+			Art.dot(self, p, 1.4, Color(1, 1, 0.85, 0.75 * sin(f * PI)))
+	if index >= 4:
+		var n := 3 + (index - 4)
+		for k in n:
+			var f := fposmod(_t * 0.045 + k / float(n), 1.0)
+			var p := Vector2(lerpf(x0, x1, fposmod(k * 0.379 + f * 0.25, 1.0)) + sin(_t * 0.9 + k * 1.7) * 14.0,
+					lerpf(LEDGE_Y - 14.0, CAVE_TOP + 24.0, f) + sin(_t * 1.6 + k) * 6.0)
+			var a := sin(f * PI) * (0.6 + 0.4 * sin(_t * 5.0 + k * 2.3))
+			Art.glow(self, p, 9.0, Color(glow, snappedf(0.45 * a, 0.05)), 10)
+			Art.dot(self, p, 1.8, Color(glow.lightened(0.4), a))
+
+
+## Leafy clumps hanging over the hall's edge (still, in front of the
+## glowing vein, behind the workers).
+func _edge_drapes(ci: CanvasItem, cave: Rect2) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = index * 19 + 3
+	var spots: Array[float] = [cave.position.x + 156.0, lerpf(cave.position.x + 220.0, cave.end.x - 80.0, 0.72 + rng.randf() * 0.12), cave.end.x - 30.0]
+	if _narrow(cave):
+		spots = [cave.end.x - 30.0]
+	for k in spots.size():
+		var at := Vector2(spots[k], cave.position.y + (6.0 if k != 1 else 0.0))
+		Art.push(ci, at, 0.0, Vector2(1.0 if k % 2 == 0 else -1.0, 1.0) * (0.9 + 0.25 * rng.randf()))
+		Art.toon(ci, _CLUMP_BACK, JG_LEAF_DARK, 2.2, 0.3)
+		Art.toon(ci, _CLUMP, JG_LEAF, 2.2, 0.4)
+		for p: Vector2 in _CLUMP_VEINS:
+			Art.line_c(ci, PackedVector2Array([Vector2.ZERO, p]), Color(JG_LEAF_DARK, 0.6), 1.2)
+		if (k + index) % 2 == 0:
+			var fc: Color = JG_FLOWERS[(k + index) % JG_FLOWERS.size()]
+			Art.toon(ci, _FLOWER, fc, 1.6, 0.3)
+			Art.t_circle(ci, Vector2(6, 10), 2.4, Color("ffe066"), 1.2, 0.0)
+		Art.pop(ci)
+	# Moss at the bottom corners of the hall.
+	for p: Vector2 in [Vector2(cave.position.x + 30.0, CAVE_BOTTOM - 2.0), Vector2(cave.end.x - 34.0, CAVE_BOTTOM - 2.0)]:
+		Art.toon(ci, Art.moved(_MOSS_LOW, p), JG_LEAF_DARK, 1.8, 0.3)
+
+
+# --- Set pieces of the ten temple halls -------------------------------------------------
+
+## Decor of the jungle halls (true when drawn).
+func _draw_decor_jungle(st: Dictionary, cave: Rect2) -> bool:
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var fit := clampf((cave.end.x - World.CAVE_L) / 520.0, 0.55, 1.0)
+	match st["deco"]:
+		"jg_clay":
+			# Painted urns and a broken pot; a gecko crawling over the wall.
+			for p: Vector3 in [Vector3(x0 - 20, 1.25, 1), Vector3(x0 + 10, 0.8, 0), Vector3(x1 + 26, 1.05, 3)]:
+				OreArt.piece(self, "clay", Vector2(p.x, y + 3), p.y, 0.0, st, _t, int(p.z))
+			for p: Vector3 in [Vector3(mid + 14, 0.45, 0.6), Vector3(mid + 30, 0.4, -0.4), Vector3(mid + 2, 0.35, 1.4)]:
+				OreArt.piece(self, "clay", Vector2(p.x, y + 4), p.y, p.z, st, _t, 2)
+			_gecko(Vector2(lerpf(x0 - 40, x1 + 50, 0.5 - 0.5 * cos(_t * 0.11 + index)), top + 58 + sin(_t * 0.23) * 14.0), sin(_t * 0.11 + index))
+		"jg_cocoa":
+			# A cocoa tree's branch grown in through the wall under the
+			# ceiling: big leaves, pods hanging and swaying.
+			var br := _cocoa_branch(cave.end.x + 10.0, mid - 30.0 * fit, top)
+			Art.toon(self, br[0], Color("8a5a34"), 2.6, 0.5)
+			Art.line_c(self, br[1], Color("6a4224"), 1.6)
+			var bp: PackedVector2Array = br[1]
+			for k in 4:
+				var lp := bp[mini(bp.size() - 1, 1 + k * 2)]
+				Art.push(self, lp, (0.7 if k % 2 else -0.6) + sin(_t * 0.5 + k) * 0.05, Vector2.ONE * (1.0 - 0.12 * (k % 2)))
+				Art.toon(self, _BIG_LEAF, JG_LEAF if k % 2 else JG_LEAF_DARK, 2.2, 0.4)
+				Art.line_c(self, _BIG_LEAF_VEIN, Color(JG_LEAF_DARK.darkened(0.2), 0.7), 1.4)
+				Art.pop(self)
+			for k in 3:
+				var at := bp[mini(bp.size() - 1, 2 + k * 2)] + Vector2(0, 5)
+				Art.line_c(self, PackedVector2Array([at + Vector2(0, -6), at + Vector2(0, 4)]), Color("6a4424"), 2.0)
+				Art.push(self, at, sin(_t * 1.3 + k * 2.0) * 0.12)
+				OreArt.piece(self, "cocoa", Vector2(0, 32), 0.7, 0.0, st, _t, k)
+				Art.pop(self)
+			OreArt.jungle_centerpiece(self, "cocoa", Vector2(x0 - 16, y + 2), 0.9, st, _t, 1)
+			for k in 2:
+				var fly := Vector2(lerpf(x0, x1 + 20, 0.5 + 0.45 * sin(_t * 0.31 + k * 2.5)), top + 50 + k * 34 + sin(_t * 0.9 + k) * 18.0)
+				_butterfly(fly, k, Color("3fa8ff") if k == 0 else Color("ff8a3d"))
+		"jg_pool":
+			_spout_pool(st, mid + 6.0, y, top, fit)
+		"jg_coins":
+			# A treasure chest spilling coins, an urn tipped over, a coin rolling.
+			OreArt.jungle_centerpiece(self, "old_coins", Vector2(mid, y + 2), 1.35 * fit, st, _t, index)
+			Art.push(self, Vector2(x0 - 20, y - 4), -1.35, Vector2.ONE * 0.9)
+			OreArt.piece(self, "clay", Vector2.ZERO, 1.0, 0.0, Art.SITE_STYLE["clay"], _t, 0)
+			Art.pop(self)
+			for k in 4:
+				OreArt.piece(self, "old_coins", Vector2(x0 + 6 + k * 9, y + 4), 0.32, 1.2 + k * 0.4, st, _t, 2)
+			OreArt.piece(self, "old_coins", Vector2(x1 + 30, y + 3), 0.75, 0.0, st, _t, 1)
+			var f := fposmod(_t * 0.09 + index * 0.3, 1.0)
+			if f < 0.6:
+				var rx := lerpf(x1 + 10, x0 + 50, f / 0.6)
+				Art.push(self, Vector2(rx, y - 6), -(rx - x0) / 7.0, Vector2.ONE * 0.55)
+				OreArt.piece(self, "old_coins", Vector2(0, 14), 1.0, 0.0, st, _t, 0)
+				Art.pop(self)
+			_twinkles(x0, x1, top, y, Color("fff1a8"), 4)
+		"jg_masks":
+			_wall_mask(st, Vector2(mid + 4, top + 104), 2.1 * fit + 0.3)
+			for p: Vector3 in [Vector3(x0 - 30, top + 46, 0.0), Vector3(x1 + 30, top + 52, 1.0)]:
+				Art.line_c(self, PackedVector2Array([Vector2(p.x, p.y - 22), Vector2(p.x, p.y - 34)]), Art.INK, 1.6)
+				Art.push(self, Vector2(p.x, p.y - 22), sin(_t * 1.1 + p.z * 2.0) * 0.08)
+				OreArt.piece(self, "mask", Vector2(0, 38), 0.95, 0.0, st, _t, int(p.z))
+				Art.pop(self)
+			for x: float in [x0 - 4, x1 + 10]:
+				Art.push(self, Vector2(x, y + 3))
+				Art.toon(self, _URN_FIRE, Color("8a8472"), 2.2, 0.4)
+				Art.pop(self)
+				_small_flame(Vector2(x, y - 14), ore2)
+		"jg_jaguar":
+			# Two stone jaguars guard the hall, facing each other.
+			var gap := 64.0 * fit + 26.0
+			for k in 2:
+				_jaguar(Vector2(mid + (gap if k == 1 else -gap), y + 3), -1.0 if k == 1 else 1.0, ore, ore2, k, 0.8 + 0.3 * fit)
+			# Tiger's eyes set in carved sockets in the wall between them.
+			for k in 3:
+				var gp := Vector2(mid + (k - 1) * 34.0 * fit, top + 62 + (k % 2) * 16)
+				Art.t_circle(self, gp + Vector2(0, -8), 12.0, Color("8a7450"), 2.2, 0.4)
+				OreArt.piece(self, "tiger_eye", gp + Vector2(0, 3), 0.5, 0.0, st, _t, k)
+			_twinkles(mid - 60, mid + 60, top + 30, top + 120, ore2, 3)
+		"jg_idol":
+			_idol_altar(st, Vector2(mid, y + 3), top, fit)
+		"jg_sun":
+			_sun_wall(st, Vector2(mid + 4, top + 84), fit)
+			for x: float in [x0 - 10, x1 + 24]:
+				Art.push(self, Vector2(x, y + 3))
+				Art.toon(self, _URN_FIRE, JG_GOLD, 2.2, 0.5)
+				Art.pop(self)
+				_small_flame(Vector2(x, y - 14), Color("ffe066"))
+			# Marigold petals drifting down.
+			for k in 5:
+				var f := fposmod(_t * 0.06 + k * 0.2, 1.0)
+				var p := Vector2(lerpf(x0 - 50, x1 + 60, fposmod(k * 0.41, 1.0)) + sin(_t * 1.2 + k) * 12.0, lerpf(top + 10, y - 4, f))
+				Art.push(self, p, _t * 1.5 + k, Vector2(1.0, 0.6 + 0.4 * sin(_t * 3.0 + k)))
+				Art.toon(self, _PETAL_J, Color("ffa02e") if k % 2 else Color("ffd23f"), 1.2, 0.0)
+				Art.pop(self)
+		"jg_serpent":
+			_serpent_wall(st, cave, x0, x1, top, fit)
+		"jg_heart":
+			_heart_altar(st, Vector2(mid + 4, y + 3), top, x0, x1, fit)
+		_:
+			return false
+	return true
+
+
+## A little green gecko on the wall, walking along `dir` (sign).
+func _gecko(at: Vector2, dir: float) -> void:
+	var face := 1.0 if dir >= 0.0 else -1.0
+	var step := int(_t * 6.0) % 2
+	Art.push(self, at, 0.0, Vector2(face, 1.0))
+	for k in 4:
+		var lp: Vector2 = [Vector2(6, -3), Vector2(6, 3), Vector2(-6, -3), Vector2(-6, 3)][k]
+		var swing := (0.5 if (k + step) % 2 == 0 else -0.5)
+		Art.push(self, lp, (-1.0 if lp.y < 0.0 else 1.0) * (PI / 2.0) + swing)
+		Art.line_c(self, _GECKO_LEG, Art.INK, 3.6)
+		Art.line_c(self, _GECKO_LEG, Color("6ac83a"), 1.8)
+		Art.pop(self)
+	Art.push(self, Vector2(-10, 0), sin(_t * 3.0) * 0.25)
+	Art.line_c(self, _GECKO_TAIL, Art.INK, 5.0)
+	Art.line_c(self, _GECKO_TAIL, Color("8ade4a"), 2.8)
+	Art.pop(self)
+	Art.toon(self, _GECKO, Color("8ade4a"), 2.0, 0.4)
+	for p: Vector2 in [Vector2(-4, 0), Vector2(3, -1)]:
+		Art.flat(self, Art.circle_pts(p, 1.5, 6), Color("ffb02e"))
+	for sy: float in [-2.6, 2.6]:
+		Art.flat(self, Art.circle_pts(Vector2(13, sy), 1.4, 6), Art.INK)
+	Art.pop(self)
+
+
+## A fluttering butterfly.
+func _butterfly(at: Vector2, k: int, c: Color) -> void:
+	var flap := 0.25 + 0.75 * absf(sin(_t * 11.0 + k * 1.3))
+	Art.push(self, at, sin(_t * 1.7 + k) * 0.2)
+	for sx: float in [-1.0, 1.0]:
+		Art.push(self, Vector2.ZERO, 0.0, Vector2(sx * flap, 1.0))
+		Art.toon(self, _WING, c, 1.6, 0.3)
+		Art.flat(self, _WING_SPOT, Color(1, 1, 1, 0.8))
+		Art.pop(self)
+	Art.line_c(self, PackedVector2Array([Vector2(0, -5), Vector2(0, 5)]), Art.INK, 2.4)
+	Art.pop(self)
+
+
+## A carved spout head pouring water into a turquoise pool with a lily pad.
+func _spout_pool(st: Dictionary, x: float, y: float, top: float, fit: float) -> void:
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var s := 0.7 + 0.3 * fit
+	var head := Vector2(x, top + 64)
+	var mouth := head + Vector2(0, -8) * 1.15
+	# The stream, then the pool over its foot.
+	var py := y + 3.0
+	Art.flat(self, PackedVector2Array([mouth + Vector2(-4, 0), mouth + Vector2(4, 0), Vector2(x + 6, py - 4), Vector2(x - 6, py - 4)]), Color(ore, 0.75))
+	Art.line_c(self, PackedVector2Array([mouth + Vector2(-1, 2), Vector2(x - 2, py - 6)]), Color(1, 1, 1, 0.6), 1.6)
+	for k in 4:
+		var f := fposmod(_t * 1.4 + k * 0.25, 1.0)
+		Art.dot(self, mouth.lerp(Vector2(x, py - 6), f) + Vector2(sin(k * 2.0) * 2.0, 0), 1.6, Color(1, 1, 1, 0.8))
+	Art.push(self, head, 0.0, Vector2.ONE * 1.15)
+	OreArt.jungle_piece(self, "mask", OreArt.JG_STONE, ore, _t, 0)
+	Art.pop(self)
+	Art.push(self, Vector2(x, py), 0.0, Vector2(s, 1.0))
+	Art.toon(self, _POOL_RIM, Color("b4ad92"), 2.6, 0.5)
+	Art.flat(self, _POOL_WATER, ore.darkened(0.12))
+	Art.flat(self, _POOL_LIGHT, ore)
+	for k in 2:
+		var f := fposmod(_t * 0.5 + k * 0.5, 1.0)
+		Art.push(self, Vector2(sin(k * 3.0) * 6.0, -4), 0.0, Vector2(1.0, 0.25) * (0.25 + f * 0.9))
+		Art.arc_c(self, Vector2.ZERO, 30.0, 0, TAU, 20, Color(ore2, snappedf(0.9 * (1.0 - f), 0.1)), 3.0)
+		Art.pop(self)
+	Art.push(self, Vector2(26, -4), sin(_t * 0.6) * 0.1)
+	Art.toon(self, _LILY, Color("4ac85a"), 1.8, 0.3)
+	Art.toon(self, Art.star_pts(Vector2(2, -4), 5, 2.2, 5), Color("ff8ac8"), 1.4, 0.0)
+	Art.flat(self, Art.circle_pts(Vector2(2, -4), 1.6, 6), Color("ffe066"))
+	Art.pop(self)
+	Art.pop(self)
+	for p: Vector3 in [Vector3(x - 52 * s, 0.4, 0), Vector3(x + 50 * s, 0.35, 1)]:
+		OreArt.piece(self, "turquoise", Vector2(p.x, py), p.y, 0.0, st, _t, int(p.z))
+	# Light from the water dancing on the wall.
+	for k in 5:
+		var cp := Vector2(x + (k - 2) * 26.0 * s + sin(_t * 1.3 + k) * 6.0, top + 100 + (k % 2) * 14.0 + sin(_t * 0.9 + k * 2.0) * 4.0)
+		Art.dot(self, cp, 2.2 + sin(_t * 2.0 + k * 1.7), Color(ore2, 0.45))
+
+
+## A great stone mask in the back wall; its jade eyes glow and blink.
+func _wall_mask(st: Dictionary, at: Vector2, s: float) -> void:
+	var ore2: Color = st["ore2"]
+	var pulse := snappedf(0.6 + 0.4 * sin(_t * 1.6 + index), 0.05)
+	Art.glow(self, at + Vector2(0, -60 * s * 0.45), 70.0 * s * 0.5 + 20.0, Color(ore2, 0.16 * pulse), 16)
+	Art.push(self, at, 0.0, Vector2(s, s))
+	Art.toon(self, _MASK_PLATE, Color("8a8a70"), 2.4, 0.4)
+	OreArt.jungle_piece(self, "mask", Color("aaa88a"), ore2, _t, 0)
+	if Chars.blinking(_t * 0.4, index):
+		for e: PackedVector2Array in OreArt._MASK_EYES:
+			Art.flat(self, e, Color("6a6a58"))
+	else:
+		for ex: float in [-7.0, 7.0]:
+			Art.glow(self, Vector2(ex, -23), 8.0, Color(ore2, 0.6 * pulse), 10)
+	Art.pop(self)
+
+
+## A sitting stone jaguar seen from the front, on a carved plinth: golden
+## eyes glowing, a gold collar, its tail tip swaying.
+func _jaguar(at: Vector2, face: float, ore: Color, ore2: Color, k: int, s: float) -> void:
+	var stone := Color("cdb88a")
+	var dark := Art.shade_of(stone, 0.42)
+	Art.push(self, at, 0.0, Vector2(face, 1.0) * s)
+	Art.t_rect(self, Rect2(-28, -12, 56, 12), 3, stone.darkened(0.16), 2.4, 0.4)
+	_carve(self, _FRET, Vector2(-8, -9), 0.5, stone.darkened(0.16))
+	Art.push(self, Vector2(16, -16), sin(_t * 1.2 + k * 2.0) * 0.12)
+	Art.line_c(self, _JAG_TAIL, Art.INK, 7.6)
+	Art.line_c(self, _JAG_TAIL, stone, 4.0)
+	Art.pop(self)
+	Art.toon(self, _JAG_BODY, stone, 2.6, 0.6)
+	for p: Vector2 in _JAG_SPOTS:
+		Art.flat(self, Art.circle_pts(p, 2.6, 8), dark)
+		Art.arc_c(self, p, 4.2, 0.0, TAU, 10, Color(dark, 0.7), 1.2)
+	for x: float in [-7.5, 7.5]:
+		Art.t_rect(self, Rect2(x - 4.5, -34, 9, 22), 4, stone.lightened(0.06), 2.0, 0.3)
+		Art.t_ellipse(self, Vector2(x, -13), Vector2(5.5, 3), stone.lightened(0.1), 1.8, 0.0)
+	for e: PackedVector2Array in _JAG_EARS:
+		Art.toon(self, e, stone, 2.2, 0.3)
+	Art.toon(self, _JAG_HEAD, stone, 2.6, 0.5)
+	Art.flat(self, _JAG_MUZZLE, stone.lightened(0.14))
+	Art.flat(self, _JAG_NOSE, Color("6a4a3a"))
+	Art.line_c(self, _JAG_MOUTH, dark, 1.4)
+	for p: Vector2 in [Vector2(-12, -62), Vector2(12, -62), Vector2(0, -72)]:
+		Art.flat(self, Art.circle_pts(p, 1.8, 6), dark)
+	# Gold collar with a jade stone.
+	Art.line_c(self, _JAG_COLLAR, Art.INK, 6.0)
+	Art.line_c(self, _JAG_COLLAR, JG_GOLD, 3.4)
+	Art.t_circle(self, Vector2(0, -44), 3.2, JG_JADE, 1.4, 0.0)
+	var pulse := snappedf(0.6 + 0.4 * sin(_t * 2.0 + k * 1.3), 0.05)
+	for x: float in [-6.0, 6.0]:
+		Art.glow(self, Vector2(x, -64), 9.0, Color(ore2, 0.6 * pulse), 10)
+		Art.toon(self, Art.ellipse_pts(Vector2(x, -64), Vector2(3.6, 2.6), 10), ore2, 1.4, 0.0)
+		Art.flat(self, Art.ellipse_pts(Vector2(x, -64), Vector2(0.9, 2.2), 6), Art.INK)
+	Art.pop(self)
+
+
+## The idol's altar in a shaft of light from the ceiling.
+func _idol_altar(st: Dictionary, at: Vector2, top: float, fit: float) -> void:
+	var stone := Color("c4ad7e")
+	var s := 0.85 + 0.35 * fit
+	var pulse := snappedf(0.8 + 0.2 * sin(_t * 1.2 + index), 0.05)
+	Art.flat(self, PackedVector2Array([Vector2(at.x - 14, top - 6), Vector2(at.x + 14, top - 6), Vector2(at.x + 50 * s, at.y), Vector2(at.x - 50 * s, at.y)]), Color(1.0, 0.96, 0.75, 0.2 * pulse))
+	Art.flat(self, PackedVector2Array([Vector2(at.x - 6, top - 6), Vector2(at.x + 6, top - 6), Vector2(at.x + 24 * s, at.y), Vector2(at.x - 24 * s, at.y)]), Color(1.0, 0.98, 0.85, 0.16 * pulse))
+	Art.flat(self, Art.ellipse_pts(Vector2(at.x, top - 4), Vector2(14, 4), 12), Color(1.0, 1.0, 0.85, 0.85))
+	Art.push(self, at, 0.0, Vector2(s, s))
+	Art.t_rect(self, Rect2(-46, -14, 92, 14), 3, stone.darkened(0.1), 2.6, 0.4)
+	Art.t_rect(self, Rect2(-32, -28, 64, 14), 3, stone, 2.6, 0.4)
+	Art.t_rect(self, Rect2(-20, -40, 40, 12), 3, stone.lightened(0.06), 2.4, 0.4)
+	for x: float in [-38.0, 26.0]:
+		_carve(self, _FRET, Vector2(x, -9), 0.5, stone.darkened(0.1))
+	for x: float in [-26.0, 20.0]:
+		Art.t_circle(self, Vector2(x + 3, -21), 3.4, JG_JADE, 1.4, 0.0)
+	var bob := snappedf(sin(_t * 1.5) * 2.0, 0.5)
+	Art.glow(self, Vector2(0, -64 + bob), 34.0, Color(1.0, 0.85, 0.4, 0.35 * pulse), 14)
+	OreArt.piece(self, "idol", Vector2(0, -40 + bob), 1.3, 0.0, st, _t, 0)
+	Art.pop(self)
+	# Dust glittering in the light.
+	for k in 4:
+		var f := fposmod(_t * 0.07 + k * 0.25, 1.0)
+		var p := Vector2(at.x + sin(_t * 0.8 + k * 1.9) * (10.0 + 26.0 * f), lerpf(top + 6.0, at.y - 10.0, f))
+		Art.dot(self, p, 1.5, Color(1, 1, 0.85, 0.85 * sin(f * PI)))
+
+
+## The great sun disc in the back wall: its rays turn, its face smiles.
+func _sun_wall(st: Dictionary, c: Vector2, fit: float) -> void:
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var s := 0.55 + 0.45 * fit
+	var pulse := snappedf(0.75 + 0.25 * sin(_t * 1.3), 0.05)
+	Art.glow(self, c, 96.0 * s, Color(ore, 0.3 * pulse), 20)
+	OreArt.heart_rays(self, c, 120.0 * s, ore2, _t * 0.6, 10)
+	Art.push(self, c, _t * 0.12, Vector2(s, s))
+	Art.toon(self, _SUN_BIG_RAYS, ore.darkened(0.08), 2.6, 0.3)
+	Art.pop(self)
+	Art.push(self, c, 0.0, Vector2(s, s))
+	Art.t_circle(self, Vector2.ZERO, 42, ore, 2.8, 0.5)
+	Art.arc_c(self, Vector2.ZERO, 36.0, 0, TAU, 32, Art.shade_of(ore, 0.3), 2.2)
+	for k in 12:
+		Art.flat(self, _SUN_DOTS[k], Art.shade_of(ore, 0.25))
+	Art.t_circle(self, Vector2.ZERO, 27, ore2, 2.2, 0.3)
+	var happy := Chars.blinking(_t * 0.3, index)
+	for sx: float in [-1.0, 1.0]:
+		if happy:
+			Art.arc_c(self, Vector2(sx * 9, -4), 4.0, PI + 0.3, TAU - 0.3, 6, Art.INK, 2.4)
+		else:
+			Art.arc_c(self, Vector2(sx * 9, -5), 4.0, 0.3, PI - 0.3, 6, Art.INK, 2.4)
+		Art.flat(self, Art.circle_pts(Vector2(sx * 15, 5), 3.4, 8), Color(1.0, 0.5, 0.4, 0.45))
+	Art.arc_c(self, Vector2(0, 4), 8.0, 0.35, PI - 0.35, 10, Art.INK, 2.6)
+	Art.flat(self, Art.ellipse_pts(Vector2(-22, -24), Vector2(4, 8), 10, 0.7), Color(1, 1, 1, 0.5))
+	Art.pop(self)
+
+
+## The feathered serpent winding along the back wall; jade glyphs glow.
+func _serpent_wall(st: Dictionary, cave: Rect2, x0: float, x1: float, top: float, fit: float) -> void:
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var a := x0 - 70.0
+	var b := x1 + 20.0
+	var body := _serpent_body(a, b, top)
+	var spine: PackedVector2Array = body[1]
+	var pulse := snappedf(0.6 + 0.4 * sin(_t * 1.4 + index), 0.05)
+	Art.glow(self, Vector2((a + b) / 2.0, top + 96), (b - a) * 0.55, Color(ore, 0.14 * pulse), 18)
+	Art.toon(self, body[0], ore, 2.6, 0.6)
+	Art.toon(self, body[2], ore2.lerp(ore, 0.5), 0.0, 0.0)
+	for k in range(1, spine.size() - 1, 2):
+		Art.arc_c(self, spine[k], 5.0, 0.4, PI - 0.4, 5, Art.shade_of(ore, 0.35), 1.6)
+	# Feathers along its back, in red, gold and turquoise.
+	var cols: Array[Color] = [Color("ff5a5a"), JG_GOLD, Color("3fd6c8")]
+	for k in range(2, spine.size() - 2, 3):
+		var d := (spine[k + 1] - spine[k - 1]).normalized()
+		Art.push(self, spine[k] - d.orthogonal() * 7.0, d.angle() - PI / 2.0 + sin(_t * 1.6 + k) * 0.12)
+		Art.toon(self, _FEATHER_J, cols[(k / 3) % 3], 1.6, 0.3)
+		Art.pop(self)
+	# Head at the far end, crest of feathers waving.
+	var hp := spine[spine.size() - 1]
+	var hs := 1.6 + 0.6 * fit
+	Art.push(self, hp, 0.0, Vector2(hs, hs))
+	for k in 4:
+		Art.push(self, Vector2(-2, -7), -1.3 + k * 0.42 + sin(_t * 2.0 + k) * 0.1)
+		Art.toon(self, _FEATHER_J, cols[k % 3], 1.6, 0.3)
+		Art.pop(self)
+	Art.toon(self, _SERP_HEAD_BIG, ore, 2.2, 0.5)
+	Art.flat(self, _SERP_JAW, ore2.lerp(ore, 0.3))
+	Art.glow(self, Vector2(6, -6), 7.0, Color(Color("ffe066"), 0.6 * pulse), 8)
+	Art.flat(self, Art.circle_pts(Vector2(6, -6), 2.2, 8), Color("ffe066"))
+	Art.flat(self, Art.ellipse_pts(Vector2(6.4, -6), Vector2(0.8, 1.8), 6), Art.INK)
+	if fposmod(_t * 0.5 + index, 2.0) < 0.3:
+		Art.line_c(self, PackedVector2Array([Vector2(20, 1), Vector2(26, 2), Vector2(29, 0)]), Color("ff5a7a"), 1.4)
+		Art.line_c(self, PackedVector2Array([Vector2(26, 2), Vector2(29, 4)]), Color("ff5a7a"), 1.4)
+	Art.pop(self)
+	# Jade glyphs pulsing on the wall.
+	for k in 3:
+		var gp := Vector2(lerpf(a + 30, b - 30, (k + 0.5) / 3.0), top + 34 + (k % 2) * 8)
+		var pk := snappedf(0.5 + 0.5 * sin(_t * 1.8 + k * 2.1), 0.1)
+		Art.glow(self, gp, 16.0, Color(ore2, 0.4 * pk), 10)
+		Art.push(self, gp, 0.0, Vector2(0.7, 0.7))
+		Art.line_c(self, _GLYPHS[k % _GLYPHS.size()], Color(ore2, 0.4 + 0.6 * pk), 2.2)
+		Art.pop(self)
+
+
+static var _bodies := {}
+
+
+## The serpent's body along the wall between a and b: [outline, spine, belly].
+func _serpent_body(a: float, b: float, top: float) -> Array:
+	var k := hash([a, b, top])
+	if _bodies.has(k):
+		return _bodies[k]
+	var spine := PackedVector2Array()
+	var n := maxi(8, int((b - a) / 18.0))
+	for i in n + 1:
+		var u := float(i) / n
+		spine.append(Vector2(lerpf(a, b, u), top + 118.0 - u * 50.0 + sin(u * TAU * 1.4) * 22.0 * (1.0 - u * 0.4)))
+	var body := Geometry2D.offset_polyline(spine, 9.0, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]
+	var belly := Geometry2D.offset_polyline(Art.moved(spine, Vector2(0, 4)), 3.0, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]
+	var out := [body, spine, Art.clipped(belly, body)]
+	_bodies[k] = out
+	return out
+
+
+## The Heart of the Temple: a stepped altar with gold trim, the ruby heart
+## floating over it, glyph stones circling, gold pillars with jade eyes.
+func _heart_altar(st: Dictionary, at: Vector2, top: float, x0: float, x1: float, fit: float) -> void:
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var s := 0.7 + 0.3 * fit
+	var stone := Color("8a7a6a")
+	var c := Vector2(at.x, top + 88)
+	var beat := maxf(0.0, sin(_t * 3.2)) * 0.06
+	Art.glow(self, c, 110.0 * s + 10.0, Color(ore, 0.22 + beat * 2.0), 20)
+	OreArt.heart_rays(self, c, 150.0 * s, ore2, _t, 10)
+	for x: float in [at.x - 112.0 * fit - 16.0, at.x + 112.0 * fit + 16.0]:
+		Art.t_rect(self, Rect2(x - 9, top + 10, 18, LEDGE_Y - top - 8), 3, JG_GOLD, 2.4, 0.5)
+		Art.t_rect(self, Rect2(x - 13, top + 4, 26, 10), 3, Color("e0a52c"), 2.2, 0.3)
+		Art.t_rect(self, Rect2(x - 13, LEDGE_Y - 8, 26, 10), 3, Color("e0a52c"), 2.2, 0.3)
+		var pk := snappedf(0.6 + 0.4 * sin(_t * 2.0 + x), 0.05)
+		for gy: float in [top + 50, top + 110]:
+			Art.glow(self, Vector2(x, gy), 12.0, Color(JG_JADE, 0.5 * pk), 10)
+			Art.t_circle(self, Vector2(x, gy), 4.2, Color("5affb8"), 1.6, 0.0)
+	# Glyph stones circling the heart (the back half behind it).
+	var orbit := Vector2(56.0 * s + 8.0, 16.0)
+	var stones := []
+	for k in 6:
+		var a := _t * 0.5 + TAU * k / 6.0
+		stones.append([sin(a), c + Vector2(cos(a) * orbit.x, sin(a) * orbit.y), k])
+	for e: Array in stones:
+		if e[0] < 0.0:
+			_glyph_stone(e[1], e[2], 0.75, ore2)
+	Art.push(self, at, 0.0, Vector2(s, s))
+	Art.t_rect(self, Rect2(-62, -14, 124, 14), 3, stone.darkened(0.1), 2.6, 0.4)
+	Art.t_rect(self, Rect2(-46, -28, 92, 14), 3, stone, 2.6, 0.4)
+	Art.t_rect(self, Rect2(-30, -42, 60, 14), 3, stone.lightened(0.06), 2.6, 0.4)
+	for r: Rect2 in [Rect2(-62, -14, 124, 3), Rect2(-46, -28, 92, 3), Rect2(-30, -42, 60, 3)]:
+		Art.t_rect(self, r, 1, JG_GOLD, 0.0, 0.0)
+	for x: float in [-38.0, -13.0, 12.0, 37.0]:
+		Art.t_circle(self, Vector2(x, -7), 3.0, JG_JADE, 1.2, 0.0)
+	Art.pop(self)
+	Art.push(self, c + Vector2(0, 16), 0.0, Vector2.ONE * (1.5 * s + 0.4) * (1.0 + beat))
+	OreArt.piece(self, "temple_heart", Vector2.ZERO, 1.0, 0.0, st, _t, 0)
+	Art.pop(self)
+	for e: Array in stones:
+		if e[0] >= 0.0:
+			_glyph_stone(e[1], e[2], 1.0, ore2)
+	for k in 6:
+		var g := fposmod(_t * 0.12 + k / 6.0, 1.0)
+		var sp := Vector2(lerpf(x0 - 20, x1 + 30, fposmod(k * 0.41, 1.0)) + sin(_t + k) * 8.0, lerpf(at.y - 10, top + 10, g))
+		Art.push(self, sp, _t + k, Vector2.ONE * (0.4 + 0.6 * sin(g * PI)))
+		Art.toon(self, Art.star_pts(Vector2.ZERO, 6, 1.5, 4), Color("fff0c0") if k % 2 else Color(ore2), 0.0, 0.0)
+		Art.pop(self)
+
+
+func _glyph_stone(p: Vector2, k: int, light: float, glow: Color) -> void:
+	Art.push(self, p, sin(_t * 0.7 + k) * 0.2)
+	Art.t_rect(self, Rect2(-7, -8, 14, 16), 3, Color("b8a37a").darkened(0.25 * (1.0 - light)), 2.0, 0.3)
+	Art.push(self, Vector2.ZERO, 0.0, Vector2(0.38, 0.38))
+	Art.line_c(self, _GLYPHS[k % _GLYPHS.size()], Color(glow, 0.5 + 0.5 * light), 3.0)
+	Art.pop(self)
+	Art.pop(self)
+
+
+## A small flame on an urn or brazier.
+func _small_flame(at: Vector2, c: Color) -> void:
+	var flick := snappedf(0.85 + 0.15 * sin(_t * 8.0 + at.x), 0.05)
+	Art.glow(self, at + Vector2(0, -8), 26.0, Color(1.0, 0.6, 0.25, 0.3 * flick), 12)
+	Art.push(self, at, sin(_t * 6.0 + at.x) * 0.08, Vector2(1.1, flick * 1.1))
+	Art.toon(self, _FLAME, Color("ff8a2a"), 1.8, 0.0)
+	Art.flat(self, _FLAME_IN, c)
+	Art.pop(self)
+
+
+static func _xf_pts(pts: PackedVector2Array, pos: Vector2, rot: float, s: float) -> PackedVector2Array:
+	return Transform2D(rot, Vector2(s, s), 0.0, pos) * pts
+
+
+## A vine hanging down from 0,0: [outline (stem + leaves), flower spot].
+static func _make_vine(length: float, seed: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var spine := PackedVector2Array()
+	var n := int(length / 9.0) + 2
+	for k in n:
+		var u := float(k) / (n - 1)
+		spine.append(Vector2(sin(u * 3.6 + seed) * 5.0 * u, u * length))
+	var parts := [Geometry2D.offset_polyline(spine, 1.8, Geometry2D.JOIN_ROUND, Geometry2D.END_ROUND)[0]]
+	for k in range(1, n):
+		var u := float(k) / (n - 1)
+		var side := 1.0 if k % 2 == 0 else -1.0
+		var a := rng.randf_range(0.35, 0.95)
+		var rot := a if side > 0.0 else PI - a
+		parts.append(_xf_pts(_LEAF_J, spine[k] + Vector2(-side * 1.0, -1.0), rot, rng.randf_range(0.75, 1.0) * lerpf(1.0, 0.8, u)))
+	return [Art.union(parts), spine[n - 1] + Vector2(0, 2)]
+
+
+static var _LEAF_J := Art.smooth_pts(PackedVector2Array([Vector2(-2, 0), Vector2(4, -4), Vector2(11, -5), Vector2(18, 0), Vector2(11, 4.5), Vector2(4, 4)]), 2)
+static var _VINES: Array = [_make_vine(70.0, 3), _make_vine(52.0, 8), _make_vine(92.0, 5), _make_vine(62.0, 11)]
+static var _MOSS_LOW := Art.smooth_pts(PackedVector2Array([Vector2(-22, 2), Vector2(-16, -6), Vector2(-6, -9), Vector2(4, -7), Vector2(14, -10), Vector2(22, -3), Vector2(22, 2)]), 2)
+static var _TUFT_J := PackedVector2Array([Vector2(-10, 0), Vector2(-8, -10), Vector2(-4, -3), Vector2(-1, -14), Vector2(2, -3), Vector2(6, -11), Vector2(7, -2), Vector2(10, 0)])
+static var _FERN := _make_fern(1.0)
+static var _FERN_FRONT := _make_fern(0.7)
+static var _FRET := PackedVector2Array([Vector2(0, 12), Vector2(0, 0), Vector2(16, 0), Vector2(16, 9), Vector2(6, 9), Vector2(6, 4), Vector2(11, 4)])
+static var _GLYPHS: Array[PackedVector2Array] = [
+		# Spiral.
+		_spiral_glyph(),
+		# Eye.
+		PackedVector2Array([Vector2(-10, 0), Vector2(-5, -5), Vector2(5, -5), Vector2(10, 0), Vector2(5, 5), Vector2(-5, 5), Vector2(-10, 0), Vector2(-2, 0), Vector2(0, -2), Vector2(2, 0)]),
+		# Step pyramid.
+		PackedVector2Array([Vector2(-11, 7), Vector2(-7, 7), Vector2(-7, 2), Vector2(-3, 2), Vector2(-3, -3), Vector2(3, -3), Vector2(3, 2), Vector2(7, 2), Vector2(7, 7), Vector2(11, 7)]),
+		# Sun cross.
+		PackedVector2Array([Vector2(0, -9), Vector2(0, 9), Vector2(0, 0), Vector2(-9, 0), Vector2(9, 0), Vector2(0, 0), Vector2(-6, -6), Vector2(6, 6)]),
+		# Zigzag (water).
+		PackedVector2Array([Vector2(-11, 3), Vector2(-7, -3), Vector2(-3, 3), Vector2(1, -3), Vector2(5, 3), Vector2(9, -3)])]
+static var _SCONCE := PackedVector2Array([Vector2(-9, 8), Vector2(9, 8), Vector2(6, 16), Vector2(2, 22), Vector2(-2, 22), Vector2(-6, 16)])
+static var _CLUMP := _make_clump(false)
+static var _CLUMP_BACK := _make_clump(true)
+static var _CLUMP_VEINS := PackedVector2Array([Vector2(-14, 16), Vector2(-4, 22), Vector2(8, 20), Vector2(16, 12)])
+static var _FLOWER := Art.smooth_pts(Art.star_pts(Vector2(6, 10), 7, 3.2, 5), 2)
+static var _GECKO := Art.smooth_pts(PackedVector2Array([Vector2(-11, 0), Vector2(-4, -4), Vector2(5, -3.5), Vector2(10, -4), Vector2(16, -1.5),
+		Vector2(16, 1.5), Vector2(10, 4), Vector2(5, 3.5), Vector2(-4, 4)]), 2)
+static var _GECKO_LEG := PackedVector2Array([Vector2(0, 0), Vector2(4, 1), Vector2(6, -1)])
+static var _GECKO_TAIL := PackedVector2Array([Vector2(0, 0), Vector2(-8, 1), Vector2(-14, -2), Vector2(-17, -6), Vector2(-15, -9)])
+static var _WING := Art.smooth_pts(PackedVector2Array([Vector2(0, -1), Vector2(6, -9), Vector2(12, -8), Vector2(11, -1), Vector2(8, 3), Vector2(10, 8), Vector2(5, 9), Vector2(0, 2)]), 2)
+static var _WING_SPOT := Art.circle_pts(Vector2(8, -5), 1.8, 8)
+static var _BIG_LEAF := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-10, 12), Vector2(-12, 30), Vector2(0, 44), Vector2(12, 30), Vector2(10, 12)]), 3)
+static var _BIG_LEAF_VEIN := PackedVector2Array([Vector2(0, 2), Vector2(0, 40)])
+static var _POOL_RIM := Art.ellipse_pts(Vector2(0, -3), Vector2(60, 11), 28)
+static var _POOL_WATER := Art.ellipse_pts(Vector2(0, -4), Vector2(52, 7), 28)
+static var _POOL_LIGHT := Art.ellipse_pts(Vector2(-6, -5), Vector2(36, 4), 24)
+static var _LILY := PackedVector2Array([Vector2(0, 0), Vector2(9, -1), Vector2(8, 3), Vector2(2, 5), Vector2(-6, 4), Vector2(-9, 0), Vector2(-6, -4), Vector2(0, -5), Vector2(6, -4)])
+static var _MASK_PLATE := Art.smooth_pts(PackedVector2Array([Vector2(-22, -42), Vector2(22, -42), Vector2(24, -18), Vector2(16, 4), Vector2(-16, 4), Vector2(-24, -18)]), 2)
+static var _URN_FIRE := Art.smooth_pts(PackedVector2Array([Vector2(-8, 0), Vector2(-12, -8), Vector2(-14, -16), Vector2(14, -16), Vector2(12, -8), Vector2(8, 0)]), 2)
+static var _JAG_BODY := Art.smooth_pts(PackedVector2Array([Vector2(-19, -12), Vector2(-21, -30), Vector2(-15, -46), Vector2(0, -50),
+		Vector2(15, -46), Vector2(21, -30), Vector2(19, -12)]), 3)
+static var _JAG_HEAD := Art.smooth_pts(PackedVector2Array([Vector2(-17, -60), Vector2(-14, -70), Vector2(-6, -75), Vector2(6, -75),
+		Vector2(14, -70), Vector2(17, -60), Vector2(12, -50), Vector2(0, -47), Vector2(-12, -50)]), 3)
+static var _JAG_MUZZLE := Art.ellipse_pts(Vector2(0, -54), Vector2(7.5, 5), 14)
+static var _JAG_NOSE := PackedVector2Array([Vector2(-3, -58), Vector2(3, -58), Vector2(0, -55)])
+static var _JAG_MOUTH := PackedVector2Array([Vector2(-4, -51), Vector2(0, -53.5), Vector2(4, -51)])
+static var _JAG_COLLAR := PackedVector2Array([Vector2(-13, -48), Vector2(-6, -45), Vector2(0, -44), Vector2(6, -45), Vector2(13, -48)])
+static var _JAG_SPOTS: Array[Vector2] = [Vector2(-12, -38), Vector2(13, -36), Vector2(-15, -24), Vector2(15, -22), Vector2(0, -40)]
+static var _JAG_EARS: Array[PackedVector2Array] = [Art.smooth_pts(PackedVector2Array([Vector2(-16, -66), Vector2(-15, -78), Vector2(-7, -73)]), 2),
+		Art.smooth_pts(PackedVector2Array([Vector2(16, -66), Vector2(15, -78), Vector2(7, -73)]), 2)]
+static var _JAG_TAIL := PackedVector2Array([Vector2(0, 0), Vector2(10, -2), Vector2(16, -10), Vector2(15, -20), Vector2(10, -24)])
+static var _SUN_BIG_RAYS := Art.star_pts(Vector2.ZERO, 62, 44, 16)
+static var _SUN_DOTS: Array[PackedVector2Array] = _sun_dots()
+static var _PETAL_J := Art.smooth_pts(PackedVector2Array([Vector2(0, -4), Vector2(3, 0), Vector2(0, 4), Vector2(-3, 0)]), 2)
+static var _FEATHER_J := Art.smooth_pts(PackedVector2Array([Vector2(-2.5, 0), Vector2(-4, -8), Vector2(0, -15), Vector2(4, -8), Vector2(2.5, 0)]), 2)
+static var _SERP_HEAD_BIG := Art.smooth_pts(PackedVector2Array([Vector2(-8, -8), Vector2(0, -12), Vector2(12, -11), Vector2(22, -4),
+		Vector2(22, 3), Vector2(10, 6), Vector2(-2, 6), Vector2(-8, 4)]), 2)
+static var _SERP_JAW := Art.clipped(PackedVector2Array([Vector2(-10, 1), Vector2(24, 1), Vector2(24, 8), Vector2(-10, 8)]), _SERP_HEAD_BIG)
+
+
+static func _spiral_glyph() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for k in 16:
+		var a := k * 0.62
+		pts.append(Vector2(cos(a), sin(a)) * (1.0 + k * 0.62))
+	return pts
+
+
+static func _sun_dots() -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for k in 12:
+		out.append(Art.circle_pts(Vector2.from_angle(TAU * k / 12.0) * 32.0, 2.4, 8))
+	return out
+
+
+## A fern: fronds fanning up from 0,0 (`s` < 1 = the smaller front set).
+static func _make_fern(s: float) -> PackedVector2Array:
+	var parts := []
+	for k in 5:
+		var a := -PI / 2.0 + (k - 2) * 0.42 * (1.0 if s >= 1.0 else 1.25)
+		var frond := Art.smooth_pts(PackedVector2Array([Vector2(0, -2.5), Vector2(14, -5), Vector2(30, -3), Vector2(40, 0), Vector2(30, 3), Vector2(14, 5), Vector2(0, 2.5)]), 2)
+		parts.append(_xf_pts(frond, Vector2.ZERO, a, s * (0.75 + 0.25 * (1.0 - absf(k - 2) / 2.0))))
+	return Art.union(parts)
+
+
+## A clump of leaves hanging over an edge from 0,0.
+static func _make_clump(back: bool) -> PackedVector2Array:
+	var parts := []
+	var angs: Array = [2.6, 2.0, 1.55, 1.1, 0.55] if not back else [2.9, 2.3, 1.3, 0.3]
+	for k in angs.size():
+		parts.append(_xf_pts(_LEAF_J, Vector2(0, 0), angs[k], (1.25 if k % 2 == 0 else 1.05) * (1.15 if back else 1.0)))
+	parts.append(Art.circle_pts(Vector2.ZERO, 5.0, 10))
+	return Art.union(parts)
+
+
+static var _branches := {}
+
+
+## The cocoa branch from the wall at x `a` to its tip at `b` under the
+## ceiling: [outline, spine].
+func _cocoa_branch(a: float, b: float, top: float) -> Array:
+	var k := hash([a, b, top])
+	if _branches.has(k):
+		return _branches[k]
+	var spine := PackedVector2Array()
+	for i in 9:
+		var u := i / 8.0
+		spine.append(Vector2(lerpf(a, b, u), top + 8.0 + u * 22.0 + sin(u * 5.0) * 5.0))
+	# Thick at the wall, thin at the tip.
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	for i in spine.size():
+		var d := (spine[mini(i + 1, 8)] - spine[maxi(i - 1, 0)]).normalized().orthogonal()
+		var hw := lerpf(11.0, 3.0, i / 8.0)
+		left.append(spine[i] + d * hw)
+		right.append(spine[i] - d * hw)
+	right.reverse()
+	left.append_array(right)
+	var out := [left, spine]
+	_branches[k] = out
+	return out
