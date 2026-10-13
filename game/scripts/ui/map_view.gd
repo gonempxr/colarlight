@@ -933,9 +933,9 @@ func _paint(ci: CanvasItem) -> void:
 		var label := world_name(l, false) if st != MapArt.LOCKED else "???"
 		MapArt.plate(ci, Vector2(0, 150), label, st, tier_of(l), 28)
 		if st == MapArt.CURRENT:
-			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_HERE"), tm)
+			MapArt.here_tag(ci, Vector2(0, MapArt.tag_y(w)), t("MAP_HERE"), tm)
 		elif l == _sel:
-			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_GO_TAG"), tm, Color("5fd27a"))
+			MapArt.here_tag(ci, Vector2(0, MapArt.tag_y(w)), t("MAP_GO_TAG"), tm, Color("5fd27a"))
 		Art.pop(ci)
 	if _hint_left > 0.0 and _pos.has(_hint_loc):
 		_hint_bubble(ci, (_pos[_hint_loc] as Vector2) + Vector2(0, -150), _hint_loc == high + 1)

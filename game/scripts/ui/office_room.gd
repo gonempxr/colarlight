@@ -487,18 +487,29 @@ func _process(delta: float) -> void:
 func _paint_bg(ci: CanvasItem) -> void:
 	var full_h := _hall.y + (_inset_top + _inset_bottom) / _k
 	Art.push(ci, _o, 0.0, Vector2(_k, _k))
+	var w := world_id()
+	var jg := OfficeArt.is_jungle(w)
 	Art.push(ci, Vector2(0, -_inset_top / _k))
-	OfficeArt.wallpaper(ci, _hall.x, _wall + _inset_top / _k, decor("wallpaper"))
-	OfficeArt.floor_band(ci, _hall.x, _wall + _inset_top / _k, full_h, decor("floor"))
+	OfficeArt.wall_in(ci, _hall.x, _wall + _inset_top / _k, decor("wallpaper"), w)
+	OfficeArt.floor_in(ci, _hall.x, _wall + _inset_top / _k, full_h, decor("floor"), w)
 	Art.pop(ci)
 	var fl := decor("floor")
 	if fl in [2, 4, 5]:
 		var c := Vector2(_p("desk").x + (_p("player").x - _p("desk").x) * 0.5, _wall + (_hall.y - _wall) * 0.6)
-		OfficeArt.rug(ci, c, Vector2(minf(_cw * 0.32, 220.0), (_hall.y - _wall) * 0.24), fl)
-	OfficeArt.window_view(ci, _window, world_id(), decor("wallpaper"))
+		if jg:
+			OfficeArt.j_rug(ci, c, Vector2(minf(_cw * 0.32, 220.0), (_hall.y - _wall) * 0.24), fl)
+		else:
+			OfficeArt.rug(ci, c, Vector2(minf(_cw * 0.32, 220.0), (_hall.y - _wall) * 0.24), fl)
+	if jg:
+		_paint_jungle(ci)
+	else:
+		OfficeArt.window_view(ci, _window, w, decor("wallpaper"))
 	OfficeArt.window_light(ci, _window, _wall)
 	Art.push(ci, _p("clock"), 0.0, Vector2.ONE * _s("clock"))
-	OfficeArt.clock(ci)
+	if jg:
+		OfficeArt.j_compass(ci)
+	else:
+		OfficeArt.clock(ci)
 	Art.pop(ci)
 	# The pipe from the factory down into the vault, and the vault.
 	var vs := _s("pile")
@@ -511,6 +522,69 @@ func _paint_bg(ci: CanvasItem) -> void:
 	OfficeArt.vignette(ci, _hall.x, full_h)
 	Art.pop(ci)
 	Art.pop(ci)
+
+
+## The jungle study's wall dressing: a leafy bamboo beam, the window with
+## its blind, a pinned treasure map and hanging vines.
+func _paint_jungle(ci: CanvasItem) -> void:
+	OfficeArt.j_canopy(ci, _hall.x, 0.0)
+	OfficeArt.j_window(ci, _window, decor("wallpaper"))
+	var m := _jungle_map()
+	if m.size.x > 0.0:
+		OfficeArt.j_map(ci, m)
+	var X := _cx
+	var W := _cw
+	var vines: Array = [[X + 10.0, 70.0], [X + W * 0.45, 56.0], [X + W - 12.0, 84.0]]
+	if _wide:
+		vines = [[X + 12.0, 60.0], [X + W * 0.52, 44.0], [X + W * 0.71, 40.0], [X + W - 12.0, 66.0]]
+	var i := 0
+	for v: Array in vines:
+		FactoryArt.vine(ci, Vector2(float(v[0]), 10.0), float(v[1]), i)
+		i += 1
+
+
+## Where the treasure map hangs (logical), or an empty rect when no room.
+func _jungle_map() -> Rect2:
+	if _wide:
+		var x0 := _window.end.x + 34.0
+		var x1 := _p("trophy").x - 60.0 * _s("trophy")
+		var ww := minf(112.0, x1 - x0 - 10.0)
+		var hh := minf(ww * 0.68, _wall - 80.0)
+		if ww < 60.0 or hh < 36.0:
+			return Rect2()
+		var r := Rect2((x0 + x1) / 2.0 - ww / 2.0, _wall * 0.46 - hh / 2.0, ww, hh)
+		# Not behind the terrarium.
+		var box: Rect2 = OfficeArt.BOX["aquarium"]
+		var aq := Rect2(_p("aquarium") + box.position * _s("aquarium"), box.size * _s("aquarium"))
+		return Rect2() if r.grow(6.0).intersects(aq) else r
+	var bt := _p("board").y - 66.0 * _s("board")
+	var a := _p("lamp").x + 10.0
+	var b := _p("clock").x - 30.0 * _s("clock")
+	var w := clampf(b - a, 0.0, 124.0)
+	var h := minf(w * 0.68, bt - 60.0)
+	if w < 60.0 or h < 36.0:
+		return Rect2()
+	return Rect2((a + b) / 2.0 - w / 2.0, bt - 12.0 - h, w, h)
+
+
+## The jungle study's live bits: a parrot on the window sill and two
+## butterflies drifting about.
+func _draw_jungle() -> void:
+	var sill := Vector2(_window.position.x - 2.0, _window.end.y + 8.0)
+	var peck := fposmod(_t, 4.6)
+	Art.push(self, sill)
+	FactoryArt.parrot(self, 1.0 if peck < 0.3 else 0.0, Chars.blinking(_t, 3.3), 1.0)
+	Art.pop(self)
+	var spots := [Vector2(_cx + _cw * 0.3, _wall - 70.0), Vector2(_window.get_center().x - 30.0, _window.end.y + 70.0)]
+	if _wide:
+		spots = [Vector2(_cx + _cw * 0.42, _wall - 40.0), Vector2(_cx + _cw * 0.9, _wall + 30.0)]
+	var cols := [Color("ff8a2a"), Color("5ad2ff")]
+	for i in 2:
+		var ph := _t * (0.45 + i * 0.12) + i * 2.0
+		var p: Vector2 = spots[i] + Vector2(sin(ph) * 46.0, sin(ph * 2.0) * 18.0 + sin(_t * 3.1 + i) * 3.0)
+		Art.push(self, p, snappedf(sin(ph) * 0.25, 0.05), Vector2(1.5, 1.5))
+		FactoryArt.butterfly(self, fposmod(_t * 5.0 + i * 0.5, 1.0), cols[i])
+		Art.pop(self)
 
 
 func _sig() -> String:
@@ -543,19 +617,25 @@ func _draw() -> void:
 	OfficeArt.board(self, clampf(1.0 - (_t - _board_at) / 0.6, 0.0, 1.0))
 	_draw_evo()
 	Art.pop(self)
+	var w := world_id()
+	var jg := OfficeArt.is_jungle(w)
 	_push("trophy")
-	OfficeArt.trophy(self, decor("trophy"), _t)
+	OfficeArt.piece(self, "trophy", decor("trophy"), _t, w)
 	Art.pop(self)
 	# Back row against the wall.
 	var wopen := clampf(1.0 - absf(_t - _wardrobe_at - 0.6) / 0.6, 0.0, 1.0)
 	_push("wardrobe")
-	OfficeArt.wardrobe(self, wopen, Chars.OUTFITS[int(_avatar().get("outfit", 0)) % Chars.OUTFITS.size()])
+	var oc: Color = Chars.OUTFITS[int(_avatar().get("outfit", 0)) % Chars.OUTFITS.size()]
+	if jg:
+		OfficeArt.j_wardrobe(self, wopen, oc)
+	else:
+		OfficeArt.wardrobe(self, wopen, oc)
 	Art.pop(self)
 	_push("sofa")
-	OfficeArt.sofa(self, decor("sofa"))
+	OfficeArt.piece(self, "sofa", decor("sofa"), _t, w)
 	Art.pop(self)
 	_push("aquarium")
-	OfficeArt.aquarium(self, decor("aquarium"), _t)
+	OfficeArt.piece(self, "aquarium", decor("aquarium"), _t, w)
 	Art.pop(self)
 	# Coins falling from the pipe into the vault, and the vault's heap.
 	var vs := _s("pile")
@@ -579,7 +659,10 @@ func _draw() -> void:
 	Art.pop(self)
 	# Clock hands.
 	Art.push(self, _p("clock"), 0.0, Vector2.ONE * _s("clock"))
-	OfficeArt.clock_hands(self, _t)
+	if jg:
+		OfficeArt.j_compass_needle(self, _t)
+	else:
+		OfficeArt.clock_hands(self, _t)
 	Art.pop(self)
 	# Empty decor slots breathe so they read as "build here".
 	_draw_spots()
@@ -587,7 +670,7 @@ func _draw() -> void:
 	_draw_desk()
 	_draw_player()
 	_push("plant")
-	OfficeArt.plant(self, decor("plant"), _t)
+	OfficeArt.piece(self, "plant", decor("plant"), _t, w)
 	Art.pop(self)
 	# Collect button (only while there is something to collect).
 	var amount := vault()
@@ -598,8 +681,10 @@ func _draw() -> void:
 	Art.pop(self)
 	# The lamp in front of everything on the wall.
 	_push("lamp")
-	OfficeArt.lamp(self, decor("lamp"), _t)
+	OfficeArt.piece(self, "lamp", decor("lamp"), _t, w)
 	Art.pop(self)
+	if jg:
+		_draw_jungle()
 	_draw_fx()
 	Art.pop(self)
 
@@ -635,7 +720,7 @@ func _draw_desk() -> void:
 	var ds := _s("desk")
 	Art.push(self, dp, 0.0, Vector2.ONE * ds * _bounce("desk"))
 	Art.push(self, Vector2(-30, -6))
-	OfficeArt.chair(self, lv)
+	OfficeArt.piece(self, "chair", lv, _t, world_id())
 	Art.pop(self)
 	if has_accountant():
 		var since := _t - _acct_at
@@ -655,7 +740,7 @@ func _draw_desk() -> void:
 		Art.push(self, Vector2(-30, -6))
 		OfficeArt.ghost(self)
 		Art.pop(self)
-	OfficeArt.desk(self, lv, _t)
+	OfficeArt.piece(self, "desk", lv, _t, world_id())
 	Art.pop(self)
 	# The bag of coins hops from the vault to the desk.
 	if has_accountant():

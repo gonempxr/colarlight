@@ -36,6 +36,8 @@ const STAGES := 20
 
 ## Per world: hall colors, the furnace flame and the wall dressing.
 ##   wall/wall2/low  back wall, its pattern and the low band
+##   style           planks, plates, tiles, panels or temple (the jungle:
+##                   see "Jungle: the temple workshop" at the end)
 ##   beam/col/pipe   ceiling beams, steel columns, wall pipes
 ##   haz             safety paint (stripes, walkway, railings)
 ##   sky/sky2        outside, seen through windows and the dock door
@@ -56,6 +58,10 @@ const LOOKS := {
 		"col": Color("aab8d0"), "pipe": Color("5ad2ff"), "haz": Color("5ad2ff"),
 		"floor": Color("c4cfe2"), "floor2": Color("b0bdd4"), "sky": Color("2a2f6a"), "sky2": Color("12163a"),
 		"accent": Color("5ad2ff"), "flame": Color("6ad8ff"), "glow": Color("a8ecff"), "style": "panels"},
+	"jungle": {"wall": Color("e8cd94"), "wall2": Color("dcbc80"), "low": Color("b98f58"), "beam": Color("7a4a26"),
+		"col": Color("dcc28a"), "pipe": Color("d6c25e"), "haz": Color("d6c25e"),
+		"floor": Color("c4a676"), "floor2": Color("8a7048"), "sky": Color("7fd0f2"), "sky2": Color("d4f2dc"),
+		"accent": Color("3fd6c0"), "flame": Color("ff8a2a"), "glow": Color("ffd98a"), "style": "temple"},
 }
 
 ## Machine materials per tier: body, trim, dark parts, light/glow.
@@ -100,8 +106,8 @@ static func _alt(c: Color) -> Color:
 	return Color.from_hsv(fposmod(c.h + 0.3, 1.0), c.s, c.v, c.a)
 
 
-static func _mat(stage: int, variant: int) -> Dictionary:
-	var m: Dictionary = TIERS[tier_of(stage)]
+static func _mat(stage: int, variant: int, temple: bool = false) -> Dictionary:
+	var m: Dictionary = (TEMPLE_TIERS if temple else TIERS)[tier_of(stage)]
 	if variant == 0:
 		return m
 	return {"body": _alt(m["body"]), "trim": _alt(m["trim"]), "dark": m["dark"], "light": m["light"]}
@@ -177,8 +183,17 @@ static func hall(ci: CanvasItem, w: float, h: float, floor_y: float, lk: Diction
 				Art.flat(ci, Art.rrect_pts(Rect2(x + 36, 18, 4, floor_y * 0.5), 2.0), Color(lk["accent"], 0.35))
 				Art.disc(ci, Vector2(x + 38, floor_y * 0.5 + 26), 3.0, Color(lk["accent"], 0.6))
 				x += 80.0
+		"temple":
+			_temple_wall(ci, w, floor_y, lk)
 	# The top of the wall is in the ceiling's shadow.
 	_vgrad(ci, Rect2(0, 0, w, 150), Color(Art.SHADE, 0.24), Color(Art.SHADE, 0.0))
+	if is_temple(lk):
+		_temple_band(ci, w, floor_y, lk)
+		for cx in cols:
+			column(ci, float(cx), 20.0, floor_y, lk)
+		ceiling(ci, w, lk)
+		floor_band(ci, w, floor_y, h, lk)
+		return
 	# Lower wall band (wainscot) along the floor, with a safety stripe.
 	var band := Rect2(0, floor_y - 58, w, 58)
 	Art.flat(ci, _quad(band), lk["low"])
@@ -200,6 +215,9 @@ static func hall(ci: CanvasItem, w: float, h: float, floor_y: float, lk: Diction
 
 ## The ceiling beam with a truss under it (0..56).
 static func ceiling(ci: CanvasItem, w: float, lk: Dictionary) -> void:
+	if is_temple(lk):
+		_temple_ceiling(ci, w, lk)
+		return
 	var c: Color = Art.shade_of(lk["col"], 0.1)
 	var x := -20.0
 	var up := true
@@ -219,6 +237,9 @@ static func ceiling(ci: CanvasItem, w: float, lk: Dictionary) -> void:
 
 ## A steel I-beam column from y0 down to the floor at y1.
 static func column(ci: CanvasItem, x: float, y0: float, y1: float, lk: Dictionary) -> void:
+	if is_temple(lk):
+		_temple_pillar(ci, x, y0, y1, lk)
+		return
 	var c: Color = lk["col"]
 	Art.flat(ci, _quad(Rect2(x - 15, y0, 30, y1 - y0)), Color(0, 0, 0, 0.08))
 	Art.t_rect(ci, Rect2(x - 11, y0, 22, y1 - y0), 2, c, 2.6, 0.5)
@@ -234,6 +255,9 @@ static func column(ci: CanvasItem, x: float, y0: float, y1: float, lk: Dictionar
 
 ## Floor from `y0` (the wall's foot) down to `y1`.
 static func floor_band(ci: CanvasItem, w: float, y0: float, y1: float, lk: Dictionary) -> void:
+	if is_temple(lk):
+		_temple_floor(ci, w, y0, y1, lk)
+		return
 	Art.flat(ci, _quad(Rect2(0, y0, w, y1 - y0)), lk["floor"])
 	var fy := y0 + 10.0
 	var k := 0
@@ -261,6 +285,16 @@ static func floor_band(ci: CanvasItem, w: float, y0: float, y1: float, lk: Dicti
 ## Horizontal wall pipes from x0 to x1 at y, with brackets and a valve
 ## wheel at each x in `valves`.
 static func wall_pipes(ci: CanvasItem, x0: float, x1: float, y: float, lk: Dictionary, valves: Array = []) -> void:
+	if is_temple(lk):
+		# A bamboo aqueduct: an open half pipe of running water on brackets.
+		var x := x0 + 30.0
+		while x < x1 - 10.0:
+			Art.t_rect(ci, Rect2(x - 4, y - 2, 8, 26), 2, Color("8a6a3a"), 2.0, 0.2)
+			x += 120.0
+		_bamboo(ci, Vector2(x0, y + 4), Vector2(x1, y + 4), 14.0)
+		Art.flat(ci, _quad(Rect2(x0, y - 4, x1 - x0, 5)), JADE)
+		Art.line_c(ci, PackedVector2Array([Vector2(x0, y - 4), Vector2(x1, y - 4)]), Color(1, 1, 1, 0.5), 1.6)
+		return
 	var p: Color = lk["pipe"]
 	var p2: Color = Art.shade_of(lk["col"], -0.1)
 	Art.stroke(ci, PackedVector2Array([Vector2(x0, y + 20), Vector2(x1, y + 20)]), p2, 7.0, 2.2)
@@ -288,6 +322,9 @@ static func valve(ci: CanvasItem, at: Vector2) -> void:
 
 ## An industrial window onto the world outside (sea, volcano, swamp, space).
 static func window(ci: CanvasItem, r: Rect2, lk: Dictionary) -> void:
+	if is_temple(lk):
+		_temple_window(ci, r, lk)
+		return
 	Art.t_rect(ci, r.grow(7), 6, lk["beam"], 3.0, 0.4)
 	scene(ci, r, lk)
 	# Glass glints, the panes and the sill.
@@ -355,6 +392,8 @@ static func scene(ci: CanvasItem, r: Rect2, lk: Dictionary) -> void:
 					p + Vector2(s.x, s.y * 0.74), p + Vector2(s.x, s.y), p + Vector2(0, s.y)])
 			Art.flat(ci, g, Color("9aa3b8"))
 			Art.flat(ci, Art.ellipse_pts(p + Vector2(s.x * 0.3, s.y * 0.88), Vector2(s.x * 0.08, s.y * 0.03), 12), Color("7a8398"))
+		"temple":
+			_jungle_scene(ci, r, lk)
 
 
 ## Soft light falling from a window rect `r` to the floor.
@@ -375,6 +414,17 @@ static func hanging_lamp(ci: CanvasItem, cord: float, lk: Dictionary, cone: floa
 	Art.grad(ci, PackedVector2Array([Vector2(-16, cord + 14), Vector2(16, cord + 14), Vector2(cone * 0.4, cord + cone), Vector2(-cone * 0.4, cord + cone)]),
 			PackedColorArray([c, c, clear, clear]))
 	Props.halo(ci, Vector2(0, cord + 18), 34, Color(lk["glow"], 0.35))
+	if is_temple(lk):
+		# A woven rattan lantern.
+		Art.t_rect(ci, Rect2(-5, cord - 2, 10, 6), 2, Art.WOOD_DARK, 1.8, 0.0)
+		Art.t_circle(ci, Vector2(0, cord + 16), 14, Color("c98a4a"), 2.6, 0.5)
+		Art.t_circle(ci, Vector2(0, cord + 16), 8, Color("fff3c4"), 0.0, 0.0)
+		for k in 3:
+			Art.arc_c(ci, Vector2(0, cord + 16), 12.0 - k * 4.0, PI * 0.15, PI * 0.85, 8, Color("8e552c"), 1.6)
+			Art.arc_c(ci, Vector2(0, cord + 16), 12.0 - k * 4.0, PI * 1.15, PI * 1.85, 8, Color("8e552c"), 1.6)
+		Art.line_c(ci, PackedVector2Array([Vector2(-13, cord + 16), Vector2(13, cord + 16)]), Color("8e552c"), 1.6)
+		Art.toon(ci, PackedVector2Array([Vector2(-4, cord + 29), Vector2(4, cord + 29), Vector2(0, cord + 38)]), Color("ff8a2a"), 1.6, 0.0)
+		return
 	Art.toon(ci, PackedVector2Array([Vector2(-7, cord), Vector2(7, cord), Vector2(22, cord + 17), Vector2(-22, cord + 17)]), lk["beam"], 2.5, 0.4)
 	Art.t_circle(ci, Vector2(0, cord + 18), 7, Color("fff3c4"), 2.0, 0.0)
 
@@ -390,8 +440,11 @@ static func rack(ci: CanvasItem, w: float, h: float, lk: Dictionary, seed: int) 
 	Art.flat(ci, _quad(Rect2(4, -h, w - 8, h)), Color(0, 0, 0, 0.12))
 	for i in levels:
 		_rack_items(ci, Vector2(8, -8.0 - i * lh - 6.0), w - 16.0, lh - 14.0, lk, seed + i * 7)
+	var shelf := Color("b07a3e") if is_temple(lk) else Color("ff8a3c")
+	if is_temple(lk):
+		post = BAMBOO
 	for i in levels + 1:
-		Art.t_rect(ci, Rect2(0, -8.0 - i * lh - 6.0, w, 7), 2, Color("ff8a3c") if i > 0 else post, 2.2, 0.3)
+		Art.t_rect(ci, Rect2(0, -8.0 - i * lh - 6.0, w, 7), 2, shelf if i > 0 else post, 2.2, 0.3)
 	for x: float in [0.0, w - 7.0]:
 		Art.t_rect(ci, Rect2(x, -h - 8, 7, h + 8), 2, post, 2.2, 0.3)
 		var y := -h + 4.0
@@ -419,7 +472,10 @@ static func _rack_items(ci: CanvasItem, at: Vector2, w: float, h: float, lk: Dic
 				var r := minf(10.0, h * 0.4)
 				if room < r * 2.0 + 4.0:
 					break
-				barrel(ci, Vector2(x + r + 2, at.y), r, lk["pipe"] if rng.randf() < 0.5 else Color("8e94a6"))
+				if is_temple(lk):
+					_pot(ci, Vector2(x + r + 2, at.y), r)
+				else:
+					barrel(ci, Vector2(x + r + 2, at.y), r, lk["pipe"] if rng.randf() < 0.5 else Color("8e94a6"))
 				x += r * 2.0 + 8.0
 			3:
 				if room < 26.0:
@@ -429,6 +485,12 @@ static func _rack_items(ci: CanvasItem, at: Vector2, w: float, h: float, lk: Dic
 			_:
 				if room < 28.0:
 					break
+				if is_temple(lk):
+					# A stack of chocolate bars.
+					for k in 3:
+						Art.t_rect(ci, Rect2(x + (k % 2) * 3, at.y - 7 - k * 6, 24, 6), 1.5, CHOC.lightened(k * 0.06), 1.6, 0.3)
+					x += 32.0
+					continue
 				# Jars / cans in a row.
 				for k in 3:
 					Art.t_rect(ci, Rect2(x + k * 9, at.y - 14, 8, 14), 2, [Art.CORAL, Art.TEAL, Art.GOLD][(seed + k) % 3], 1.8, 0.3)
@@ -451,6 +513,15 @@ static func barrel(ci: CanvasItem, base: Vector2, r: float, c: Color) -> void:
 	for y: float in [0.45, 1.9]:
 		Art.line_c(ci, PackedVector2Array([base + Vector2(-r * 1.05, -r * y), base + Vector2(r * 1.05, -r * y)]), Art.shade_of(c, 0.35), 2.0)
 	Art.flat(ci, Art.ellipse_pts(base + Vector2(-r * 0.45, -r * 1.3), Vector2(r * 0.18, r * 0.6), 8), Color(1, 1, 1, 0.3))
+
+
+## A clay pot with a turquoise band (the temple's barrel), base bottom center.
+static func _pot(ci: CanvasItem, base: Vector2, r: float) -> void:
+	var body := Art.smooth_pts(PackedVector2Array([base + Vector2(-r * 0.7, 0), base + Vector2(-r * 1.1, -r * 1.1), base + Vector2(-r * 0.6, -r * 2.0),
+			base + Vector2(r * 0.6, -r * 2.0), base + Vector2(r * 1.1, -r * 1.1), base + Vector2(r * 0.7, 0)]), 2)
+	Art.toon(ci, body, TERRACOTTA, 2.2, 0.6)
+	Art.flat(ci, _quad(Rect2(base.x - r * 0.95, base.y - r * 1.35, r * 1.9, r * 0.3)), JADE)
+	Art.t_rect(ci, Rect2(base.x - r * 0.55, base.y - r * 2.3, r * 1.1, r * 0.4), 1.5, Art.shade_of(TERRACOTTA, 0.1), 1.8, 0.0)
 
 
 ## Small world-themed shelf items: rope / fish box (ocean), hot rocks
@@ -476,6 +547,20 @@ static func _world_thing(ci: CanvasItem, base: Vector2, lk: Dictionary, k: int) 
 			for j in 2:
 				Art.t_rect(ci, Rect2(base.x - 10 + j * 11, base.y - 22, 9, 22), 4, Art.WHITE if j == 0 else Color("5ad2ff"), 2.0, 0.4)
 				Art.t_rect(ci, Rect2(base.x - 8 + j * 11, base.y - 25, 5, 4), 1, Art.METAL, 1.4, 0.0)
+		"temple":
+			match k:
+				0:
+					# A woven basket of cocoa pods.
+					for j in 3:
+						Art.t_ellipse(ci, base + Vector2(-6 + j * 6, -14 - (j % 2) * 3), Vector2(4.5, 6.5), Color("e0802e") if j != 1 else Color("c9602a"), 1.6, 0.3)
+					Art.toon(ci, PackedVector2Array([base + Vector2(-12, -12), base + Vector2(12, -12), base + Vector2(9, 0), base + Vector2(-9, 0)]), Color("c9a050"), 2.0, 0.3)
+					Art.line_c(ci, PackedVector2Array([base + Vector2(-10, -6), base + Vector2(10, -6)]), Color("8a6a2a"), 1.4)
+				1:
+					Art.push(ci, base)
+					idol(ci, 1.3)
+					Art.pop(ci)
+				_:
+					_pot(ci, base, 9.0)
 
 
 ## A control desk (origin bottom center, ~84 x 92): buttons, a screen and a
@@ -572,6 +657,14 @@ static func extinguisher(ci: CanvasItem) -> void:
 static func sign_board(ci: CanvasItem, kind: String, lk: Dictionary) -> void:
 	match kind:
 		"helmet":
+			if is_temple(lk):
+				# An explorer's pith helmet on a wooden board.
+				Art.t_rect(ci, Rect2(-26, -26, 52, 52), 8, Color("3f9a5a"), 2.6, 0.3)
+				Art.ring(ci, Art.rrect_pts(Rect2(-21, -21, 42, 42), 6), Color("ffe9b0"), 2.0)
+				Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(-14, 4), Vector2(-12, -10), Vector2(0, -16), Vector2(12, -10), Vector2(14, 4)]), 3), Color("ead7a2"), 2.2, 0.4)
+				Art.t_ellipse(ci, Vector2(0, 6), Vector2(20, 5), Color("d9c48a"), 2.0, 0.2)
+				Art.flat(ci, _quad(Rect2(-13, -2, 26, 4)), Color("8a6a3a"))
+				return
 			Art.t_rect(ci, Rect2(-26, -26, 52, 52), 8, Color("3aa6f0"), 2.6, 0.3)
 			Art.ring(ci, Art.rrect_pts(Rect2(-21, -21, 42, 42), 6), Art.WHITE, 2.0)
 			Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(-16, 6), Vector2(-14, -8), Vector2(0, -14), Vector2(14, -8), Vector2(16, 6)]), 3), Art.GOLD, 2.2, 0.4)
@@ -593,7 +686,10 @@ static func sign_board(ci: CanvasItem, kind: String, lk: Dictionary) -> void:
 
 
 ## A string of little flags from x0 to x1 hanging from y (sagging `sag`).
-static func pennants(ci: CanvasItem, x0: float, x1: float, y: float, sag: float) -> void:
+static func pennants(ci: CanvasItem, x0: float, x1: float, y: float, sag: float, lk: Dictionary = {}) -> void:
+	if is_temple(lk):
+		garland(ci, x0, x1, y, sag)
+		return
 	var n := maxi(3, int((x1 - x0) / 26.0))
 	var pts := PackedVector2Array()
 	for i in n + 1:
@@ -628,6 +724,21 @@ static func emblem(ci: CanvasItem, lk: Dictionary) -> void:
 			Art.flat(ci, Art.clipped(_quad(Rect2(-22, 4, 44, 16)), fl), Color("7dff5a"))
 			Art.ring(ci, fl, Art.INK, 2.6)
 			Art.disc(ci, Vector2(-4, 10), 3, Art.WHITE)
+		"temple":
+			# A golden sun mask on a carved stone plaque.
+			Art.t_rect(ci, Rect2(-38, -38, 76, 76), 6, Color("c9a668"), 3.0, 0.4)
+			Art.ring(ci, Art.rrect_pts(Rect2(-31, -31, 62, 62), 4), Art.shade_of(Color("c9a668"), 0.3), 2.4)
+			for k in 12:
+				var a := k * TAU / 12.0
+				Art.toon(ci, PackedVector2Array([Vector2.from_angle(a - 0.16) * 18, Vector2.from_angle(a) * 29, Vector2.from_angle(a + 0.16) * 18]),
+						Art.GOLD if k % 2 == 0 else Color("ffe38a"), 2.0, 0.0)
+			Art.t_circle(ci, Vector2.ZERO, 19, Art.GOLD, 2.6, 0.5)
+			for sx: float in [-7.0, 7.0]:
+				Art.t_ellipse(ci, Vector2(sx, -4), Vector2(4, 3), Art.WHITE, 1.6, 0.0)
+				Art.disc(ci, Vector2(sx, -3.5), 1.8, Art.INK)
+			Art.arc_c(ci, Vector2(0, 3), 7, 0.3, PI - 0.3, 8, Art.INK, 2.2)
+			for sx: float in [-13.0, 13.0]:
+				Art.disc(ci, Vector2(sx, 4), 2.6, JADE)
 		"panels":
 			Art.t_rect(ci, Rect2(-30, -40, 60, 80), 8, Color("1d2350"), 3.0, 0.2)
 			Art.toon(ci, PackedVector2Array([Vector2(0, -30), Vector2(10, -12), Vector2(10, 14), Vector2(-10, 14), Vector2(-10, -12)]), Art.WHITE, 2.4, 0.4)
@@ -641,6 +752,18 @@ static func emblem(ci: CanvasItem, lk: Dictionary) -> void:
 
 ## A round wall clock face; clock_hands tick on it.
 static func clock(ci: CanvasItem, lk: Dictionary) -> void:
+	if is_temple(lk):
+		# A carved stone calendar with a turquoise ring.
+		Art.t_circle(ci, Vector2.ZERO, 25, Color("d8bc80"), 3.0, 0.4)
+		Art.ring(ci, Art.circle_pts(Vector2.ZERO, 20, 24), Art.shade_of(Color("d8bc80"), 0.35), 2.0)
+		Art.t_circle(ci, Vector2.ZERO, 16, Art.CREAM, 2.0, 0.0)
+		Art.ring(ci, Art.circle_pts(Vector2.ZERO, 16, 24), JADE, 2.4)
+		for k in 12:
+			var d := Vector2(0, -22.5).rotated(k * TAU / 12.0)
+			Art.disc(ci, d, 1.6, Art.shade_of(Color("d8bc80"), 0.45))
+			if k % 3 == 0:
+				Art.disc(ci, d * 0.58, 1.8, Art.INK_SOFT)
+		return
 	Art.t_circle(ci, Vector2.ZERO, 22, lk["beam"], 3.0, 0.3)
 	Art.t_circle(ci, Vector2.ZERO, 17, Art.CREAM, 2.0, 0.0)
 	for k in 12:
@@ -660,6 +783,22 @@ static func clock_hands(ci: CanvasItem, t: float) -> void:
 ## A neon sign (stage 13+): a big coin and a star in glowing tubes.
 static func neon(ci: CanvasItem, lk: Dictionary) -> void:
 	var c: Color = lk["accent"]
+	if is_temple(lk):
+		# A glowing sun stone: a dark slab with jade and gold rings that shine.
+		Art.t_rect(ci, Rect2(-56, -32, 112, 64), 8, Color("3a3a2a"), 3.0, 0.2)
+		Props.halo(ci, Vector2(-20, 0), 42, Color(Art.GOLD, 0.35))
+		Props.halo(ci, Vector2(28, 0), 32, Color(c, 0.35))
+		Art.arc_c(ci, Vector2(-20, 0), 17, 0, TAU, 24, Color(Art.GOLD, 0.45), 8.0)
+		Art.arc_c(ci, Vector2(-20, 0), 17, 0, TAU, 24, Color("fff1a8"), 3.0)
+		for k in 8:
+			var d := Vector2.from_angle(k * TAU / 8.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(-20, 0) + d * 20, Vector2(-20, 0) + d * 26]), Color("fff1a8"), 2.5)
+		Art.disc(ci, Vector2(-20, 0), 5, Color("fff1a8"))
+		var st := PackedVector2Array([Vector2(28, -16), Vector2(42, 0), Vector2(28, 16), Vector2(14, 0)])
+		Art.polyline(ci, st, Color(c, 0.45), 8.0, true)
+		Art.polyline(ci, st, c.lightened(0.6), 3.0, true)
+		Art.disc(ci, Vector2(28, 0), 3.5, c.lightened(0.6))
+		return
 	Art.t_rect(ci, Rect2(-56, -30, 112, 60), 10, Color("231a3d"), 3.0, 0.2)
 	Props.halo(ci, Vector2(-18, 0), 40, Color(Art.GOLD, 0.3))
 	Props.halo(ci, Vector2(26, 0), 34, Color(c, 0.3))
@@ -722,15 +861,19 @@ static func dock_door_back(ci: CanvasItem, lk: Dictionary) -> void:
 ## 0..1 lights the beacon; `boat` 0..1 brings a boat to the quay outside.
 static func dock_door(ci: CanvasItem, open: float, lamp: float, lk: Dictionary, boat: float = 0.0) -> void:
 	var r := Rect2(8, -DOOR_H, DOOR_W - 16, DOOR_H)
+	var temple := is_temple(lk)
 	if boat > 0.01:
 		# The boat slides in to the quay (only its part inside the opening).
 		var bx := lerpf(r.end.x + 30.0, r.get_center().x + 6.0, Props._q(boat, 24))
-		var hull := Art.clipped(Art.moved(PackedVector2Array([Vector2(-30, -12), Vector2(30, -12), Vector2(24, 2), Vector2(-24, 2)]), Vector2(bx, -30)), _quad(r))
+		var hull := Art.clipped(Art.moved(PackedVector2Array([Vector2(-34, -16), Vector2(-20, -12), Vector2(20, -12), Vector2(34, -16), Vector2(26, 2), Vector2(-26, 2)]
+				if temple else [Vector2(-30, -12), Vector2(30, -12), Vector2(24, 2), Vector2(-24, 2)]), Vector2(bx, -30)), _quad(r))
 		var cab := Art.clipped(_quad(Rect2(bx - 14, -56, 22, 14)), _quad(r))
+		if temple:
+			cab = Art.clipped(PackedVector2Array([Vector2(bx - 18, -56), Vector2(bx + 10, -56), Vector2(bx + 14, -48), Vector2(bx - 22, -48)]), _quad(r))
 		if not cab.is_empty():
-			Art.toon(ci, cab, Art.WHITE, 2.0, 0.3)
+			Art.toon(ci, cab, Color("e9b95a") if temple else Art.WHITE, 2.0, 0.3)
 		if not hull.is_empty():
-			Art.toon(ci, hull, Art.CORAL, 2.2, 0.4)
+			Art.toon(ci, hull, Color("b8743a") if temple else Art.CORAL, 2.2, 0.4)
 	# The shutter, in slats, rolled up by `open`.
 	var sh := DOOR_H * (1.0 - clampf(open, 0.0, 0.82))
 	var n := int(ceil(sh / 14.0))
@@ -739,8 +882,28 @@ static func dock_door(ci: CanvasItem, open: float, lamp: float, lk: Dictionary, 
 		if y < -DOOR_H:
 			break
 		Art.push(ci, Vector2(8, snappedf(y, 0.5)))
-		Art.t_rect(ci, Rect2(0, 0, DOOR_W - 16, 14), 2, Color("c9d2e2") if i % 2 == 0 else Color("b7c1d4"), 2.0, 0.2)
+		if temple:
+			Art.t_rect(ci, Rect2(0, 0, DOOR_W - 16, 14), 6, BAMBOO if i % 2 == 0 else Color("c8b456"), 2.0, 0.3)
+			Art.line_c(ci, PackedVector2Array([Vector2(26 + (i % 2) * 14, 2), Vector2(26 + (i % 2) * 14, 12)]), BAMBOO_DARK, 1.6)
+		else:
+			Art.t_rect(ci, Rect2(0, 0, DOOR_W - 16, 14), 2, Color("c9d2e2") if i % 2 == 0 else Color("b7c1d4"), 2.0, 0.2)
 		Art.pop(ci)
+	if temple:
+		# A carved stone lintel and posts with gold bands, a lantern over it.
+		Art.t_rect(ci, Rect2(-2, -DOOR_H - 20, DOOR_W + 4, 18), 3, Color("d8bc80"), 2.6, 0.4)
+		for gx in 4:
+			Art.disc(ci, Vector2(15 + gx * 22, -DOOR_H - 11), 3.0, JADE if gx % 2 == 0 else Art.GOLD)
+		for x: float in [0.0, DOOR_W - 8.0]:
+			Art.t_rect(ci, Rect2(x - 2, -DOOR_H, 12, DOOR_H), 2, Color("d8bc80"), 2.2, 0.3)
+			for j in 3:
+				Art.flat(ci, _quad(Rect2(x - 1, -DOOR_H + 20 + j * 48, 10, 6)), Art.GOLD)
+		var lc := Vector2(DOOR_W / 2.0, -DOOR_H - 34)
+		var lq2 := Props._q(lamp, 8)
+		Art.line_c(ci, PackedVector2Array([lc + Vector2(0, -14), lc + Vector2(0, -6)]), Art.INK, 2.0)
+		Props.halo(ci, lc, 22 + 14 * lq2, Color(1.0, 0.75, 0.3, 0.35 + 0.3 * lq2))
+		Art.t_circle(ci, lc, 8, Color("c98a4a"), 2.2, 0.4)
+		Art.t_circle(ci, lc, 4, Color("fff3c4").lerp(Color("ffe38a"), lq2), 0.0, 0.0)
+		return
 	Art.t_rect(ci, Rect2(4, -DOOR_H - 18, DOOR_W - 8, 16), 6, Color("8d94a6"), 2.6, 0.3)
 	# Yellow-black posts.
 	for x: float in [0.0, DOOR_W - 8.0]:
@@ -764,7 +927,7 @@ static func belt_frame(ci: CanvasItem, a: Vector2, len: float, h: float, lk: Dic
 	for i in legs:
 		var x := a.x + 10.0 + (len - 20.0) * i / float(legs - 1)
 		Art.t_rect(ci, Rect2(x - 3, a.y - h + 8, 6, h - 8), 1, Art.shade_of(lk["col"], 0.1), 1.8, 0.0)
-	Art.t_rect(ci, Rect2(a.x, a.y - h - 2, len, 12), 6, Color("3a3f5c"), 2.6, 0.2)
+	Art.t_rect(ci, Rect2(a.x, a.y - h - 2, len, 12), 6, Color("6a4a2a") if is_temple(lk) else Color("3a3f5c"), 2.6, 0.2)
 	Art.t_circle(ci, Vector2(a.x + 6, a.y - h + 4), 4, Art.METAL, 1.6, 0.0)
 	Art.t_circle(ci, Vector2(a.x + len - 6, a.y - h + 4), 4, Art.METAL, 1.6, 0.0)
 
@@ -786,7 +949,8 @@ static func belt_live(ci: CanvasItem, a: Vector2, len: float, h: float, t: float
 ## second line (other paint).
 static func line_back(ci: CanvasItem, stage: int, variant: int, lk: Dictionary) -> void:
 	var s := clampi(stage, 1, STAGES)
-	var m := _mat(s, variant)
+	var temple := is_temple(lk)
+	var m := _mat(s, variant, temple)
 	var tier := tier_of(s)
 	var ex := extras_of(s)
 	var n := machines_at(s)
@@ -825,9 +989,11 @@ static func line_back(ci: CanvasItem, stage: int, variant: int, lk: Dictionary) 
 		if i < n:
 			match i:
 				0: _crusher_back(ci, tier, m)
-				1: _furnace_back(ci, tier, m)
+				1: _furnace_back(ci, tier, m, temple)
 				2: _polisher_back(ci, tier, m)
 				3: _press_back(ci, tier, m)
+			if temple:
+				_temple_carve(ci, i, tier, m)
 			if ex >= 1:
 				Art.t_rect(ci, Rect2(-7, _top(i) - 8, 14, 6), 2, m["dark"], 2.0, 0.0)
 		else:
@@ -849,7 +1015,8 @@ static func line_back(ci: CanvasItem, stage: int, variant: int, lk: Dictionary) 
 ## (0..1 piston down), "flash" (0..1 after a payout), "flame", "variant".
 static func line_live(ci: CanvasItem, stage: int, o: Dictionary) -> void:
 	var s := clampi(stage, 1, STAGES)
-	var m := _mat(s, int(o.get("variant", 0)))
+	var temple := str(o.get("style", "")) == "temple"
+	var m := _mat(s, int(o.get("variant", 0)), temple)
 	var tier := tier_of(s)
 	var ex := extras_of(s)
 	var n := machines_at(s)
@@ -879,7 +1046,10 @@ static func line_live(ci: CanvasItem, stage: int, o: Dictionary) -> void:
 			for k in 2:
 				var f := fposmod(t * 0.9 + i * 0.37 + k * 0.5, 1.0)
 				Art.push(ci, Vector2(snappedf(a + 8.0 + (len - 16.0) * f, 0.5), -24))
-				_good(ci, i)
+				if temple:
+					_temple_good(ci, i)
+				else:
+					_good(ci, i)
 				Art.pop(ci)
 
 
@@ -992,12 +1162,17 @@ static func _crusher_live(ci: CanvasItem, _tier: int, m: Dictionary, o: Dictiona
 
 
 ## 2. Furnace: a rounded oven with a fire mouth and a chimney.
-static func _furnace_back(ci: CanvasItem, tier: int, m: Dictionary) -> void:
+static func _furnace_back(ci: CanvasItem, tier: int, m: Dictionary, temple: bool = false) -> void:
 	Art.t_rect(ci, Rect2(-10, -132, 20, 40), 3, m["dark"], 2.6, 0.3)
 	Art.t_rect(ci, Rect2(-13, -138, 26, 8), 3, m["trim"], 2.4, 0.2)
 	var body := Rect2(-38, -100, 76, 100)
-	Art.t_rect(ci, body, 20 if tier >= 2 else 10, Color("c8604a") if tier == 0 else m["body"], 3.0, 0.6)
-	if tier == 0:
+	Art.t_rect(ci, body, 20 if tier >= 2 else 10, Color("c8604a") if tier == 0 and not temple else m["body"], 3.0, 0.6)
+	if temple:
+		# Stone blocks of the idol head.
+		for y: float in [-56.0, -20.0]:
+			Art.line_c(ci, PackedVector2Array([Vector2(-36, y), Vector2(-26, y)]), Art.shade_of(m["body"], 0.3), 2.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(26, y), Vector2(36, y)]), Art.shade_of(m["body"], 0.3), 2.0)
+	elif tier == 0:
 		for j in 6:
 			var y := -88.0 + j * 14.0
 			Art.line_c(ci, PackedVector2Array([Vector2(-36, y), Vector2(36, y)]), Color("8e3a2c"), 2.0)
@@ -1010,7 +1185,8 @@ static func _furnace_back(ci: CanvasItem, tier: int, m: Dictionary) -> void:
 	Art.t_rect(ci, Rect2(-25, -59, 50, 42), 16, Art.shade_of(m["trim"], 0.15), 2.6, 0.2)
 	Art.t_rect(ci, Rect2(-20, -54, 40, 34), 14, Color("2a1830"), 2.4, 0.0)
 	# The dial (needle in the live part).
-	Art.t_circle(ci, Vector2(26, -88), 7, Art.WHITE, 2.0, 0.0)
+	if not temple:
+		Art.t_circle(ci, Vector2(26, -88), 7, Art.WHITE, 2.0, 0.0)
 
 
 static func _furnace_live(ci: CanvasItem, _tier: int, _m: Dictionary, o: Dictionary) -> void:
@@ -1030,10 +1206,18 @@ static func _furnace_live(ci: CanvasItem, _tier: int, _m: Dictionary, o: Diction
 		Art.push(ci, Vector2(-10 + k * 10, -22))
 		Art.t_circle(ci, Vector2.ZERO, 4.5, flame.lerp(Color("fff1a8"), 0.4) if hot else Art.shade_of(flame, 0.35 if working else 0.55), 1.6, 0.0)
 		Art.pop(ci)
-	# The dial.
-	Art.push(ci, Vector2(26, -88), snappedf(0.9 + sin(t * 3.0) * 0.15, 0.05) if working else -0.9)
-	Art.flat(ci, Art.rrect_pts(Rect2(-1, -6, 2, 6), 1), Art.RED)
-	Art.pop(ci)
+	if str(o.get("style", "")) == "temple":
+		# The idol's eyes glow while the fire burns.
+		for sx: float in [-16.0, 16.0]:
+			Art.t_ellipse(ci, Vector2(sx, -69), Vector2(6, 4), Color("fff1a8") if working else Art.WHITE, 0.0, 0.0)
+			Art.disc(ci, Vector2(sx + 1, -69), 2.2, Color("ff8a2a") if working else Art.INK)
+		if working:
+			Props.halo(ci, Vector2(0, -69), 30, Color(1.0, 0.8, 0.3, 0.25 * fl))
+	else:
+		# The dial.
+		Art.push(ci, Vector2(26, -88), snappedf(0.9 + sin(t * 3.0) * 0.15, 0.05) if working else -0.9)
+		Art.flat(ci, Art.rrect_pts(Rect2(-1, -6, 2, 6), 1), Art.RED)
+		Art.pop(ci)
 	# Smoke from the chimney and embers.
 	var puffs := 3 if working else 1
 	for k in puffs:
@@ -1060,9 +1244,17 @@ static func _polisher_live(ci: CanvasItem, tier: int, m: Dictionary, o: Dictiona
 	var working: bool = o.get("working", false)
 	Art.push(ci, Vector2(0, -64), gr)
 	Art.t_circle(ci, Vector2.ZERO, 24, m["body"], 3.0, 0.0)
-	for k in 4:
-		Art.line_c(ci, PackedVector2Array([Vector2(7, 0).rotated(k * PI / 2.0), Vector2(21, 0).rotated(k * PI / 2.0)]), Art.shade_of(m["body"], 0.3), 3.0)
-	Art.t_circle(ci, Vector2.ZERO, 7, m["trim"], 2.0, 0.0)
+	if str(o.get("style", "")) == "temple":
+		# A carved sun disc.
+		for k in 8:
+			var a := k * TAU / 8.0
+			Art.toon(ci, PackedVector2Array([Vector2.from_angle(a - 0.2) * 10, Vector2.from_angle(a) * 21, Vector2.from_angle(a + 0.2) * 10]), m["trim"], 1.6, 0.0)
+		Art.t_circle(ci, Vector2.ZERO, 9, m["trim"], 2.0, 0.0)
+		Art.disc(ci, Vector2.ZERO, 3.5, JADE)
+	else:
+		for k in 4:
+			Art.line_c(ci, PackedVector2Array([Vector2(7, 0).rotated(k * PI / 2.0), Vector2(21, 0).rotated(k * PI / 2.0)]), Art.shade_of(m["body"], 0.3), 3.0)
+		Art.t_circle(ci, Vector2.ZERO, 7, m["trim"], 2.0, 0.0)
 	Art.pop(ci)
 	Art.arc_c(ci, Vector2(0, -64), 19, PI * 1.1, PI * 1.45, 6, Color(1, 1, 1, 0.55), 3.0)
 	if tier >= 2:
@@ -1162,6 +1354,21 @@ static func pipe(ci: CanvasItem, a: Vector2, top_y: float, lk: Dictionary, caps:
 ## with posts down to `floor_y` and a ladder at `ladder_x` (< 0: none).
 static func mezzanine(ci: CanvasItem, x0: float, x1: float, y: float, floor_y: float, lk: Dictionary, ladder_x: float = -1.0) -> void:
 	var c: Color = lk["col"]
+	if is_temple(lk):
+		# A wooden deck on stone posts, with a carved edge.
+		_vgrad(ci, Rect2(x0, y + 16, x1 - x0, 34), Color(Art.SHADE, 0.28), Color(Art.SHADE, 0.0))
+		var px := x0 + 20.0
+		while px < x1:
+			Art.t_rect(ci, Rect2(px - 7, y, 14, floor_y - y), 2, Art.shade_of(c, 0.05), 2.4, 0.4)
+			Art.flat(ci, _quad(Rect2(px - 7, y + 24, 14, 5)), Art.GOLD)
+			px += 140.0
+		Art.t_rect(ci, Rect2(x0, y, x1 - x0, 16), 2, Color("a8743e"), 3.0, 0.4)
+		var sx := x0 + 30.0
+		while sx < x1 - 10.0:
+			Art.line_c(ci, PackedVector2Array([Vector2(sx, y + 2), Vector2(sx, y + 14)]), Color("7a4a26"), 1.6)
+			sx += 46.0
+		Art.flat(ci, _quad(Rect2(x0 + 4, y + 11, x1 - x0 - 8, 3)), Color(0, 0, 0, 0.2))
+		return
 	# The shadow the deck throws on the wall under it.
 	_vgrad(ci, Rect2(x0, y + 16, x1 - x0, 34), Color(Art.SHADE, 0.28), Color(Art.SHADE, 0.0))
 	var x := x0 + 20.0
@@ -1186,6 +1393,18 @@ static func mezzanine(ci: CanvasItem, x0: float, x1: float, y: float, floor_y: f
 ## The railing in front of what stands on the mezzanine.
 static func railing(ci: CanvasItem, x0: float, x1: float, y: float, lk: Dictionary) -> void:
 	var c: Color = lk["haz"]
+	if is_temple(lk):
+		var bx := x0 + 8.0
+		while bx <= x1 - 4.0:
+			_bamboo(ci, Vector2(bx, y - 34), Vector2(bx, y), 6.0)
+			bx += 44.0
+		_bamboo(ci, Vector2(x0 + 4, y - 30), Vector2(x1 - 4, y - 30), 7.0)
+		_bamboo(ci, Vector2(x0 + 4, y - 14), Vector2(x1 - 4, y - 14), 5.0)
+		bx = x0 + 8.0
+		while bx <= x1 - 4.0:
+			Art.t_circle(ci, Vector2(bx, y - 30), 3.5, Color("c9a26a"), 1.4, 0.0)
+			bx += 44.0
+		return
 	Art.stroke(ci, PackedVector2Array([Vector2(x0 + 4, y - 30), Vector2(x1 - 4, y - 30)]), c, 5.0, 2.0)
 	Art.line_c(ci, PackedVector2Array([Vector2(x0 + 4, y - 15), Vector2(x1 - 4, y - 15)]), Art.shade_of(c, 0.25), 2.5)
 	var x := x0 + 8.0
@@ -1239,4 +1458,582 @@ static func build_badge(ci: CanvasItem, t: float) -> void:
 	Art.t_circle(ci, Vector2.ZERO, 17, Art.GREEN, 3.0, 0.5)
 	Art.flat(ci, Art.rrect_pts(Rect2(-9, -2.5, 18, 5), 2), Art.WHITE)
 	Art.flat(ci, Art.rrect_pts(Rect2(-2.5, -9, 5, 18), 2), Art.WHITE)
+	Art.pop(ci)
+
+
+# --- Jungle: the temple workshop -----------------------------------------------------------
+## The jungle hall ("temple" style) is a stone and bamboo temple: carved
+## sandstone blocks with glyphs and moss, stone pillars with gold bands,
+## bamboo beams under a leaf thatch, stone slab floors, arched windows on
+## the rainforest with big leaves, a bamboo aqueduct and a water wheel
+## that drives the line. Its machines are carved stone and jade with gold
+## trims (the furnace is an idol head breathing fire), and the goods are
+## cocoa pods, chocolate bars and little golden idols.
+
+const BAMBOO := Color("d6c25e")
+const BAMBOO_DARK := Color("9a8a34")
+const LEAF := Color("3fae4e")
+const LEAF_LIGHT := Color("6fd45c")
+const LEAF_DARK := Color("23804a")
+const JADE := Color("3fd6c0")
+const TERRACOTTA := Color("d0763e")
+const COCOA := Color("8a4a26")
+const CHOC := Color("6a3a22")
+
+## Machine materials of the temple line per tier: bamboo and wood,
+## sandstone with turquoise, jade with gold, white limestone with gold,
+## and solid gold with jade.
+const TEMPLE_TIERS := [
+	{"body": Color("c98a50"), "trim": Color("e2c47e"), "dark": Color("6e4426"), "light": Color("ffd27a")},
+	{"body": Color("e2c47e"), "trim": Color("3fc9b4"), "dark": Color("8a6a3a"), "light": Color("bff8ee")},
+	{"body": Color("46b884"), "trim": Color("ffc93c"), "dark": Color("2a6a50"), "light": Color("fff1a8")},
+	{"body": Color("f3ead2"), "trim": Color("ffc93c"), "dark": Color("8a6a3a"), "light": Color("bff3ff")},
+	{"body": Color("ffc93c"), "trim": Color("3fd6c0"), "dark": Color("a0641c"), "light": Color("fff1a8")},
+]
+
+
+static func is_temple(lk: Dictionary) -> bool:
+	return str(lk.get("style", "")) == "temple"
+
+
+## Carved sandstone blocks in staggered rows, some with glyphs, moss on top.
+static func _temple_wall(ci: CanvasItem, w: float, floor_y: float, lk: Dictionary) -> void:
+	var wall: Color = lk["wall"]
+	var wall2: Color = lk["wall2"]
+	Art.flat(ci, _quad(Rect2(0, 0, w, floor_y)), Art.shade_of(wall, 0.32))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var bh := 46.0
+	var y := 0.0
+	var row := 0
+	while y < floor_y:
+		var x := -fmod(row * 41.0, 88.0)
+		while x < w:
+			var bw := 88.0 if rng.randf() < 0.7 else 64.0
+			var r := Rect2(x + 2, y + 2, bw - 4, bh - 4)
+			var c := wall if rng.randf() < 0.55 else wall2
+			if rng.randf() < 0.12:
+				c = c.lerp(Color("c8b07a"), 0.5)
+			Art.flat(ci, Art.rrect_pts(r, 5), c)
+			Art.line_c(ci, PackedVector2Array([r.position + Vector2(5, 2), Vector2(r.end.x - 5, r.position.y + 2)]), Color(1, 1, 1, 0.28), 2.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(r.position.x + 5, r.end.y - 2), r.end - Vector2(5, 2)]), Art.shade_of(c, 0.18), 2.5)
+			var roll := rng.randf()
+			if roll < 0.13 and y > 70.0 and y < floor_y - 110.0 and bw > 70.0:
+				glyph(ci, r.get_center(), rng.randi() % 4, c)
+			elif roll < 0.3:
+				# Moss creeping over the top edge.
+				var mx := r.position.x + rng.randf_range(10, bw - 30)
+				Art.flat(ci, Art.ellipse_pts(Vector2(mx, r.position.y + 3), Vector2(rng.randf_range(10, 20), 4.5), 12), Color(LEAF, 0.75))
+				Art.flat(ci, Art.ellipse_pts(Vector2(mx + 6, r.position.y + 5), Vector2(6, 3), 8), Color(LEAF_LIGHT, 0.8))
+			elif roll < 0.36:
+				var cx := r.position.x + rng.randf_range(14, bw - 20)
+				Art.line_c(ci, PackedVector2Array([Vector2(cx, r.position.y + 4), Vector2(cx + 5, r.position.y + 14), Vector2(cx + 2, r.position.y + 24)]), Art.shade_of(c, 0.3), 1.6)
+			x += bw
+		y += bh
+		row += 1
+	# Warm light from the windows, cool shade low on the wall.
+	_vgrad(ci, Rect2(0, floor_y * 0.45, w, floor_y * 0.55), Color(0.2, 0.5, 0.3, 0.0), Color(0.15, 0.4, 0.25, 0.12))
+
+
+## A glyph carved into a stone block (k: 0 spiral, 1 step fret, 2 sun, 3 face).
+static func glyph(ci: CanvasItem, c: Vector2, k: int, stone: Color) -> void:
+	var deep := Art.shade_of(stone, 0.34)
+	var lit := Color(1, 1, 1, 0.3)
+	match k:
+		0:
+			for p: Array in [[deep, Vector2.ZERO], [lit, Vector2(1, 1.5)]]:
+				var pts := PackedVector2Array()
+				for i in 14:
+					var a := i * 0.62
+					pts.append(c + Vector2(p[1]) + Vector2(cos(a), sin(a)) * (2.0 + i * 0.9))
+				Art.line_c(ci, pts, p[0], 2.4)
+		1:
+			for p: Array in [[deep, Vector2.ZERO], [lit, Vector2(1, 1.5)]]:
+				var o: Vector2 = c + Vector2(p[1])
+				Art.line_c(ci, PackedVector2Array([o + Vector2(-14, 8), o + Vector2(-14, -8), o + Vector2(6, -8), o + Vector2(6, 4),
+						o + Vector2(-4, 4), o + Vector2(-4, -2)]), p[0], 2.4)
+		2:
+			Art.ring(ci, Art.circle_pts(c, 8, 16), deep, 2.4)
+			for i in 8:
+				var d := Vector2.from_angle(i * TAU / 8.0)
+				Art.line_c(ci, PackedVector2Array([c + d * 11, c + d * 15]), deep, 2.2)
+			Art.disc(ci, c, 2.5, Color(JADE, 0.8))
+		3:
+			Art.ring(ci, Art.rrect_pts(Rect2(c - Vector2(13, 11), Vector2(26, 22)), 4), deep, 2.2)
+			Art.flat(ci, Art.rrect_pts(Rect2(c + Vector2(-9, -6), Vector2(6, 5)), 1), deep)
+			Art.flat(ci, Art.rrect_pts(Rect2(c + Vector2(3, -6), Vector2(6, 5)), 1), deep)
+			Art.line_c(ci, PackedVector2Array([c + Vector2(-7, 5), c + Vector2(-3, 3), c + Vector2(3, 3), c + Vector2(7, 5)]), deep, 2.2)
+
+
+## The carved frieze along the foot of the wall: a step-fret band with
+## turquoise and gold inlays.
+static func _temple_band(ci: CanvasItem, w: float, floor_y: float, lk: Dictionary) -> void:
+	var band := Rect2(0, floor_y - 58, w, 58)
+	var low: Color = lk["low"]
+	Art.flat(ci, _quad(band), low)
+	_vgrad(ci, band, Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.18))
+	Art.flat(ci, _quad(Rect2(0, floor_y - 64, w, 9)), Art.shade_of(low, -0.15))
+	Art.line_c(ci, PackedVector2Array([Vector2(0, floor_y - 64), Vector2(w, floor_y - 64)]), Art.shade_of(low, 0.35), 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(0, floor_y - 55), Vector2(w, floor_y - 55)]), Art.shade_of(low, 0.35), 2.0)
+	var deep := Art.shade_of(low, 0.32)
+	var x := 6.0
+	var i := 0
+	while x < w:
+		var y0 := floor_y - 46.0
+		Art.line_c(ci, PackedVector2Array([Vector2(x, y0 + 26), Vector2(x, y0 + 4), Vector2(x + 22, y0 + 4), Vector2(x + 22, y0 + 18),
+				Vector2(x + 10, y0 + 18), Vector2(x + 10, y0 + 12)]), deep, 3.0)
+		var gem := JADE if i % 2 == 0 else Art.GOLD
+		Art.flat(ci, Art.rrect_pts(Rect2(x + 28, y0 + 8, 8, 8), 2), gem)
+		Art.ring(ci, Art.rrect_pts(Rect2(x + 28, y0 + 8, 8, 8), 2), deep, 1.6)
+		x += 42.0
+		i += 1
+
+
+## A carved stone pillar from y0 to the floor y1, gold bands and a vine.
+static func _temple_pillar(ci: CanvasItem, x: float, y0: float, y1: float, lk: Dictionary) -> void:
+	var c: Color = lk["col"]
+	Art.flat(ci, _quad(Rect2(x - 18, y0, 36, y1 - y0)), Color(0, 0, 0, 0.1))
+	Art.t_rect(ci, Rect2(x - 13, y0, 26, y1 - y0), 3, c, 2.6, 0.6)
+	for fx: float in [-5.0, 0.0, 5.0]:
+		Art.line_c(ci, PackedVector2Array([Vector2(x + fx, y0 + 26), Vector2(x + fx, y1 - 30)]), Art.shade_of(c, 0.18), 1.6)
+	Art.flat(ci, _quad(Rect2(x - 10, y0 + 4, 3, y1 - y0 - 8)), Color(1, 1, 1, 0.22))
+	for by: float in [y0 + 22.0, y1 - 34.0]:
+		Art.t_rect(ci, Rect2(x - 15, by, 30, 8), 2, Art.GOLD, 2.0, 0.3)
+		Art.disc(ci, Vector2(x, by + 4), 2.2, JADE)
+	Art.t_rect(ci, Rect2(x - 19, y0, 38, 16), 3, Art.shade_of(c, 0.08), 2.6, 0.4)
+	Art.t_rect(ci, Rect2(x - 19, y1 - 14, 38, 14), 3, Art.shade_of(c, 0.08), 2.4, 0.4)
+	# A diamond glyph in the middle and a vine winding down.
+	var mid := (y0 + y1) * 0.5
+	Art.toon(ci, PackedVector2Array([Vector2(x, mid - 10), Vector2(x + 7, mid), Vector2(x, mid + 10), Vector2(x - 7, mid)]), JADE, 2.0, 0.3)
+	var vine := PackedVector2Array()
+	var vy := y0 + 16.0
+	var k := 0
+	while vy < mid - 20.0:
+		vine.append(Vector2(x + (12.0 if k % 2 == 0 else -12.0), vy))
+		vy += 22.0
+		k += 1
+	if vine.size() >= 2:
+		Art.stroke(ci, Art.smooth_pts(vine, 3), Color("3a9a48"), 3.0, 1.5)
+		for j in vine.size():
+			Art.toon(ci, Art.ellipse_pts(vine[j] + Vector2(5 if j % 2 == 0 else -5, 2), Vector2(7, 3.5), 10, 0.5 if j % 2 == 0 else -0.5),
+					LEAF_LIGHT if j % 2 == 0 else LEAF, 1.8, 0.3)
+
+
+## Bamboo poles under a leaf thatch, lashed with rope.
+static func _temple_ceiling(ci: CanvasItem, w: float, lk: Dictionary) -> void:
+	# Thatch: rows of hanging palm leaves.
+	Art.flat(ci, _quad(Rect2(-10, -6, w + 20, 34)), Color("7a5a2a"))
+	var x := -14.0
+	var k := 0
+	while x < w + 20.0:
+		var c := LEAF if k % 3 == 0 else (LEAF_DARK if k % 3 == 1 else Color("4fbf56"))
+		Art.toon(ci, PackedVector2Array([Vector2(x, 16), Vector2(x + 22, 16), Vector2(x + 13, 40 + (k % 2) * 6)]), c, 2.0, 0.3)
+		x += 16.0
+		k += 1
+	# The big beam and the bamboo pole under it.
+	Art.t_rect(ci, Rect2(-10, -6, w + 20, 24), 0.0, lk["beam"], 3.0, 0.5)
+	_bamboo(ci, Vector2(-10, 50), Vector2(w + 10, 50), 9.0)
+	# Diagonal braces with rope lashings.
+	var bx := 30.0
+	var up := true
+	while bx < w:
+		_bamboo(ci, Vector2(bx, 18), Vector2(bx + (22.0 if up else -22.0), 48), 6.0)
+		Art.t_circle(ci, Vector2(bx + (22.0 if up else -22.0), 50), 4, Color("c9a26a"), 1.6, 0.0)
+		bx += 92.0
+		up = not up
+
+
+## A bamboo pole from a to b, `thick` wide, with nodes.
+static func _bamboo(ci: CanvasItem, a: Vector2, b: Vector2, thick: float) -> void:
+	Art.stroke(ci, PackedVector2Array([a, b]), BAMBOO, thick, 2.2)
+	var d := b - a
+	var len := d.length()
+	var n := d / maxf(len, 0.001)
+	var o := n.orthogonal() * (thick * 0.5)
+	Art.line_c(ci, PackedVector2Array([a - o * 0.3, b - o * 0.3]), Color(1, 1, 1, 0.35), maxf(1.5, thick * 0.22))
+	var s := 38.0
+	while s < len - 6.0:
+		var p := a + n * s
+		Art.line_c(ci, PackedVector2Array([p + o, p - o]), BAMBOO_DARK, 2.0)
+		s += 44.0
+
+
+## Stone slab floor with grass in the cracks and a turquoise inlay path.
+static func _temple_floor(ci: CanvasItem, w: float, y0: float, y1: float, lk: Dictionary) -> void:
+	var f: Color = lk["floor"]
+	var f2: Color = lk["floor2"]
+	Art.flat(ci, _quad(Rect2(0, y0, w, y1 - y0)), f2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 17
+	var fy := y0 + 2.0
+	var k := 0
+	while fy < y1:
+		var h := 14.0 + k * 6.0
+		var fx := -fmod(k * 47.0, 110.0)
+		while fx < w:
+			var sw := rng.randf_range(80, 120)
+			var r := Rect2(fx + 2, fy + 1, sw - 4, h - 3)
+			Art.flat(ci, Art.rrect_pts(r, 3), f.lerp(Color("d8c08a"), rng.randf() * 0.25))
+			Art.line_c(ci, PackedVector2Array([r.position + Vector2(4, 1.5), Vector2(r.end.x - 4, r.position.y + 1.5)]), Color(1, 1, 1, 0.2), 1.6)
+			if rng.randf() < 0.3:
+				var gx := fx + rng.randf_range(6, sw - 6)
+				for g in 3:
+					Art.line_c(ci, PackedVector2Array([Vector2(gx + g * 3, fy + 1), Vector2(gx + g * 3 + (g - 1) * 2, fy - 5 - (g % 2) * 3)]), LEAF, 2.0)
+			fx += sw
+		fy += h
+		k += 1
+	# A turquoise inlay path along the hall.
+	var wy := y0 + 34.0
+	if wy < y1 - 8.0:
+		var x := 10.0
+		while x < w:
+			Art.flat(ci, PackedVector2Array([Vector2(x, wy + 3), Vector2(x + 5, wy), Vector2(x + 10, wy + 3), Vector2(x + 5, wy + 6)]), Color(JADE, 0.8))
+			x += 34.0
+	_vgrad(ci, Rect2(0, y0, w, 18), Color(Art.SHADE, 0.3), Color(Art.SHADE, 0.0))
+	_vgrad(ci, Rect2(0, y0 - 24, w, 24), Color(Art.SHADE, 0.0), Color(Art.SHADE, 0.12))
+	Art.line_c(ci, PackedVector2Array([Vector2(0, y0), Vector2(w, y0)]), Art.INK, 3.0)
+
+
+## A stone window with a stepped (corbel) arch onto the rainforest, big
+## leaves growing in from outside.
+static func _temple_window(ci: CanvasItem, r: Rect2, lk: Dictionary) -> void:
+	var stone: Color = lk["col"]
+	# A thick stone frame, a carved lintel with a golden sun, the sill.
+	Art.t_rect(ci, r.grow(10), 4, stone, 3.0, 0.5)
+	Art.ring(ci, Art.rrect_pts(r.grow(5), 3), Art.shade_of(stone, 0.22), 2.0)
+	scene(ci, r, lk)
+	Art.flat(ci, PackedVector2Array([r.position + Vector2(r.size.x * 0.12, 0), r.position + Vector2(r.size.x * 0.3, 0),
+			r.position + Vector2(r.size.x * 0.08, r.size.y), r.position + Vector2(0, r.size.y)]), Color(1, 1, 0.9, 0.12))
+	Art.t_rect(ci, Rect2(r.get_center().x - 4, r.position.y, 8, r.size.y), 1, stone, 2.4, 0.4)
+	Art.ring(ci, Art.rrect_pts(r, 2), Art.INK, 3.0)
+	var lin := Rect2(r.position.x - 20, r.position.y - 26, r.size.x + 40, 20)
+	Art.t_rect(ci, lin, 3, Art.shade_of(stone, 0.06), 3.0, 0.5)
+	var deep := Art.shade_of(stone, 0.32)
+	var x := lin.position.x + 10.0
+	while x < lin.end.x - 24.0:
+		if absf(x + 7.0 - r.get_center().x) > 20.0:
+			Art.line_c(ci, PackedVector2Array([Vector2(x, lin.end.y - 5), Vector2(x, lin.position.y + 5), Vector2(x + 12, lin.position.y + 5),
+					Vector2(x + 12, lin.end.y - 9), Vector2(x + 6, lin.end.y - 9)]), deep, 2.0)
+		x += 20.0
+	var sun := Vector2(r.get_center().x, lin.get_center().y)
+	for k in 8:
+		var a := k * TAU / 8.0
+		Art.toon(ci, PackedVector2Array([sun + Vector2.from_angle(a - 0.25) * 7, sun + Vector2.from_angle(a) * 13, sun + Vector2.from_angle(a + 0.25) * 7]), Art.GOLD, 1.6, 0.0)
+	Art.t_circle(ci, sun, 7.5, Art.GOLD, 2.0, 0.4)
+	Art.disc(ci, sun, 2.5, JADE)
+	Art.t_rect(ci, Rect2(r.position.x - 18, r.end.y + 6, r.size.x + 36, 10), 3, Art.shade_of(stone, 0.06), 2.6, 0.4)
+	# Leaves growing in at the corners and a flowering vine along the sill.
+	_leaf(ci, Vector2(r.position.x - 6, r.position.y + 6), minf(34.0, r.size.y * 0.42), 0.55, LEAF)
+	_leaf(ci, Vector2(r.end.x + 4, r.end.y - 4), minf(32.0, r.size.y * 0.4), -2.6, LEAF_DARK)
+	for i in 3:
+		_flower(ci, Vector2(r.position.x + r.size.x * (0.22 + i * 0.28), r.end.y + 6), 4.0, [Color("ff8a2a"), Color("ff4fa8"), Color("ffd23f")][i])
+
+
+## A big jungle leaf from `base` at angle `a` (radians), `len` long.
+static func _leaf(ci: CanvasItem, base: Vector2, len: float, a: float, col: Color) -> void:
+	Art.push(ci, base, a)
+	var key := hash(["jleaf", len, col])
+	if not Art.cache_begin(ci, key):
+		# A pointed leaf: wide in the middle, a tip, a midrib and side veins.
+		var top := PackedVector2Array()
+		var bot := PackedVector2Array()
+		for i in 9:
+			var u := i / 8.0
+			var wd := len * 0.26 * pow(sin(PI * minf(1.0, u * 1.08)), 0.75)
+			top.append(Vector2(u * len, -wd))
+			bot.append(Vector2(u * len, wd * 0.9))
+		bot.reverse()
+		top.append_array(bot)
+		Art.toon(ci, top, col, 2.4, 0.5)
+		Art.line_c(ci, PackedVector2Array([Vector2(2, 0), Vector2(len * 0.9, 0)]), Art.shade_of(col, 0.3), 1.8)
+		for i in 3:
+			var x := len * (0.22 + i * 0.2)
+			Art.line_c(ci, PackedVector2Array([Vector2(x, 0), Vector2(x + len * 0.12, -len * 0.15)]), Art.shade_of(col, 0.25), 1.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(x, 0), Vector2(x + len * 0.12, len * 0.13)]), Art.shade_of(col, 0.25), 1.4)
+		Art.flat(ci, Art.ellipse_pts(Vector2(len * 0.4, -len * 0.1), Vector2(len * 0.18, len * 0.05), 8), Color(1, 1, 1, 0.22))
+		Art.cache_end(ci, key)
+	Art.pop(ci)
+
+
+static func _flower(ci: CanvasItem, at: Vector2, r: float, col: Color) -> void:
+	for k in 5:
+		Art.toon(ci, Art.circle_pts(at + Vector2(0, -r).rotated(k * TAU / 5.0), r * 0.72, 8), col, 1.4, 0.0)
+	Art.disc(ci, at, r * 0.5, Color("fff1a8"))
+
+
+## The rainforest outside: sky and sun, a far pyramid in the haze, a
+## waterfall off a green cliff, the canopy and the turquoise river.
+static func _jungle_scene(ci: CanvasItem, r: Rect2, lk: Dictionary) -> void:
+	var p := r.position
+	var s := r.size
+	Props.halo(ci, p + Vector2(s.x * 0.8, s.y * 0.2), minf(s.x, s.y) * 0.45, Color(1.0, 0.95, 0.6, 0.6))
+	Art.t_circle(ci, p + Vector2(s.x * 0.8, s.y * 0.2), minf(10.0, s.y * 0.12), Color("fff3b0"), 0.0, 0.0)
+	# Far hills in the haze, with the pyramid.
+	var far := PackedVector2Array([p + Vector2(0, s.y * 0.6), p + Vector2(s.x * 0.2, s.y * 0.48), p + Vector2(s.x * 0.45, s.y * 0.56),
+			p + Vector2(s.x * 0.75, s.y * 0.44), p + Vector2(s.x, s.y * 0.52), p + Vector2(s.x, s.y), p + Vector2(0, s.y)])
+	Art.flat(ci, Art.smooth_pts(far, 3), Color("8fcfb4"))
+	var py := p + Vector2(s.x * 0.6, s.y * 0.5)
+	var pw := s.x * 0.2
+	for i in 4:
+		var w := pw * (1.0 - i * 0.22)
+		var h := s.y * 0.06
+		Art.flat(ci, _quad(Rect2(py.x - w / 2.0, py.y - (i + 1) * h, w, h + 0.5)), Color("b8c89a") if i % 2 == 0 else Color("a8bc8c"))
+	Art.flat(ci, _quad(Rect2(py.x - pw * 0.08, py.y - s.y * 0.3, pw * 0.16, s.y * 0.06)), Color("a8bc8c"))
+	# A green cliff with a waterfall on the left.
+	var cliff := PackedVector2Array([p + Vector2(0, s.y * 0.3), p + Vector2(s.x * 0.22, s.y * 0.34), p + Vector2(s.x * 0.3, s.y * 0.7), p + Vector2(0, s.y * 0.75)])
+	Art.flat(ci, cliff, Color("3f9a5a"))
+	Art.flat(ci, _quad(Rect2(p.x + s.x * 0.17, p.y + s.y * 0.34, s.x * 0.06, s.y * 0.5)), Color("dffcff"))
+	Art.flat(ci, _quad(Rect2(p.x + s.x * 0.19, p.y + s.y * 0.34, s.x * 0.015, s.y * 0.5)), Color(JADE, 0.6))
+	# The canopy: rows of round crowns.
+	for row in 2:
+		var cy := p.y + s.y * (0.7 + row * 0.1)
+		var x := p.x - 6.0 + row * 10.0
+		var k := 0
+		while x < r.end.x + 10.0:
+			var rad := s.x * (0.07 + 0.02 * float((k + row) % 3))
+			Art.flat(ci, Art.circle_pts(Vector2(x, cy), rad, 12), Color("2f8a4a") if row == 0 else Color("3faa52"))
+			Art.flat(ci, Art.ellipse_pts(Vector2(x - rad * 0.2, cy - rad * 0.55), Vector2(rad * 0.5, rad * 0.22), 10), Color("6fd45c") if row == 1 else Color("4fbf56"))
+			x += rad * 1.5
+			k += 1
+	_vgrad(ci, Rect2(p.x, p.y + s.y * 0.9, s.x, s.y * 0.1), Color("3fd6c0"), Color("1fa8a0"))
+	# Two birds.
+	for b: Vector2 in [Vector2(0.35, 0.22), Vector2(0.45, 0.17)]:
+		var c := p + Vector2(s.x * b.x, s.y * b.y)
+		Art.line_c(ci, PackedVector2Array([c + Vector2(-4, -2), c, c + Vector2(4, -2)]), Color("2a4a3a"), 1.5)
+
+
+## The water wheel turned by the aqueduct (origin at its hub, radius r):
+## rim, paddles and spokes at `rot`.
+static func wheel(ci: CanvasItem, r: float, rot: float) -> void:
+	Art.push(ci, Vector2.ZERO, snappedf(rot, 0.05))
+	for k in 10:
+		Art.push(ci, Vector2.ZERO, k * TAU / 10.0)
+		Art.line_c(ci, PackedVector2Array([Vector2(5, 0), Vector2(r - 2, 0)]), Art.WOOD_DARK, 3.0)
+		Art.t_rect(ci, Rect2(r - 6, -6, 13, 12), 2, Art.WOOD, 2.0, 0.3)
+		Art.pop(ci)
+	Art.pop(ci)
+	Art.arc_c(ci, Vector2.ZERO, r - 4, 0.0, TAU, 28, Art.INK, 6.0)
+	Art.arc_c(ci, Vector2.ZERO, r - 4, 0.0, TAU, 28, Art.WOOD, 3.0)
+	Art.t_circle(ci, Vector2.ZERO, 7, Art.GOLD, 2.2, 0.4)
+	Art.disc(ci, Vector2.ZERO, 2.5, Art.GOLD_DARK)
+
+
+## The still part of the wheel: the bamboo spout from the aqueduct above
+## (at `spout_y`, local, < 0) and the stone basin below it.
+static func wheel_back(ci: CanvasItem, r: float, spout_y: float) -> void:
+	_bamboo(ci, Vector2(-r * 0.2, spout_y), Vector2(-r * 0.2, spout_y + 16), 10.0)
+	_bamboo(ci, Vector2(-r * 0.2, spout_y + 12), Vector2(r * 0.45, -r - 10), 8.0)
+	Art.flat(ci, Art.circle_pts(Vector2.ZERO, r + 6, 28), Color(0, 0, 0, 0.12))
+	Art.t_rect(ci, Rect2(-6, -4, 12, r + 14), 2, Art.WOOD_DARK, 2.0, 0.2)
+	Art.toon(ci, PackedVector2Array([Vector2(-r - 6, r - 2), Vector2(r + 6, r - 2), Vector2(r, r + 14), Vector2(-r, r + 14)]), Color("c9aa6e"), 2.6, 0.5)
+	Art.flat(ci, PackedVector2Array([Vector2(-r - 1, r + 1), Vector2(r + 1, r + 1), Vector2(r - 2, r + 6), Vector2(-r + 2, r + 6)]), JADE)
+
+
+## Water pouring onto the wheel and splashing in the basin (t = time).
+static func wheel_water(ci: CanvasItem, r: float, t: float, on: bool) -> void:
+	var top := Vector2(r * 0.45, -r - 8)
+	var flow := 1.0 if on else 0.4
+	Art.flat(ci, _quad(Rect2(top.x - 3.5 * flow, top.y, 7 * flow, r * 0.6)), Color(0.75, 0.97, 1.0, 0.85))
+	for i in 3:
+		var f := fposmod(t * 1.8 + i / 3.0, 1.0)
+		Art.push(ci, Vector2(top.x, snappedf(top.y + f * r * 0.6, 1.0)))
+		Art.flat(ci, Art.rrect_pts(Rect2(-1, 0, 2, 7), 1), Color(1, 1, 1, 0.8))
+		Art.pop(ci)
+	# Drops thrown off the paddles and the splash in the basin.
+	for i in 4:
+		var f := fposmod(t * 1.3 + i / 4.0, 1.0)
+		var a := 0.2 + i * 0.35
+		var d := Vector2(cos(a), sin(a)) * r
+		Art.dot(ci, d + Vector2(f * 8.0, f * f * 26.0), 2.4 * (1.0 - f) + 0.5, Color(0.8, 0.98, 1.0, 1.0 - f))
+	for i in 2:
+		var f := fposmod(t * 1.1 + i * 0.5, 1.0)
+		Art.dot(ci, Vector2(-r * 0.5 + i * r, r - 2 - f * 8.0), 3.0 + f * 4.0, Color(1, 1, 1, 0.6 * (1.0 - f)))
+
+
+## A torch in a stone bracket on a pillar (origin at the bracket).
+static func torch(ci: CanvasItem) -> void:
+	Art.t_rect(ci, Rect2(-7, 0, 14, 8), 2, Color("8a6a3a"), 2.0, 0.3)
+	Art.toon(ci, PackedVector2Array([Vector2(-5, -14), Vector2(5, -14), Vector2(3, 2), Vector2(-3, 2)]), Art.WOOD_DARK, 2.0, 0.3)
+	Art.t_rect(ci, Rect2(-6, -17, 12, 5), 2, Color("c9a26a"), 1.8, 0.0)
+
+
+static func torch_flame(ci: CanvasItem, t: float, lk: Dictionary) -> void:
+	var fl := Props._q(0.82 + 0.18 * sin(t * 13.0) * sin(t * 7.3 + 1.0), 6)
+	Props.halo(ci, Vector2(0, -26), 42, Color(Color(lk["glow"]), 0.36 + 0.1 * fl))
+	Art.push(ci, Vector2(0, -16), 0.0, Vector2(1.0 - (1.0 - fl) * 0.4, fl))
+	Art.toon(ci, PackedVector2Array([Vector2(-7, 0), Vector2(-6, -10), Vector2(-2, -8), Vector2(0, -22), Vector2(3, -9), Vector2(6, -12), Vector2(7, 0)]), Color("ff8a2a"), 2.0, 0.0)
+	Art.flat(ci, PackedVector2Array([Vector2(-3, 0), Vector2(0, -12), Vector2(3, 0)]), Color("fff1a8"))
+	Art.pop(ci)
+
+
+## A monkey hanging by its tail from a beam (origin at the beam), swinging by `swing` radians.
+static func monkey(ci: CanvasItem, swing: float, t: float, blink: bool) -> void:
+	Art.push(ci, Vector2.ZERO, snappedf(swing, 0.04))
+	Art.stroke(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(6, 8), Vector2(0, 16), Vector2(-2, 26)]), 3), Color("8a5a2c"), 3.0, 1.5)
+	var b := Vector2(-2, 40)
+	# Arms reaching down, legs up, body upside down.
+	Art.stroke(ci, PackedVector2Array([b + Vector2(-6, 6), b + Vector2(-12, 22)]), Color("8a5a2c"), 4.0, 1.5)
+	Art.stroke(ci, PackedVector2Array([b + Vector2(6, 6), b + Vector2(10, 21 + sin(t * 3.0) * 2.0)]), Color("8a5a2c"), 4.0, 1.5)
+	Art.t_ellipse(ci, b, Vector2(10, 13), Color("9a6234"), 2.4, 0.5)
+	Art.flat(ci, Art.ellipse_pts(b + Vector2(0, 2), Vector2(5.5, 8), 10), Color("e8c08a"))
+	var h := b + Vector2(0, 20)
+	for sx: float in [-10.0, 10.0]:
+		Art.t_circle(ci, h + Vector2(sx, -2), 5, Color("9a6234"), 2.0, 0.0)
+		Art.disc(ci, h + Vector2(sx, -2), 2.4, Color("e8b07a"))
+	Art.t_circle(ci, h, 10, Color("9a6234"), 2.4, 0.4)
+	Art.t_ellipse(ci, h + Vector2(0, 2), Vector2(7.5, 6.5), Color("f0cf9a"), 0.0, 0.0)
+	if blink:
+		Art.line_c(ci, PackedVector2Array([h + Vector2(-5, 0), h + Vector2(-2, 0)]), Art.INK, 1.6)
+		Art.line_c(ci, PackedVector2Array([h + Vector2(2, 0), h + Vector2(5, 0)]), Art.INK, 1.6)
+	else:
+		Art.disc(ci, h + Vector2(-3.5, 0), 1.8, Art.INK)
+		Art.disc(ci, h + Vector2(3.5, 0), 1.8, Art.INK)
+	Art.arc_c(ci, h + Vector2(0, 2.5), 3.0, 0.3, PI - 0.3, 6, Art.INK, 1.5)
+	Art.pop(ci)
+
+
+## A parrot perched on a beam (origin at its feet); `bob` 0..1 dips the head.
+static func parrot(ci: CanvasItem, bob: float, blink: bool, facing: float) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(facing, 1.0))
+	Art.toon(ci, PackedVector2Array([Vector2(-3, -6), Vector2(-14, 22), Vector2(-7, 24), Vector2(3, -4)]), Color("3a7ae0"), 2.0, 0.2)
+	Art.t_ellipse(ci, Vector2(0, -12), Vector2(8, 12), Color("ef3e3e"), 2.4, 0.5)
+	Art.flat(ci, Art.ellipse_pts(Vector2(3, -9), Vector2(4, 7), 10), Color("ff7a3c"))
+	Art.toon(ci, PackedVector2Array([Vector2(-7, -14), Vector2(2, -12), Vector2(-3, 2), Vector2(-9, -1)]), Color("ffd23f"), 2.0, 0.3)
+	Art.toon(ci, PackedVector2Array([Vector2(-4, -6), Vector2(1, -6), Vector2(-1, 0), Vector2(-5, 0)]), Color("3a7ae0"), 1.4, 0.0)
+	var h := Vector2(3, -25 + Props._q(bob, 4) * 3.0)
+	Art.t_circle(ci, h, 7, Color("ef3e3e"), 2.4, 0.4)
+	Art.flat(ci, Art.ellipse_pts(h + Vector2(2.5, 0), Vector2(3.4, 2.8), 8), Art.WHITE)
+	if blink:
+		Art.line_c(ci, PackedVector2Array([h + Vector2(1.5, -0.5), h + Vector2(5, -0.5)]), Art.INK, 1.4)
+	else:
+		Art.disc(ci, h + Vector2(3.2, -0.6), 1.4, Art.INK)
+	Art.toon(ci, PackedVector2Array([h + Vector2(5, -3), h + Vector2(11, 1), h + Vector2(6, 4)]), Color("3a3040"), 1.6, 0.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(-2, 0), Vector2(-2, -3)]), Color("5a4a3a"), 2.0)
+	Art.line_c(ci, PackedVector2Array([Vector2(2, 0), Vector2(2, -3)]), Color("5a4a3a"), 2.0)
+	Art.pop(ci)
+
+
+## A butterfly (origin at its body); `flap` 0..1 closes the wings.
+static func butterfly(ci: CanvasItem, flap: float, col: Color) -> void:
+	var k := 0.25 + 0.75 * (1.0 - Props._q(flap, 4))
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(k, 1.0))
+	Art.toon(ci, PackedVector2Array([Vector2(0, -1), Vector2(-9, -9), Vector2(-11, -2), Vector2(-3, 1)]), col, 1.6, 0.0)
+	Art.toon(ci, PackedVector2Array([Vector2(0, -1), Vector2(9, -9), Vector2(11, -2), Vector2(3, 1)]), col, 1.6, 0.0)
+	Art.toon(ci, PackedVector2Array([Vector2(-1, 0), Vector2(-7, 6), Vector2(-3, 7)]), col.lightened(0.3), 1.4, 0.0)
+	Art.toon(ci, PackedVector2Array([Vector2(1, 0), Vector2(7, 6), Vector2(3, 7)]), col.lightened(0.3), 1.4, 0.0)
+	Art.pop(ci)
+	Art.flat(ci, Art.rrect_pts(Rect2(-1, -5, 2, 10), 1), Art.INK)
+
+
+## A garland of leaves and flowers (the jungle's pennants).
+static func garland(ci: CanvasItem, x0: float, x1: float, y: float, sag: float) -> void:
+	var n := maxi(4, int((x1 - x0) / 22.0))
+	var pts := PackedVector2Array()
+	for i in n + 1:
+		var u := float(i) / n
+		pts.append(Vector2(lerpf(x0, x1, u), y + sin(u * PI) * sag))
+	Art.polyline(ci, pts, Color("3a7a3a"), 2.5)
+	for i in n:
+		var m := (pts[i] + pts[i + 1]) / 2.0
+		if i % 3 == 1:
+			_flower(ci, m + Vector2(0, 3), 5.0, [Color("ff8a2a"), Color("ff4fa8"), Color("ffd23f")][(i / 3) % 3])
+		else:
+			Art.push(ci, m, 1.57 + (0.25 if i % 2 == 0 else -0.25))
+			Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(8, -5), Vector2(17, 0), Vector2(8, 5)]), 2), LEAF if i % 2 == 0 else LEAF_LIGHT, 1.8, 0.3)
+			Art.pop(ci)
+
+
+## Hanging vines from the ceiling (static), `len` long with leaves and a flower.
+static func vine(ci: CanvasItem, top: Vector2, len: float, seed: int) -> void:
+	var pts := PackedVector2Array()
+	for i in 7:
+		var f := i / 6.0
+		pts.append(top + Vector2(sin(f * 2.6 + seed) * 6.0, f * len))
+	Art.stroke(ci, pts, Color("3a9a48"), 3.0, 1.5)
+	for i in range(1, 7):
+		var side := 1.0 if (i + seed) % 2 == 0 else -1.0
+		Art.toon(ci, Art.ellipse_pts(pts[i] + Vector2(side * 6.0, -1), Vector2(7, 3.5), 10, side * 0.6), LEAF_LIGHT if i % 2 == 0 else LEAF, 1.8, 0.3)
+	_flower(ci, pts[6] + Vector2(0, 4), 4.5, [Color("ff8a2a"), Color("ff4fa8"), Color("ffd23f")][seed % 3])
+
+
+## A clay water jar (the temple's fire bucket), origin bottom center.
+static func water_jar(ci: CanvasItem) -> void:
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(-10, 0), Vector2(-16, -16), Vector2(-12, -32), Vector2(-7, -36),
+			Vector2(7, -36), Vector2(12, -32), Vector2(16, -16), Vector2(10, 0)]), 3)
+	Art.toon(ci, body, TERRACOTTA, 2.6, 0.6)
+	Art.flat(ci, _quad(Rect2(-14, -22, 28, 5)), JADE)
+	Art.t_rect(ci, Rect2(-9, -42, 18, 7), 3, Art.shade_of(TERRACOTTA, 0.1), 2.2, 0.2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(0, -41), Vector2(6, 2), 10), Color("1fa8a0"))
+	Art.flat(ci, Art.ellipse_pts(Vector2(-7, -20), Vector2(2.5, 7), 8), Color(1, 1, 1, 0.3))
+
+
+## Carvings and trims over a machine of the temple line (drawn after its body).
+static func _temple_carve(ci: CanvasItem, i: int, tier: int, m: Dictionary) -> void:
+	var deep := Art.shade_of(m["body"], 0.35)
+	match i:
+		0:
+			# A jaguar's face on the crusher: brow, eyes and a row of teeth.
+			Art.flat(ci, Art.rrect_pts(Rect2(-30, -74, 60, 7), 2), m["trim"])
+			for sx: float in [-22.0, 22.0]:
+				Art.t_circle(ci, Vector2(sx, -60), 5, m["trim"], 2.0, 0.2)
+				Art.disc(ci, Vector2(sx, -60), 2.2, Art.INK)
+			for k in 5:
+				Art.toon(ci, PackedVector2Array([Vector2(-15 + k * 7, -26), Vector2(-9 + k * 7, -26), Vector2(-12 + k * 7, -20)]), Art.WHITE, 1.4, 0.0)
+		1:
+			# The furnace is an idol head: brow ridge, ear spools, a feather crown.
+			Art.t_rect(ci, Rect2(-36, -84, 72, 9), 3, m["trim"], 2.2, 0.3)
+			for sx: float in [-1.0, 1.0]:
+				Art.t_circle(ci, Vector2(sx * 40, -50), 8, m["trim"], 2.4, 0.3)
+				Art.t_circle(ci, Vector2(sx * 40, -50), 3.5, JADE if tier != 4 else Art.WHITE, 1.6, 0.0)
+				Art.t_rect(ci, Rect2(sx * 16 - 9, -74, 18, 10), 4, Color("2a1830"), 2.0, 0.0)
+			Art.toon(ci, PackedVector2Array([Vector2(-5, -72), Vector2(5, -72), Vector2(7, -61), Vector2(-7, -61)]), Art.shade_of(m["body"], 0.12), 2.0, 0.3)
+			var cols := [Color("ef3e3e"), Color("3fd6c0"), Art.GOLD, Color("3fd6c0"), Color("ef3e3e")]
+			for k in 5:
+				var a := -PI / 2.0 + (k - 2) * 0.32
+				var base := Vector2(cos(a) * 22.0, -98 + sin(a) * 8.0 + 8.0)
+				Art.push(ci, base, a + PI / 2.0)
+				Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-6, -14), Vector2(0, -26), Vector2(6, -14)]), 2), cols[k], 2.0, 0.3)
+				Art.pop(ci)
+		2:
+			# A step-fret base and gold studs on the polisher.
+			for k in 4:
+				Art.disc(ci, Vector2(-24 + k * 16, -14), 2.6, m["trim"])
+			Art.line_c(ci, PackedVector2Array([Vector2(-28, -6), Vector2(-28, -12), Vector2(-20, -12), Vector2(-20, -8)]), deep, 2.0)
+			Art.line_c(ci, PackedVector2Array([Vector2(28, -6), Vector2(28, -12), Vector2(20, -12), Vector2(20, -8)]), deep, 2.0)
+		3:
+			# Serpent heads on the press's top beam and a sun on its base.
+			for sx: float in [-1.0, 1.0]:
+				Art.push(ci, Vector2(sx * 44, -124), 0.0, Vector2(sx, 1))
+				Art.toon(ci, PackedVector2Array([Vector2(-4, -8), Vector2(10, -6), Vector2(14, 0), Vector2(10, 5), Vector2(-4, 8)]), m["trim"], 2.2, 0.3)
+				Art.disc(ci, Vector2(6, -2), 1.8, Art.INK)
+				Art.pop(ci)
+			Art.t_circle(ci, Vector2(0, -18), 7, Art.GOLD, 2.0, 0.3)
+			Art.disc(ci, Vector2(0, -18), 2.5, Art.GOLD_DARK)
+
+
+## What the temple line makes: cocoa pods, chocolate bars, golden idols.
+static func _temple_good(ci: CanvasItem, i: int) -> void:
+	match i:
+		0:
+			Art.t_ellipse(ci, Vector2(0, -6), Vector2(8, 5), Color("e0802e"), 1.8, 0.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(-5, -7), Vector2(5, -7)]), Art.shade_of(Color("e0802e"), 0.3), 1.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(-5, -4), Vector2(5, -4)]), Art.shade_of(Color("e0802e"), 0.3), 1.4)
+		1:
+			Art.t_rect(ci, Rect2(-9, -8, 18, 8), 2, CHOC, 1.8, 0.4)
+			Art.line_c(ci, PackedVector2Array([Vector2(-3, -7), Vector2(-3, -1)]), Art.shade_of(CHOC, 0.3), 1.2)
+			Art.line_c(ci, PackedVector2Array([Vector2(3, -7), Vector2(3, -1)]), Art.shade_of(CHOC, 0.3), 1.2)
+			Art.flat(ci, Art.rrect_pts(Rect2(-7, -7, 4, 2), 1), Color(1, 1, 1, 0.35))
+		_:
+			idol(ci, 1.0)
+
+
+## A little golden idol (origin bottom center, ~14 tall at s 1).
+static func idol(ci: CanvasItem, s: float) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(s, s))
+	Art.t_rect(ci, Rect2(-6, -6, 12, 6), 2, Art.GOLD_DARK, 1.6, 0.2)
+	Art.t_rect(ci, Rect2(-5, -16, 10, 11), 3, Art.GOLD, 1.8, 0.4)
+	Art.t_rect(ci, Rect2(-7, -18, 14, 4), 1.5, Art.GOLD, 1.6, 0.2)
+	Art.disc(ci, Vector2(-2, -12), 1.1, Art.INK)
+	Art.disc(ci, Vector2(2, -12), 1.1, Art.INK)
+	Art.disc(ci, Vector2(0, -21), 2.2, JADE)
 	Art.pop(ci)

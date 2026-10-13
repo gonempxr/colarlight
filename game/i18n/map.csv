@@ -5,11 +5,13 @@ MAP_W_OCEAN,Ocean Island,Океанский остров,Isla del Océano,海洋
 MAP_W_VOLCANO,Volcano Island,Остров-вулкан,Isla Volcán,火山岛
 MAP_W_ACID,Acid Swamp,Кислотное болото,Pantano Ácido,酸液沼泽
 MAP_W_MOON,Moon,Луна,Luna,月球
+MAP_W_JUNGLE,Jungle Ruins,Джунгли,Ruinas de la Selva,丛林遗迹
 MAP_NEXT,Next: %s,Дальше: %s,Siguiente: %s,下一站：%s
 MAP_HINT_OCEAN,A new sea with bigger treasures is waiting!,Новое море с ещё большими сокровищами!,¡Un mar nuevo con tesoros más grandes te espera!,新的大海，藏着更大的宝藏！
 MAP_HINT_VOLCANO,Something hot is rumbling there…,Там что-то горячее грохочет…,Algo caliente retumba allí…,那里有什么滚烫的东西在轰鸣……
 MAP_HINT_ACID,Something green is bubbling there…,Там что-то зелёное булькает…,Algo verde burbujea allí…,那里有什么绿色的东西在冒泡……
 MAP_HINT_MOON,Something shines among the stars…,Что-то сияет среди звёзд…,Algo brilla entre las estrellas…,群星之间有什么在闪光……
+MAP_HINT_JUNGLE,Something golden hides in the green…,Что-то золотое прячется в зелени…,Algo dorado se esconde entre lo verde…,绿荫深处藏着金色的东西……
 MAP_LOCKED_FAR,Open the islands before this one first!,Сначала открой острова перед этим!,¡Primero abre las islas de antes!,先开启前面的岛屿吧！
 MAP_GOAL_SITES,Open all work sites,Открой все места добычи,Abre todos los sitios de trabajo,开启所有工作点
 MAP_GOAL_FOREMEN,Hire all foremen,Найми всех бригадиров,Contrata a todos los capataces,雇佣所有工头
@@ -25,6 +27,6 @@ MAP_CONFIRM,Sail to %s?,Отправляемся? Новый мир: %s,¿Viajam
 MAP_YES,Let's go!,Поехали!,¡Vamos!,出发！
 MAP_NO,Not yet,Пока нет,Todavía no,还不要
 MAP_SOON,Soon!,Скоро!,¡Pronto!,即将开放！
-MAP_SOON_TITLE,New worlds are coming!,Скоро новые миры!,¡Llegan mundos nuevos!,新世界即将到来！
-MAP_SOON_TEXT,"You reached the last world for now. Two secret islands are being built: keep mining on the Moon, your levels keep growing!","Ты дошёл до последнего мира. Два тайных острова ещё строятся: копай дальше на Луне, уровни продолжают расти!","Llegaste al último mundo por ahora. Se están construyendo dos islas secretas: sigue minando en la Luna, ¡tus niveles siguen creciendo!",你已到达目前最后一个世界。两座神秘岛屿正在建造中：继续在月球采矿，等级还会不断提升！
+MAP_SOON_TITLE,A new world is coming!,Скоро новый мир!,¡Llega un mundo nuevo!,新世界即将到来！
+MAP_SOON_TEXT,"You reached the last world for now. A secret island is being built: keep mining in the Jungle, your levels keep growing!","Ты дошёл до последнего мира. Тайный остров ещё строится: копай дальше в Джунглях, уровни продолжают расти!","Llegaste al último mundo por ahora. Se está construyendo una isla secreta: sigue minando en la Selva, ¡tus niveles siguen creciendo!",你已到达目前最后一个世界。一座神秘岛屿正在建造中：继续在丛林采矿，等级还会不断提升！
 MAP_SOON_HINT,This island is still being built. Coming soon!,Этот остров ещё строится. Скоро!,Esta isla aún se está construyendo. ¡Pronto!,这座岛还在建造中，敬请期待！
