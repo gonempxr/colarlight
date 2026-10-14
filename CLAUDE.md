@@ -33,8 +33,12 @@ This file is the quick picture; keep it up to date when something big changes.
 - Loop: divers mine ore at 10 sites per world → lift → boat → factory →
   coins. Managers automate. Three rooms: Mine, Factory, Office (vault,
   decor). Income = min of the chain.
-- Worlds: Ocean → Volcano → Acid swamp → Moon (exactly 4), then 2 locked
-  "?" islands ("Soon!"). Opened worlds can be switched between (p-switch).
+- Worlds: Ocean → Volcano → Acid swamp → Moon → Jungle Ruins (5 since
+  2026-10-14, `Balance.LAST_LOCATION` = 4), then 1 locked "?" island (ice,
+  "Soon!"). Opened worlds can be switched between (p-switch). Endgame:
+  world stars ★ (docs/jungle-world.md §2, `StarView`, `GameState.get_star`):
+  any finished world restarts with x1000 numbers, +25% income everywhere per
+  star, max 50 per world; boards cap scores under 1e60 (`Online.SCORE_CAP`).
 - Workers: gear levels + skins by rarity per world (Evolution/Gear card).
 - Meta: pearls, quests (per world), daily gift, login streak, chests,
   match-3 puzzle → artifacts → museum, wardrobe (pets, hats, outfits,
@@ -109,6 +113,10 @@ This file is the quick picture; keep it up to date when something big changes.
   level 3 drops it).
 - Store covers: variant D of `tools/store_art/covers_v3.py` (in docs/store).
   CTR on launch day was 0.8% (bottom 20%); check again after the new cover.
+- 2026-10-14 (worlds + beta only, not main / not the CG zip yet): world 5
+  "Jungle Ruins" (docs/jungle-world.md) + world stars. Saves v5; older saves
+  are clamped to the Moon on load. Screenshots overlay `in:N:<overlay>`.
+  Perf: jungle mine is the heaviest view (PC ~10-13 ms headless).
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:
@@ -120,10 +128,7 @@ This file is the quick picture; keep it up to date when something big changes.
      Match): separate coin/pearl pills in the top bar, fewer round buttons
      on the left, white outlined text on coloured panels, shorter texts,
      one colour system for buttons. Show Mark screenshots before going live.
-  3. A NEW WORLD (5th, after Moon; replaces one "?" island) with everything
-     the other worlds have: its own look, sites, ore, workers' gear and
-     skins, factory/office looks, themed puzzle (TileWorlds) and fishing in
-     its style, map island, quests, translations (RU/EN/ES/ZH), tests.
+  3. (done 2026-10-14, on beta) the 5th world: Jungle Ruins.
 
 ## Rules of the code
 - All art is drawn in code through `Art.*` (art.gd) with push/pop — never
