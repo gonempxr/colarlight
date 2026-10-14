@@ -16,6 +16,22 @@ const PROMOS := {
 	# coins never count on the leaderboards (Online.track).
 	"edb19a27d5cd5bb89788e932dc220125015d8f1b3c6cea95bbb27883b5cbeabf": {"id": "p4", "coins": 2.0e23},
 	"d61cba720e6f4d81fd201aa76ccc38a9325a2d9ddb0e342a34297a2803f55c42": {"id": "p5", "coins": 1.0e23},
+	# 2026-10-14: 8 x 10ad and 7 x 100ad.
+	"b6c81a692c24704d8e0c0cc17130130c2e9b17de1d05b19da5bdfd0d4615c652": {"id": "p6", "coins": 1.0e25},
+	"a040c3e496473d5b1b3062ad93d60e4d06d83a45cf0dd8dccedd8cfce69eb969": {"id": "p7", "coins": 1.0e25},
+	"749c6df2f1d94c48ab656a40bf119a6f5fdd10a3c8286741ad02c49f5b3cf6e0": {"id": "p8", "coins": 1.0e25},
+	"b2fcb590603c6882c061ef7c26028ef173afe3867642465d394e2a0cf0860818": {"id": "p9", "coins": 1.0e25},
+	"52e1034b1272ff61c52e80b68690a4d1ca9b50ac71e05290b9c688925297b1b9": {"id": "p10", "coins": 1.0e25},
+	"162c127a70f0e05bc7680a1a2fdca1b91e1fd02bddbf9d8aa5e80651b4765933": {"id": "p11", "coins": 1.0e25},
+	"1a9bd2bb134891c8a5b06be9e069a1257e327a476d24ac7ae63c07d09f1c6d5a": {"id": "p12", "coins": 1.0e25},
+	"81211b0a37e638ce92e867d66ba9f8292808122e0020cfb6b2da1c63d6b443d8": {"id": "p13", "coins": 1.0e25},
+	"741214ccddeb55a205423a4142318ae669bfab3083e28029d0948363b29021fc": {"id": "p14", "coins": 1.0e26},
+	"8a051aedf5a76b34118338dbeff914a73b5e999b1d71fa8938bb4039223ce889": {"id": "p15", "coins": 1.0e26},
+	"015fef92974f30017fafc883e0e554a63e6001a24a247a6c7f12c08d64efb1cb": {"id": "p16", "coins": 1.0e26},
+	"aecb8dba77c125f4bc3974bff70a00fb4201eabc72254bcc81c8c40dc6f7b481": {"id": "p17", "coins": 1.0e26},
+	"d79034c464d9179b3b7393c09612ed0fec6eed1e51dc42b904e1385521e1846f": {"id": "p18", "coins": 1.0e26},
+	"03fae9f14164c8b4410c1f789a218d3ffce4990397d2e0465e436bf4d042c49e": {"id": "p19", "coins": 1.0e26},
+	"d856f6dc4ca8b393e3cb9202d0d0f3fb5912dc346f50038e8b84488071f101f2": {"id": "p20", "coins": 1.0e26},
 }
 
 ## The exclusive item: never sold, only given (founders, a promo code,
@@ -199,6 +215,14 @@ static func week_id(unix: float) -> int:
 ## 05:15 so that builds which still counted every profile (beta / CrazyGames
 ## zip of 2026-10-14) write to another board than the fresh-save one.
 const LEAGUE_STARTS: Array[int] = [1792127701]
+
+## The race to Friday (2026-10-14, Mark): whoever holds the crown of the
+## week race at the cutoff (Fri 16.10 05:15:00 UTC, one second before the
+## league) wins a huge coin prize. The server keeps that moment in crown/fri
+## (the rules let nobody take the crown after the cutoff before it is there).
+const FRI_CUTOFF := 1792127700
+const FRI_COINS := 1.0e27
+const FRI_PEARLS := 500
 
 
 ## The league running at `unix` (its start), 0 before the first one.

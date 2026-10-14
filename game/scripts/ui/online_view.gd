@@ -459,6 +459,11 @@ static func _crown_card(m: Modal) -> Control:
 		if not td.is_empty():
 			v.add_child(_center(Views.label(t("CROWN_TODAY") % [str(td[0]["name"]), OnlineRules.crown_time(int(td[0]["score"]))], 19, Art.INK_SOFT)))
 	v.add_child(_center(Views.label(t("CROWN_PRIZE"), 17, Color("2a8a4a"), true)))
+	var left := OnlineRules.FRI_CUTOFF - Clock.now()
+	if left > 0.0:
+		v.add_child(_center(Views.label(t("FRI_RACE") % [NumFormat.short(OnlineRules.FRI_COINS), OnlineRules.countdown(left)], 19, Color("c0392b"), true)))
+	elif str(Online.data.get("fri_name", "")) != "":
+		v.add_child(_center(Views.label(t("FRI_WINNER") % str(Online.data["fri_name"]), 19, Color("c0392b"), true)))
 	return card
 
 
@@ -872,14 +877,19 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 	m.add(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		if kind == "founder":
 			FounderArt.medal(ci, s / 2.0 + Vector2(0, 18), 54.0, n, tt)
+		elif kind == "fri":
+			KingArt.crown(ci, s / 2.0 + Vector2(0, 52), 100.0, tt)
 		elif kind in ["week", "season", "puzzle", "crown"]:
 			FounderArt.podium(ci, s / 2.0 + Vector2(0, 14), 1.7, tt)
 		elif kind in ["join", "inviter"]:
 			FounderArt.letter(ci, s / 2.0 + Vector2(0, 6), 1.7, tt)
 		else:
 			_draw_ticket(ci, s / 2.0, tt), Vector2(0, 140), true))
-	m.title({"crown": t("THANKS_CROWN_TITLE"), "week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE")}.get(kind, t("THANKS_TITLE")))
+	m.title({"crown": t("THANKS_CROWN_TITLE"), "week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE"),
+		"fri": t("THANKS_FRI_TITLE")}.get(kind, t("THANKS_TITLE")))
 	match kind:
+		"fri":
+			m.text(t("THANKS_FRI") % [NumFormat.short(float(info.get("coins", 0.0))), int(info.get("pearls", 0))], 25, Art.GOLD_DARK.darkened(0.2))
 		"crown":
 			m.text(t("THANKS_CROWN") % [n, OnlineRules.crown_time(int(info.get("min", 0)))], 25, Art.GOLD_DARK.darkened(0.2))
 		"puzzle":
@@ -896,7 +906,7 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 			m.text(t("THANKS_JOIN"), 24, Color("1c7fb8"))
 		"inviter":
 			m.text(t("THANKS_INVITER") % n, 24, Color("1c7fb8"))
-	if not kind in ["week", "season", "puzzle", "crown"]:
+	if not kind in ["week", "season", "puzzle", "crown", "fri"]:
 		var c := Views.card(Color("fff1c2"))
 		var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
 		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

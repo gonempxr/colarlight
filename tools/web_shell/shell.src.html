@@ -1148,6 +1148,16 @@ window.coralightFirebase = (function () {
 				const t = (c.k === 'league' ? d.league : d.weeks)[c.id] || {};
 				return later(JSON.stringify({ uid: c.uid, name: c.name, k: c.k, id: c.id, score: t[c.uid] ? t[c.uid].score : 0 }));
 			},
+			// The race to Friday: crown/fri = crown/now as it stood at the
+			// cutoff (written once by the first player after it).
+			crown_fri: function (a) {
+				const d = fix(load());
+				if (!d.crownfri && Date.now() >= a.cut * 1000 && d.crown && d.crown.k === 'weeks') {
+					d.crownfri = { uid: d.crown.uid, name: d.crown.name, k: d.crown.k, id: d.crown.id };
+					store(d);
+				}
+				return later(d.crownfri ? JSON.stringify(d.crownfri) : 'none');
+			},
 			crown_take: function (a) {
 				const d = fix(load());
 				const t = (a.k === 'league' ? d.league : d.weeks)[a.id] || {};
@@ -1392,6 +1402,30 @@ window.coralightFirebase = (function () {
 					const x = c.data();
 					return boardCol(x.k, x.id).doc(String(x.uid)).get().then(function (r) {
 						return JSON.stringify({ uid: String(x.uid), name: String(x.name || ''), k: String(x.k), id: String(x.id), score: r.exists ? (Number(r.data().score) || 0) : 0 });
+					});
+				});
+			},
+			// The race to Friday: crown/fri is crown/now as it stood at the
+			// cutoff; the first player after it copies it (the rules check the
+			// copy and let nobody take crown/now after the cutoff before it).
+			crown_fri: function (a) {
+				const fri = F.db.collection('crown').doc('fri');
+				const out = function (x) { return JSON.stringify({ uid: String(x.uid), name: String(x.name || ''), k: String(x.k), id: String(x.id) }); };
+				return fri.get().then(function (f) {
+					if (f.exists) {
+						return out(f.data());
+					}
+					if (Date.now() < a.cut * 1000) {
+						return 'none';
+					}
+					return crownRef().get().then(function (c) {
+						if (!c.exists || c.data().k !== 'weeks') {
+							return 'none';
+						}
+						const x = c.data();
+						return fri.set({ uid: x.uid, name: x.name, k: x.k, id: x.id, t: ts() }).then(function () { return out(x); }, function () {
+							return fri.get().then(function (g) { return g.exists ? out(g.data()) : 'error'; });
+						});
 					});
 				});
 			},

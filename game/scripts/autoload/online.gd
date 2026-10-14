@@ -277,7 +277,7 @@ func defaults() -> Dictionary:
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
 		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1, "owner": "",
-		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "tester": false, "cheated": false}
+		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "fri": "", "fri_name": "", "tester": false, "cheated": false}
 
 
 func load_data() -> void:
@@ -1032,7 +1032,42 @@ func row_is_king(row: Dictionary) -> bool:
 ## Reads the crown; takes it when this player's sent score is higher than
 ## the holder's (the rules check the same on the server).
 func check_crown() -> void:
+	if str(data["fri"]) == "" and Clock.now() >= OnlineRules.FRI_CUTOFF:
+		check_fri()
+	elif str(data["fri"]) == "owed":
+		pay_fri()
 	_request("crown", "", func(res: String): on_crown(res))
+
+
+## The race to Friday: reads (or, first after the cutoff, writes) who held
+## the crown at the cutoff; the winner gets the prize once, in a normal
+## game (not a league save, where it would spoil the race).
+func check_fri() -> void:
+	_request("crown_fri", JSON.stringify({"cut": OnlineRules.FRI_CUTOFF}), func(res: String): on_fri(res))
+
+
+func on_fri(res: String) -> void:
+	var info := parse_crown(res)
+	if info.is_empty():
+		if res == "none" and Clock.now() >= OnlineRules.FRI_CUTOFF + 86400:
+			data["fri"] = "none"
+			_dirty = true
+		return
+	data["fri_name"] = str(info["name"])
+	if str(info["uid"]) != uid or uid == "":
+		data["fri"] = "lost"
+	else:
+		data["fri"] = "owed"
+		pay_fri()
+	_dirty = true
+
+
+func pay_fri() -> void:
+	if str(data["fri"]) != "owed" or Profiles.league_game():
+		return
+	data["fri"] = "won"
+	_grant({"kind": "fri", "pearls": OnlineRules.FRI_PEARLS, "coins": OnlineRules.FRI_COINS})
+	save_data()
 
 
 func on_crown(res: String) -> void:

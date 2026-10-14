@@ -47,3 +47,7 @@ LEAGUE_ENTERED,Welcome to the Top League! Everyone starts from zero.,Добро 
 LEAGUE_BADGE,League,Лига,Liga,联赛
 LEAGUE_LOCKED,Open the Jungle Ruins to join the league.,"Открой Джунгли, чтобы вступить в лигу.",Abre las Ruinas de la Selva para unirte a la liga.,开启丛林遗迹后即可加入联赛。
 LEAGUE_NO_ADS,No x2 for ads in the league: everyone plays on equal terms.,В лиге нет x2 за рекламу: все играют на равных.,En la liga no hay x2 por anuncios: todos juegan en igualdad.,联赛中没有看广告得双倍：大家公平竞争。
+FRI_RACE,"Race to Friday: whoever is No. 1 at the finish wins %s coins! Ends in %s","Гонка до пятницы: кто будет №1 на финише, получит %s монет! До конца %s","Carrera hasta el viernes: ¡quien sea el n.º 1 al final gana %s monedas! Termina en %s",周五冲刺：终点时排名第一的玩家将赢得%s金币！剩余%s
+FRI_WINNER,"Winner of the race to Friday: %s","Победитель гонки до пятницы: %s","Ganador de la carrera hasta el viernes: %s",周五冲刺冠军：%s
+THANKS_FRI_TITLE,Champion of the week!,Чемпион недели!,¡Campeón de la semana!,本周冠军！
+THANKS_FRI,"You were No. 1 at the Friday finish! +%s coins and %d pearls","Ты был №1 на финише в пятницу! +%s монет и %d жемчуга","¡Fuiste el n.º 1 en la meta del viernes! +%s monedas y %d perlas",你在周五终点时排名第一！+%s金币和%d珍珠

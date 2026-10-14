@@ -722,11 +722,31 @@ func _initialize() -> void:
 	online.track(ls + 40.0)
 	_check(float(online.data["league_score"]) == 4000.0, "coins earned in the league game count there")
 	_check(profiles.enter_league(ls) == lgp and profiles.list.size() == n_before + 1, "joining again goes back to the same league game")
+	# The race to Friday: the crown at the cutoff wins, paid in the ordinary game only.
+	online.data["fri"] = ""
+	var fri_c0: float = gs.coins
+	online.on_fri(JSON.stringify({"uid": online.uid, "name": "Neo", "k": "weeks", "id": "3"}))
+	_check(online.uid != "" and str(online.data["fri"]) == "owed" and gs.coins == fri_c0, "the Friday prize waits outside a league game")
 	profiles.leave_league()
 	_check(profiles.current_id == home_id and gs.total_earned == 1.8e6, "leaving goes back to the ordinary game, untouched")
 	gs.total_earned = 1.9e6
 	online.track(ls + 50.0)
 	_check(float(online.data["league_score"]) == 4000.0, "and the ordinary game still adds nothing to the league")
+	var fri_h0: float = gs.coins
+	online.pay_fri()
+	_check(str(online.data["fri"]) == "won" and gs.coins >= fri_h0 + OnlineRules.FRI_COINS * 0.99, "the Friday winner gets the coins in the ordinary game")
+	online.pay_fri()
+	_check(gs.coins < fri_h0 + OnlineRules.FRI_COINS * 1.5, "and only once")
+	online.data["fri"] = ""
+	online.on_fri(JSON.stringify({"uid": "someone", "name": "Neo", "k": "weeks", "id": "3"}))
+	_check(str(online.data["fri"]) == "lost" and str(online.data["fri_name"]) == "Neo", "another winner is only named")
+	online.on_fri("none")
+	var fri_ids := {}
+	for ph in OnlineRules.PROMOS:
+		fri_ids[str(OnlineRules.PROMOS[ph]["id"])] = float(OnlineRules.PROMOS[ph].get("coins", 0.0))
+	_check(fri_ids.size() == 20 and fri_ids["p6"] == 1.0e25 and fri_ids["p20"] == 1.0e26, "15 new coin codes, each with its own id")
+	for fk in ["FRI_RACE", "FRI_WINNER", "THANKS_FRI_TITLE", "THANKS_FRI"]:
+		_check(TranslationServer.translate(fk) != fk, "words for %s" % fk)
 	_check(not profiles.league_profile(ls).is_empty() and profiles.league_profile(0).is_empty(), "the league profile is found by its league")
 	profiles.remove(lgp)
 	_check(profiles.league_profile(ls).is_empty() and profiles.current_id == home_id, "a league profile can be removed")
