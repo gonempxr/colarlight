@@ -851,8 +851,8 @@ func _soon_panel() -> void:
 	var hv := VBoxContainer.new()
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hv.add_theme_constant_override("separation", 4)
-	hv.add_child(_label(t("MAP_SOON_TITLE"), 30, Art.INK, true))
-	hv.add_child(_label(t("MAP_SOON_TEXT"), 21, Art.INK_SOFT))
+	hv.add_child(_label(t("SAGA_SOON_TITLE" if Balance.saga else "MAP_SOON_TITLE"), 30, Art.INK, true))
+	hv.add_child(_label(t("SAGA_SOON_TEXT" if Balance.saga else "MAP_SOON_TEXT"), 21, Art.INK_SOFT))
 	head.add_child(hv)
 	_box.add_child(head)
 	_stars_button()

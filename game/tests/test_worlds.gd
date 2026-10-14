@@ -67,14 +67,14 @@ func _complete_location() -> void:
 
 
 func test_balance_tables() -> void:
-	check(Balance.WORLDS.size() == 5, "five worlds")
+	check(Balance.REGULAR == 5 and Balance.WORLDS.size() == 6 and Balance.SAGA_FIRST == 5, "five usual worlds and the saga's")
 	var ids := []
 	for w in Balance.WORLDS:
 		ids.append(w["id"])
-		var want := 15 if w["id"] == "jungle" else 10
+		var want := 15 if w["id"] in ["jungle", "twilight"] else 10
 		check(w["sites"].size() == want, "%s has %d sites" % [w["id"], want])
 		check(str(w["name"]) == "WORLD_" + str(w["id"]).to_upper(), "%s name key" % w["id"])
-	check(ids == ["ocean", "volcano", "acid", "moon", "jungle"], "worlds in order")
+	check(ids == ["ocean", "volcano", "acid", "moon", "jungle", "twilight"], "worlds in order")
 	check(Balance.DEPTHS.size() == 15, "one 15-step ladder (10 for most worlds)")
 	var rising := true
 	for i in range(1, 15):
@@ -380,7 +380,7 @@ func test_world_cycling() -> void:
 ## progress (their location 4 was "Ocean ★2", not the Jungle).
 func test_last_location() -> void:
 	_fresh()
-	check(Balance.LAST_LOCATION == 4 and Balance.WORLDS.size() == 5, "five worlds, the Jungle is the last")
+	check(Balance.LAST_LOCATION == 4 and Balance.REGULAR == 5, "five worlds, the Jungle is the last")
 	gs.location = 9
 	check(gs.location == 4 and gs.world_id() == "jungle" and gs.tier() == 0, "no location past the Jungle")
 	gs.location = 3

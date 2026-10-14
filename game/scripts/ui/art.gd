@@ -109,6 +109,24 @@ const SITE_STYLE := {
 	"sky_feather": {"rock": Color("365a64"), "floor": Color("6a98a0"), "ore": Color("2ec4e8"), "ore2": Color("ff4a5a"), "suit": Color("ffd23f"), "water": Color("15323a"), "deco": "jg_feather", "glow": Color("7ae8ff")},
 	"rain_crystal": {"rock": Color("3e4a6e"), "floor": Color("7080aa"), "ore": Color("8ac8ff"), "ore2": Color("e8f6ff"), "suit": Color("ff8a3d"), "water": Color("1a2240"), "deco": "jg_rain", "glow": Color("a8dcff")},
 	"sun_crown": {"rock": Color("6a4430"), "floor": Color("b0844a"), "ore": Color("ffc93c"), "ore2": Color("ff5a3d"), "suit": Color("2de2c5"), "water": Color("3a1e14"), "deco": "jg_crown", "glow": Color("ffe07a")},
+	# The saga, act I "The Twilight Zone" (league games): lilac and violet
+	# rock, rosy sand, glowing water from turquoise down to deep indigo;
+	# everything that matters glows (plankton, jellies, lanterns, the Light).
+	"glow_sand": {"rock": Color("a07ad6"), "floor": Color("f6cceb"), "ore": Color("7affe8"), "ore2": Color("e8fff8"), "suit": Color("ff6ad8"), "water": Color("1fa6d2"), "deco": "tw_plankton", "glow": Color("7affe8")},
+	"lantern_shell": {"rock": Color("9070cc"), "floor": Color("ecbce4"), "ore": Color("ffd23f"), "ore2": Color("ff8ad8"), "suit": Color("6af8ff"), "water": Color("1d94ca"), "deco": "tw_lanterns", "glow": Color("ffd27a")},
+	"jelly_pearl": {"rock": Color("8064c6"), "floor": Color("deb0e4"), "ore": Color("ff9af0"), "ore2": Color("ffffff"), "suit": Color("6af8ff"), "water": Color("1b80c2"), "deco": "tw_jelly", "glow": Color("ff9af0")},
+	"anchor_iron": {"rock": Color("6a62b0"), "floor": Color("b0a6d8"), "ore": Color("9ab4dc"), "ore2": Color("6af8ff"), "suit": Color("ff6ad8"), "water": Color("1a6cb4"), "deco": "wreck", "glow": Color("6af8ff")},
+	"ghost_coin": {"rock": Color("5e50a4"), "floor": Color("a092cc"), "ore": Color("7affc8"), "ore2": Color("fff1a8"), "suit": Color("ff6ad8"), "water": Color("185aa6"), "deco": "tw_ghost", "glow": Color("7affc8")},
+	"angler_light": {"rock": Color("4e3e94"), "floor": Color("907ec6"), "ore": Color("ffd23f"), "ore2": Color("ff6ad8"), "suit": Color("6af8ff"), "water": Color("164896"), "deco": "tw_angler", "glow": Color("ffd23f")},
+	"ink_crystal": {"rock": Color("42348a"), "floor": Color("8070bc"), "ore": Color("9a6aff"), "ore2": Color("e6d8ff"), "suit": Color("ffd23f"), "water": Color("143c8a"), "deco": "crystals", "glow": Color("b48aff")},
+	"bone_coral": {"rock": Color("4a3c82"), "floor": Color("9e92c0"), "ore": Color("f6eedc"), "ore2": Color("ff9af0"), "suit": Color("6af8ff"), "water": Color("123280"), "deco": "whale", "glow": Color("ffd0f4")},
+	"siren_scale": {"rock": Color("3e3c8c"), "floor": Color("767cc6"), "ore": Color("4af0d0"), "ore2": Color("ff9af0"), "suit": Color("ffd23f"), "water": Color("102a78"), "deco": "tw_siren", "glow": Color("4af0d0")},
+	"nautilus": {"rock": Color("3e3278"), "floor": Color("8068b6"), "ore": Color("ffc93c"), "ore2": Color("fff1a8"), "suit": Color("6af8ff"), "water": Color("0e246e"), "deco": "pearls", "glow": Color("ffd84a")},
+	"abyss_opal": {"rock": Color("322e70"), "floor": Color("625cae"), "ore": Color("7ae8ff"), "ore2": Color("ff6ad8"), "suit": Color("ffd23f"), "water": Color("0c1e66"), "deco": "glow", "glow": Color("7ae8ff")},
+	"kraken_tooth": {"rock": Color("2e245e"), "floor": Color("5a4ea2"), "ore": Color("fbf4e4"), "ore2": Color("c25aff"), "suit": Color("ffd23f"), "water": Color("0a185c"), "deco": "tentacles", "glow": Color("c25aff")},
+	"deep_star": {"rock": Color("28225c"), "floor": Color("524e9e"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("ff6ad8"), "water": Color("0a1454"), "deco": "tw_stars", "glow": Color("ffe07a")},
+	"warden_eye": {"rock": Color("2e1e58"), "floor": Color("604496"), "ore": Color("ff4a7a"), "ore2": Color("ffd23f"), "suit": Color("6af8ff"), "water": Color("0c104c"), "deco": "tw_eyes", "glow": Color("ff5a8a")},
+	"coral_light": {"rock": Color("221e60"), "floor": Color("4e60ae"), "ore": Color("6af8ff"), "ore2": Color("ff9af0"), "suit": Color("ffc93c"), "water": Color("0a0e46"), "deco": "heart", "glow": Color("9afcff")},
 }
 
 

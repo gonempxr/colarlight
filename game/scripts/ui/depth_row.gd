@@ -467,7 +467,7 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 	var x0 := World.CAVE_L + 130.0
 	var x1 := cave.end.x - 140.0
 	var mid := (x0 + x1) / 2.0
-	if _draw_decor_world(st, cave) or _draw_decor_jungle(st, cave):
+	if _draw_decor_world(st, cave) or _draw_decor_jungle(st, cave) or _draw_decor_twilight(st, cave):
 		return
 	match st["deco"]:
 		"shells":
@@ -2682,3 +2682,118 @@ func _cocoa_branch(a: float, b: float, top: float) -> Array:
 	var out := [left, spine]
 	_branches[k] = out
 	return out
+
+
+# --- The Twilight Zone (saga act I): a glowing deep -----------------------------------------
+
+## Decor of the Twilight Zone's halls: everything glows. Animated bits move
+## in steps (cache friendly); jellies and fish come from Props / AtlasArt.
+func _draw_decor_twilight(st: Dictionary, cave: Rect2) -> bool:
+	if not str(st["deco"]).begins_with("tw_"):
+		return false
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var glow: Color = st.get("glow", ore)
+	var bob := snappedf(sin(_t * 1.4 + index) * 6.0, 1.0)
+	match st["deco"]:
+		"tw_plankton":
+			# Glowing sand dunes, sea pens and drifting plankton.
+			for p: Vector2 in [Vector2(x0, y + 4), Vector2(x1 + 10, y + 4)]:
+				Art.toon(self, Art.moved(Art.smooth_pts(PackedVector2Array([Vector2(-40, 0), Vector2(-20, -12), Vector2(6, -16), Vector2(30, -8), Vector2(42, 0)]), 3), p), Color(st["floor"]).lightened(0.15), 2.2, 0.4)
+			for k in 3:
+				var b := Vector2(lerpf(x0 + 30, x1 - 20, k / 2.0), y + 2)
+				Art.polyline(self, PackedVector2Array([b, b + Vector2(snappedf(sin(_t + k) * 3.0, 1.0), -34)]), Color("ff8ad8"), 4.0)
+				Art.glow(self, b + Vector2(0, -38), 16.0, Color(glow, 0.55))
+				Art.t_circle(self, b + Vector2(0, -38), 5.0, glow, 1.8, 0.0)
+			for k in 9:
+				var px := lerpf(x0 - 40, x1 + 40, fposmod(k * 0.37 + _t * 0.02, 1.0))
+				var py := top + 30.0 + fposmod(k * 41.0 + _t * 6.0, y - top - 50.0)
+				Art.dot(self, Vector2(px, snappedf(py, 1.0)), 2.0 + k % 2, Color(glow, 0.7))
+		"tw_lanterns":
+			# Glowing lantern shells on the floor and lantern fish over them.
+			for p: Vector3 in [Vector3(x0 - 6, y + 4, 0.2), Vector3(x1 + 14, y + 4, -0.25)]:
+				Art.push(self, Vector2(p.x, p.y), p.z, Vector2.ONE * 0.9)
+				OreArt.twilight_piece(self, "lantern_shell", ore, ore2, _t, int(p.x))
+				Art.pop(self)
+			for k in 2:
+				var c := Vector2(lerpf(x0 + 40, x1 - 30, k), top + 70 + bob * (1 - 2 * k))
+				Art.glow(self, c, 26.0, Color(ore, 0.4))
+				Art.toon(self, Art.ellipse_pts(c, Vector2(14, 8), 16), Color("5a3ec8"), 2.2, 0.4)
+				Art.toon(self, PackedVector2Array([c + Vector2(-13, 0), c + Vector2(-22, -7), c + Vector2(-21, 7)]), Color("5a3ec8"), 2.0, 0.0)
+				Art.t_circle(self, c + Vector2(9, -2), 4.0, ore, 1.6, 0.0)
+			Art.seaweed(self, Vector2(mid, y), 70, Color("ff6ad8"), _t, index, 9.0)
+		"tw_jelly":
+			# Three jellyfish of light drifting in the hall.
+			for k in 3:
+				var c := Vector2(lerpf(x0, x1, k / 2.0), top + 60 + snappedf(sin(_t * 1.1 + k * 2.0) * 10.0, 1.0) + (k % 2) * 30)
+				Art.glow(self, c, 40.0, Color(ore if k != 1 else Color("6af8ff"), 0.35))
+				Art.push(self, c, 0.0, Vector2.ONE * (0.9 + 0.2 * (k % 2)))
+				Props.jelly(self, _t + k, ore if k != 1 else Color("6af8ff"))
+				Art.pop(self)
+			Art.push(self, Vector2(mid, y + 2))
+			Props.clam(self, 0.5 + 0.5 * sin(_t * 1.2), ore2)
+			Art.pop(self)
+		"tw_ghost":
+			# A ghost ship's broken bow with a green lantern, ghost lights.
+			var hull := PackedVector2Array([Vector2(x0 - 50, y + 4), Vector2(x0 - 40, y - 40), Vector2(x0 + 20, y - 54), Vector2(x0 + 50, y - 20), Vector2(x0 + 40, y + 4)])
+			Art.toon(self, hull, Color("3a2e6a"), 2.6, 0.5)
+			for k in 3:
+				Art.line_c(self, PackedVector2Array([Vector2(x0 - 36 + k * 22, y - 34 - k * 4), Vector2(x0 - 30 + k * 22, y + 2)]), Color("26204a"), 3.0)
+			Art.line_c(self, PackedVector2Array([Vector2(x0, y - 50), Vector2(x0 + 8, top + 40)]), Color("2a2250"), 6.0)
+			var lamp := Vector2(x0 + 8, top + 52)
+			Art.glow(self, lamp, 34.0, Color(ore, 0.5 + 0.2 * snappedf(sin(_t * 3.0), 0.25)))
+			Art.t_rect(self, Rect2(lamp - Vector2(7, 9), Vector2(14, 18)), 3, ore, 2.0, 0.3)
+			for k in 4:
+				var g := Vector2(lerpf(mid, x1 + 20, k / 3.0), top + 50 + snappedf(sin(_t * 1.5 + k) * 14.0, 1.0) + (k % 2) * 40)
+				Art.glow(self, g, 14.0, Color(ore, 0.5))
+				Art.dot(self, g, 3.0, Color(ore2, 0.9))
+			Art.push(self, Vector2(x1 + 10, y + 4), -0.4)
+			Props.anchor(self)
+			Art.pop(self)
+		"tw_angler":
+			# Small anglerfish hunting with their lures; bones on the floor.
+			for k in 2:
+				var c := Vector2(lerpf(x0 + 10, x1 - 10, k), top + 90 + (bob if k == 0 else -bob))
+				AtlasArt.draw_angler(self, c, 0.75 - k * 0.12, _t + k, Color("4a3a8c"))
+			for k in 3:
+				Art.push(self, Vector2(lerpf(x0 - 20, x1 + 30, k / 2.0), y + 4), 0.3 * (k - 1), Vector2.ONE * 0.7)
+				Art.toon(self, Art.rrect_pts(Rect2(-14, -4, 28, 7), 3.5), Color("f4ecd8"), 2.0, 0.3)
+				Art.pop(self)
+		"tw_siren":
+			# Pink kelp, a big clam with a glowing pearl, shimmering scales.
+			for k in 4:
+				Art.seaweed(self, Vector2(lerpf(x0 - 20, x1 + 20, k / 3.0), y), 100 + (k % 2) * 36, Color("ff6ad8") if k % 2 == 0 else Color("3ae2c2"), _t, k + index, 10.0)
+			Art.push(self, Vector2(mid, y + 2), 0.0, Vector2.ONE * 1.2)
+			Props.clam(self, 0.6 + 0.4 * sin(_t * 1.1), ore)
+			Art.pop(self)
+			Art.glow(self, Vector2(mid, y - 16), 30.0, Color(ore, 0.4))
+		"tw_stars":
+			# Glowing starfish and a slow rain of falling star sparks.
+			for p: Vector3 in [Vector3(x0, y + 2, 0.3), Vector3(mid + 20, y + 4, -0.2), Vector3(x1 + 10, y + 2, 0.1)]:
+				Art.glow(self, Vector2(p.x, p.y - 8), 22.0, Color(ore, 0.45))
+				Art.push(self, Vector2(p.x, p.y), p.z)
+				Props.starfish(self, ore)
+				Art.pop(self)
+			for k in 6:
+				var sx := lerpf(x0 - 30, x1 + 30, fposmod(k * 0.29, 1.0))
+				var sy := top + fposmod(k * 53.0 + _t * 18.0, y - top - 30.0)
+				Art.toon(self, Art.star_pts(Vector2(sx, snappedf(sy, 2.0)), 5.0, 2.2, 4), ore2, 1.2, 0.0)
+		"tw_eyes":
+			# Eyes watching from the dark and a tentacle on the floor.
+			for k in 3:
+				var c := Vector2(lerpf(x0 - 10, x1 + 10, k / 2.0), top + 50 + (k % 2) * 46)
+				var open := 0.15 if fposmod(_t * 0.7 + k * 0.33, 3.0) < 0.15 else 1.0
+				for sx in [-1.0, 1.0]:
+					var e := c + Vector2(sx * 11.0, 0)
+					Art.glow(self, e, 16.0, Color(ore, 0.5))
+					Art.t_ellipse(self, e, Vector2(6, 6 * open), ore2, 1.6, 0.0)
+					Art.t_ellipse(self, e, Vector2(2, 5 * open), Art.INK, 0.0, 0.0)
+			Art.push(self, Vector2(x1 + 20, y + 4), 0.0, Vector2(-1.1, 1.1))
+			OreArt.tentacle(self, _t, Color("8a3ac8"))
+			Art.pop(self)
+	return true
