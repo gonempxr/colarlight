@@ -366,6 +366,19 @@ func _wall_band(cave: Rect2) -> PackedVector2Array:
 ## level with the cave floor (past the cave's rounded corner, so there is no
 ## bump next to the lift crate) and its side towards the shaft is open.
 func _cave_poly() -> PackedVector2Array:
+	var r := cave_rect()
+	if r == _poly_rect and not _poly.is_empty():
+		return _poly
+	_poly_rect = r
+	_poly = _make_cave_poly()
+	return _poly
+
+
+var _poly_rect := Rect2()
+var _poly := PackedVector2Array()
+
+
+func _make_cave_poly() -> PackedVector2Array:
 	var door := PackedVector2Array([Vector2(World.SHAFT_R - 2.5, 118), Vector2(World.CAVE_L + 44, 118),
 			Vector2(World.CAVE_L + 44, CAVE_BOTTOM), Vector2(World.SHAFT_R - 2.5, CAVE_BOTTOM)])
 	return Art.union([Art.rrect_pts(cave_rect(), 38, 6), door])
@@ -403,6 +416,11 @@ func _cave_edge(ci: CanvasItem, poly: PackedVector2Array) -> void:
 		Art.polyline(ci, pts, Art.INK, WorldLook.EDGE)
 
 
+## The vein's glow, clipped to the cave once (it only changes with the hall).
+var _glow_key := 0
+var _glow_poly := PackedVector2Array()
+
+
 ## The moving parts: lantern, decor, the glowing ore vein.
 func _draw() -> void:
 	if not GameState.is_open(key()):
@@ -420,7 +438,11 @@ func _draw() -> void:
 	# Ore vein, glowing on each delivery.
 	var dp := deposit_pos()
 	var glow := 0.12 + 0.05 * sin(_t * 2.0 + index) + _flash * 0.3
-	Art.flat(self, Art.clipped(Art.circle_pts(Vector2(cave.end.x - 30, LEDGE_Y - 50), 90, 32), cave_poly), Color(st["ore"], glow))
+	var gk := hash([cave, LEDGE_Y])
+	if gk != _glow_key:
+		_glow_key = gk
+		_glow_poly = Art.clipped(Art.circle_pts(Vector2(cave.end.x - 30, LEDGE_Y - 50), 90, 32), cave_poly)
+	Art.flat(self, _glow_poly, Color(st["ore"], snappedf(glow, 0.02)))
 	# The ore moves slowly: drawn four times a second (like the small veins
 	# of the divers) and pasted from the cache in between.
 	var tq := int(_t * 4.0 + (index % 4) / 4.0)
