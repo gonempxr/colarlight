@@ -235,7 +235,7 @@ LEADER_HINT,Only you see this.,Это видишь только ты.,Solo tú v
 LEADER_KICK,Kick,Кикнуть,Expulsar,踢出
 LEADER_BAN,Ban,Забанить,Bloquear,封禁
 LEADER_SURE,Sure? Tap again,Точно? Ещё раз,¿Seguro? Otra vez,确定？再点一次
-LEADER_KICK_D,Removes them from all boards. They come back when they play again.,Уберёт из всех таблиц. Вернётся, когда снова сыграет.,Lo quita de todas las tablas. Vuelve cuando juegue otra vez.,从所有榜单中移除。再次游戏时会回来。
+LEADER_KICK_D,Removes them from all boards. They come back when they play again.,"Уберёт из всех таблиц. Вернётся, когда снова сыграет.",Lo quita de todas las tablas. Vuelve cuando juegue otra vez.,从所有榜单中移除。再次游戏时会回来。
 LEADER_BAN_D,Removes them for good: their scores are no longer accepted.,Уберёт навсегда: его очки больше не принимаются.,Lo quita para siempre: sus puntos ya no se aceptan.,永久移除：不再接受其分数。
 LEADER_DONE,Done!,Готово!,¡Hecho!,完成！
 LEADER_FAIL,Didn't work. Are the new Firebase rules published?,Не вышло. Новые правила Firebase опубликованы?,No funcionó. ¿Publicaste las nuevas reglas de Firebase?,失败了。新的 Firebase 规则发布了吗？
@@ -246,3 +246,5 @@ LEADER_NO_BANS,Nobody is banned.,Никто не забанен.,Nadie está blo
 LEADER_UNBAN,Unban,Разбанить,Desbloquear,解封
 MY_ID,Your ID: %s,Твой ID: %s,Tu ID: %s,你的 ID：%s
 COPIED,Copied!,Скопировано!,¡Copiado!,已复制！
+BP_BONUS_BUY,Open: %d pearls,Открыть: %d жемчуга,Abrir: %d perlas,开启：%d珍珠
+BP_BONUS_NO_PEARLS,You need %d pearls. Pearls come from quests and challenges!,Нужно %d жемчуга. Жемчуг дают задания и испытания!,Necesitas %d perlas. ¡Las perlas salen de misiones y desafíos!,需要%d珍珠。完成任务和挑战可获得珍珠！

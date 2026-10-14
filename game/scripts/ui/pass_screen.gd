@@ -185,7 +185,25 @@ func _bonus_strip() -> Control:
 	_bonus_label.text = t("BP_BONUS_OPEN") if BattlePass.bonus_open() else \
 		t("BP_BONUS_LOCKED") % [mini(BattlePass.challenges_done(), BattlePass.BONUS_NEED), BattlePass.BONUS_NEED]
 	h.add_child(_bonus_label)
+	if not BattlePass.bonus_open():
+		var buy := Button.new()
+		buy.text = t("BP_BONUS_BUY") % BattlePass.BONUS_PEARLS
+		buy.theme_type_variation = &"CreamButton"
+		buy.add_theme_font_size_override("font_size", 19)
+		buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		buy.pressed.connect(_buy_bonus)
+		h.add_child(buy)
 	return p
+
+
+func _buy_bonus() -> void:
+	if BattlePass.buy_bonus():
+		Sfx.play("unlock")
+		main._show_toast(t("BP_BONUS_OPEN"))
+		_rebuild()
+	else:
+		Sfx.play("deny")
+		main._show_toast(t("BP_BONUS_NO_PEARLS") % BattlePass.BONUS_PEARLS)
 
 
 ## The next big reward (an item, else the next bonus prize), shown large.

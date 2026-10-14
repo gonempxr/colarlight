@@ -549,9 +549,9 @@ func _initialize() -> void:
 		if str(bk).begins_with("bp_"):
 			pr.stats.erase(bk)
 	_check(bp.tick() == 0 and bp.xp() == 0 and bp.level() == 0, "the pass starts at zero (old progress gives no XP)")
-	pr.stats["quests_done"] = int(pr.stats.get("quests_done", 0)) + 3
+	pr.stats["quests_done"] = int(pr.stats.get("quests_done", 0)) + 2
 	pr.stats["puzzle_stars"] = int(pr.stats.get("puzzle_stars", 0)) + 4
-	_check(bp.tick() == 1 and bp.xp() == 100, "3 quests + 4 stars = 100 XP = level 1")
+	_check(bp.tick() == 1 and bp.xp() == 120, "2 quests + 4 stars = 120 XP = level 1")
 	_check(bp.tick() == 0, "nothing new, no XP")
 	_check(bp.waiting() == 1 and bp.ready("f", 1) and not bp.ready("b", 1), "one main reward waits; the bonus track is closed")
 	var bpp: int = pr.pearls
@@ -578,6 +578,17 @@ func _initialize() -> void:
 	_check(bp.chapter() == 2 and not bp.taken("f", 1) and bp.xp() == mini(xb + 5000, 6000) - 3000 and int(all_bp.get("chapter", 0)) == 2, "the next chapter starts with the XP left over")
 	_check(not bp.bonus_open(), "the bonus track closes again for the new chapter")
 	_check(not bp.reward("f", 10).has("item") and int(bp.reward("f", 10)["pearls"]) == 80, "owned items become pearls in later chapters")
+	var pk: int = pr.pearls
+	pr.pearls = bp.BONUS_PEARLS - 1
+	_check(not bp.buy_bonus() and not bp.bonus_open() and pr.pearls == bp.BONUS_PEARLS - 1, "too few pearls: the bonus track stays closed")
+	pr.pearls = bp.BONUS_PEARLS + 7
+	_check(bp.buy_bonus() and bp.bonus_open() and pr.pearls == 7 and not bp.buy_bonus(), "1500 pearls open the bonus track, once")
+	var bsum := 0
+	for lv in range(1, bp.LEVELS + 1):
+		bsum += int(bp.reward("b", lv).get("pearls", 0))
+	_check(bsum > bp.BONUS_PEARLS, "the bonus track pays back more than its price (%d)" % bsum)
+	pr.stats.erase("bp_paid")
+	pr.pearls = pk
 	var x0: int = bp.xp()
 	pr.stats["dc_claims"] = int(pr.stats.get("dc_claims", 0)) + 1
 	bp.tick()

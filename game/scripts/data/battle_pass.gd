@@ -18,8 +18,11 @@ extends RefCounted
 const LEVELS := 30
 const XP_LEVEL := 100
 const BONUS_NEED := 5
+## Or the bonus track is opened at once for pearls (earned in the game,
+## never bought: there is nothing to buy), once per chapter.
+const BONUS_PEARLS := 1500
 ## XP for each one done.
-const XP := {"challenge": 100, "quest": 20, "star": 10, "chest": 15, "daily": 30, "fish": 2, "badge": 40, "minute": 1}
+const XP := {"challenge": 100, "quest": 40, "star": 10, "chest": 15, "daily": 30, "fish": 2, "badge": 40, "minute": 1}
 ## Items on the main track: level -> id (later chapters pay ITEM_PEARLS
 ## instead when the item is owned).
 const ITEMS := {10: "boat_reef", 20: "hat_coral_crown", 30: "hat_trident"}
@@ -62,7 +65,16 @@ static func challenges_done() -> int:
 
 
 static func bonus_open() -> bool:
-	return challenges_done() >= BONUS_NEED
+	return challenges_done() >= BONUS_NEED or int(Progress.stats.get("bp_paid", 0)) == chapter()
+
+
+## Opens the bonus track for BONUS_PEARLS. False when open or too few pearls.
+static func buy_bonus() -> bool:
+	if bonus_open() or not Progress.spend_pearls(BONUS_PEARLS):
+		return false
+	Progress.stats["bp_paid"] = chapter()
+	Progress.save_game()
+	return true
 
 
 static func taken(row: String, lv: int) -> bool:
@@ -130,13 +142,14 @@ static func add_xp(n: int) -> int:
 static func reward(row: String, lv: int, ch: int = -1) -> Dictionary:
 	var c := ch if ch > 0 else chapter()
 	if row == "b":
+		# Worth more than its BONUS_PEARLS price over a chapter.
 		if lv % 10 == 0:
-			return {"pearls": 40 + lv}
+			return {"pearls": 200 + lv * 5}
 		if lv % 5 == 0:
-			return {"boost": 3600}
+			return {"boost": 7200}
 		if lv % 2 == 0:
-			return {"coins_min": 15 + lv}
-		return {"pearls": 8 + lv / 3}
+			return {"coins_min": 30 + lv}
+		return {"pearls": 30 + lv * 2}
 	if ITEMS.has(lv):
 		var id: String = ITEMS[lv]
 		if c == 1 or not Progress.is_owned(id):
