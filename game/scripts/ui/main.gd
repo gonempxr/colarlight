@@ -158,6 +158,9 @@ func _ready() -> void:
 	_scroller.set_content(_world)
 	_world.stage_selected.connect(_on_stage_selected)
 	_world.chest.opened.connect(func(r, at): celebrate(r, at))
+	# The saga's Murk over the mine (league games).
+	_veil = MurkVeil.new()
+	add_child(_veil)
 
 	_factory = FactoryRoom.new()
 	_factory.visible = false
@@ -244,6 +247,9 @@ func _ready() -> void:
 	_tabs = RoomTabs.new()
 	_tabs.selected.connect(func(i): show_room(i))
 	add_child(_tabs)
+	_saga_bar = SagaBar.new()
+	_saga_bar.pressed.connect(func(): _modal.open(func(m): SagaBar.build(m, self)))
+	add_child(_saga_bar)
 	_hud = Hud.new()
 	_hud.settings_pressed.connect(_open_settings)
 	_hud.avatar_pressed.connect(open_profile)
@@ -305,6 +311,7 @@ func _ready() -> void:
 			ask_nickname(tr("ONLINE_NAME_TAKEN") % name))
 	Online.crown_changed.connect(_on_crown_changed)
 	GameState.boss_requested.connect(open_boss)
+	GameState.boss_defeated.connect(func(_k: String, boss: String): _post_story = "post_" + boss)
 	_setup_league_timer()
 	CloudSave.account_changed.connect(func():
 		if _modal.is_open():
@@ -409,6 +416,7 @@ func _after_title() -> void:
 	# A game in the Top League's own save says so (it is not the usual game).
 	if Profiles.in_league(int(Profiles.current().get("league", 0))):
 		get_tree().create_timer(1.5).timeout.connect(func(): _show_toast(tr("LEAGUE_IN_TEXT")))
+	_saga_intro()
 	if GuideView.news_due():
 		_news.append("whatsnew")
 	var report := GameState.take_offline_report()
@@ -427,12 +435,18 @@ func _process(delta: float) -> void:
 		var drop := _hud.bar_bottom()
 		_hint_btn.position.y = 24.0 + drop
 		_tabs.position.y = maxf(_hud.used_height() + 10.0, drop + 10.0)
+		_saga_bar.position.y = _tabs.position.y + RoomTabs.PILL_H + 4.0
 	_place_side_buttons()
+	_veil.visible = Balance.saga and _room == MINE and not _covered
+	_scroller.modulate = MurkVeil.tint(MurkVeil.shown(GameState.murk)) if Balance.saga else Color.WHITE
+	if _veil.visible:
+		_veil.position = _area.position
+		_veil.size = _area.size
 	_refresh_left -= delta
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or is_instance_valid(_boss) or _room != MINE
+	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or is_instance_valid(_boss) or is_instance_valid(_story) or _room != MINE
 	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
 	# under it: nothing there needs drawing until it closes.
 	World.calm = _modal.visible or _top.visible
@@ -542,7 +556,7 @@ func _move_slide(delta: float) -> void:
 ## Rooms side by side, moved by the slide; only the ones on screen show.
 ## True while an opaque screen covers the whole window (fully faded in).
 func _covering() -> bool:
-	for c in [_puzzle, _fishing, _pass, _boss]:
+	for c in [_puzzle, _fishing, _pass, _boss, _story]:
 		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
 			return true
 	return _map.visible and _map.modulate.a >= 0.999
@@ -765,6 +779,10 @@ func _layout() -> void:
 		_tabs.size = Vector2(tw, RoomTabs.PILL_H)
 		_tabs.position = Vector2(roundf(12.0 + (world_w - tw) / 2.0), maxf(_hud.used_height() + 10.0, 0.0))
 		var top := _hud.used_height() + 10.0 + RoomTabs.PILL_H + 8.0
+		if Balance.saga:
+			_saga_bar.size = Vector2(tw, SagaBar.H)
+			_saga_bar.position = Vector2(_tabs.position.x, top - 4.0)
+			top += SagaBar.H + 2.0
 		_scroller.zoom = clampf(world_w / 960.0, 1.0, 1.7)
 		_factory.set_insets(top, 0.0)
 		_office.set_insets(top, 0.0)
@@ -782,6 +800,10 @@ func _layout() -> void:
 		_tabs.position = Vector2(0, _hud.phone_bottom() - 4.0)
 		# (+4: the Office badge hangs under its tab; keep it off the room cards.)
 		var top := _tabs.position.y + RoomTabs.STRIP_H + 4.0
+		if Balance.saga:
+			_saga_bar.size = Vector2(view.x, SagaBar.H)
+			_saga_bar.position = Vector2(0, top - 4.0)
+			top += SagaBar.H - 2.0
 		_area = Rect2(0, top, view.x, view.y - top - dock_h + 10.0)
 		_scroller.zoom = 1.0
 		_factory.set_insets(0.0, 10.0)
@@ -796,6 +818,7 @@ func _layout() -> void:
 		_dock.fit(view.x)
 		_dock.size = Vector2(view.x, dock_h)
 		_dock.position = Vector2(0, view.y - dock_h)
+	_saga_bar.visible = Balance.saga
 	_place_rooms()
 	_scroller.scroll_to(_scroller.scroll)
 	_place_room_cards()
@@ -1388,13 +1411,20 @@ func open_pass() -> void:
 
 
 var _boss: Control
+var _veil: MurkVeil
+var _saga_bar: SagaBar
 
 
-## A mine boss fight (MineBoss) on its own screen.
+## A mine boss fight (MineBoss) on its own screen (its story scene first,
+## once).
 func open_boss(key: String) -> void:
-	if is_instance_valid(_boss) or GameState.boss_at(key) == "":
+	if is_instance_valid(_boss) or is_instance_valid(_story) or GameState.boss_at(key) == "":
 		return
 	_modal.close()
+	var pre := "pre_" + GameState.boss_at(key)
+	if not GameState.story.has(pre):
+		open_story(pre, open_boss.bind(key))
+		return
 	_boss = BossScreen.new()
 	_boss.main = self
 	_boss.key = key
@@ -1402,7 +1432,41 @@ func open_boss(key: String) -> void:
 	move_child(_boss, _fx.get_index())
 	_boss.tree_exited.connect(func():
 		_boss = null
-		_show_next_news())
+		if _post_story != "" and is_inside_tree():
+			var post := _post_story
+			_post_story = ""
+			open_story(post, _show_next_news)
+		else:
+			_show_next_news())
+
+
+var _story: Control
+## The story scene due after the boss screen closes ("post_<boss>").
+var _post_story := ""
+
+
+## A saga story scene (SagaStory) on its own screen; `done` runs after it.
+## Each is marked seen (GameState.story) so it shows once by itself.
+func open_story(id: String, done: Callable = Callable()) -> void:
+	if is_instance_valid(_story) or SagaStory.pages_of(id).is_empty():
+		if done.is_valid():
+			done.call()
+		return
+	GameState.story[id] = true
+	_story = SagaStory.new()
+	_story.id = id
+	add_child(_story)
+	move_child(_story, _fx.get_index())
+	_story.finished.connect(func():
+		_story = null
+		if done.is_valid():
+			done.call())
+
+
+## A league game opened for the first time: the saga's intro.
+func _saga_intro() -> void:
+	if Balance.saga and not GameState.story.has("intro"):
+		open_story("intro")
 
 
 func open_rivals() -> void:
@@ -1731,7 +1795,9 @@ static func random_name() -> String:
 
 
 func after_profile_switch() -> void:
+	_layout()
 	_scroller.scroll_to(0.0)
+	_saga_intro()
 	_refresh()
 	_hud.queue_redraw()
 	var report := GameState.take_offline_report()

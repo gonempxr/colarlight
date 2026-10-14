@@ -80,6 +80,50 @@ func _initialize() -> void:
 	gs._reset_run(true)
 	_check(gs.bosses.is_empty() and gs.boss_at("d3") == "crabblack", "a new run (a star) brings the guards back")
 	DirAccess.remove_absolute("user://saga_test_save.json")
+	# --- Story scenes ---------------------------------------------------------------------
+	var story = load("res://scripts/ui/saga_story.gd")
+	var ids := ["intro"]
+	for b in MineBoss.BOSSES:
+		ids.append("pre_" + b)
+		ids.append("post_" + b)
+	for sid in ids:
+		var pages: Array = story.pages_of(sid)
+		_check(not pages.is_empty(), "story %s has pages" % sid)
+		for pg in pages:
+			_check(TranslationServer.translate(pg[1]) != pg[1], "words for %s" % pg[1])
+	_check(story.pages_of("pre_nobody").is_empty() and story.pages_of("x").is_empty(), "no story for unknown ids")
+	for k in ["SAGA_TITLE", "SAGA_ACT", "SAGA_ACT2", "SAGA_ACT3", "MURK_TITLE", "MURK_TEXT", "STORY_KEEPER", "STORY_SKIP"]:
+		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	# --- The Murk ---------------------------------------------------------------------------
+	gs.reset()
+	_check(gs.murk == 0.0 and gs.murk_mult() == 1.0, "a fresh saga starts clear")
+	var base: float = gs.income_mult()
+	gs.advance(600.0)
+	_check(is_equal_approx(gs.murk, 600.0 / Murk.FULL_SEC), "the Murk rises while the mine works")
+	_check(gs.income_mult() < base and is_equal_approx(gs.murk_mult(), Murk.factor(gs.murk)), "and slows everything down")
+	gs.murk = 1.0
+	_check(is_equal_approx(gs.murk_mult(), 1.0 - Murk.LOSS), "full Murk: half the income")
+	gs.tap_clock += 5.0
+	gs.tap("d0")
+	_check(is_equal_approx(gs.murk, 1.0 - Murk.TAP_CLEAR), "a tap pushes it back")
+	gs.simulate_offline(3600.0)
+	_check(gs.murk == 1.0, "never above full")
+	for i in 3:
+		gs.levels["d%d" % i] = 10
+	var cleansed := [false]
+	gs.murk_cleansed.connect(func(): cleansed[0] = true, CONNECT_ONE_SHOT)
+	gs.defeat_boss("d3")
+	_check(gs.murk == 0.0 and cleansed[0], "a beaten guard cleanses the world")
+	_check(Murk.rise(100.0, 1) < Murk.rise(100.0, 0), "every beaten guard slows the Murk")
+	gs.murk = 0.4
+	gs.story = {"intro": true}
+	gs.save_path = "user://saga_test_save.json"
+	gs.save_game()
+	gs.murk = 0.0
+	gs.story = {}
+	gs.load_game()
+	_check(is_equal_approx(gs.murk, 0.4) and gs.story.get("intro", false), "Murk and seen story scenes are saved")
+	DirAccess.remove_absolute("user://saga_test_save.json")
 
 	pf.leave_league()
 	_check(pf.current_id == home and not Balance.saga and gs.world_id() == "ocean", "back home: the usual worlds")
@@ -87,6 +131,8 @@ func _initialize() -> void:
 	for i in 3:
 		gs.levels["d%d" % i] = 10
 	_check(gs.boss_at("d3") == "", "no guards in the usual worlds")
+	gs.advance(600.0)
+	_check(gs.murk == 0.0 and gs.murk_mult() == 1.0, "no Murk in the usual worlds")
 	WorldLook.apply(0)
 	_check(WorldLook.world == "ocean", "the look follows back (same location number, other world)")
 	pf.remove(pf.league_profile(lg).get("id", ""))

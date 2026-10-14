@@ -59,6 +59,8 @@ signal star_gained(L: int, stars: int)
 signal boss_defeated(key: String, boss: String)
 ## The player wants to fight the guard of site `key` (main opens BossScreen).
 signal boss_requested(key: String)
+## The Murk was swept away (a beaten guard, Murk).
+signal murk_cleansed
 
 ## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
 ## 4: worlds and locations, 10 sites (v3 saves fold with V3_SITE_FOLD into
@@ -112,6 +114,10 @@ var world_stars: Dictionary = {}
 var exchanged: Dictionary = {}
 ## Mine bosses beaten in this run: site key -> true (MineBoss).
 var bosses: Dictionary = {}
+## The saga's Murk, 0..1 (Murk; only in the saga's worlds).
+var murk := 0.0
+## Saga story scenes already shown (SagaStory), id -> true.
+var story: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -223,6 +229,7 @@ func reset() -> void:
 	worlds_runs = {}
 	world_stars = {}
 	exchanged = {}
+	story = {}
 	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
@@ -248,6 +255,7 @@ func _reset_run(keep_automation: bool = false) -> void:
 		_load[key] = 0.0
 	managers[VAULT] = kept.get(VAULT, false)
 	bosses = {}
+	murk = 0.0
 	evo = 0
 	vault = 0.0
 	levels["d0"] = 1
@@ -350,7 +358,7 @@ func is_open(key: String) -> bool:
 ## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
 	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult * star_mult() \
-			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0))
+			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0)) * murk_mult()
 
 
 # --- Worlds and locations --------------------------------------------------------
@@ -1049,6 +1057,8 @@ func defeat_boss(key: String) -> Dictionary:
 	if id == "":
 		return {}
 	bosses[key] = true
+	murk = 0.0
+	murk_cleansed.emit()
 	var d := MineBoss.data(id)
 	var c := income_rate() * float(d["coins_sec"])
 	if c > 0.0:
@@ -1059,6 +1069,16 @@ func defeat_boss(key: String) -> Dictionary:
 	boss_defeated.emit(key, id)
 	changed.emit()
 	return {"boss": id, "pearls": int(d["pearls"]), "coins": c}
+
+
+## Income factor of the Murk (1 outside the saga).
+func murk_mult() -> float:
+	return Murk.factor(murk) if Balance.saga else 1.0
+
+
+func _grow_murk(seconds: float) -> void:
+	if Balance.saga:
+		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()))
 
 
 func _read_bosses(v) -> void:
@@ -1104,6 +1124,8 @@ func tap(key: String) -> bool:
 		return false
 	if _taps.allow("rush", tap_clock):
 		_add_rush()
+	if Balance.saga:
+		murk = maxf(0.0, murk - Murk.TAP_CLEAR)
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
 		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * cycle_time(key)
@@ -1121,6 +1143,7 @@ func advance(seconds: float) -> void:
 	if seconds <= 0.0:
 		return
 	tap_clock += seconds
+	_grow_murk(seconds)
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
@@ -1239,6 +1262,7 @@ func simulate_offline(seconds: float) -> float:
 			break
 	if earned > 0.0:
 		_earn(earned)
+	_grow_murk(seconds)
 	return earned
 
 
@@ -1256,6 +1280,8 @@ func save_game() -> bool:
 		"stars": world_stars,
 		"exchanged": exchanged,
 		"bosses": bosses,
+		"murk": murk,
+		"story": story,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1411,6 +1437,12 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 			if v > 0.0 and str(k).length() <= 12:
 				exchanged[str(k)] = v
 	_read_bosses(data.get("bosses"))
+	murk = clampf(_num(data.get("murk"), 0.0), 0.0, 1.0)
+	var sto = data.get("story")
+	if sto is Dictionary:
+		for k in sto:
+			if str(k).length() <= 24 and sto[k] == true and story.size() < 64:
+				story[str(k)] = true
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

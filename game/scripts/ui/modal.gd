@@ -81,6 +81,8 @@ func open(builder: Callable, opts: Dictionary = {}) -> void:
 	_builder = builder
 	_wide = opts.get("wide", false)
 	_closing = false
+	_panel.add_theme_stylebox_override("panel", UiTheme.dialog_box(Balance.saga))
+	_dim.color = Color(0.1, 0.02, 0.2, 0.68) if Balance.saga else Color(0.05, 0.03, 0.15, 0.6)
 	_scroll.scroll_vertical = 0
 	rebuild()
 	visible = true
@@ -94,7 +96,7 @@ func rebuild() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_head_label.text = ""
-	_head_color = UiTheme.BANNER_BLUE
+	_head_color = UiTheme.SAGA_BANNER if Balance.saga else UiTheme.BANNER_BLUE
 	_builder.call(self)
 	_head.visible = _head_label.text != ""
 	_head.queue_redraw()
@@ -213,7 +215,8 @@ func text(value: String, size_px: int = 24, color: Color = Art.INK) -> Label:
 ## The banner colour (UiTheme.BANNER_*): gold for rewards, purple for
 ## the pass and online things, blue otherwise.
 func banner(color: Color) -> void:
-	_head_color = color
+	# The saga's dialogs keep their violet banner instead of the usual blue.
+	_head_color = UiTheme.SAGA_BANNER if Balance.saga and color == UiTheme.BANNER_BLUE else color
 	_head.queue_redraw()
 
 

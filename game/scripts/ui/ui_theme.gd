@@ -102,9 +102,19 @@ const BANNER_GREEN := Color("2fae5a")
 const BANNER_RED := Color("e0484a")
 
 
-static func dialog_box() -> ToonBox:
-	var b := ToonBox.make(DIALOG_FILL, 30, 8)
-	b.line_w = 5.0
+## The saga's look (Top League games): lavender dialogs in a deep violet
+## frame under a violet banner with glowing runes.
+const SAGA_FILL := Color("e8e0fb")
+const SAGA_RIM := Color("2a0d4a")
+const SAGA_BANNER := Color("5b2bb5")
+const SAGA_RUNE := Color("c9a3ff")
+
+
+static func dialog_box(saga: bool = false) -> ToonBox:
+	var b := ToonBox.make(SAGA_FILL if saga else DIALOG_FILL, 30, 8)
+	if saga:
+		b.line = SAGA_RIM
+	b.line_w = 6.0 if saga else 5.0
 	b.gloss = 0.0
 	b.shadow = 0.45
 	b.content_margin_left = 18
@@ -142,6 +152,13 @@ static func draw_banner(ci: CanvasItem, r: Rect2, color: Color) -> void:
 	# Gloss on the upper half.
 	var g := Rect2(face_r.position + Vector2(rad * 0.6, 4), Vector2(face_r.size.x - rad * 1.2, face_r.size.y * 0.36))
 	Art.flat(ci, Art.rrect_pts(g, g.size.y / 2.0), Color(1, 1, 1, 0.22))
+	if Balance.saga:
+		# Runes glowing at both ends.
+		for rx in [r.position.x + 26.0, r.end.x - 26.0]:
+			var c := Vector2(rx, r.position.y + (r.size.y - lip) / 2.0)
+			Art.glow(ci, c, 22.0, Color(SAGA_RUNE, 0.6))
+			Art.toon(ci, PackedVector2Array([c + Vector2(0, -12), c + Vector2(8, 0), c + Vector2(0, 12), c + Vector2(-8, 0)]), Color("f3e6ff"), 2.5, 0.0)
+			Art.line(ci, c + Vector2(0, -6), c + Vector2(0, 6), SAGA_BANNER, 2.5)
 
 
 static func build() -> Theme:

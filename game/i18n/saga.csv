@@ -3,8 +3,8 @@ WORLD_TWILIGHT,The Twilight Zone,Сумеречная зона,La Zona Crepuscul
 MAP_W_TWILIGHT,The Twilight Zone,Сумеречная зона,La Zona Crepuscular,暮光之海
 WORLD_TWILIGHT_FLAVOR,An endless dusk over a glowing sea,Вечные сумерки над светящимся морем,Un ocaso eterno sobre un mar brillante,发光大海上永恒的黄昏
 MAP_HINT_TWILIGHT,Act I of the saga: dive into the glowing deep and beat its guardians.,Акт I саги: погрузись в светящуюся глубину и победи её стражей.,Acto I de la saga: sumérgete en las profundidades brillantes y vence a sus guardianes.,传说第一幕：潜入发光的深海，打败守卫。
-MAP_W_SUNKEN,The Sunken City,Затонувший город,La Ciudad Hundida,沉没之城
-MAP_W_ABYSS,Heart of the Abyss,Сердце Бездны,Corazón del Abismo,深渊之心
+MAP_W_SUNKEN,Atlantis,Атлантида,Atlántida,亚特兰蒂斯
+MAP_W_ABYSS,R'lyeh,Р'льех,R'lyeh,拉莱耶
 GEAR_TWILIGHT_1,Glow Diver,Светящийся ныряльщик,Buzo Brillante,发光潜水员
 GEAR_TWILIGHT_2,Jelly Diver,Медузный ныряльщик,Buzo Medusa,水母潜水员
 GEAR_TWILIGHT_3,Lantern Diver,Ныряльщик с фонарём,Buzo Linterna,灯笼潜水员
@@ -25,7 +25,7 @@ SITE_DEEP_STAR,Deep Star,Глубинная звезда,Estrella Profunda,深�
 SITE_WARDEN_EYE,Warden's Eye,Глаз Стража,Ojo del Guardián,守卫之眼
 SITE_CORAL_LIGHT,Shard of Coral Light,Осколок Кораллового Света,Fragmento de Luz de Coral,珊瑚之光碎片
 SAGA_SOON_TITLE,Act II is coming!,Скоро Акт II!,¡Pronto el Acto II!,第二幕即将到来！
-SAGA_SOON_TEXT,The Sunken City opens soon. Beat the guardians of the Twilight Zone and climb the league board!,Скоро откроется Затонувший город. Побеждай стражей Сумеречной зоны и поднимайся в таблице лиги!,La Ciudad Hundida abre pronto. ¡Vence a los guardianes de la Zona Crepuscular y sube en la tabla de la liga!,沉没之城即将开放。打败暮光之海的守卫，在联赛榜上往上爬！
+SAGA_SOON_TEXT,Atlantis opens soon. Beat the guardians of the Twilight Zone and climb the league board!,Скоро откроется Атлантида. Побеждай стражей Сумеречной зоны и поднимайся в таблице лиги!,La Atlántida abre pronto. ¡Vence a los guardianes de la Zona Crepuscular y sube en la tabla de la liga!,亚特兰蒂斯即将开放。打败暮光之海的守卫，在联赛榜上往上爬！
 FISHING_ROD_TWILIGHT,Abyss Glow rod,Удочка Сияния Бездны,Caña del Brillo Abisal,深渊之光鱼竿
 ROD_TWILIGHT_1,A violet rod with a pink float,Фиолетовая удочка с розовым поплавком,Caña violeta con flotador rosa,紫色鱼竿，配粉色浮漂
 ROD_TWILIGHT_2,A soft grip,Мягкая рукоять,Mango suave,柔软的握把
@@ -73,3 +73,34 @@ BOSS_COLLECT,Collect,Забрать,Recoger,领取
 BOSS_LOST,Out of time! The guard healed. Upgrade your mine: your hits grow with its income.,Время вышло! Страж восстановился. Прокачай шахту: удары растут вместе с доходом.,¡Se acabó el tiempo! El guardián se curó. Mejora tu mina: tus golpes crecen con sus ingresos.,时间到了！守卫恢复了。升级你的矿山：攻击会随收入增长。
 BOSS_AGAIN,Try again,Ещё раз,Otra vez,再试一次
 HINT_BOSS,%s guards the way down: fight it! Upgrading the mine makes your hits stronger.,%s преграждает путь вниз: сразись! Прокачка шахты усиливает удары.,%s bloquea el camino: ¡lucha! Mejorar la mina hace tus golpes más fuertes.,%s挡住了往下的路：开战吧！升级矿山会让攻击更强。
+SAGA_TITLE,The Leviathan's Abyss,Бездна Левиафана,El Abismo del Leviatán,利维坦深渊
+SAGA_ACT,Act %s,Акт %s,Acto %s,第%s幕
+SAGA_ACT1,The Twilight Zone,Сумеречная зона,La Zona Crepuscular,暮光之海
+SAGA_ACT2,Atlantis,Атлантида,Atlántida,亚特兰蒂斯
+SAGA_ACT3,R'lyeh,Р'льех,R'lyeh,拉莱耶
+SAGA_NOW,Now,Сейчас,Ahora,进行中
+SAGA_LATER,Soon,Скоро,Pronto,即将开放
+SAGA_BEATEN,Beaten,Побеждён,Vencido,已击败
+SAGA_NEXT,Next,Следующий,Siguiente,下一个
+SAGA_LOCKED,Deeper,Глубже,Más hondo,更深处
+SAGA_STORY_BTN,Watch the story,Смотреть историю,Ver la historia,观看剧情
+MURK_TITLE,The Murk: %d%%,Скверна: %d%%,La Bruma: %d%%,腐化：%d%%
+MURK_TEXT,"The Murk rises from the deep while you play and slows all digging (up to −%d%%). Tap the mines to push it back. A beaten guard cleanses the world, and the Murk rises slower after each one.","Скверна поднимается со дна, пока ты играешь, и замедляет всю добычу (до −%d%%). Тапай по шахтам, чтобы её разогнать. Побеждённый страж очищает мир, и после каждого Скверна растёт медленнее.","La Bruma sube del fondo mientras juegas y frena toda la extracción (hasta −%d%%). Toca las minas para alejarla. Un guardián vencido limpia el mundo y, tras cada uno, la Bruma sube más despacio.",游戏时，腐化会从深处升起，让所有开采变慢（最多 −%d%%）。点击矿井可以驱散它。击败守卫会净化世界，之后腐化也会升得更慢。
+STORY_KEEPER,Keeper of the Deep,Хранитель Глубин,Guardián de las Profundidades,深海守护者
+STORY_NEXT,Next,Дальше,Siguiente,继续
+STORY_GO,Let's go!,Вперёд!,¡Vamos!,出发！
+STORY_SKIP,Skip,Пропустить,Saltar,跳过
+STORY_INTRO_1,"I am the Keeper. For forty years I have guarded the Coral Light, the heart of the ocean. You are the first diver in a long time who came this deep.","Я Хранитель. Сорок лет я берегу Коралловый Свет — сердце океана. Ты первый за много лет, кто нырнул так глубоко.","Soy el Guardián. Llevo cuarenta años cuidando la Luz de Coral, el corazón del océano. Eres el primer buzo en mucho tiempo que baja tan hondo.",我是守护者。四十年来，我一直守护着珊瑚之光——海洋的心脏。你是多年来第一个潜得这么深的潜水员。
+STORY_INTRO_2,"But the Murk is rising from the abyss. Where it creeps, the light fades and the mines dig slower. Something huge is waking down there…","Но из бездны поднимается Скверна. Где она ползёт, гаснет свет и шахты копают медленнее. Там, внизу, просыпается что-то огромное…","Pero la Bruma sube del abismo. Donde llega, la luz se apaga y las minas cavan más lento. Algo enorme despierta allá abajo…",但腐化正从深渊升起。它所到之处，光芒熄灭，矿井也挖得更慢。下面有个庞然大物正在苏醒……
+STORY_INTRO_3,Its guards hold the deep mines. Beat them and the Murk pulls back. And tap your mines: every tap pushes the dark away.,Его стражи держат глубокие шахты. Победи их — и Скверна отступит. И тапай по шахтам: каждый тап разгоняет тьму.,Sus guardianes ocupan las minas profundas. Véncelos y la Bruma retrocederá. Y toca tus minas: cada toque aleja la oscuridad.,它的守卫占据着深处的矿井。击败它们，腐化就会退去。也要多点矿井：每次点击都能驱散黑暗。
+STORY_INTRO_4,"The road is long: the Twilight Zone, sunken Atlantis and, deepest of all, R'lyeh, where the Ancient One sleeps. Only the bravest reach the top of the league. Let's dive!","Путь долгий: Сумеречная зона, затонувшая Атлантида и, глубже всех, Р'льех, где спит Древний. До вершины лиги дойдут только смелые. Ныряем!","El camino es largo: la Zona Crepuscular, la Atlántida hundida y, lo más hondo, R'lyeh, donde duerme el Antiguo. Solo los valientes llegan a la cima de la liga. ¡A bucear!",前路漫长：暮光之海、沉没的亚特兰蒂斯，以及最深处——远古者沉睡的拉莱耶。只有最勇敢的人才能登上联赛之巅。下潜吧！
+STORY_PRE_CRABBLACK,Captain Crabblack! The first pirate who sold himself to the Murk. Hit when the ring reaches the glowing spot!,"Капитан Крабблэк! Первый пират, что продался Скверне. Бей, когда кольцо дойдёт до светящейся точки!",¡El Capitán Cangrejonegro! El primer pirata que se vendió a la Bruma. ¡Golpea cuando el anillo llegue al punto brillante!,黑蟹船长！第一个投靠腐化的海盗。等光圈碰到发光点时出击！
+STORY_PRE_MOTHER_JELLY,"Mother Jelly. Her children glow with the Murk now… Careful, she stings!","Мать-Медуза. Её дети теперь светятся Скверной… Осторожно, она жжётся!","Madre Medusa. Sus hijas ahora brillan con la Bruma… ¡Cuidado, pica!",水母之母。她的孩子们如今散发着腐化的光……小心，她会蜇人！
+STORY_PRE_SHADOW_EEL,"The Shadow Eel. They say it has seen a city in the deep, with golden columns…","Угорь-Тень. Говорят, он видел в глубине город с золотыми колоннами…","La Anguila Sombra. Dicen que ha visto una ciudad en el fondo, con columnas de oro…",影子鳗鱼。传说它在深处见过一座有金色立柱的城市……
+STORY_PRE_KRAKEN,A young Kraken. Its kin held the gates of Atlantis for a thousand years.,Юный Кракен. Его родня тысячу лет держала ворота Атлантиды.,Un Kraken joven. Los suyos guardaron las puertas de la Atlántida mil años.,小海怪。它的族人守卫亚特兰蒂斯之门已有一千年。
+STORY_PRE_WARDEN,The Twilight Warden. The last guard of this zone. Behind it I hear the whisper of the Ancient One…,Страж Сумерек. Последний на этом пути. За ним я слышу шёпот Древнего…,El Guardián del Crepúsculo. El último de esta zona. Tras él oigo el susurro del Antiguo…,暮光守卫。这片海域的最后一道防线。在它身后，我听见了远古者的低语……
+STORY_POST_CRABBLACK,The Murk pulls back! The mine is open. But I can feel it: this was only the first.,Скверна отступила! Шахта открыта. Но я чувствую: это был только первый.,¡La Bruma retrocede! La mina está abierta. Pero lo siento: solo era el primero.,腐化退去了！矿井已开放。但我感觉得到：这只是第一个。
+STORY_POST_MOTHER_JELLY,"The jellies glow with clean light again. Deeper, diver!","Медузы снова светятся чистым светом. Глубже, ныряльщик!","Las medusas vuelven a brillar con luz limpia. ¡Más hondo, buzo!",水母们又发出了纯净的光。继续深潜吧，潜水员！
+STORY_POST_SHADOW_EEL,The eel left a scale with a pattern… It's a map of Atlantis!,Угорь оставил чешую с узором… Это карта Атлантиды!,La anguila dejó una escama con un dibujo… ¡Es un mapa de la Atlántida!,鳗鱼留下了一片带花纹的鳞片……这是亚特兰蒂斯的地图！
+STORY_POST_KRAKEN,The Kraken swam off into the dark. Nobody holds the gates of Atlantis anymore.,Кракен уплыл во тьму. Ворота Атлантиды больше никто не держит.,El Kraken se fue a la oscuridad. Ya nadie guarda las puertas de la Atlántida.,海怪游进了黑暗。再也没有谁守着亚特兰蒂斯之门了。
+STORY_POST_WARDEN,Act I is done! The Twilight Zone is clean. Atlantis lies ahead; the way there opens soon. Climb the league board until then!,Акт I пройден! Сумеречная зона очищена. Впереди Атлантида — путь туда скоро откроется. А пока поднимайся в таблице лиги!,"¡Acto I superado! La Zona Crepuscular está limpia. Más adelante está la Atlántida; el camino se abre pronto. ¡Mientras, sube en la tabla de la liga!",第一幕完成！暮光之海已被净化。前方就是亚特兰蒂斯，通往那里的路很快就会开启。在此之前，冲上联赛排行榜吧！

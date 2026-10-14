@@ -71,19 +71,55 @@ was removed; its tap-ring fight lives on in the bosses.
 - Chinese font: rebuilt from the Debian fonts-noto-cjk SC face (see
   tools/subset_fonts.py); kerning only, ~219 KB (was 292 KB).
 
-## The story
-The Coral Light that feeds all five worlds is going out. The Murk (Мгла)
-rises from below the deepest trench. The player's expedition goes where
-nobody has dived before, to save the Light.
+## Built: the saga feeling (2026-10-14, branch `mechanics`)
+Mark: "players must feel they are in a saga and in the endgame: something
+new, like Atlantis or a Lovecraft world". He chose the story "Atlantis ->
+Lovecraft" and all four "saga feeling" parts:
+- **The Murk changes the world** (`Murk`, `GameState.murk`, `MurkVeil`):
+  in saga games the Murk rises while the mine works (and while away), to
+  full in 40 min (each beaten guard: +50% slower). It cuts all income by
+  up to 50% (`income_mult` x `murk_mult`, steps of 2%). A tap pushes it
+  back 3%; a beaten guard cleanses it (a gold flash). On screen: a violet
+  gloom and dark edges over the mine, eyes opening in the dark from 20%,
+  tentacles creeping in from 40%. Saved (`murk`), reset with a run.
+- **Saga strip** (`SagaBar`, under the room tabs in league games): "Act I",
+  the five guards as dots (beaten gold, next glowing "!", star on the last),
+  the Murk meter (eye + %). Tap: the saga page (acts I-III, guards with
+  portraits and state, what the Murk does, "Watch the story").
+- **Story scenes** (`SagaStory`, `main.open_story`): comic panel + the
+  Keeper of the Deep (old brass-helmet diver with the Coral Light lantern)
+  speaking, typewriter text, skip. "intro" (4 pages) the first time a
+  league game opens; "pre_<boss>" before a guard's first fight;
+  "post_<boss>" after it is beaten (the last one ends Act I and points to
+  Atlantis). Seen scenes are saved (`GameState.story`).
+- **Dark league dialogs**: in saga games every dialog has a lavender panel
+  in a deep violet frame, violet banners with glowing runes, a violet dim
+  (`UiTheme.dialog_box(true)`, `Modal`).
+- Map teasers renamed: "Atlantis" (act II) and "R'lyeh" (act III).
+- Relics (`scripts/data/relics.gd`): the data side is written (kinds,
+  rarities, affixes, salvage/reroll); not used yet (needs the relic UI).
 
-- **Act I: The Twilight Zone.** Shipwrecks, glowing jellyfish, the first
-  pockets of Murk.
-- **Act II: The Sunken City.** Ruins of the ancients who lit the Coral
-  Light. Their machines still work.
-- **Act III: The Heart of the Abyss.** The Leviathan sleeps on the Light.
-  The finale of the league.
+## The story (Atlantis -> Lovecraft)
+The Coral Light, the heart of the ocean, is fading: the Murk rises from
+below the deepest trench, where the Ancient One sleeps. The Keeper of the
+Deep has guarded the Light for forty years and leads the player down.
+- **Act I: The Twilight Zone** (built). Shipwrecks, glowing jellies, the
+  first Murk. Guards: Crabblack, Mother Jelly, Shadow Eel (leaves a scale
+  with the map of Atlantis), Young Kraken (its kin held Atlantis' gates),
+  the Twilight Warden.
+- **Act II: Atlantis** (next). The sunken city of the ancients who lit the
+  Coral Light: white-gold columns, domes, working brass mechanisms, statues
+  that turned to the Murk. New mechanic idea: ancient machines (sites that
+  power each other, a "circuit" bonus). Guards: a bronze automaton, the
+  drowned king, a siren choir, the Murk-touched oracle, the Gatekeeper.
+- **Act III: R'lyeh** (finale). Lovecraft: green non-Euclidean stone,
+  stairs that go nowhere, huge eyes in the walls, tentacles; the Murk is
+  strongest here. Final boss: the Ancient One (a multi-phase fight). Ends
+  the league's story; carry-over of cosmetics / titles / trophies.
+- Each act = one saga world (15 sites, 5 guards), opened after the last
+  guard of the previous act (`Balance.SAGA_LAST` grows).
 
-## Endgame: the Atlas of the Deep (PoE2 maps, idle-sized)
+## Earlier idea (replaced): the Atlas of the Deep
 - **Sea charts** (waystones), tiers 1-16. A chart is a short expedition
   (10-20 min): a special mine with a goal. Finishing it drops charts, mostly
   of the same or next tier.
@@ -102,11 +138,7 @@ nobody has dived before, to save the Light.
 - **Board score**: league points (atlas + bosses + bounties + best tier)
   instead of raw coins, so the board rewards variety, not only time online.
 
-## Open questions for Mark
-- The rewarded x2 ad in the league: switch it off there, or keep it
-  without effect on the board? (recommended: off in the league)
-- Who may join: everyone (now) or only players who opened the Jungle?
-- What carries over to the usual game when a league ends (cosmetics,
-  titles, trophies; never coins)?
-- Act dates (proposal: Act I + Atlas 1-2 weeks after the start, then one
-  act every ~2 weeks).
+## Mark's answers (2026-10-14)
+- No x2-for-ads in league games; the league opens after the Jungle; at a
+  league's end cosmetics/titles/trophies carry over, never coins (not built).
+- Open: act dates (proposal: Act II ~2 weeks after the start).

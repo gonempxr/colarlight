@@ -14,7 +14,7 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
-## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | boss[:row|:fight|:won|:lost] (a mine boss, saga games) | stars[:confirm|:map] |
+## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | murk:<0..1> | story:<id>[:page] (intro, pre_<boss>, post_<boss>) | sagapage | boss[:row|:fight|:won|:lost] (a mine boss, saga games) | stars[:confirm|:map] |
 ## board:<month|friends|clubs|donors|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -43,6 +43,9 @@ func _initialize() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://screenshot_save.json"
 	gs.reset()
+	# Saga shots: story scenes count as seen unless one is the shot.
+	for k in ["intro"] + MineBoss.BOSSES.keys().map(func(b): return "pre_" + b) + MineBoss.BOSSES.keys().map(func(b): return "post_" + b):
+		gs.story[k] = true
 	var pr := root.get_node("Progress")
 	pr.autosave_enabled = false
 	pr.save_path = "user://screenshot_progress.json"
@@ -301,6 +304,22 @@ func _initialize() -> void:
 			elif overlay.begins_with("nick"):
 				root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "")
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
+			elif overlay.begins_with("murk:"):
+				# The Murk at a level (saga games): "murk:0.8".
+				root.get_node("GameState").murk = float(overlay.get_slice(":", 1))
+				for i in 12:
+					await process_frame
+			elif overlay.begins_with("story:"):
+				# A saga story scene: "story:<id>[:page]".
+				main.open_story(overlay.get_slice(":", 1))
+				for i in 3:
+					await process_frame
+				if overlay.get_slice_count(":") > 2:
+					main._story._show(int(overlay.get_slice(":", 2)))
+				await create_timer(3.0).timeout
+			elif overlay == "sagapage":
+				root.get_node("GameState").murk = 0.35
+				main._modal.open(func(m): load("res://scripts/ui/saga_bar.gd").build(m, main))
 			elif overlay.begins_with("boss"):
 				# A mine boss (saga games): the guarded row ("boss:row"), the
 				# fight screen (ready, ":fight", ":won", ":lost").
@@ -367,7 +386,7 @@ func _initialize() -> void:
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the thank-you dialog); board:taken (the name is someone else's);
-pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
+## pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")

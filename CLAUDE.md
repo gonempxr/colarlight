@@ -154,6 +154,17 @@ This file is the quick picture; keep it up to date when something big changes.
   (Mark: "should be the mines and the core loop, with bosses"). Acts II-III
   (`MapArt.SAGA_SOON`), league points and the end-of-league carry-over are
   not built yet.
+- 2026-10-14 (branch `mechanics`, docs/league-saga.md "saga feeling"):
+  Mark wants the league to feel like a saga/endgame: story "Atlantis ->
+  Lovecraft" (Act I Twilight built, Act II Atlantis, Act III R'lyeh with the
+  Ancient One, not built). Built: the Murk (`Murk`, `GameState.murk`: rises
+  while playing, up to -50% income, taps push it back, a beaten guard
+  cleanses; `MurkVeil` darkens the mine, eyes, tentacles), the saga strip
+  under the tabs (`SagaBar`: act, 5 guard dots, Murk %; tap = saga page),
+  story scenes with the Keeper of the Deep (`SagaStory`, intro + before /
+  after each guard, seen ones saved in `GameState.story`), dark-violet
+  dialogs in league games (`UiTheme.dialog_box(true)`). Relics data
+  (`relics.gd`) written, not used yet.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

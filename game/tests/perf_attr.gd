@@ -1,7 +1,7 @@
 extends SceneTree
 ## Where the frame time goes, per script (needs a renderer):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
-##     -s res://tests/perf_attr.gd -- [phone] [room=0|1|2] [world=0..3] [saga] [scroll=px] [attr] [frames=N]
+##     -s res://tests/perf_attr.gd -- [phone] [room=0|1|2] [world=0..3] [saga] [murk=0..1] [scroll=px] [attr] [frames=N]
 ## Prints the average frame cost (process + render cpu) and, with "attr",
 ## how much each script's nodes cost: all nodes running that script are
 ## hidden and stop processing, and the saving is reported.
@@ -32,6 +32,10 @@ func _initialize() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://perf_attr_save.json"
 	gs.reset()
+	# The saga's story scenes count as seen (they would cover the world);
+	# murk=0..1 shows the Murk at that level.
+	gs.story = {"intro": true}
+	gs.murk = float(opt.get("murk", "0"))
 	var pr = root.get_node("Progress")
 	pr.autosave_enabled = false
 	pr.save_path = "user://perf_attr_progress.json"
