@@ -119,7 +119,7 @@ static func _worlds_row() -> Control:
 	var grid := HBoxContainer.new()
 	grid.alignment = BoxContainer.ALIGNMENT_CENTER
 	grid.add_theme_constant_override("separation", 4)
-	for l in range(0, Balance.LAST_LOCATION + 1):
+	for l in range(0, Balance.last_location() + 1):
 		var cell := VBoxContainer.new()
 		cell.add_theme_constant_override("separation", 0)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL

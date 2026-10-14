@@ -26,6 +26,8 @@ const SOON := 4
 ## its silhouette exists). "sky" (a city in the clouds) keeps its drawing
 ## for a later update.
 const SOON_WORLDS: Array[String] = ["ice"]
+## The saga's next parts (league games): "coming soon" islands after act I.
+const SAGA_SOON: Array[String] = ["sunken", "abyss"]
 ## The glow around their silhouettes, a hint of what they hold.
 const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a")}
 
@@ -94,7 +96,12 @@ static var _sil := {}
 
 
 static func world_of(location: int) -> String:
-	return WORLDS[posmod(location, WORLDS.size())]
+	return str(Balance.world_of(location)["id"])
+
+
+## The "Soon!" islands of this game (the saga's in a league game).
+static func soon_worlds() -> Array[String]:
+	return SAGA_SOON if Balance.saga else SOON_WORLDS
 
 
 static func spots(world: String) -> Dictionary:
@@ -119,7 +126,7 @@ static func top_pts(world: String) -> PackedVector2Array:
 		return _tops[world]
 	var idx := WORLDS.find(world)
 	if idx < 0:
-		idx = WORLDS.size() + SOON_WORLDS.find(world)
+		idx = WORLDS.size() + maxi(SOON_WORLDS.find(world), SAGA_SOON.find(world) + 3)
 	var seed := float(idx) * 1.7 + 0.5
 	var pts := PackedVector2Array()
 	for i in 48:

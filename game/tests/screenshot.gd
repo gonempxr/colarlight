@@ -14,7 +14,7 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
-## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
+## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | stars[:confirm|:map] |
 ## board:<month|friends|clubs|donors|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -30,6 +30,15 @@ func _initialize() -> void:
 	root.get_node("Settings").language = lang
 	root.get_node("Settings").ui_scale = ui_scale
 	TranslationServer.set_locale(lang)
+	# "saga[:overlay]": the shot in a Top League game (the saga's worlds).
+	var pf0 := root.get_node("Profiles")
+	if overlay.begins_with("saga"):
+		pf0.enter_league(OnlineRules.LEAGUE_STARTS[0])
+		overlay = overlay.trim_prefix("saga").trim_prefix(":")
+		if overlay == "":
+			overlay = "-"
+	elif pf0.league_game():
+		pf0.leave_league()
 	var gs := root.get_node("GameState")
 	gs.autosave_enabled = false
 	gs.save_path = "user://screenshot_save.json"

@@ -90,13 +90,13 @@ var total_earned := 0.0
 ## Location index L (world L % 5), 0..Balance.LAST_LOCATION.
 var location := 0:
 	set(value):
-		location = clampi(value, 0, Balance.LAST_LOCATION)
+		location = clampi(value, 0, Balance.last_location())
 		_rescale()
 		_ensure_keys()
 ## Highest location opened so far (>= location). The gate lives there.
 var max_location := 0:
 	set(value):
-		max_location = clampi(value, 0, Balance.LAST_LOCATION)
+		max_location = clampi(value, 0, Balance.last_location())
 ## Runs of the opened worlds that are not active: str(L) -> snapshot
 ## (_run_snapshot). A world opened before this existed (old saves) has none
 ## and starts a fresh run on its first visit (see _fresh_world_run).
@@ -349,7 +349,7 @@ func income_mult() -> float:
 # --- Worlds and locations --------------------------------------------------------
 
 func world_index() -> int:
-	return posmod(location, Balance.WORLDS.size())
+	return Balance.world_index_of(location)
 
 
 func world_id() -> String:
@@ -461,7 +461,7 @@ func can_advance_location() -> bool:
 
 ## The last world (the Jungle): there is no next world yet.
 func is_last_location() -> bool:
-	return location >= Balance.LAST_LOCATION
+	return location >= Balance.last_location()
 
 
 ## Opens the next location: L + 1 with a fresh run (coins, levels, foremen,
@@ -511,7 +511,7 @@ func star_mult() -> float:
 
 ## Stars open up once the last world is open.
 func stars_unlocked() -> bool:
-	return max_location >= Balance.LAST_LOCATION
+	return max_location >= Balance.last_location()
 
 
 func star_cost() -> float:

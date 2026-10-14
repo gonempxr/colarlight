@@ -1,0 +1,26 @@
+keys,en,ru,es,zh
+WORLD_TWILIGHT,The Twilight Zone,Сумеречная зона,La Zona Crepuscular,暮光之海
+MAP_W_TWILIGHT,The Twilight Zone,Сумеречная зона,La Zona Crepuscular,暮光之海
+WORLD_TWILIGHT_FLAVOR,An endless dusk over a glowing sea,Вечные сумерки над светящимся морем,Un ocaso eterno sobre un mar brillante,发光大海上永恒的黄昏
+MAP_HINT_TWILIGHT,Act I of the saga: dive into the glowing deep and beat its guardians.,Акт I саги: погрузись в светящуюся глубину и победи её стражей.,Acto I de la saga: sumérgete en las profundidades brillantes y vence a sus guardianes.,传说第一幕：潜入发光的深海，打败守卫。
+MAP_W_SUNKEN,The Sunken City,Затонувший город,La Ciudad Hundida,沉没之城
+MAP_W_ABYSS,Heart of the Abyss,Сердце Бездны,Corazón del Abismo,深渊之心
+GEAR_TWILIGHT_1,Glow Diver,Светящийся ныряльщик,Buzo Brillante,发光潜水员
+GEAR_TWILIGHT_2,Jelly Diver,Медузный ныряльщик,Buzo Medusa,水母潜水员
+GEAR_TWILIGHT_3,Lantern Diver,Ныряльщик с фонарём,Buzo Linterna,灯笼潜水员
+GEAR_TWILIGHT_4,Abyss Knight,Рыцарь Бездны,Caballero del Abismo,深渊骑士
+SITE_GLOW_SAND,Glow Sand,Светящийся песок,Arena Brillante,发光的沙
+SITE_LANTERN_SHELL,Lantern Shells,Ракушки-фонарики,Conchas Farol,灯笼贝壳
+SITE_JELLY_PEARL,Jelly Pearls,Медузий жемчуг,Perlas de Medusa,水母珍珠
+SITE_ANCHOR_IRON,Anchor Iron,Якорное железо,Hierro de Ancla,锚铁
+SITE_GHOST_COIN,Ghost Doubloons,Призрачные дублоны,Doblones Fantasma,幽灵金币
+SITE_ANGLER_LIGHT,Angler Lights,Огни удильщика,Luces de Rape,鮟鱇之光
+SITE_INK_CRYSTAL,Ink Crystals,Чернильные кристаллы,Cristales de Tinta,墨水晶
+SITE_BONE_CORAL,Bone Coral,Костяной коралл,Coral de Hueso,骨珊瑚
+SITE_SIREN_SCALE,Siren Scales,Чешуя сирены,Escamas de Sirena,海妖鳞片
+SITE_NAUTILUS,Golden Nautilus,Золотой наутилус,Nautilo Dorado,黄金鹦鹉螺
+SITE_ABYSS_OPAL,Abyss Opal,Опал Бездны,Ópalo del Abismo,深渊蛋白石
+SITE_KRAKEN_TOOTH,Kraken Tooth,Зуб кракена,Diente de Kraken,海怪之牙
+SITE_DEEP_STAR,Deep Star,Глубинная звезда,Estrella Profunda,深海之星
+SITE_WARDEN_EYE,Warden's Eye,Глаз Стража,Ojo del Guardián,守卫之眼
+SITE_CORAL_LIGHT,Shard of Coral Light,Осколок Кораллового Света,Fragmento de Luz de Coral,珊瑚之光碎片

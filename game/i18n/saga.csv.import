@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://w68q330607in"
+
+[deps]
+
+files=["res://i18n/saga.en.translation", "res://i18n/saga.ru.translation", "res://i18n/saga.es.translation", "res://i18n/saga.zh.translation"]
+
+source_file="res://i18n/saga.csv"
+dest_files=["res://i18n/saga.en.translation", "res://i18n/saga.ru.translation", "res://i18n/saga.es.translation", "res://i18n/saga.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
