@@ -60,7 +60,7 @@ func test_scripts_compile() -> void:
 
 func test_data() -> void:
 	var ids := FishData.ids()
-	check(ids.size() == 18, "18 species")
+	check(ids.size() == 26, "26 species")
 	var seen := {}
 	for id in ids:
 		seen[id] = true

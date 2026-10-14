@@ -61,6 +61,14 @@ static func draw(ci: CanvasItem, id: String, t: float, facing: float = 1.0, happ
 		"rainbow": _rainbow(ci, tt, blink, happy)
 		"golden": _golden(ci, tt, blink, happy)
 		"star_whale": _star_whale(ci, tt, blink, happy)
+		"herring": _herring(ci, tt, blink, happy)
+		"bream": _bream(ci, tt, blink, happy)
+		"parrotfish": _parrotfish(ci, tt, blink, happy)
+		"seahorse": _seahorse(ci, tt, blink, happy)
+		"barracuda": _barracuda(ci, tt, blink, happy)
+		"manta": _manta(ci, tt, blink, happy)
+		"dragonfish": _dragonfish(ci, tt, blink, happy)
+		"crystal_shark": _crystal_shark(ci, tt, blink, happy)
 	Art.pop(ci)
 	if world != 0 and not silhouette:
 		_world_front(ci, t + sd)
@@ -769,6 +777,253 @@ static func _star_whale(ci: CanvasItem, t: float, blink: bool, happy: bool) -> v
 
 
 # --- Fishing UI props -------------------------------------------------------------------
+
+# --- Added species -------------------------------------------------------------------------
+static func _herring(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 44.0
+	var B := 28.0
+	var H := 11.5
+	var body := _body_pts(L, B, H)
+	var fin := Color("5fb0c4")
+	_tail(ci, Vector2(-B + 2, 0), "fork", 17.0, fin, t)
+	_fin(ci, PackedVector2Array([Vector2(-4, -H + 2), Vector2(10, -H + 1), Vector2(-6, -H - 9)]), fin)
+	_fin(ci, PackedVector2Array([Vector2(-16, H - 3), Vector2(-6, H - 1), Vector2(-18, H + 6)]), fin)
+	_body(ci, body, Color("d4e6ee"))
+	_back(ci, body, L, H, Color("3f8fb0"))
+	_belly(ci, body, L, H, Color("f7fcff"))
+	if not _sil:
+		Art.arc(ci, Vector2(14, -1), 9.0, PI * 0.6, PI * 1.4, 8, Color("3f6f8a", 0.6), 1.6)
+		for k in 3:
+			Art.line(ci, Vector2(-4 - k * 8.0, -H + 4), Vector2(-6 - k * 8.0, 2), Color("ffffff", 0.45), 1.6)
+	_gloss(ci, body, Vector2(6, -6), Vector2(20, 2.6))
+	_pec(ci, Vector2(18, 4), fin, t, 0.8)
+	_eye(ci, Vector2(30, -2), 6.0, blink, happy)
+	_cheek(ci, Vector2(31, 4.5), 2.6)
+	_smile(ci, Vector2(40, 4), 2.8, happy)
+
+
+static func _bream(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 32.0
+	var B := 22.0
+	var H := 23.0
+	var body := _body_pts(L, B, H)
+	var gold := Color("c9b27a")
+	var fin := Color("a78a58")
+	_tail(ci, Vector2(-B + 2, 0), "fork", 16.0, fin, t)
+	_fin(ci, PackedVector2Array([Vector2(-18, -H + 6), Vector2(-12, -H - 5), Vector2(-5, -H - 1), Vector2(2, -H - 9), Vector2(10, -H - 1), Vector2(18, -H + 4)]), fin)
+	_fin(ci, Art.smooth_pts(PackedVector2Array([Vector2(-16, H - 7), Vector2(-8, H + 7), Vector2(8, H + 4), Vector2(4, H - 5)]), 3), fin)
+	_body(ci, body, gold)
+	_back(ci, body, L, H, Color("7d6a45"))
+	_belly(ci, body, L, H, Color("f1e6c4"))
+	if not _sil:
+		for x in [8.0, -2.0, -12.0]:
+			_paint(ci, _band(x, 3.0, H, 0.12), body, Color("8d7848", 0.4))
+	_gloss(ci, body, Vector2(2, -14), Vector2(15, 3.5))
+	_pec(ci, Vector2(12, 6), fin, t)
+	_eye(ci, Vector2(21, -5), 7.0, blink, happy)
+	_cheek(ci, Vector2(22, 7), 3.6)
+	_smile(ci, Vector2(30, 5), 3.0, happy)
+
+
+static func _parrotfish(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 36.0
+	var B := 22.0
+	var H := 19.0
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(L, 2), Vector2(L - 3, -H * 0.8), Vector2(L * 0.45, -H * 1.12), Vector2(0, -H),
+			Vector2(-B * 0.55, -H * 0.7), Vector2(-B, -H * 0.24), Vector2(-B, H * 0.24), Vector2(-B * 0.55, H * 0.68),
+			Vector2(L * 0.05, H), Vector2(L * 0.66, H * 0.74)]), 4)
+	var teal := Color("2fc4a8")
+	var pink := Color("ff6fa5")
+	_tail(ci, Vector2(-B + 2, 0), "moon", 14.0, pink, t)
+	_fin(ci, Art.smooth_pts(PackedVector2Array([Vector2(-18, -H + 6), Vector2(-10, -H - 8), Vector2(8, -H - 8), Vector2(18, -H + 2)]), 3), pink)
+	_fin(ci, Art.smooth_pts(PackedVector2Array([Vector2(-16, H - 6), Vector2(-8, H + 6), Vector2(6, H + 5), Vector2(10, H - 4)]), 3), pink)
+	_body(ci, body, teal)
+	_belly(ci, body, L, H, Color("b6f0e0"))
+	_paint(ci, Art.ellipse_pts(Vector2(-8, -6), Vector2(16, 8), 16, -0.1), body, Color("7a5be0"))
+	_paint(ci, Art.ellipse_pts(Vector2(-14, 4), Vector2(9, 5), 12), body, pink)
+	if not _sil:
+		for p in [Vector2(-4, -8), Vector2(-14, -10), Vector2(4, 0)]:
+			Art.flat(ci, Art.circle_pts(p, 1.8, 8), Color("ffffff", 0.7))
+	_gloss(ci, body, Vector2(10, -14), Vector2(14, 3))
+	# The beak: two fused teeth.
+	Art.toon(ci, PackedVector2Array([Vector2(L - 3, -5), Vector2(L + 7, -3), Vector2(L + 8, 3), Vector2(L - 3, 7)]), _c(Color("fff6dc")), W2, 0.4)
+	if not _sil:
+		Art.line(ci, Vector2(L - 1, 1), Vector2(L + 7, 0.5), Art.INK, 1.4)
+	_pec(ci, Vector2(12, 6), pink, t)
+	_eye(ci, Vector2(22, -6), 7.0, blink, happy)
+	_cheek(ci, Vector2(24, 7), 3.6)
+	_smile(ci, Vector2(L - 6, 10), 2.4, happy)
+
+
+static func _seahorse(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var col := Color("ffb347")
+	var dark := Color("e0782a")
+	Art.push(ci, Vector2(0, -2))
+	# Curled tail first (behind the body).
+	Art.push(ci, Vector2(-2, 16), sin(t * 2.5) * 0.08)
+	var tail := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-6, 10), Vector2(-4, 22), Vector2(6, 26), Vector2(14, 20), Vector2(10, 12), Vector2(5, 15)]), 3)
+	Art.polyline(ci, tail, Art.INK, 12.0)
+	Art.polyline(ci, tail, _c(col), 7.0)
+	Art.pop(ci)
+	# Back fin.
+	Art.push(ci, Vector2(-9, -2), sin(t * 8.0) * 0.12)
+	_fin(ci, Art.smooth_pts(PackedVector2Array([Vector2(2, -9), Vector2(-9, -8), Vector2(-12, 0), Vector2(-9, 8), Vector2(2, 9)]), 3), Color("ffd98a"))
+	Art.pop(ci)
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(10, -28), Vector2(14, -38), Vector2(4, -43), Vector2(-5, -37), Vector2(-9, -26),
+			Vector2(-12, -10), Vector2(-11, 6), Vector2(-4, 19), Vector2(5, 19), Vector2(11, 8), Vector2(14, -6), Vector2(18, -18), Vector2(16, -26)]), 4)
+	# Snout.
+	var snout := PackedVector2Array([Vector2(12, -33), Vector2(30, -33)])
+	Art.polyline(ci, snout, Art.INK, 12.0)
+	Art.polyline(ci, snout, _c(col), 8.0)
+	# Crown spikes.
+	for i in 3:
+		_fin(ci, PackedVector2Array([Vector2(6 - i * 6.0, -40 - i * 0.5), Vector2(4 - i * 6.0, -50), Vector2(0 - i * 6.0, -40)]), dark)
+	_body(ci, body, col)
+	_paint(ci, Art.ellipse_pts(Vector2(10, -4), Vector2(6, 22), 16, 0.12), body, Color("ffe2a8"))
+	if not _sil:
+		for i in 5:
+			Art.line(ci, Vector2(-11, -22 + i * 7.0), Vector2(11, -20 + i * 7.0), Color(dark, 0.55), 1.6)
+	_gloss(ci, body, Vector2(0, -32), Vector2(5, 3))
+	_pec(ci, Vector2(2, -12), Color("ffd98a"), t, 0.6)
+	_eye(ci, Vector2(6, -34), 5.6, blink, happy)
+	_cheek(ci, Vector2(11, -26), 3.0)
+	_smile(ci, Vector2(28, -29), 2.2, happy)
+	Art.pop(ci)
+
+
+static func _barracuda(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 54.0
+	var B := 34.0
+	var H := 13.0
+	var body := _body_pts(L, B, H)
+	var steel := Color("8fa6b8")
+	var fin := Color("4d6a82")
+	_tail(ci, Vector2(-B + 2, 0), "fork", 20.0, fin, t)
+	_fin(ci, PackedVector2Array([Vector2(-26, -H + 3), Vector2(-16, -H - 8), Vector2(-8, -H + 2)]), fin)
+	_fin(ci, PackedVector2Array([Vector2(2, -H + 3), Vector2(10, -H - 9), Vector2(16, -H + 2)]), fin)
+	_fin(ci, PackedVector2Array([Vector2(-16, H - 3), Vector2(-8, H + 7), Vector2(-3, H - 2)]), fin)
+	_body(ci, body, steel)
+	_back(ci, body, L, H, Color("46627a"))
+	_belly(ci, body, L, H, Color("eef4f8"))
+	if not _sil:
+		for i in 5:
+			var x := 22.0 - i * 11.0
+			Art.flat(ci, PackedVector2Array([Vector2(x, -H), Vector2(x - 5, -H), Vector2(x - 8, -1), Vector2(x - 3, -1)]), Color("2d435a", 0.55))
+	_gloss(ci, body, Vector2(10, -7), Vector2(22, 2.6))
+	_pec(ci, Vector2(24, 5), fin, t, 0.8)
+	# Underbite with friendly little fangs.
+	if not _sil:
+		Art.toon(ci, PackedVector2Array([Vector2(L - 2, 3), Vector2(L - 22, 5), Vector2(L - 24, 9), Vector2(L - 8, 9.5), Vector2(L + 1, 5)]), Color("9db4c6"), W2, 0.2)
+		for x in [L - 6.0, L - 12.0, L - 18.0]:
+			Art.toon(ci, PackedVector2Array([Vector2(x - 1.6, 4.5), Vector2(x + 1.6, 4.5), Vector2(x, 0.5)]), Art.WHITE, 1.0, 0.0)
+	_eye(ci, Vector2(34, -3), 6.0, blink, happy)
+	_cheek(ci, Vector2(28, 3), 2.6)
+
+
+static func _manta(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var flap := snappedf(sin(t * 2.4), 0.1)
+	var dark := Color("34406e")
+	# Whip tail.
+	Art.push(ci, Vector2(-26, 0), sin(t * 3.0) * 0.06)
+	Art.toon(ci, PackedVector2Array([Vector2(4, -3), Vector2(-40, -0.8), Vector2(-42, 0.8), Vector2(4, 3)]), _c(dark), W2, 0.0)
+	Art.pop(ci)
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(1.0, 1.0 + flap * 0.07))
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(34, 0), Vector2(26, -12), Vector2(10, -22), Vector2(-4, -40), Vector2(-14, -44), Vector2(-16, -26),
+			Vector2(-24, -10), Vector2(-28, 0), Vector2(-24, 10), Vector2(-16, 26), Vector2(-14, 44), Vector2(-4, 40), Vector2(10, 22), Vector2(26, 12)]), 3)
+	_body(ci, body, dark)
+	_paint(ci, Art.ellipse_pts(Vector2(8, 0), Vector2(24, 14), 20), body, Color("e8f1ff"))
+	_paint(ci, Art.ellipse_pts(Vector2(2, -26), Vector2(10, 5), 12, -0.7), body, Color("e8f1ff", 0.9))
+	_paint(ci, Art.ellipse_pts(Vector2(2, 26), Vector2(10, 5), 12, 0.7), body, Color("e8f1ff", 0.9))
+	if not _sil:
+		for p in [Vector2(-8, -12), Vector2(-14, 8), Vector2(-4, 10), Vector2(-18, -4)]:
+			Art.flat(ci, Art.circle_pts(p, 1.8, 8), Color("e8f1ff", 0.6))
+	_gloss(ci, body, Vector2(-4, -18), Vector2(14, 3))
+	Art.pop(ci)
+	# Cephalic horns.
+	_fin(ci, PackedVector2Array([Vector2(30, -5), Vector2(42, -9), Vector2(40, -3)]), dark)
+	_fin(ci, PackedVector2Array([Vector2(30, 5), Vector2(42, 9), Vector2(40, 3)]), dark)
+	_eye(ci, Vector2(18, -9), 5.6, blink, happy)
+	_eye(ci, Vector2(18, 9), 5.6, blink, happy)
+	_cheek(ci, Vector2(10, -4), 2.6)
+	_cheek(ci, Vector2(10, 4), 2.6)
+	_smile(ci, Vector2(27, 2), 3.0, happy)
+
+
+static func _dragonfish(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 36.0
+	var B := 28.0
+	var H := 15.0
+	var body := _body_pts(L, B, H)
+	var navy := Color("2c2a66")
+	var fin := Color("4a3f9a")
+	var glow := Color("7dffe6")
+	# Glowing barbel hanging from the chin.
+	var bulb := Vector2(46, 28 + snappedf(sin(t * 3.0) * 3.0, 0.5))
+	if not _sil:
+		var pulse := snappedf(0.5 + 0.5 * sin(t * 4.0), 0.1)
+		Art.flat(ci, Art.circle_pts(bulb, 14.0 + pulse * 4.0, 20), Color(glow, 0.16))
+		Art.flat(ci, Art.circle_pts(bulb, 9.0 + pulse * 2.0, 16), Color(glow, 0.3))
+	var stalk := Art.smooth_pts(PackedVector2Array([Vector2(30, 8), Vector2(38, 14), Vector2(36, 22), bulb]), 3)
+	Art.polyline(ci, stalk, Art.INK, 4.4)
+	Art.polyline(ci, stalk, _c(fin), 2.0)
+	Art.t_circle(ci, bulb, 5.0, _c(glow), 2.0, 0.0)
+	_tail(ci, Vector2(-B + 2, 0), "fork", 17.0, fin, t)
+	_fin(ci, Art.smooth_pts(PackedVector2Array([Vector2(-20, -H + 3), Vector2(-12, -H - 12), Vector2(6, -H - 4), Vector2(14, -H + 2)]), 3), fin)
+	_fin(ci, PackedVector2Array([Vector2(-16, H - 3), Vector2(-8, H + 8), Vector2(0, H - 1)]), fin)
+	_body(ci, body, navy)
+	_belly(ci, body, L, H, Color("4b4aa8"))
+	if not _sil:
+		for i in 6:
+			var p := Vector2(16 - i * 8.0, H * 0.55 - abs(i - 2.5) * 0.5)
+			Art.flat(ci, Art.circle_pts(p, 3.0, 10), Color(glow, 0.3))
+			Art.flat(ci, Art.circle_pts(p, 1.6, 8), glow)
+	_gloss(ci, body, Vector2(8, -9), Vector2(16, 2.6))
+	_pec(ci, Vector2(14, 3), fin, t, 0.8)
+	# Big grin with fangs.
+	if not _sil:
+		var mouth := Art.clipped(Art.ellipse_pts(Vector2(30, 5), Vector2(11, 6), 20), body)
+		if mouth.size() >= 3:
+			Art.flat(ci, mouth, Color("1a1034"))
+		for x in [24.0, 29.0, 34.0]:
+			Art.toon(ci, PackedVector2Array([Vector2(x - 1.7, 1.5), Vector2(x + 1.7, 1.5), Vector2(x, 7.5)]), Art.WHITE, 1.0, 0.0)
+		Art.flat(ci, Art.ellipse_pts(Vector2(30, 9.5), Vector2(4, 1.6), 10), Color("ff7f93"))
+	_eye(ci, Vector2(24, -5), 6.6, blink, happy)
+	_cheek(ci, Vector2(14, 3), 3.0)
+
+
+static func _crystal_shark(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var L := 52.0
+	var B := 34.0
+	var H := 18.0
+	var body := _body_pts(L, B, H, 0.9)
+	var ice := Color("8fdcff", 0.92)
+	var deep := Color("4aa6e8", 0.95)
+	_tail(ci, Vector2(-B + 2, 0), "fork", 22.0, deep, t, 0.12)
+	_fin(ci, PackedVector2Array([Vector2(8, -H + 3), Vector2(-14, -H - 24), Vector2(-20, -H + 4)]), deep)
+	_fin(ci, PackedVector2Array([Vector2(-14, H - 4), Vector2(-24, H + 10), Vector2(-6, H - 2)]), deep)
+	_body(ci, body, ice)
+	_back(ci, body, L, H, Color("5db4f0", 0.9))
+	_belly(ci, body, L, H, Color("e6f8ff"))
+	# Crystal facets.
+	_paint(ci, PackedVector2Array([Vector2(-8, -20), Vector2(14, -20), Vector2(0, 0)]), body, Color("d6f4ff", 0.55))
+	_paint(ci, PackedVector2Array([Vector2(-30, -2), Vector2(-8, -20), Vector2(0, 0), Vector2(-12, 10)]), body, Color("2f86d4", 0.3))
+	_paint(ci, PackedVector2Array([Vector2(14, -20), Vector2(40, -4), Vector2(18, 4), Vector2(0, 0)]), body, Color("ffffff", 0.3))
+	if not _sil:
+		for k in 3:
+			Art.line(ci, Vector2(14 - k * 3.0, -6 + k * 1.5), Vector2(12 - k * 3.0, 6 + k * 1.5), Color("2f86d4", 0.55), 1.5)
+	_gloss(ci, body, Vector2(12, -11), Vector2(20, 3))
+	_pec(ci, Vector2(18, 6), deep, t, 0.9)
+	_eye(ci, Vector2(34, -4), 6.2, blink, happy)
+	_cheek(ci, Vector2(30, 5), 3.0)
+	if not _sil and not happy:
+		Art.arc(ci, Vector2(41, 0), 5.0, 0.4, PI - 0.4, 8, Art.INK, 1.9)
+		for x in [38.0, 41.0, 44.0]:
+			Art.toon(ci, PackedVector2Array([Vector2(x - 1.3, 3.6), Vector2(x + 1.3, 3.6), Vector2(x, 6.2)]), Art.WHITE, 0.8, 0.0)
+	else:
+		_smile(ci, Vector2(42, 3), 3.0, happy)
+	if not _sil:
+		sparkles(ci, Vector2(0, 0), 60.0, t, 7, Color(0.85, 0.97, 1.0))
+
 
 ## Wooden bucket, bottom center at (0,0), ~60 px wide. `n` fish tails poke out.
 static func bucket(ci: CanvasItem, n: int, t: float, full: bool = false) -> void:
