@@ -48,6 +48,7 @@ func _initialize() -> void:
 	test_quests_per_world()
 	test_quest_save()
 	test_mine_quest()
+	test_exchange()
 	await test_map_ui()
 	print("%d checks, %d failed" % [_checks, _failures])
 	DirAccess.remove_absolute(GAME_SAVE)
@@ -109,6 +110,37 @@ func test_advance_keeps_old_world() -> void:
 	check(gs.coins == 0.0 and gs.evo == 0 and gs.get_level("d3") == 0, "volcano starts fresh")
 	check(gs.has_manager("lift") and gs.has_manager("boat") and gs.has_manager("plant") and gs.has_manager("vault"), "automation comes along")
 	check(not gs.has_manager("d0"), "foremen do not")
+
+
+## The coin exchange: an older world's wallet goes to the newer world at the
+## gap between their prices, capped, and never counts as earnings.
+func test_exchange() -> void:
+	_fresh()
+	_open_next()
+	check(gs.location == 1, "in the volcano")
+	var rate: float = gs.exchange_rate(0)
+	check(near(rate, Balance.loc_gate_scale(1) / Balance.loc_gate_scale(0)), "rate = the gap between the worlds (%s)" % rate)
+	check(gs.exchange_rate(1) == 0.0 and gs.exchange_rate(2) == 0.0, "no exchange from here or a closed world")
+	var snap: Dictionary = gs.worlds_runs["0"]
+	snap["coins"] = rate * 1000.0
+	gs.coins = 0.0
+	var earned: float = gs.total_earned
+	var got: float = gs.exchange_from(0)
+	check(near(got, 1000.0) and near(gs.coins, 1000.0), "1000 arrive (%s)" % got)
+	check(near(float(gs.worlds_runs["0"]["coins"]), 0.0), "taken from the old wallet")
+	check(gs.total_earned == earned, "not earnings (boards stay)")
+	snap = gs.worlds_runs["0"]
+	snap["coins"] = 1.0e300
+	var room: float = gs.exchange_room()
+	got = gs.exchange_from(0)
+	check(near(got, room) and gs.exchange_room() < 1.0, "capped at the world's share")
+	check(gs.exchange_from(0) == 0.0, "nothing more once full")
+	check(float(gs.worlds_runs["0"]["coins"]) > 1.0e299, "the rest stays in the old world")
+	gs.save_game()
+	gs.reset()
+	gs.load_game()
+	check(gs.exchange_room() < 1.0, "the cap survives a reload")
+	check(gs.switch_location(0) and gs.exchange_rate(1) == 0.0, "never down to a smaller world")
 
 
 func test_round_trip() -> void:
