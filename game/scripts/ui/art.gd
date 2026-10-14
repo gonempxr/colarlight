@@ -88,6 +88,19 @@ const SITE_STYLE := {
 	"alien_egg": {"rock": Color("365446"), "floor": Color("74948a"), "ore": Color("6aff8a"), "ore2": Color("e0ffd0"), "suit": Color("ff8a3d"), "water": Color("243e36"), "deco": "alien"},
 	"ufo": {"rock": Color("424258"), "floor": Color("8282a0"), "ore": Color("a8bcd8"), "ore2": Color("6affe8"), "suit": Color("ffd23f"), "water": Color("2c2c44"), "deco": "ufo"},
 	"cosmic_heart": {"rock": Color("242e64"), "floor": Color("5068ac"), "ore": Color("c86bff"), "ore2": Color("ffd0ff"), "suit": Color("ffc93c"), "water": Color("161e56"), "deco": "heart"},
+	# Jungle ruins: temple tunnels of golden sandstone blocks, vines and
+	# torches; deeper halls turn mossy, then jade-lit and golden. "water"
+	# is the hall's back wall, "glow" the magic light of the deep halls.
+	"clay": {"rock": Color("b08a58"), "floor": Color("dcb878"), "ore": Color("d9773e"), "ore2": Color("f6c48a"), "suit": Color("ff8a3d"), "water": Color("7a5a38"), "deco": "jg_clay", "glow": Color("ffc870")},
+	"cocoa": {"rock": Color("9a8452"), "floor": Color("c8b070"), "ore": Color("e8962a"), "ore2": Color("8a3a1e"), "suit": Color("ffd23f"), "water": Color("665a36"), "deco": "jg_cocoa", "glow": Color("ffd27a")},
+	"turquoise": {"rock": Color("8a8a64"), "floor": Color("c4bc8a"), "ore": Color("3fd6c8"), "ore2": Color("c8fff4"), "suit": Color("ff6fae"), "water": Color("4c5c48"), "deco": "jg_pool", "glow": Color("7affe8")},
+	"old_coins": {"rock": Color("a08050"), "floor": Color("d8b670"), "ore": Color("ffc93c"), "ore2": Color("fff1a8"), "suit": Color("2de2c5"), "water": Color("6a5434"), "deco": "jg_coins", "glow": Color("ffd84a")},
+	"mask": {"rock": Color("7a7a5a"), "floor": Color("aaa47a"), "ore": Color("b4b49a"), "ore2": Color("3fe0a8"), "suit": Color("ff8a3d"), "water": Color("444c38"), "deco": "jg_masks", "glow": Color("5affc0")},
+	"tiger_eye": {"rock": Color("8a6440"), "floor": Color("c09658"), "ore": Color("d4922e"), "ore2": Color("ffe28a"), "suit": Color("4fb3ee"), "water": Color("523a24"), "deco": "jg_jaguar", "glow": Color("ffc04a")},
+	"idol": {"rock": Color("6e6448"), "floor": Color("a89466"), "ore": Color("ffc93c"), "ore2": Color("3fd6c8"), "suit": Color("ff5ab4"), "water": Color("3a3628"), "deco": "jg_idol", "glow": Color("ffe07a")},
+	"sun_disc": {"rock": Color("8a5a3a"), "floor": Color("c09258"), "ore": Color("ffb02e"), "ore2": Color("fff0a0"), "suit": Color("2de2c5"), "water": Color("48301f"), "deco": "jg_sun", "glow": Color("ffcc4a")},
+	"serpent": {"rock": Color("4a6a58"), "floor": Color("6e9a7e"), "ore": Color("34c88a"), "ore2": Color("b8ffe0"), "suit": Color("ffd23f"), "water": Color("1c3630"), "deco": "jg_serpent", "glow": Color("5affb8")},
+	"temple_heart": {"rock": Color("5a4450"), "floor": Color("9a7a5a"), "ore": Color("ff3d5a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("241a28"), "deco": "jg_heart", "glow": Color("ff8a6a")},
 }
 
 
@@ -297,6 +310,8 @@ static func clear_cache() -> void:
 	_pc.clear()
 	_pc_old.clear()
 	_pc_verts = 0
+	_brief.clear()
+	_brief_verts = 0
 
 
 # Caches in two generations: when the young one is full it becomes the old
@@ -705,11 +720,15 @@ static var _rec_stack: Array[Transform2D] = []
 
 ## True when the part for `key` was already cached and has been drawn. False
 ## means: draw it now, then call cache_end with the same key.
-static func cache_begin(ci: CanvasItem, key: int) -> bool:
+## `brief`: a time-stepped part whose key never comes back once its moment
+## has passed (an animation drawn a few times a second). Those go in their
+## own small cache, so they never push out the long-lived parts (faces,
+## props), which then had to be built again all at once (a frame hitch).
+static func cache_begin(ci: CanvasItem, key: int, brief := false) -> bool:
 	# Parts drawn at another scale step have other outline widths.
 	key = hash([key, _scale_step(_rec_xf * _xf if _rec else _xf)])
-	var e = _pc.get(key)
-	if e == null:
+	var e = _brief.get(key) if brief else _pc.get(key)
+	if e == null and not brief:
 		e = _pc_old.get(key)
 		if e != null:
 			_pc_store(key, e)
@@ -774,13 +793,28 @@ static func _pc_store(key: int, e: Array) -> void:
 	_pc_verts += n
 
 
-static func cache_end(ci: CanvasItem, key: int) -> void:
+static func cache_end(ci: CanvasItem, key: int, brief := false) -> void:
 	key = hash([key, _scale_step(_rec_xf)])
 	if not _rec or _rec_key != key:
 		return
 	var r := _rec_finish()
-	_pc_store(key, [r[0], r[1]])
+	if brief:
+		var n := (r[0] as PackedVector2Array).size()
+		if _brief_verts + n > BRIEF_CACHE_VERTS:
+			_brief = {}
+			_brief_verts = 0
+		_brief[key] = [r[0], r[1]]
+		_brief_verts += n
+	else:
+		_pc_store(key, [r[0], r[1]])
 	_put(ci, r[0], r[1])
+
+
+## The cache of brief parts (see cache_begin): simply emptied when full, as
+## its parts are only reused for a moment.
+const BRIEF_CACHE_VERTS := 200000
+static var _brief := {}
+static var _brief_verts := 0
 
 
 # --- Sprite slots -------------------------------------------------------------------

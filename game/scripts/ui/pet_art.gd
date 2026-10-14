@@ -5,7 +5,7 @@ extends RefCounted
 ## transforms only (bob, fin and tentacle wiggles, blinks swap between two
 ## constant eye shapes); `happy` shows closed happy eyes and an open smile.
 
-const IDS: Array[String] = ["turtle", "octopus", "crab", "clownfish", "seal", "jellyfish", "axolotl", "puffer", "dolphin", "narwhal", "seahorse", "shark_pup"]
+const IDS: Array[String] = ["turtle", "octopus", "crab", "clownfish", "seal", "jellyfish", "axolotl", "puffer", "dolphin", "narwhal", "seahorse", "shark_pup", "parrot", "monkey"]
 
 const W := 2.2           # body outline width
 const W2 := 1.7          # small parts
@@ -35,6 +35,8 @@ static func draw(ci: CanvasItem, id: String, t: float, facing: float = 1.0, happ
 		"narwhal": _narwhal(ci, t, blink, happy)
 		"seahorse": _seahorse(ci, t, blink, happy)
 		"shark_pup": _shark_pup(ci, t, blink, happy)
+		"parrot": _parrot(ci, t, blink, happy)
+		"monkey": _monkey(ci, t, blink, happy)
 	Art.pop(ci)
 
 
@@ -510,3 +512,70 @@ static func _shark_pup(ci: CanvasItem, t: float, blink: bool, happy: bool) -> vo
 		Art.flat(ci, _smile(m + Vector2(0, -2), 2.8, 0.45, 0.9), SMILE)
 		for sx: float in [-1.0, 1.0]:
 			Art.flat(ci, PackedVector2Array([m + Vector2(1.3 * sx - 0.8, 0.5), m + Vector2(1.3 * sx + 0.8, 0.5), m + Vector2(1.3 * sx, 1.8)]), Art.WHITE)
+
+
+## Jungle parrot: red body, blue and yellow wing, a curved beak, a long
+## tail; the wing flaps a little.
+static func _parrot(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var red := Color("ef4f3f")
+	# Tail feathers behind.
+	Art.push(ci, Vector2(-8, 8), 0.35 + sin(t * 2.2) * 0.08)
+	for f: Array in [[Color("3a7ff0"), 0.0], [Color("ffd23f"), 0.22], [red, -0.2]]:
+		Art.push(ci, Vector2.ZERO, f[1])
+		Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, -3), Vector2(-20, 4), Vector2(-26, 9), Vector2(-18, 8), Vector2(0, 3)]), 3), f[0], W2, 0.2)
+		Art.pop(ci)
+	Art.pop(ci)
+	var body := Art.union([Art.ellipse_pts(Vector2(-2, 6), Vector2(12, 13), 26), Art.circle_pts(Vector2(6, -8), 11.0, 24)])
+	Art.toon(ci, body, red, W, 0.6)
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(2, 13), Vector2(8, 7), 18), body), Color("ff8a5a"))
+	# Face patch and beak.
+	Art.flat(ci, Art.ellipse_pts(Vector2(10, -9), Vector2(6, 5.5), 14), Color("fff6f0"))
+	var beak := Art.smooth_pts(PackedVector2Array([Vector2(13, -11), Vector2(22, -10), Vector2(23, -3), Vector2(19, -1), Vector2(15, -4)]), 2)
+	Art.toon(ci, beak, Color("4a4458"), W2, 0.5)
+	Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(14, -4), Vector2(19, -2), Vector2(16, 1)]), 2), Color("2e2a38"), 1.2, 0.0)
+	_eye(ci, Vector2(9, -10), 2.8, blink, happy)
+	_cheek(ci, Vector2(7, -3.5), 2.0)
+	# Wing.
+	Art.push(ci, Vector2(-4, 2), -0.15 + sin(t * 6.0) * (0.25 if happy else 0.08))
+	var wing := Art.smooth_pts(PackedVector2Array([Vector2(4, -6), Vector2(-6, -4), Vector2(-14, 6), Vector2(-10, 12), Vector2(2, 8)]), 3)
+	Art.toon(ci, wing, Color("3a7ff0"), W2, 0.4)
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(0, -3), Vector2(8, 4), 14), wing), Color("ffd23f"))
+	Art.flat(ci, Art.clipped(Art.ellipse_pts(Vector2(-10, 9), Vector2(5, 3), 12), wing), Color("2fb87a"))
+	Art.pop(ci)
+	# Feet.
+	for x: float in [-3.0, 3.0]:
+		Art.line(ci, Vector2(x, 18), Vector2(x - 1, 22), Color("6a6478"), 2.4)
+
+
+## Jungle monkey: brown with a peach face and ears, a curly tail that sways.
+static func _monkey(ci: CanvasItem, t: float, blink: bool, happy: bool) -> void:
+	var fur := Color("9a6a3e")
+	var peach := Color("ffd2a8")
+	Art.push(ci, Vector2(-10, 10), sin(t * 2.0) * 0.18)
+	var tail := _tube(PackedVector2Array([Vector2(0, 0), Vector2(-12, 2), Vector2(-18, -8), Vector2(-12, -15), Vector2(-7, -10)]), 4.2, 3.0)
+	Art.toon(ci, tail, fur, W2, 0.3)
+	Art.pop(ci)
+	Art.toon(ci, Art.ellipse_pts(Vector2(-1, 9), Vector2(11, 11), 24), fur, W, 0.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(1, 11), Vector2(7, 7.5), 16), peach)
+	# Ears, head, face.
+	for x: float in [-6.0, 18.0]:
+		Art.t_circle(ci, Vector2(x, -10), 5.5, fur, W2, 0.3)
+		Art.flat(ci, Art.circle_pts(Vector2(x, -10), 3.0, 10), peach)
+	var head := Art.circle_pts(Vector2(6, -10), 12.0, 26)
+	Art.toon(ci, head, fur, W, 0.6)
+	var face := Art.union([Art.circle_pts(Vector2(2.5, -12), 5.0, 14), Art.circle_pts(Vector2(9.5, -12), 5.0, 14),
+			Art.ellipse_pts(Vector2(6, -5), Vector2(7.5, 5.5), 16)])
+	Art.flat(ci, face, peach)
+	_eye(ci, Vector2(3, -12), 2.4, blink, happy)
+	_eye(ci, Vector2(10, -12), 2.4, blink, happy)
+	Art.flat(ci, Art.circle_pts(Vector2(5.2, -7.5), 0.7, 6), Art.INK_SOFT)
+	Art.flat(ci, Art.circle_pts(Vector2(7.2, -7.5), 0.7, 6), Art.INK_SOFT)
+	_mouth(ci, Vector2(6.2, -4.0), 2.2, happy)
+	# Arms holding a banana.
+	Art.push(ci, Vector2(8, 6), sin(t * 3.0) * 0.1)
+	var banana := _tube(PackedVector2Array([Vector2(-4, -4), Vector2(4, 3), Vector2(13, 2), Vector2(18, -6)]), 7.0, 3.0)
+	Art.toon(ci, banana, Color("ffd23f"), W2, 0.3)
+	Art.flat(ci, Art.circle_pts(Vector2(18.5, -6.5), 1.4, 6), Color("6a4a2a"))
+	Art.t_circle(ci, Vector2(-1, 0), 3.6, fur, W2, 0.0)
+	Art.t_circle(ci, Vector2(10, 3), 3.6, fur, W2, 0.0)
+	Art.pop(ci)

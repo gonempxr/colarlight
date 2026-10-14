@@ -106,6 +106,9 @@ func _ready() -> void:
 		_see_looks()
 		apply_bonus()
 		_check_goals())
+	GameState.star_gained.connect(func(_l, _n):
+		stats["stars_got"] = int(stats.get("stars_got", 0)) + 1
+		_check_goals())
 	_streak_connect()
 	GameState.depth_opened.connect(func(k):
 		_count("open", 1)
@@ -919,6 +922,7 @@ func suit_bonus() -> float:
 func _sync_location_stats() -> void:
 	stats["prestiges"] = maxi(int(stats.get("prestiges", 0)), GameState.max_location)
 	stats["location"] = maxi(int(stats.get("location", 0)), GameState.max_location)
+	stats["stars"] = maxi(int(stats.get("stars", 0)), GameState.total_stars())
 
 
 func equip(id: String) -> void:

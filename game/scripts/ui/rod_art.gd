@@ -1,7 +1,7 @@
 class_name RodArt
 extends RefCounted
 ## The fishing rods: 20 levels in each world (ocean, volcano, acid swamp,
-## moon), after Mark's rod sheet (docs/concept/rods.txt). Every level keeps
+## moon, jungle), after Mark's rod sheet (docs/concept/rods.txt). Every level keeps
 ## the same rod and adds the one change listed for it, so the silhouette
 ## stays and the detail grows. Toon style like the rest: thick INK outline,
 ## chunky parts, world materials.
@@ -12,7 +12,7 @@ extends RefCounted
 ## the part sizes scale with it). The line and the float/hook are separate
 ## calls because the screen draws them in its own order.
 ##
-##   RodArt.rod(ci, centerline, world, level, t)        # world 0..3, level 1..20
+##   RodArt.rod(ci, centerline, world, level, t)        # world 0..4, level 1..20
 ##   RodArt.line(ci, pts, world, level, t, width, wet)
 ##   RodArt.bob(ci, at, scale, world, level, t)         # float, hook or magnet
 ##   RodArt.icon(ci, world, level, t)                   # the whole rod in a ~120 px box
@@ -22,7 +22,8 @@ const OCEAN := 0
 const VOLCANO := 1
 const ACID := 2
 const MOON := 3
-const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON"]
+const JUNGLE := 4
+const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON", "JUNGLE"]
 const LEVELS := 20
 const UNIT := 110.0
 const SIL := Color("b4b2cc")
@@ -42,12 +43,12 @@ static var _part := PART
 
 ## "Sea rod", "Volcano rod", ...
 static func name_key(world: int) -> String:
-	return "FISHING_ROD_" + KEYS[posmod(world, 4)]
+	return "FISHING_ROD_" + KEYS[posmod(world, KEYS.size())]
 
 
 ## What level `level` (1..20) adds, e.g. "Blue grip wrap".
 static func level_key(world: int, level: int) -> String:
-	return "ROD_%s_%d" % [KEYS[posmod(world, 4)], clampi(level, 1, LEVELS)]
+	return "ROD_%s_%d" % [KEYS[posmod(world, KEYS.size())], clampi(level, 1, LEVELS)]
 
 
 # --- Geometry -------------------------------------------------------------------------
@@ -171,11 +172,12 @@ const PAL := [
 	{"blank": Color("4a4250"), "blank2": Color("5c5262"), "handle": Color("ecdcc4"), "accent": Color("ff7a1e"), "reel": Color("2a2230"), "metal": Color("8a7e8c"), "glow": Color("ffb43a")},
 	{"blank": Color("5d8a3c"), "blank2": Color("6fa046"), "handle": Color("2f3a35"), "accent": Color("b6f36a"), "reel": Color("e8c64a"), "metal": Color("b8c4a8"), "glow": Color("b6ff5a")},
 	{"blank": Color("c9d3e6"), "blank2": Color("e2e8f4"), "handle": Color("3a3f6e"), "accent": Color("8a6cf0"), "reel": Color("dfe6f5"), "metal": Color("aab4cc"), "glow": Color("7ff0ff")},
+	{"blank": Color("cdb85a"), "blank2": Color("3fbf8a"), "handle": Color("c8a46a"), "accent": Color("3fbf4a"), "reel": Color("c98249"), "metal": Color("ffc93c"), "glow": Color("ffd84a")},
 ]
 
 
 static func pal(world: int, key: String) -> Color:
-	return PAL[posmod(world, 4)][key]
+	return PAL[posmod(world, PAL.size())][key]
 
 
 # --- The whole rod in a box -------------------------------------------------------------
@@ -228,7 +230,7 @@ static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int,
 	var lv := clampi(level, 1, LEVELS)
 	if lv >= LEVELS:
 		_aura(ci, world, t)
-	match posmod(world, 4):
+	match posmod(world, KEYS.size()):
 		OCEAN:
 			_ocean(ci, lv, t)
 		VOLCANO:
@@ -237,6 +239,8 @@ static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int,
 			_acid(ci, lv, t)
 		MOON:
 			_moon(ci, lv, t)
+		JUNGLE:
+			_jungle(ci, lv, t)
 
 
 ## The legendary rod's glow and twinkles.
@@ -722,6 +726,221 @@ static func _moon(ci: CanvasItem, lv: int, t: float) -> void:
 		_out(ci)
 
 
+# --- Jungle: bamboo, vines, carved hardwood, jade, gold; the sun rod ------------------------
+
+static func _jungle(ci: CanvasItem, lv: int, t: float) -> void:
+	var hf := 0.25
+	var pulse := _q(0.5 + 0.5 * sin(t * 2.6), 0.1)
+	var bamboo := pal(JUNGLE, "blank")
+	var wood := Color("7a4424")
+	var jade := pal(JUNGLE, "blank2")
+	var gold := Color("ffc93c")
+	var turq := Color("3fe0d0")
+	var blank := bamboo if lv < 9 else wood
+	if lv >= 20:
+		blank = gold
+	# Blank: bamboo, carved hardwood from 9, a jade top piece from 13, all
+	# gold at 20.
+	if lv >= 13:
+		_tube(ci, hf - 0.02, 0.58, 6.2, 4.6, blank)
+		_tube(ci, 0.58, 1.0, 4.3, 2.6, jade if lv < 20 else Color("ffe27a"))
+		_band(ci, 0.58, 7.0, 8.4, gold if lv >= 16 else jade.darkened(0.25), 0.4)
+	else:
+		_tube(ci, hf - 0.02, 1.0, 6.0, 2.6, blank)
+	if not _sil:
+		if lv < 9:
+			# Bamboo nodes.
+			for f: float in [0.37, 0.5, 0.63, 0.76, 0.88]:
+				var w := lerpf(6.0, 2.6, (f - hf) / (1.0 - hf)) * 0.5 / _part + 0.4
+				_in(ci, f)
+				Art.line(ci, Vector2(0, -w), Vector2(0, w), Color("8a7a2a"), 1.4)
+				_out(ci)
+		elif lv < 20:
+			# Carved glyphs on the hardwood.
+			for f: float in [0.34, 0.47]:
+				_in(ci, f)
+				Art.polyline(ci, PackedVector2Array([Vector2(-3, 1), Vector2(-1.5, -1.5), Vector2(0, 1), Vector2(1.5, -1.5), Vector2(3, 1)]), Color("c8945a"), 1.0)
+				_out(ci)
+		else:
+			Art.polyline(ci, _sub(0.3, 0.95, 6), Color(1, 1, 0.8, 0.5), 1.4 * _sc)
+	# A vine wrapped along the rod, with two leaves.
+	if lv >= 6 and lv < 20 and not _sil:
+		var vp := PackedVector2Array()
+		for i in 17:
+			var f := lerpf(0.3, 0.92, i / 16.0)
+			var w := lerpf(6.0, 2.6, (f - hf) / (1.0 - hf)) * 0.55 * _sc
+			vp.append(_at(f) + Vector2.from_angle(_ang(f) + PI / 2.0) * sin(i * 1.6) * w)
+		Art.polyline(ci, vp, Color("2f8a2a"), maxf(1.0, 1.3 * _sc))
+		for f: float in [0.42, 0.74]:
+			_in(ci, f)
+			Art.push(ci, Vector2(0, -2), -2.2)
+			Art.toon(ci, TileJungle.leaf_pts(6.0, 2.2), Color("3fbf4a"), 1.0, 0.0)
+			Art.pop(ci)
+			_out(ci)
+	# Line guides: vine loops, jade rings from 12.
+	if lv >= 4:
+		for f: float in [0.46, 0.68, 0.88]:
+			_in(ci, f)
+			Art.arc(ci, Vector2(0, 5.5), 2.6, 0.0, TAU, 10, Art.INK, 2.8)
+			Art.arc(ci, Vector2(0, 5.5), 2.6, 0.0, TAU, 10, _c(jade if lv >= 12 else Color("4caa3a")), 1.4)
+			_out(ci)
+	if lv >= 12:
+		_band(ci, 0.4, 3.4, 8.0, jade, 0.3)
+	# Handle: bamboo, a grass-rope wrap from 2, carved hardwood from 9.
+	_tube(ci, 0.0, hf, 9.0, 8.0, pal(JUNGLE, "handle") if lv < 9 else Color("5a3018"))
+	if lv >= 2 and not _sil:
+		_in(ci, hf / 2.0)
+		if lv < 9:
+			for i in 6:
+				var x := -11.0 + i * 4.5
+				Art.line(ci, Vector2(x - 1.8, -3.8), Vector2(x + 1.8, 3.8), Color("8a6a3a"), 1.4)
+		else:
+			Art.polyline(ci, PackedVector2Array([Vector2(-9, 0), Vector2(-6, -3), Vector2(-3, 0), Vector2(0, -3), Vector2(3, 0), Vector2(6, -3), Vector2(9, 0)]), Color("c8945a"), 1.2)
+		_out(ci)
+	# Gold inlays on the handle.
+	if lv >= 16:
+		for f: float in [0.05, 0.21]:
+			_band(ci, f, 2.6, 9.6, gold, 0.3)
+		_in(ci, 0.13)
+		Art.t_circle(ci, Vector2(0, -1), 2.2, _c(turq), 1.3, 0.0)
+		_out(ci)
+	# Butt cap: wood, jade, gold.
+	_band(ci, 0.015, 4.0, 10.2, Color("8a5a32") if lv < 12 else (jade if lv < 16 else gold), 0.4)
+	# A parrot-feather bite flag.
+	if lv >= 11:
+		_in(ci, 0.34)
+		var wob := _q(sin(t * 3.0) * 0.12, 0.04)
+		Art.push(ci, Vector2(0, -3), -PI / 2.0 + 0.5 + wob)
+		Art.toon(ci, TileJungle.leaf_pts(11.0, 3.2), _c(Color("ff4a4a")), 1.2, 0.0)
+		if not _sil:
+			Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(6.5, -4, 5, 8), 0.5), TileJungle.leaf_pts(11.0, 3.2)), Color("3a9cff"))
+			Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(4.5, -4, 2, 8), 0.5), TileJungle.leaf_pts(11.0, 3.2)), Color("ffd23a"))
+		Art.pop(ci)
+		_out(ci)
+	# The tip: a golden leaf from 15, the little sun at 20.
+	if lv >= 15 and lv < 20:
+		_in(ci, 0.97)
+		Art.push(ci, Vector2(0, -1), -0.6)
+		Art.toon(ci, TileJungle.leaf_pts(6.0, 2.2), _c(gold), 1.0, 0.0)
+		Art.pop(ci)
+		_out(ci)
+	if lv >= 20:
+		_in(ci, 1.0)
+		if not _sil:
+			_soft(ci, _here(Vector2(2, 0)), 9.0 * _sc, Color(1.0, 0.85, 0.3, 0.45 + pulse * 0.2))
+		Art.toon(ci, Art.star_pts(Vector2(2, 0), 4.2, 2.4, 8), _c(gold), 1.0, 0.0)
+		Art.t_circle(ci, Vector2(2, 0), 1.8, _c(Color("ff8a2a")), 0.8, 0.0)
+		_out(ci)
+	# The reel.
+	if lv >= 3:
+		_in(ci, hf - 0.05)
+		Art.t_rect(ci, Rect2(-3, 0, 6, 6), 1.5, _c(Color("8a5a32") if lv < 16 else gold), 1.8, 0.0)
+		var c := Vector2(0, 11)
+		var r := 8.0
+		if lv >= 18:
+			# A second, golden reel behind.
+			Art.t_circle(ci, c + Vector2(-5.5, 1.0), r * 0.72, _c(gold), 1.8, 0.4)
+		if lv >= 20 and not _sil:
+			_soft(ci, _here(c), 15.0 * _sc, Color(1.0, 0.75, 0.2, 0.3 + pulse * 0.25))
+			# Sun rays turning around the reel.
+			Art.push(ci, c, _q(t * 0.8, 0.1))
+			for i in 8:
+				Art.push(ci, Vector2.ZERO, TAU * i / 8.0)
+				Art.toon(ci, PackedVector2Array([Vector2(r - 1.0, -2.0), Vector2(r + 4.0, 0), Vector2(r - 1.0, 2.0)]), gold, 1.0, 0.0)
+				Art.pop(ci)
+			Art.pop(ci)
+		var reel := Color("d8a060")
+		if lv >= 8:
+			reel = Color("6a3a1e")
+		if lv >= 14:
+			reel = jade
+		if lv >= 20:
+			reel = gold
+		Art.t_circle(ci, c, r, _c(reel), 2.2, 0.4)
+		if not _sil:
+			if lv >= 8 and lv < 14:
+				# Carved ring on the hardwood reel.
+				Art.arc(ci, c, r - 2.2, 0.0, TAU, 14, Color("c8945a"), 1.0)
+			elif lv >= 14 and lv < 20:
+				Art.arc(ci, c, r - 1.8, 0.0, TAU, 14, Color(gold, 0.9), 1.2)
+		if lv >= 19:
+			if not _sil:
+				_soft(ci, _here(c), 8.0 * _sc, Color(1.0, 0.6, 0.2, 0.35 + pulse * 0.2))
+			Art.toon(ci, PackedVector2Array([c + Vector2(0, -4.5), c + Vector2(3.4, 0), c + Vector2(0, 4.5), c + Vector2(-3.4, 0)]), _c(Color("ff9a2a")), 1.4, 0.0)
+			if not _sil:
+				Art.disc(ci, c + Vector2(-0.8, -1.6), 0.9, Art.WHITE)
+		elif lv >= 14:
+			Art.t_circle(ci, c, 2.6, _c(turq), 1.2, 0.0)
+		else:
+			Art.t_circle(ci, c, 2.0, _c(Color("5a3018")), 1.2, 0.0)
+		if lv >= 8:
+			_crank(ci, c, r, t, gold if lv >= 16 else Color("3fbf4a"))
+		_out(ci)
+
+
+static func _jungle_bob(ci: CanvasItem, lv: int, t: float) -> void:
+	Art.line(ci, Vector2(0, -16), Vector2(0, -9), Art.INK, 3.0)
+	if lv >= 20:
+		# The glowing sun gem.
+		if not _sil:
+			_soft(ci, _here(Vector2.ZERO), 24.0, Color(1.0, 0.8, 0.3, _q(0.45 + 0.15 * sin(t * 3.0), 0.05)))
+			Art.push(ci, Vector2.ZERO, _q(t * 0.6, 0.1))
+			for i in 8:
+				Art.push(ci, Vector2.ZERO, TAU * i / 8.0)
+				Art.flat(ci, PackedVector2Array([Vector2(9, -2.2), Vector2(15, 0), Vector2(9, 2.2)]), Color("ffd84a"))
+				Art.pop(ci)
+			Art.pop(ci)
+		var gem := PackedVector2Array([Vector2(0, -10), Vector2(8, -4), Vector2(8, 4), Vector2(0, 10), Vector2(-8, 4), Vector2(-8, -4)])
+		Art.toon(ci, gem, _c(Color("ffb02a")), 2.4, 0.4)
+		if not _sil:
+			Art.flat(ci, PackedVector2Array([Vector2(0, -6), Vector2(4.5, -2), Vector2(4.5, 2), Vector2(0, 6), Vector2(-4.5, 2), Vector2(-4.5, -2)]), Color("ffe27a"))
+			Art.flat(ci, Art.ellipse_pts(Vector2(-3, -5), Vector2(2.2, 1.4), 8, -0.5), Color(1, 1, 1, 0.9))
+		return
+	if lv >= 15:
+		# A golden scarab: shell, the line between the wings, little legs.
+		for sx: float in [-1.0, 1.0]:
+			for i in 3:
+				Art.line(ci, Vector2(6.0 * sx, -3.0 + i * 4.0), Vector2(10.5 * sx, -5.0 + i * 5.0), Art.INK, 1.6)
+		Art.t_circle(ci, Vector2(0, -8), 3.8, _c(Color("8a5a1a")), 1.8, 0.0)
+		Art.t_ellipse(ci, Vector2(0, 1), Vector2(8, 9.5), _c(Color("ffc93c")), 2.4, 0.5)
+		if not _sil:
+			Art.line(ci, Vector2(0, -7), Vector2(0, 9), Color("c8901a"), 1.4)
+			Art.flat(ci, Art.ellipse_pts(Vector2(-3.5, -3), Vector2(2, 3.2), 8, 0.3), Color(1, 1, 1, 0.75))
+			Art.disc(ci, Vector2(3.5, 4), 1.4, Color("3fe0d0"))
+		return
+	if lv >= 10:
+		# A big leaf float with a red bead.
+		Art.push(ci, Vector2(-12, 3), -0.15)
+		Art.toon(ci, TileJungle.leaf_pts(24.0, 7.0), _c(Color("4cc04a")), 2.4, 0.4)
+		if not _sil:
+			Art.line(ci, Vector2(2, 0), Vector2(20, -1), Color("2a8a3a"), 1.4)
+		Art.pop(ci)
+		Art.t_circle(ci, Vector2(0, -5), 4.6, _c(Art.RED), 2.0, 0.4)
+		if not _sil:
+			Art.disc(ci, Vector2(-1.4, -6.6), 1.3, Art.WHITE)
+		return
+	if lv >= 5:
+		# Half a coconut shell, white flesh on the rim.
+		var shell := PackedVector2Array()
+		for i in 13:
+			var a := PI * i / 12.0
+			shell.append(Vector2(cos(a) * 10.0, -2.0 + sin(a) * 9.0))
+		Art.toon(ci, shell, _c(Color("8a5a2c")), 2.6, 0.5)
+		Art.toon(ci, Art.rrect_pts(Rect2(-11, -4.5, 22, 4.0), 2.0), _c(Color("fff6e4")), 2.0, 0.0)
+		if not _sil:
+			for x: float in [-5.0, 0.0, 5.0]:
+				Art.line(ci, Vector2(x, 0.5), Vector2(x * 1.2, 5.0), Color("6a4020"), 1.0)
+		return
+	# A cork float with a red top.
+	Art.t_rect(ci, Rect2(-6, -9, 12, 17), 4.0, _c(Color("d8a868")), 2.6, 0.4)
+	Art.toon(ci, Art.clipped(Art.rrect_pts(Rect2(-6, -9, 12, 17), 4.0), Art.rrect_pts(Rect2(-8, -11, 16, 8), 0.1, 1)), _c(Art.RED), 0.0, 0.0)
+	Art.ring(ci, Art.rrect_pts(Rect2(-6, -9, 12, 17), 4.0), Art.INK, 2.6)
+	if not _sil:
+		for p: Vector2 in [Vector2(-2, 2), Vector2(2.5, 4), Vector2(0, 6)]:
+			Art.disc(ci, p, 0.8, Color("a8783a"))
+		Art.flat(ci, Art.ellipse_pts(Vector2(-3, -6), Vector2(1.6, 1.2), 8, -0.5), Color(1, 1, 1, 0.8))
+
+
 # --- The line ------------------------------------------------------------------------------
 
 ## The fishing line through `pts` (tip first). `wet`: the float is in the water.
@@ -731,7 +950,7 @@ static func line(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int
 	var lv := clampi(level, 1, LEVELS)
 	var col := Color(1, 1, 1, 0.92)
 	var glow := Color(0, 0, 0, 0)
-	match posmod(world, 4):
+	match posmod(world, KEYS.size()):
 		OCEAN:
 			if lv >= 7:
 				col = Color("cdeeff")
@@ -756,6 +975,15 @@ static func line(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int
 			if lv >= 19:
 				col = Color("f0fcff")
 				glow = Color(0.65, 0.55, 1.0, 0.5)
+		JUNGLE:
+			if lv >= 7:
+				col = Color("eadcae")
+			if lv >= 17:
+				col = Color("ffe27a")
+				if wet:
+					glow = Color(1.0, 0.85, 0.3, 0.35)
+			if lv >= 20:
+				glow = Color(1.0, 0.8, 0.25, 0.5)
 	if _sil:
 		col = SIL
 		glow.a = 0.0
@@ -766,7 +994,8 @@ static func line(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int
 	if _sil:
 		return
 	# Sparkles running down the line.
-	var sparkle := (world == OCEAN and lv >= 17 and wet) or (world == MOON and lv >= 19) or (world == VOLCANO and lv >= 20)
+	var sparkle := (world == OCEAN and lv >= 17 and wet) or (world == MOON and lv >= 19) or (world == VOLCANO and lv >= 20) \
+			or (world == JUNGLE and lv >= 17 and (wet or lv >= 20))
 	if sparkle:
 		var n := pts.size() - 1
 		for k in 3:
@@ -774,7 +1003,7 @@ static func line(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int
 			var i := mini(int(f * n), n - 1)
 			var p := pts[i].lerp(pts[i + 1], f * n - i)
 			var s := width * (1.6 + 0.6 * sin(f * PI))
-			Art.flat(ci, Art.star_pts(p, s * 1.6, s * 0.5, 4), Color(1, 1, 0.9, 0.9) if world != VOLCANO else Color("ffd080"))
+			Art.flat(ci, Art.star_pts(p, s * 1.6, s * 0.5, 4), Color(1, 1, 0.9, 0.9) if world != VOLCANO and world != JUNGLE else Color("ffd080"))
 	# Slime drips on the acid line.
 	if world == ACID and lv >= 17 and wet:
 		for k in 2:
@@ -790,7 +1019,7 @@ static func line(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int
 static func bob(ci: CanvasItem, at: Vector2, s: float, world: int, level: int, t: float) -> void:
 	var lv := clampi(level, 1, LEVELS)
 	Art.push(ci, at, 0.0, Vector2.ONE * s)
-	match posmod(world, 4):
+	match posmod(world, KEYS.size()):
 		OCEAN:
 			_ocean_bob(ci, lv, t)
 		VOLCANO:
@@ -799,6 +1028,8 @@ static func bob(ci: CanvasItem, at: Vector2, s: float, world: int, level: int, t
 			_acid_bob(ci, lv, t)
 		MOON:
 			_moon_bob(ci, lv, t)
+		JUNGLE:
+			_jungle_bob(ci, lv, t)
 	Art.pop(ci)
 
 

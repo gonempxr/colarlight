@@ -348,7 +348,7 @@ func is_fish_at(p: Vector2) -> bool:
 
 
 func _fish_at(p: Vector2) -> int:
-	if WorldLook.world != "ocean":
+	if not WorldLook.world in ["ocean", "jungle"]:
 		return -1
 	var best := -1
 	var best_d := 46.0
@@ -519,6 +519,8 @@ func _paint_sky(ci: CanvasItem) -> void:
 		for s in _stars:
 			var tw := 0.55 + 0.45 * sin(t * (1.3 + s.z) + s.x * 40.0)
 			Props.star(ci, Vector2(s.x * w, s.y), s.z, Color(1.0, 0.97, 0.85, starlight * tw))
+	if WorldLook.world == "jungle":
+		WorldArt.jungle_sky(ci, w, sy, DayNight.sun_pos(w) if DayNight.sun_up() else Vector2(0, sy + 100.0), DayNight.daylight(), warm)
 	if WorldLook.world == "moon":
 		WorldArt.moon_sky(ci, w, sy, maxf(starlight, 0.6))
 		# Phones: small, in the strip of sky under the stage cards.
@@ -586,14 +588,14 @@ func _paint_sea(ci: CanvasItem) -> void:
 		elif band.x < TOP_H and WorldLook.world == "moon":
 			WorldArt.dust_still(ci, w, band.x, band.y, DayNight.daylight())
 			continue
-		elif band.x < TOP_H and WorldLook.world != "ocean":
+		elif band.x < TOP_H and not WorldLook.world in ["ocean", "jungle"]:
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.75)) * DayNight.sea_tint()
 		elif band.x < TOP_H:
 			# Ocean: bright at the surface, clearly deeper towards the sand.
 			c0 = c0.lightened(0.08)
 			c1 = Art.calm(Art.sea_cols[0].lerp(Art.sea_cols[1], 0.55)) * DayNight.sea_tint()
 		Art.grad(ci, PackedVector2Array([Vector2(0, band.x), Vector2(w, band.x), Vector2(w, band.y), Vector2(0, band.y)]), PackedColorArray([c0, c0, c1, c1]))
-		if band.x < TOP_H and WorldLook.world == "ocean":
+		if band.x < TOP_H and WorldLook.world in ["ocean", "jungle"]:
 			_caustics(ci, w, band.x, band.y)
 
 
@@ -645,10 +647,10 @@ func _draw_top_water(w: float) -> void:
 	var day := DayNight.daylight()
 	var tint := DayNight.deep_tint(DayNight.stepped_phase())
 	var wl := WorldLook.world
-	if wl == "ocean":
+	if wl in ["ocean", "jungle"]:
 		for i in 5:
 			var x := w * (0.1 + i * 0.2) + sin(t * 0.3 + i) * 16.0
-			var ray := Color(1, 1, 1, 0.07 * (0.2 + 0.8 * day))
+			var ray := Color(1, 1, 1, (0.07 if wl == "ocean" else 0.09) * (0.2 + 0.8 * day))
 			Art.grad(self, PackedVector2Array([Vector2(x - 14, SURFACE_Y), Vector2(x + 14, SURFACE_Y),
 					Vector2(x + 70, TOP_H), Vector2(x + 20, TOP_H)]), PackedColorArray([ray, ray, Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
 	elif wl == "volcano":
@@ -659,7 +661,7 @@ func _draw_top_water(w: float) -> void:
 		WorldArt.goo_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
 	elif wl == "moon":
 		WorldArt.dust_body(self, w, SURFACE_Y, TOP_H - 14.0, t)
-	if wl == "ocean":
+	if wl in ["ocean", "jungle"]:
 		for f in _fish:
 			var dart := exp(-(t - float(f["dart"])) * 2.5)
 			var face: float = f["face"]
@@ -675,6 +677,11 @@ func _draw_top_water(w: float) -> void:
 		for i in 5:
 			var x := SHAFT_R + 60.0 + i * (w - SHAFT_R - 120.0) / 4.0
 			Art.seaweed(self, Vector2(x, TOP_H - 22), 54 + (i % 3) * 20, Color("4fae4a") * tint, t * 0.7, i, 7.0)
+	elif wl == "jungle":
+		# Eelgrass and water plants swaying in the current.
+		for i in 6:
+			var x := SHAFT_R + 44.0 + i * (w - SHAFT_R - 90.0) / 5.0
+			Art.seaweed(self, Vector2(x, TOP_H - 22), 40 + (i % 3) * 18, (Color("3fbf5a") if i % 2 == 0 else Color("7ad860")) * tint, t * 0.8, i, 7.0)
 
 
 ## Fish colors fit the world (fire fish in lava, frog fish in the swamp).
@@ -685,6 +692,9 @@ func _fish_color(f: Dictionary) -> Color:
 			return [Color("ffe066"), Color("ff5a3a"), Color("ff9a2a"), Color("ffd0a0"), Color("ff3d6e")][i % 5]
 		"acid":
 			return [Color("c8ff5a"), Color("b07aff"), Color("5ae0c8"), Color("ff9fd0"), Color("ffe14a")][i % 5]
+		"jungle":
+			# River fish: neon tetras, golden and orange cichlids, discus.
+			return [Color("ff9a3d"), Color("3ad0ff"), Color("ffd23f"), Color("ff5a7a"), Color("9aeb5a")][i % 5]
 	return f["color"]
 
 
@@ -753,6 +763,17 @@ func _paint_ground(ci: CanvasItem) -> void:
 				Art.push(ci, p + Vector2(0, 6), 0.0, Vector2.ONE * (1.0 - k * 0.2))
 				WorldArt.crater(ci, ground, 30.0)
 				Art.pop(ci)
+			"jungle":
+				# The river bed: a sunken temple block, smooth stones, an old pot.
+				Art.push(ci, p + Vector2(0, 6))
+				match k:
+					0:
+						WorldArt.glyph_block(ci, WorldArt.TEMPLE * tint)
+					1:
+						WorldArt.river_stones(ci, tint)
+					_:
+						WorldArt.clay_pot(ci, tint)
+				Art.pop(ci)
 
 
 ## The bottom of the world under the last site (a still layer): the sea
@@ -796,6 +817,12 @@ func _paint_floor(ci: CanvasItem) -> void:
 				Art.push(ci, Vector2(w * (0.22 + k * 0.28), floor_y + 30), 0.0, Vector2.ONE * (1.2 - k * 0.2))
 				WorldArt.crystal_cluster(ci, [Color("9fe0ff"), Color("c8a0ff"), Color("8affd0")][k])
 				Art.pop(ci)
+		"jungle":
+			Art.push(ci, Vector2(w * 0.6, floor_y + 34))
+			WorldArt.pool(ci, Color("2fd8c4"), Color("b8fff0"), 1.6)
+			Art.pop(ci)
+			for k in 3:
+				WorldArt.column(ci, Vector2(w * (0.2 + k * 0.32), floor_y + 30 + k * 2), 70.0 - k * 12.0, WorldArt.TEMPLE.darkened(0.25), k % 2)
 	_paint_rock_end(ci, w, h - BOTTOM_H)
 
 
@@ -877,6 +904,10 @@ func _draw_bottom_life(w: float, floor_y: float) -> void:
 			"acid":
 				var p := Vector2(w * 0.62 - 40.0 + k * 16.0 + sin(t * 1.3 + k) * 4.0, floor_y + 30.0 - f * 90.0)
 				Art.arc(self, p, 3.0 + f * 3.0, 0, TAU, 10, Color(0.85, 1.0, 0.6, 0.8 * (1.0 - f)), 1.6)
+			"jungle":
+				# Golden motes rising from the temple pool.
+				var p := Vector2(w * 0.6 - 40.0 + k * 16.0 + sin(t * 1.1 + k * 2.0) * 8.0, floor_y + 30.0 - f * 110.0)
+				Art.dot(self, p, 2.4 * (1.0 - f) + 0.8, Color(1.0, 0.9, 0.45, 0.9 * sin(f * PI)))
 			_:
 				var p := Vector2(w * (0.15 + k * 0.14), floor_y - 10.0 - (k % 3) * 20.0)
 				var tw := snappedf(0.5 + 0.5 * sin(t * 2.4 + k * 1.9), 0.1)

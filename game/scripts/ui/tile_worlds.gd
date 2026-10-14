@@ -8,6 +8,8 @@ extends RefCounted
 ## Volcano: fire opal, obsidian shard, flame, ruby, lava blob, lava rock.
 ## Acid:    slime drop, mushroom, frog, orchid, amber, glow spore.
 ## Moon:    moonstone, ringed planet, star, alien, meteor, UFO.
+## Jungle:  banana bunch, parrot, hibiscus, coconut, golden idol mask,
+##          tiger's-eye gem (and its own specials, blockers: TileJungle).
 
 const _W := 3.0
 
@@ -15,6 +17,7 @@ const COLORS := {
 	1: [Color("6fdcff"), Color("4b3a6b"), Color("ffd23a"), Color("e8263f"), Color("ff5a1e"), Color("6e7a8f")],
 	2: [Color("8ff03c"), Color("e8423c"), Color("2fc4a0"), Color("d45cf0"), Color("ffae2a"), Color("4fc8ff")],
 	3: [Color("e8f4ff"), Color("ff9a4a"), Color("ffe04a"), Color("6ee05a"), Color("d8553a"), Color("a77bff")],
+	4: [Color("ffe03a"), Color("3a9cff"), Color("ff4a86"), Color("9a6234"), Color("ffa21e"), Color("2fd27a")],
 }
 
 
@@ -45,6 +48,7 @@ static func draw(ci: CanvasItem, world: int, slot: int, t: float, lift: float) -
 		33: _alien(ci, t, col)
 		34: _meteor(ci, t, col)
 		35: _ufo(ci, t, col)
+		40, 41, 42, 43, 44, 45: TileJungle.piece(ci, slot, t, col)
 
 
 static func _shine(ci: CanvasItem, c: Vector2, radii: Vector2, rot: float, a: float = 0.8) -> void:
@@ -336,6 +340,7 @@ static func block_colors(world: int) -> Array:
 		1: return [Color("8a8090"), Color("5a5262")]
 		2: return [Color("7fae4a"), Color("4f7a2a")]
 		3: return [Color("c8ccd8"), Color("8f95a8")]
+		4: return [Color("d9bb7c"), Color("a8844a")]
 	return [Art.SAND, Art.SAND_DARK]
 
 
@@ -345,4 +350,5 @@ static func bubble_colors(world: int) -> Array:
 		1: return [Color(1.0, 0.6, 0.3, 0.32), Color("c2501a")]
 		2: return [Color(0.6, 1.0, 0.4, 0.32), Color("3f8a1a")]
 		3: return [Color(0.75, 0.65, 1.0, 0.32), Color("5a3fb0")]
+		4: return [Color(0.55, 1.0, 0.75, 0.22), Color("2f8a3a")]
 	return [Color(0.72, 0.93, 1.0, 0.3), Color("2f7fc0")]

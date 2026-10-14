@@ -42,6 +42,7 @@ func _initialize() -> void:
 	test_vault()
 	test_advance_location()
 	test_world_cycling()
+	test_stars()
 	test_v3_migration()
 	test_decor()
 	test_suit_refund()
@@ -65,13 +66,13 @@ func _complete_location() -> void:
 
 
 func test_balance_tables() -> void:
-	check(Balance.WORLDS.size() == 4, "four worlds")
+	check(Balance.WORLDS.size() == 5, "five worlds")
 	var ids := []
 	for w in Balance.WORLDS:
 		ids.append(w["id"])
 		check(w["sites"].size() == 10, "%s has 10 sites" % w["id"])
 		check(str(w["name"]) == "WORLD_" + str(w["id"]).to_upper(), "%s name key" % w["id"])
-	check(ids == ["ocean", "volcano", "acid", "moon"], "worlds in order")
+	check(ids == ["ocean", "volcano", "acid", "moon", "jungle"], "worlds in order")
 	check(Balance.DEPTHS.size() == 10, "one 10-step ladder")
 	var rising := true
 	for i in range(1, 10):
@@ -155,7 +156,7 @@ func test_evolution() -> void:
 func test_skins() -> void:
 	_fresh()
 	var ids := {}
-	for w: String in ["ocean", "volcano", "acid", "moon"]:
+	for w: String in ["ocean", "volcano", "acid", "moon", "jungle"]:
 		var list: Array = Content.skins_of(w)
 		var rar := [0, 0, 0, 0]
 		for c: Dictionary in list:
@@ -353,12 +354,14 @@ func test_advance_location() -> void:
 
 func test_world_cycling() -> void:
 	_fresh()
-	var want := ["ocean", "volcano", "acid", "moon"]
+	var want := ["ocean", "volcano", "acid", "moon", "jungle"]
 	var ok := true
 	for l in want.size():
 		gs.location = l
 		ok = ok and gs.world_id() == want[l] and gs.world_index() == l and gs.tier() == 0
-	check(ok, "worlds go ocean -> volcano -> acid -> moon, no stars")
+	check(ok, "worlds go ocean -> volcano -> acid -> moon -> jungle, no tiers")
+	check(gs.site_id(0) == "clay" and gs.site_id(9) == "temple_heart", "jungle sites")
+	gs.location = 3
 	check(gs.site_id(9) == "cosmic_heart" and gs.site_id(1) == "meteor", "moon sites")
 	gs.location = 0
 	check(gs.site_id(0) == "shells" and gs.site_id(9) == "heart", "ocean sites")
@@ -370,23 +373,29 @@ func test_world_cycling() -> void:
 	test_last_location()
 
 
-## Exactly four worlds: the Moon is the last, nothing opens after it, and old
-## saves from the repeats come back to the Moon with their progress.
+## Five worlds: the Jungle is the last, nothing opens after it. Old saves
+## (before version 5) from the repeats come back to the Moon with their
+## progress (their location 4 was "Ocean ★2", not the Jungle).
 func test_last_location() -> void:
 	_fresh()
-	check(Balance.LAST_LOCATION == 3 and Balance.WORLDS.size() == 4, "four worlds, the Moon is the last")
-	gs.location = 7
-	check(gs.location == 3 and gs.world_id() == "moon" and gs.tier() == 0, "no location past the Moon")
-	gs.location = 2
-	check(not gs.is_last_location(), "the swamp is not the last")
+	check(Balance.LAST_LOCATION == 4 and Balance.WORLDS.size() == 5, "five worlds, the Jungle is the last")
+	gs.location = 9
+	check(gs.location == 4 and gs.world_id() == "jungle" and gs.tier() == 0, "no location past the Jungle")
 	gs.location = 3
-	check(gs.is_last_location(), "the Moon is the last")
+	check(not gs.is_last_location(), "the Moon is not the last any more")
 	_complete_location()
 	gs.coins = gs.next_location_cost() * 10.0
-	check(gs.location_ready(), "a finished Moon")
-	check(not gs.can_advance_location() and not gs.advance_location(), "the Moon's gate stays shut")
-	check(gs.location == 3 and gs.coins > 0.0, "still on the Moon, coins kept")
-	# An old save at Ocean ★2 / Volcano ★2: back to the Moon, levels kept.
+	gs.max_location = 3
+	check(gs.can_advance_location(), "a finished Moon opens the Jungle")
+	gs.location = 4
+	gs.max_location = 4
+	check(gs.is_last_location(), "the Jungle is the last")
+	_complete_location()
+	gs.coins = gs.next_location_cost() * 10.0
+	check(gs.location_ready(), "a finished Jungle")
+	check(not gs.can_advance_location() and not gs.advance_location(), "the Jungle's gate stays shut")
+	check(gs.location == 4 and gs.coins > 0.0, "still in the Jungle, coins kept")
+	# An old save (version 4) at Ocean ★2 / Volcano ★2: back to the Moon, levels kept.
 	for old_loc in [4, 5, 9]:
 		_fresh()
 		gs.levels["d0"] = 77
@@ -397,14 +406,93 @@ func test_last_location() -> void:
 		gs.save_game()
 		var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
 		saved["location"] = old_loc
+		saved["max_location"] = old_loc
+		saved["version"] = 4
 		var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
 		f.store_string(JSON.stringify(saved))
 		f.close()
 		gs.reset()
 		gs.load_game()
-		check(gs.location == 3, "save at location %d is clamped to the Moon" % old_loc)
+		check(gs.location == 3 and gs.max_location == 3, "old save at location %d is clamped to the Moon" % old_loc)
 		check(int(gs.levels["d0"]) == 77 and int(gs.levels["d3"]) == 21 and gs.has_manager("d0"), "its levels and foremen stay (%d)" % old_loc)
 		check(gs.coins >= 1.5e15 * 0.99, "its coins stay (%d)" % old_loc)
+	# A version 5 save in the Jungle stays there.
+	_fresh()
+	gs.location = 4
+	gs.max_location = 4
+	gs.levels["d0"] = 33
+	gs.save_game()
+	gs.reset()
+	gs.load_game()
+	check(gs.location == 4 and gs.world_id() == "jungle" and int(gs.levels["d0"]) == 33, "a Jungle save loads in the Jungle")
+	_fresh()
+
+
+## World stars: only once the last world is open, only for a finished world,
+## for coins; the world starts over with bigger numbers, every star lifts
+## every world's income, pearls are paid, and it all survives a save.
+func test_stars() -> void:
+	_fresh()
+	gs.location = 0
+	_complete_location()
+	gs.coins = 1e40
+	check(not gs.stars_unlocked() and not gs.can_get_star() and not gs.get_star(), "no stars before the Jungle")
+	gs.max_location = 4
+	check(gs.stars_unlocked() and gs.star_ready(), "stars open once the Jungle is open")
+	var price: float = gs.star_cost()
+	check(near(price, Balance.LOCATION_PRICE * Balance.loc_gate_scale(0)), "the first star costs like the location price")
+	gs.coins = price * 0.5
+	check(not gs.can_get_star(), "not enough coins")
+	gs.coins = price * 0.5
+	gs.vault = price * 0.6
+	check(gs.can_get_star(), "the vault counts too")
+	var pearls0: int = pr.pearls
+	var rate0: float = gs.rate("d0") / float(gs.get_level("d0"))
+	var mult0: float = gs.income_mult()
+	gs.levels["d0"] = 50
+	gs.managers["vault"] = true
+	check(gs.get_star(), "a star is taken")
+	check(gs.stars_of(0) == 1 and gs.total_stars() == 1, "the ocean has a star")
+	check(gs.get_level("d0") == 1 and not gs.is_open("d1") and not gs.has_manager("d0"), "the run starts over")
+	check(gs.has_manager("lift") and gs.has_manager("boat") and gs.has_manager("plant") and gs.has_manager("vault"), "automation stays")
+	check(gs.coins == 0.0 and gs.vault == 0.0 and gs.evo == 0, "coins, vault and gear start over")
+	check(pr.pearls == pearls0 + Balance.star_pearls(0), "pearls paid (%d)" % (pr.pearls - pearls0))
+	check(near(gs.income_mult() / mult0, Balance.star_scale(0, 1) * Balance.star_mult(1)), "numbers grow, plus the star bonus")
+	check(near(gs.upgrade_cost("d0"), Balance.upgrade_cost(Balance.DEPTHS[0]["cost0"], 1) * Balance.star_scale(0, 1)), "level prices grow with the star")
+	check(near(gs.manager_cost("d0"), Balance.DEPTHS[0]["manager"] * Balance.star_gate_scale(0, 1)), "gate prices use the star gate scale")
+	check(near(gs.star_cost(), price * Balance.LOC_SCALE_STEP * Balance.STAR_GATE), "the next star costs ~600x more")
+	# A world stops at MAX_STARS; a save can't hold more.
+	gs.world_stars[str(gs.location)] = Balance.MAX_STARS
+	check(not gs.star_ready() and not gs.can_get_star(), "no star past MAX_STARS")
+	gs.world_stars[str(gs.location)] = 1
+	check(near(Balance.star_gate_scale(0, 2) / Balance.star_gate_scale(0, 1), pow(Balance.LOC_SCALE_STEP, Balance.STAR_LOCS) * Balance.STAR_GROWTH), "each further star grows the gate")
+	check(rate0 > 0.0, "the ocean earned before")
+	check(WorldLook.name_of(0).ends_with("★1"), "the name shows the star (%s)" % WorldLook.name_of(0))
+	# The bonus counts in another world too.
+	var m_ocean: float = gs.star_mult()
+	gs.switch_location(1)
+	check(gs.location == 1 and near(gs.star_mult(), m_ocean) and gs.stars_of(1) == 0, "the star bonus counts in the volcano")
+	check(not gs.can_get_star(), "the volcano's own checklist first")
+	# Save and load.
+	gs.save_game()
+	gs.reset()
+	check(gs.total_stars() == 0, "reset clears stars")
+	gs.load_game()
+	check(gs.stars_of(0) == 1 and gs.total_stars() == 1 and gs.location == 1, "stars saved and loaded")
+	gs.switch_location(0)
+	check(near(gs.upgrade_cost("d0"), Balance.upgrade_cost(Balance.DEPTHS[0]["cost0"], 1) * Balance.star_scale(0, 1)), "the starred ocean keeps its bigger numbers after a load")
+	# Goals and achievements.
+	check(int(pr.stats.get("stars", 0)) >= 1, "the stars stat is kept")
+	check(pr.is_owned("boat_starlight"), "the 1-star gift unlocks")
+	# Bad save values.
+	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
+	saved["stars"] = {"0": -3, "2": "x", "9": 4, "1": 2}
+	var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(saved))
+	f.close()
+	gs.reset()
+	gs.load_game()
+	check(gs.stars_of(0) == 0 and gs.stars_of(2) == 0 and gs.stars_of(1) == 2 and gs.total_stars() == 2, "bad star values are dropped")
 	_fresh()
 
 
@@ -433,7 +521,7 @@ func test_v3_migration() -> void:
 	check(gs.income_rate() > 0.0 and gs.next_depth() == "d9", "the economy runs; heart is the next site")
 	gs.save_game()
 	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
-	check(int(saved["version"]) == 4 and int(saved["location"]) == 0, "saved as version 4")
+	check(int(saved["version"]) == int(gs.get("SAVE_VERSION")) and int(saved["location"]) == 0, "saved as the current version")
 	gs.reset()
 	gs.load_game()
 	check(gs.get_level("d7") == 47 and gs.get_level("d8") == 21 and near(gs.legacy_mult, 27.0), "a v4 save does not fold twice")

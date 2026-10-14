@@ -8,7 +8,7 @@ FRAMES=${2:-240}
 cd "$GAME" || exit 1
 for dev in phone pc; do
 	if [ $dev = phone ]; then res=390x844; flag=phone; else res=1920x1080; flag=; fi
-	for cfg in "world=0" "world=0 scroll=1400" "world=1 scroll=700" "world=2 scroll=1400" "world=3 scroll=700" "room=1" "room=2"; do
+	for cfg in "world=0" "world=0 scroll=1400" "world=1 scroll=700" "world=2 scroll=1400" "world=3 scroll=700" "world=4" "world=4 scroll=1400" "room=1" "room=2" "world=4 room=1" "world=4 room=2"; do
 		out=$(timeout 600 godot --headless --fixed-fps 60 --path . --resolution $res -s res://tests/perf_attr.gd -- $flag frames=$FRAMES $cfg 2>&1 | grep BASE)
 		med=$(echo "$out" | sed -E 's/.*frame ([0-9.]+) ms.*/\1/')
 		worst=$(echo "$out" | sed -E 's/.*worst ([0-9.]+)\).*/\1/')

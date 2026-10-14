@@ -51,6 +51,19 @@ FORM_MOON_9,Moon Cat,Лунный кот,Gato lunar,月亮猫
 FORM_MOON_10,Meteor Golem,Метеоритный голем,Gólem de meteorito,陨石巨人
 FORM_MOON_11,Cosmic Dragon,Космический дракон,Dragón cósmico,宇宙龙
 FORM_MOON_12,Star King,Звёздный король,Rey de las estrellas,星辰之王
+FORM_JUNGLE_0,Young Explorer,Юный исследователь,Joven explorador,小探险家
+FORM_JUNGLE_1,Monkey,Обезьянка,Monito,小猴子
+FORM_JUNGLE_2,Parrot,Попугай,Loro,鹦鹉
+FORM_JUNGLE_3,Jaguar,Ягуар,Jaguar,美洲豹
+FORM_JUNGLE_4,Poison Frog,Древолаз,Rana flecha,箭毒蛙
+FORM_JUNGLE_5,Toucan,Тукан,Tucán,巨嘴鸟
+FORM_JUNGLE_6,Sloth,Ленивец,Perezoso,树懒
+FORM_JUNGLE_7,Tiki Mask,Маска тики,Máscara tiki,提基面具
+FORM_JUNGLE_8,Chameleon,Хамелеон,Camaleón,变色龙
+FORM_JUNGLE_9,Temple Guardian,Страж храма,Guardián del templo,神庙守卫
+FORM_JUNGLE_10,Vine Spirit,Дух лиан,Espíritu de lianas,藤蔓精灵
+FORM_JUNGLE_11,Feathered Serpent,Пернатый змей,Serpiente emplumada,羽蛇
+FORM_JUNGLE_12,Golden Idol King,Король Золотой Идол,Rey Ídolo Dorado,黄金神像王
 RARITY_BASE,Basic,Обычный,Básico,基础
 RARITY_RARE,Rare,Редкий,Raro,稀有
 RARITY_EPIC,Epic,Эпический,Épico,史诗
@@ -95,6 +108,10 @@ GEAR_MOON_1,Space Cadet,Космический кадет,Cadete espacial,太空
 GEAR_MOON_2,Astronaut,Космонавт,Astronauta,宇航员
 GEAR_MOON_3,Moonwalker,Лунопроходец,Caminante lunar,月球漫步者
 GEAR_MOON_4,Star Commander,Звёздный командир,Comandante estelar,星际指挥官
+GEAR_JUNGLE_1,Safari Explorer,Исследователь сафари,Explorador de safari,探险家
+GEAR_JUNGLE_2,Cliff Climber,Скалолаз,Escalador,攀岩者
+GEAR_JUNGLE_3,Jungle Ranger,Рейнджер джунглей,Guardabosques de la selva,丛林游侠
+GEAR_JUNGLE_4,Temple Champion,Чемпион храма,Campeón del templo,神庙勇士
 SKIN_OCEAN_SHELLS,Seashells,Ракушки,Conchas,贝壳
 SKIN_OCEAN_JELLY,Jellyfish,Медузы,Medusas,水母
 SKIN_OCEAN_CORAL,Coral,Кораллы,Coral,珊瑚
@@ -119,3 +136,9 @@ SKIN_MOON_NIGHT,Night Sky,Ночное небо,Cielo nocturno,夜空
 SKIN_MOON_GALAXY,Galaxy,Галактика,Galaxia,银河
 SKIN_MOON_AURORA,Aurora,Северное сияние,Aurora,极光
 SKIN_MOON_GOLD,Constellations,Созвездия,Constelaciones,星座
+SKIN_JUNGLE_LEAF,Leaf Camo,Лиственный камуфляж,Camuflaje de hojas,树叶迷彩
+SKIN_JUNGLE_BANANA,Bananas,Бананы,Plátanos,香蕉
+SKIN_JUNGLE_FLOWERS,Tropical Flowers,Тропические цветы,Flores tropicales,热带花
+SKIN_JUNGLE_JADE,Jade,Нефрит,Jade,翡翠
+SKIN_JUNGLE_TIGER,Tiger Stripes,Тигровые полоски,Rayas de tigre,虎纹
+SKIN_JUNGLE_GLYPHS,Gold Glyphs,Золотые знаки,Glifos dorados,金色符文

@@ -29,17 +29,19 @@ const HINT_DELAY := 5.0
 const EXTRA_MOVES := 5
 const TOP_H := 124.0
 ## The look of each world's board: background stops, the floor, the frame
-## and the board's back (0 ocean, 1 volcano, 2 acid swamp, 3 moon).
+## and the board's back (0 ocean, 1 volcano, 2 acid swamp, 3 moon, 4 jungle).
 const LOOKS := [
 	{"bg": ["46c3dc", "1f86bd", "134e8e"], "floor": "f2d29b", "frame": "f2d29b", "back": "1a5c96", "plant": "3fbf6a"},
 	{"bg": ["7a2a2a", "a8341a", "2a0a10"], "floor": "4a3a40", "frame": "6a5660", "back": "3a1a20", "plant": "ff7a1a"},
 	{"bg": ["3f8a3a", "1f5a2a", "0a2a14"], "floor": "5a6a3a", "frame": "8aa04a", "back": "1f3a1a", "plant": "7fd04a"},
 	{"bg": ["1a1a4a", "0d0d2e", "05051a"], "floor": "b8bccb", "frame": "9aa0b4", "back": "1a1a3a", "plant": "c8ccd8"},
+	{"bg": ["bff0c8", "5cc68a", "1f6a4c"], "floor": "5a8a3a", "frame": "d9bb7c", "back": "173d34", "plant": "3fbf4a"},
 ]
+const JUNGLE := 4
 const NO_CELL := Vector2i(-1, -1)
 
 var model: Match3
-## 0 ocean, 1 volcano, 2 acid swamp, 3 moon (main sets it before setup()).
+## 0 ocean, 1 volcano, 2 acid swamp, 3 moon, 4 jungle (main sets it before setup()).
 var world := 0
 var level := {}
 var artifact := "compass"
@@ -50,6 +52,8 @@ var _reward_fn: Callable
 var _reward_lines: Array = []
 var _reward_box: VBoxContainer
 
+## Scenery that never moves (the jungle ruins), drawn once per layout.
+var _still: Control
 var _bg: Control
 var _frame: Control
 var _board: Control
@@ -119,6 +123,7 @@ func _ready() -> void:
 	theme = UiTheme.build()
 	_touch_input = not bool(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", true))
 	_rng.seed = 11
+	_still = _layer(_draw_still)
 	_bg = _layer(_draw_bg)
 	_frame = _layer(_draw_frame)
 	_board = _layer(_draw_board)
@@ -224,7 +229,7 @@ func _layout() -> void:
 	var bs := Vector2(w, h) * tile
 	var pos := avail.position + (avail.size - bs) / 2.0
 	_board_rect = Rect2(pos.round(), bs)
-	for c: Control in [_bg, _frame, _fx, _overlay]:
+	for c: Control in [_still, _bg, _frame, _fx, _overlay]:
 		c.position = Vector2.ZERO
 		c.size = v
 	_board.position = _board_rect.position
@@ -236,6 +241,7 @@ func _layout() -> void:
 	_confirm.reset_size()
 	_confirm.position = Vector2(_top_rect.end.x - _confirm.size.x - 6.0, _top_rect.end.y + 6.0)
 	_frame.queue_redraw()
+	_still.queue_redraw()
 	_bg.queue_redraw()
 	_board.queue_redraw()
 	_top.queue_redraw()
@@ -601,9 +607,21 @@ func _burst(p: Vector2, col: Color, n: int, power: float) -> void:
 
 
 func _bubble_burst(p: Vector2, n: int) -> void:
+	if world == JUNGLE:
+		_leaf_burst(p, n)
+		return
 	for i in n:
 		_parts.append({"p": p + Vector2(_rng.randf_range(-20, 20), _rng.randf_range(-10, 10)), "v": Vector2(_rng.randf_range(-40, 40), _rng.randf_range(-220, -140)),
 				"age": 0.0, "life": _rng.randf_range(0.5, 0.8), "c": Color(1, 1, 1, 0.85), "s": _rng.randf_range(0.5, 0.9) * tile / 90.0, "type": "bubble"})
+
+
+## Jungle: leaves and petals flutter out of a match instead of bubbles.
+func _leaf_burst(p: Vector2, n: int) -> void:
+	for i in n:
+		var cols := [Color("3fbf4a"), Color("8ad84a"), Color("ff6aa8"), Color("ffd23a")]
+		_parts.append({"p": p + Vector2(_rng.randf_range(-16, 16), _rng.randf_range(-10, 10)), "v": Vector2(_rng.randf_range(-160, 160), _rng.randf_range(-260, -140)),
+				"age": 0.0, "life": _rng.randf_range(0.7, 1.0), "c": cols[_rng.randi() % cols.size()], "s": _rng.randf_range(0.6, 0.95) * tile / 90.0,
+				"type": "leaf", "spin": _rng.randf_range(-7.0, 7.0)})
 
 
 func _sparkles(p: Vector2, n: int) -> void:
@@ -648,6 +666,11 @@ func _update_fx(delta: float) -> void:
 		p["age"] += delta
 		if p["type"] == "bubble":
 			p["v"].x *= Motion.drag(0.97, delta)
+		elif p["type"] == "leaf":
+			# Leaves float: little gravity, lots of air drag, a swing.
+			p["v"].y += 260.0 * delta
+			p["v"] *= Motion.drag(0.92, delta)
+			p["p"].x += sin(p["age"] * 9.0 + p["spin"]) * 60.0 * delta
 		else:
 			p["v"].y += 700.0 * delta
 			p["v"] *= Motion.drag(0.97, delta)
@@ -689,8 +712,17 @@ func _ring_pts() -> PackedVector2Array:
 	return Art.circle_pts(Vector2.ZERO, _RING_PTS_R, 20)
 
 
+## The still part of the background (only the jungle has one).
+func _draw_still() -> void:
+	if world == JUNGLE:
+		JungleBoard.still(_still, _still.size, _board_rect)
+
+
 func _draw_bg() -> void:
 	var v := _bg.size
+	if world == JUNGLE:
+		JungleBoard.ambient(_bg, v, _t, _bubbles, Art.low_power)
+		return
 	var look: Dictionary = LOOKS[world]
 	var top := Color(look["bg"][0])
 	var mid := Color(look["bg"][1])
@@ -799,10 +831,15 @@ func _bg_space(v: Vector2) -> void:
 				PackedColorArray([Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.9 * (1.0 - u)), Color(1, 1, 1, 0.9 * (1.0 - u))]))
 
 
+## Width of the board's frame (the jungle's carved stone frame is thicker).
+func _pad() -> float:
+	return maxf(14.0, tile * 0.3) if world == JUNGLE else maxf(10.0, tile * 0.2)
+
+
 func _draw_frame() -> void:
 	var v := _frame.size
 	var r := _board_rect
-	var pad := maxf(10.0, tile * 0.2)
+	var pad := _pad()
 	# Sea floor along the bottom of the screen.
 	var look: Dictionary = LOOKS[world]
 	var floor_col := Color(look["floor"])
@@ -810,10 +847,16 @@ func _draw_frame() -> void:
 	var floor_y := minf(v.y - 60.0, r.end.y + pad + 10.0) if not _wide else v.y - 80.0
 	var dunes := PackedVector2Array([Vector2(-10, floor_y + 30), Vector2(v.x * 0.2, floor_y + 5), Vector2(v.x * 0.45, floor_y + 28),
 			Vector2(v.x * 0.7, floor_y), Vector2(v.x + 10, floor_y + 22), Vector2(v.x + 10, v.y + 10), Vector2(-10, v.y + 10)])
-	Art.toon(_frame, dunes, floor_col, 4.0, 0.5)
+	if world == JUNGLE:
+		JungleBoard.ground(_frame, v, floor_y)
+	else:
+		Art.toon(_frame, dunes, floor_col, 4.0, 0.5)
 	for i in 5:
 		var sx := v.x * (0.1 + i * 0.2)
-		Art.push(_frame, Vector2(sx, v.y - 18.0 - (i % 2) * 14.0), 0.3 * (i - 2), Vector2.ONE * 0.9)
+		if world == JUNGLE:
+			Art.push(_frame, Vector2(sx, v.y - 14.0 - (i % 2) * 10.0), 0.0, Vector2.ONE * clampf((v.y - floor_y) / 120.0, 1.1, 2.2))
+		else:
+			Art.push(_frame, Vector2(sx, v.y - 18.0 - (i % 2) * 14.0), 0.3 * (i - 2), Vector2.ONE * 0.9)
 		_floor_prop(i)
 		Art.pop(_frame)
 	# Coral and seaweed on the sides (more room on PC).
@@ -825,7 +868,9 @@ func _draw_frame() -> void:
 		if room > 120.0:
 			var cx := edge + s * room * 0.5
 			for k in 3:
-				if world != 3:
+				if world == JUNGLE:
+					JungleBoard.fern(_frame, Vector2(cx + (k - 1) * 46.0 * s, v.y - 30.0), 1.3 + k * 0.35, Color("3fbf4a").lerp(Color("23863a"), k * 0.4))
+				elif world != 3:
 					Art.seaweed(_frame, Vector2(cx + (k - 1) * 34.0 * s, v.y - 30.0), 140.0 + k * 50.0, Color(look["plant"]).lerp(Color(look["plant"]).darkened(0.25), k * 0.4), 0.0, k * 1.3 + s, 12.0)
 			Art.push(_frame, Vector2(cx - s * room * 0.2, v.y - 60.0), 0.0, Vector2.ONE * 1.4)
 			_side_prop(s)
@@ -840,7 +885,7 @@ func _draw_frame() -> void:
 	# Pebbles on the frame.
 	var prng := RandomNumberGenerator.new()
 	prng.seed = 5
-	for i in 18:
+	for i in (0 if world == JUNGLE else 18):
 		var side := i % 4
 		var f := prng.randf_range(0.1, 0.9)
 		var p := Vector2.ZERO
@@ -874,7 +919,9 @@ func _draw_frame() -> void:
 		Art.toon(_frame, Art.arrow_pts(13.0), Art.WHITE, 2.5, 0.0)
 		Art.pop(_frame)
 	# Corner decorations.
-	if world == 0:
+	if world == JUNGLE:
+		JungleBoard.frame_deco(_frame, outer, r.grow(4.0), pad, tile)
+	elif world == 0:
 		Art.push(_frame, outer.position + Vector2(pad * 0.2, pad * 1.4), -0.4, Vector2.ONE * (tile / 70.0))
 		Props.coral(_frame, Color("ff6f7f"), 2, 0.0)
 		Art.pop(_frame)
@@ -912,6 +959,8 @@ func _floor_prop(i: int) -> void:
 			Art.push(_frame, Vector2(0, -8), 0.0, Vector2.ONE * 0.6)
 			TileWorlds.draw(_frame, 2, [1, 4, 1, 3, 1][i], 0.0, 0.0)
 			Art.pop(_frame)
+		JUNGLE:
+			JungleBoard.floor_prop(_frame, i)
 		3:
 			Art.flat(_frame, Art.ellipse_pts(Vector2.ZERO, Vector2(16, 5), 16), Color("8f95a8"))
 			Art.ring(_frame, Art.ellipse_pts(Vector2.ZERO, Vector2(16, 5), 16), Color("6a7088"), 2.0)
@@ -934,6 +983,8 @@ func _side_prop(s: float) -> void:
 			Art.push(_frame, Vector2(0, -20), 0.0, Vector2.ONE * 1.3)
 			TileWorlds.draw(_frame, 3, 5 if s < 0 else 1, _t, 0.0)
 			Art.pop(_frame)
+		JUNGLE:
+			JungleBoard.side_prop(_frame, s, _t)
 
 
 # --- Drawing: board --------------------------------------------------------------------------
@@ -981,10 +1032,10 @@ func _draw_board() -> void:
 					# Pieces of a kind share their look: five phases of the idle
 					# animation, 15 steps a second, recorded once and pasted.
 					var tt := snappedf(_t + (i % 5) * 0.37, 1.0 / 15.0)
-					var key := hash([77, k, sel, tt])
-					if not Art.cache_begin(_board, key):
+					var key := hash([77, world, k, sel, tt])
+					if not Art.cache_begin(_board, key, true):
 						TileArt.draw(_board, TileArt.KINDS[k], tt, sel)
-						Art.cache_end(_board, key)
+						Art.cache_end(_board, key, true)
 				if bubs[i] > 0:
 					TileArt.blocker(_board, "bubble", bubs[i])
 			Art.pop(_board)
@@ -1098,7 +1149,7 @@ func _draw_fx() -> void:
 		var reach := _ease_out(minf(1.0, f * 2.2))
 		var thick := tile * 0.36 * (1.0 - f * 0.7)
 		var col := Color(1.0, 0.97, 0.75, 0.9 * (1.0 - f))
-		var glow := Color(1.0, 0.65, 0.3, 0.45 * (1.0 - f))
+		var glow := Color(1.0, 0.65, 0.3, 0.45 * (1.0 - f)) if world != JUNGLE else Color(0.45, 1.0, 0.4, 0.5 * (1.0 - f))
 		if b["h"]:
 			var x0 := lerpf(c.x, br.position.x, reach)
 			var x1 := lerpf(c.x, br.end.x, reach)
@@ -1166,6 +1217,11 @@ func _draw_fx() -> void:
 				Art.push(ci, p["p"], 0.0, Vector2.ONE * p["s"])
 				Art.ring(ci, rp, Color(1, 1, 1, 0.8), 2.2)
 				Art.pop(ci)
+			"leaf":
+				var flip := snappedf(cos(p["age"] * 8.0 + p["spin"]), 0.25)
+				Art.push(ci, p["p"], p["age"] * p["spin"], Vector2(1.0, flip if absf(flip) > 0.25 else 0.25) * p["s"] * (1.0 - f * 0.4))
+				Art.toon(ci, TileJungle.leaf_pts(26.0, 8.0), Color(col, snappedf(1.0 - f * f, 0.1)), 2.0, 0.0)
+				Art.pop(ci)
 			"star":
 				Art.push(ci, p["p"], p["age"] * 6.0, Vector2.ONE * p["s"] * (1.0 - f))
 				Art.flat(ci, Art.star_pts(Vector2.ZERO, 12.0, 4.0, 4), Color(1.0, 0.97, 0.7))
@@ -1211,7 +1267,7 @@ func _draw_tip(ci: CanvasItem) -> void:
 		fs -= 2
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var top := _top_rect.end.y + 34.0
-	var bottom := _board_rect.position.y - maxf(10.0, tile * 0.2) - 6.0
+	var bottom := _board_rect.position.y - _pad() - 6.0
 	var y := maxf(top, (top + bottom) / 2.0)
 	var pill := Rect2(v.x / 2.0 - (tw + 80.0) / 2.0, y - 26.0, tw + 80.0, 52.0)
 	Art.t_rect(ci, Rect2(pill.position + Vector2(0, 5), pill.size), 26.0, Color(Art.shade_of(Art.CREAM_DARK, 0.3), a), 3.5, 0.0)

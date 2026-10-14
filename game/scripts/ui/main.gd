@@ -15,6 +15,7 @@ const SIDE_W := 540.0
 ## Smallest on-screen scale of the 720x1280 design on short landscape screens.
 const SHORT_SCREEN_SCALE := 0.46
 const TOAST_SEC := 3.0
+const CROWN_TOAST_GAP := 180.0
 const HUD_H := 112.0
 const DOCK_H := 128.0
 const PUZZLE_SCRIPT := "res://scripts/puzzle/puzzle_screen.gd"
@@ -92,6 +93,8 @@ var _sheet_open := false
 var _refresh_left := 0.0
 var _news: Array[String] = []
 var _started := false
+var _crown_toast_at := -1000.0
+var _league_seen := -1
 var _sheet_tween: Tween
 ## The room shown (0 mine, 1 factory, 2 office) and the slide between rooms
 ## (a float index: 0.5 is halfway from the mine to the factory).
@@ -283,6 +286,7 @@ func _ready() -> void:
 	add_child(_map)
 	_map.location_opened.connect(_on_location_opened)
 	_map.location_switched.connect(_on_location_switched)
+	_map.stars_requested.connect(open_stars)
 	_map.closed.connect(_on_map_closed)
 
 	_modal = Modal.new()
@@ -296,6 +300,8 @@ func _ready() -> void:
 	Online.name_taken.connect(func(name: String):
 		if not _top.visible and _started:
 			ask_nickname(tr("ONLINE_NAME_TAKEN") % name))
+	Online.crown_changed.connect(_on_crown_changed)
+	_setup_league_timer()
 	CloudSave.account_changed.connect(func():
 		if _modal.is_open():
 			_modal.rebuild())
@@ -1018,6 +1024,58 @@ func _on_milestone(key: String, level: int) -> void:
 	Sfx.play("milestone")
 
 
+## Toasts about the fight for no. 1 (who holds the crown now). Losing or
+## winning the crown always shows; other players' changes at most every
+## CROWN_TOAST_GAP seconds so the screen never fills with them.
+func _on_crown_changed(info: Dictionary, prev: String) -> void:
+	if not _online_settled():
+		return
+	var name := str(info.get("name", ""))
+	var now := Time.get_ticks_msec() / 1000.0
+	if Online.is_king():
+		_show_toast(tr("CROWN_TOAST_ME"))
+		Sfx.play("milestone")
+	elif prev != "" and prev == Online.uid:
+		_show_toast(tr("CROWN_TOAST_LOST") % name)
+	elif now - _crown_toast_at >= CROWN_TOAST_GAP:
+		_show_toast(tr("CROWN_TOAST_FIRST" if prev == "" else "CROWN_TOAST_NEW") % name)
+	else:
+		return
+	_crown_toast_at = now
+
+
+func _online_settled() -> bool:
+	return _started and Progress.has_feature("quests") and Online.present()
+
+
+## The Top League: one reminder per session before it starts, one toast when
+## it starts while the game is open.
+func _setup_league_timer() -> void:
+	var t := Timer.new()
+	t.wait_time = 20.0
+	t.autostart = true
+	add_child(t)
+	t.timeout.connect(_check_league)
+
+
+func _check_league() -> void:
+	if not _online_settled() or _top.visible or _modal.visible:
+		return
+	var now := Clock.now()
+	var lg := OnlineRules.league_id(now)
+	if _league_seen < 0:
+		_league_seen = lg
+		var next := OnlineRules.next_league(now)
+		if lg == 0 and next > 0:
+			_show_toast(tr("LEAGUE_TOAST_SOON") % OnlineRules.countdown(next - now))
+		return
+	if lg != _league_seen:
+		_league_seen = lg
+		if lg > 0:
+			_show_toast(tr("LEAGUE_TOAST_GO"))
+			Sfx.play("milestone")
+
+
 func _show_toast(text: String) -> void:
 	# A small calm card in the middle of the screen that fades up and away.
 	_toast_label.text = text
@@ -1147,6 +1205,35 @@ func _settle_switch(location: int) -> void:
 		return
 	_show_toast(tr("SWITCH_WELCOME") % WorldLook.name_of(location) + "\n" + tr("SWITCH_EARNED") % NumFormat.short(earned))
 	Sfx.play("coins")
+
+
+## World stars (the endgame): the dialog with every world's stars, this
+## world's checklist and the "Get a star" button.
+func open_stars() -> void:
+	if _map.visible:
+		_map.close()
+	_modal.open(func(m): StarView.build(m, self))
+
+
+## A star was taken (StarView): the world starts over with bigger numbers,
+## so everything follows like a new world, with a bigger party.
+func on_star_gained() -> void:
+	var l := GameState.location
+	_room_key = ["d0", "plant", ""]
+	show_room(MINE, false)
+	_scroller.scroll_to(0.0)
+	if _sheet_open:
+		_close_sheet()
+	_panel.show_stage("d0")
+	for c in [_side_lift, _side_boat, _side_plant, _factory_card, _world.surface.boat_card]:
+		c.show_unit(c.base)
+	_refresh()
+	var v := get_viewport_rect().size
+	_fx.burst(v / 2.0, 90)
+	_fx.float_text(v / 2.0 + Vector2(0, -60), "★ %d" % GameState.stars_of(l), Color("ffd23f"), 56)
+	_show_toast(tr("STAR_TOAST") % [WorldLook.name_of(l), GameState.stars_of(l), int(round((GameState.star_mult() - 1.0) * 100.0))])
+	if _world.has_method("show_world_name"):
+		_world.show_world_name(l)
 
 
 func open_evolution() -> void:

@@ -2,8 +2,9 @@ extends SceneTree
 ## World map preview:
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
 ##     -s res://tests/map_sheet.gd -- out.png <location> <ready 0|1> [map|confirm|hint|mini|islands] [lang]
-## "mini" draws the mini-map for all four worlds, small and big;
-## "islands" the four islands lit and as silhouettes (run at 1800x1200).
+## "mini" draws the mini-map for every world, small and big (run at 900x500);
+## "islands" every island lit and as silhouettes, plus the "Soon!" islands
+## (run at 1800x1200).
 
 
 class Islands extends Control:
@@ -16,13 +17,19 @@ class Islands extends Control:
 	func _draw() -> void:
 		var ma: GDScript = load("res://scripts/ui/map_art.gd")
 		Art.flat(self, Art.rrect_pts(Rect2(Vector2.ZERO, size), 0), Color("6ec3f2"))
-		var k := minf(size.x / 1900.0, size.y / 1150.0)
-		for i in 8:
-			var c := Vector2(240 + (i % 4) * 470, 300 + (i / 4) * 560) * k
+		var n: int = ma.WORLDS.size()
+		var cols: int = n + ma.SOON_WORLDS.size()
+		var k := minf(size.x / (cols * 470.0 + 20.0), size.y / 1150.0)
+		for i in cols * 2:
+			var c := Vector2(240 + (i % cols) * 470, 300 + (i / cols) * 560) * k
 			Art.push(self, c, 0.0, Vector2(k, k))
-			var w: String = ma.WORLDS[i % 4]
-			ma.island(self, w, ma.CURRENT if i < 4 else (ma.NEXT if i == 4 else ma.LOCKED), t, 0)
-			if i < 4:
+			var col: int = i % cols
+			var lit: bool = i < cols and col < n
+			var w: String = ma.WORLDS[col] if col < n else ma.SOON_WORLDS[col - n]
+			# Top row lit (and the "Soon!" islands), bottom row the silhouettes.
+			var st: int = ma.SOON if col >= n else (ma.CURRENT if lit else (ma.NEXT if col % 2 == 0 else ma.LOCKED))
+			ma.island(self, w, st, t, 0)
+			if lit:
 				ma.nodes(self, w, 2)
 				ma.markers(self, w, t)
 				var b: Vector3 = ma.boat_at(w, 0.3)
@@ -58,11 +65,12 @@ func _initialize() -> void:
 		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		host.add_child(bg)
 		var mm: GDScript = load("res://scripts/ui/mini_map.gd")
-		for i in 8:
+		var nw: int = load("res://scripts/ui/map_art.gd").WORLDS.size()
+		for i in nw * 2:
 			var m: Control = mm.new()
-			m.set("location_override", i % 4)
-			m.set("big", i >= 4)
-			m.position = Vector2(30 + (i % 4) * 175, 40 + (i / 4) * 220)
+			m.set("location_override", i % nw)
+			m.set("big", i >= nw)
+			m.position = Vector2(30 + (i % nw) * 175, 40 + (i / nw) * 220)
 			host.add_child(m)
 	else:
 		var v: Control = mv.new()

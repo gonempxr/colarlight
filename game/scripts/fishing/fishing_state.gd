@@ -34,8 +34,8 @@ var autosave_enabled := true
 var bucket: Array = []
 ## species id -> {"count": int, "best": float (cm)}
 var book: Dictionary = {}
-## Rod level index (0..19) in each world: ocean, volcano, acid, moon.
-var rods: Array[int] = [0, 0, 0, 0]
+## Rod level index (0..19) in each world: ocean, volcano, acid, moon, ice.
+var rods: Array[int] = [0, 0, 0, 0, 0]
 ## The rod of the world the player is in now.
 var rod: int:
 	get:
@@ -69,7 +69,7 @@ func _ready() -> void:
 func reset() -> void:
 	bucket = []
 	book = {}
-	rods = [0, 0, 0, 0]
+	rods = [0, 0, 0, 0, 0]
 	bucket_level = 0
 	helper = 0
 	helper_timer = 0.0
@@ -121,14 +121,14 @@ func base_rate() -> float:
 	return maxf(r, FishData.MIN_RATE)
 
 
-## World index 0..3 the fishing happens in (GameState's world).
+## World index 0..4 the fishing happens in (GameState's world).
 func world() -> int:
 	if world_override >= 0:
-		return world_override % 4
+		return world_override % Balance.WORLDS.size()
 	var gs := get_node_or_null("/root/GameState")
 	if gs == null or not gs.has_method("world_index"):
 		return 0
-	return posmod(int(gs.world_index()), 4)
+	return posmod(int(gs.world_index()), Balance.WORLDS.size())
 
 
 ## Rod levels of every world added up (they all grow the bucket a little).
@@ -410,7 +410,7 @@ func load_game() -> bool:
 	var top := FishData.max_level("rod")
 	if d.get("rods") is Array:
 		var arr: Array = d["rods"]
-		for i in mini(arr.size(), 4):
+		for i in mini(arr.size(), rods.size()):
 			rods[i] = clampi(_int(arr[i]), 0, top)
 	else:
 		# Version 1: one rod for all, it becomes the ocean rod.

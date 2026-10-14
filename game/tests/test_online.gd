@@ -432,7 +432,7 @@ func _initialize() -> void:
 	_check(int(prof["t"]) == 2 and int(prof["r"]) == 2 and int(prof["wo"]) >= 1, "own profile card: title, best place, worlds")
 	_check(online.profile_info().length() <= 200, "the profile field stays small")
 	var odd: Dictionary = online.parse_profile('{"t": 99, "wo": 50, "b": -3, "c": "x[b]y"}')
-	_check(int(odd["t"]) == 3 and int(odd["wo"]) == 4 and int(odd["b"]) == 0 and str(odd["c"]) == "xby", "odd profile values are clamped")
+	_check(int(odd["t"]) == 3 and int(odd["wo"]) == Balance.LAST_LOCATION + 1 and int(odd["b"]) == 0 and str(odd["c"]) == "xby", "odd profile values are clamped")
 	_check(int(online.parse_profile("nonsense")["t"]) == 0, "a broken profile is empty")
 	online._since_submit = 9999.0
 	online.submit()
@@ -585,6 +585,158 @@ func _initialize() -> void:
 	# The first version kept one number of levels taken.
 	pr.stats["bp_got"] = 3
 	_check(bp.taken("f", 1) and bp.taken("f", 3) and not bp.taken("f", 4) and not pr.stats.has("bp_got"), "old pass saves move to the new form")
+
+	# --- The Top League and the crown (no. 1 of the race) --------------------------------------
+	var ls := OnlineRules.LEAGUE_STARTS[0]
+	_check(ls == 1792127700, "the Top League starts Fri 16.10.2026 8:15 Tallinn (05:15 UTC)")
+	_check(OnlineRules.league_id(ls - 1) == 0 and OnlineRules.league_id(ls) == ls and OnlineRules.league_id(ls + 9.0e6) == ls, "league id = its start")
+	_check(OnlineRules.next_league(ls - 100) == ls and OnlineRules.next_league(ls) == 0, "the next league start")
+	_check(OnlineRules.countdown(3661).ends_with("01:01:01") and OnlineRules.countdown(90061).begins_with("1") and OnlineRules.countdown(-5) == "00:00:00", "the countdown text")
+	_check(OnlineRules.day_id(ls) == int(ls / 86400), "the crown day is the UTC day")
+	_check(int(OnlineRules.crown_prize(1, 30)["pearls"]) == 150 and bool(OnlineRules.crown_prize(1, 30)["item"]), "the day's king: 150 pearls and the hat")
+	_check(int(OnlineRules.crown_prize(3, 30)["pearls"]) == 35 and not bool(OnlineRules.crown_prize(3, 30)["item"]), "3rd place: 35 pearls")
+	_check(OnlineRules.crown_prize(4, 300).is_empty() and OnlineRules.crown_prize(1, OnlineRules.CROWN_MIN_MINUTES - 1).is_empty(), "no prize below the top 3 or for a few minutes")
+	var ck = load("res://tests/online_fake.gd").new()
+	ck.uid = "Kng00001qqqqqqqqqqqqqqqqqqqq"
+	ck.founders = 100
+	DirAccess.remove_absolute(online.SAVE_PATH)
+	online.load_data()
+	online.crown = {}
+	online.use_backend(ck)
+	var t0 := float(ls) + 3.0 * 86400.0 + 3600.0
+	var wk0 := OnlineRules.week_id(ls - 86400.0)
+	online.data["week"] = wk0
+	online.data["league"] = 0
+	var rival := "Rod00001qqqqqqqqqqqqqqqqqqqq"
+	ck.weeks[wk0] = {rival: {"name": "Родя", "score": 1000.0, "a": "", "p": ""}}
+	ck.crown = {"uid": rival, "name": "Родя", "k": "weeks", "id": str(wk0)}
+	var cseen := []
+	var on_cseen := func(info: Dictionary, prev: String): cseen.append([str(info.get("uid", "")), prev])
+	online.crown_changed.connect(on_cseen)
+	online._sent["week"] = 500.0
+	online.check_crown()
+	_check(str(online.crown.get("uid", "")) == rival and str(online.crown.get("name", "")) == "Родя" and not online.is_king(), "Родя holds the crown")
+	_check(cseen.size() == 1 and cseen[0] == [rival, ""], "the first look tells who is no. 1")
+	online.check_crown()
+	_check(cseen.size() == 1, "no repeat while the holder stays")
+	ck.weeks[wk0][ck.uid] = {"name": "Me", "score": 900.0, "a": "", "p": ""}
+	online._sent["week"] = 900.0
+	online.check_crown()
+	_check(not online.is_king() and str(ck.crown["uid"]) == rival, "a lower score can't take the crown")
+	ck.weeks[wk0][ck.uid]["score"] = 2000.0
+	online._sent["week"] = 2000.0
+	online.check_crown()
+	_check(online.is_king() and str(ck.crown["uid"]) == ck.uid, "a higher score takes the crown")
+	_check(cseen.size() == 2 and cseen[1] == [ck.uid, rival], "and says so")
+	online._crown_tick(t0)
+	online._crown_tick(t0 + 60.0)
+	_check(online.crown_minutes == 2 and int(ck.crown_days[OnlineRules.day_id(t0)][ck.uid]["score"]) == 2, "each minute at no. 1 is counted")
+	ck.crown = {"uid": rival, "name": "Родя", "k": "weeks", "id": str(wk0)}
+	ck.weeks[wk0][rival]["score"] = 5000.0
+	online._crown_left = 50.0
+	online._crown_tick(t0 + 120.0)
+	_check(online._crown_left <= 1.0 and int(ck.crown_days[OnlineRules.day_id(t0)][ck.uid]["score"]) == 2, "no minutes once the crown is gone: read it again")
+	online.check_crown()
+	_check(not online.is_king() and cseen.size() == 3 and cseen[2] == [rival, ck.uid], "losing the crown is told (overtaken)")
+	# The league starts: last week's crown is stale, the first league score takes it.
+	online.data["league"] = ls
+	online._sent["league"] = 0.0
+	online.check_crown()
+	_check(online.crown.is_empty(), "a crown from the old board is free in the league")
+	ck.leagues[ls] = {ck.uid: {"name": "Me", "score": 10.0, "a": "", "p": ""}}
+	online._sent["league"] = 10.0
+	online.check_crown()
+	_check(online.is_king() and str(ck.crown["k"]) == "league" and str(ck.crown["id"]) == str(ls), "the first league score takes the free crown")
+	online.crown_changed.disconnect(on_cseen)
+	# Today's and yesterday's longest at no. 1.
+	var dk := OnlineRules.day_id(t0)
+	ck.crown_days[dk - 1] = {ck.uid: {"name": "Me", "score": 30}, rival: {"name": "Родя", "score": 12}}
+	var kg := [null]
+	online.fetch_kings(func(r): kg[0] = r, t0)
+	_check(kg[0]["ok"] and kg[0]["yesterday"].size() == 2 and kg[0]["yesterday"][0]["you"] and int(kg[0]["yesterday"][0]["score"]) == 30, "yesterday's kings, longest first")
+	_check(kg[0]["today"].size() == 1 and int(kg[0]["today"][0]["score"]) == 2, "today's minutes")
+	# Yesterday's king is paid once, with the crown hat.
+	pr.owned.erase(OnlineRules.CROWN_ITEM)
+	online.data["crown_prize"] = -1
+	online.pending_thanks.clear()
+	var cp0: int = pr.pearls
+	online.check_crown_prize(t0)
+	_check(pr.pearls == cp0 + 150 and pr.is_owned(OnlineRules.CROWN_ITEM) and int(online.data["crown_wins"]) == 1, "the day's king: +150 pearls, crown hat, a win")
+	_check(online.pending_thanks.size() == 1 and online.pending_thanks[0]["kind"] == "crown" and int(online.pending_thanks[0]["min"]) == 30, "a thank-you dialog with the minutes")
+	online.check_crown_prize(t0 + 60.0)
+	_check(pr.pearls == cp0 + 150 and int(online.data["crown_wins"]) == 1, "paid once")
+	online.check_crown_prize(t0 + 86400.0)
+	_check(pr.pearls == cp0 + 150 and int(online.data["crown_prize"]) == dk, "a day with no minutes pays nothing")
+	online.pending_thanks.clear()
+	# The league score starts from zero at the league start; the game's progress stays.
+	online.data["league"] = 0
+	online.data["league_score"] = 0.0
+	online.data["week_score"] = 0.0
+	online.data["week"] = OnlineRules.week_id(ls - 60.0)
+	gs.total_earned = 1.0e6
+	online.track(ls - 60.0)
+	gs.total_earned = 1.5e6
+	online.track(ls - 30.0)
+	_check(float(online.data["league_score"]) == 0.0 and int(online.data["league"]) == 0, "before the start nothing counts for the league")
+	var wbefore := float(online.data["week_score"])
+	online.track(ls + 10.0)
+	gs.total_earned = 1.8e6
+	online.track(ls + 20.0)
+	_check(int(online.data["league"]) == ls and float(online.data["league_score"]) == 3.0e5, "the league counts from its start")
+	_check(gs.total_earned == 1.8e6 and float(online.data["all_best"]) >= 1.8e6, "the wipe touches only the league board")
+	_check(wbefore > 0.0, "the week counted before")
+	for ck_key in ["LEAGUE_TAB", "LEAGUE_SOON_TEXT", "CROWN_TOAST_NEW", "CROWN_TOAST_LOST", "CROWN_TOAST_ME", "CROWN_TOAST_FIRST", "LEAGUE_TOAST_SOON", "LEAGUE_TOAST_GO", "THANKS_CROWN", "ITEM_HAT_DAY_KING"]:
+		_check(TranslationServer.translate(ck_key) != ck_key, "words for %s" % ck_key)
+	_check(TranslationServer.translate("CROWN_TOAST_NEW").contains("%s"), "the toast names the player")
+
+	# --- The leader's test mode: free things, never on a board --------------------------------
+	var tf = load("res://tests/online_fake.gd").new()
+	tf.uid = "Adm00001qqqqqqqqqqqqqqqqqqqq"
+	tf.founders = 100
+	DirAccess.remove_absolute(online.SAVE_PATH)
+	online.load_data()
+	online.crown = {}
+	online.use_backend(tf)
+	online.data["week"] = OnlineRules.week_id(Time.get_unix_time_from_system())
+	tf.weeks[int(online.data["week"])] = {tf.uid: {"name": "Mark", "score": 5.0e6, "a": "", "p": ""}}
+	tf.all[tf.uid] = {"name": "Mark", "score": 9.0e6, "a": "", "p": ""}
+	tf.crown = {"uid": tf.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"])}
+	online.admin = false
+	var tr := [""]
+	online.set_tester(true, func(r): tr[0] = r)
+	_check(tr[0] == "admin" and not online.tester(), "only the leader can turn test mode on")
+	_check(not online.cheat("coins"), "no cheats without test mode")
+	online.admin = true
+	tf.is_admin = true
+	online.set_tester(true, func(r): tr[0] = r)
+	_check(tr[0] == "ok" and online.tester(), "the leader turns test mode on")
+	_check(not tf.all.has(tf.uid) and not tf.weeks[int(online.data["week"])].has(tf.uid) and tf.crown.is_empty(), "their rows and the crown leave the boards")
+	var tc0: float = gs.coins
+	var tp0: int = pr.pearls
+	_check(online.cheat("coins") and gs.coins >= tc0 + 1.0e9, "free coins")
+	_check(online.cheat("pearls") and pr.pearls == tp0 + 5000, "free pearls")
+	_check(online.cheat("items") and pr.is_owned("hat_day_king") and pr.is_owned(OnlineRules.EXCLUSIVE_ITEM), "every item")
+	var loc0: int = gs.location
+	if not gs.is_last_location():
+		_check(online.cheat("world") and gs.location == loc0 + 1, "the next world at once")
+	gs.total_earned += 1.0e12
+	online._since_submit = 999.0
+	var sent := [null]
+	online.submit(func(ok): sent[0] = ok)
+	_check(sent[0] == false and not tf.all.has(tf.uid), "nothing is sent in test mode")
+	online._sent["week"] = 1.0e15
+	online.check_crown()
+	_check(tf.crown.is_empty() and not online.is_king(), "the crown is never taken in test mode")
+	online.set_tester(false, func(r): tr[0] = r)
+	_check(tr[0] == "cheated" and online.tester(), "after cheats the device stays off the boards")
+	DirAccess.remove_absolute(online.SAVE_PATH)
+	online.load_data()
+	online.set_tester(true)
+	online.set_tester(false, func(r): tr[0] = r)
+	_check(tr[0] == "ok" and not online.tester(), "without cheats it can be turned off")
+	online.admin = false
+	for tk in ["TESTER_TITLE", "TESTER_TEXT", "TESTER_COINS", "TESTER_WORLD", "TESTER_STAYS"]:
+		_check(TranslationServer.translate(tk) != tk, "words for %s" % tk)
 
 	# --- The guide: every entry has words ------------------------------------------------------
 	var guide_src := FileAccess.get_file_as_string("res://scripts/ui/guide_view.gd")

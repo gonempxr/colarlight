@@ -75,6 +75,7 @@ FISHING_ROD_OCEAN,Sea rod,Морская удочка,Caña marina,海洋鱼竿
 FISHING_ROD_VOLCANO,Volcano rod,Вулканическая удочка,Caña volcánica,火山鱼竿
 FISHING_ROD_ACID,Swamp rod,Болотная удочка,Caña del pantano,沼泽鱼竿
 FISHING_ROD_MOON,Gravity rod,Гравитационная удочка,Caña de gravedad,重力鱼竿
+FISHING_ROD_JUNGLE,Sun Temple rod,Удочка Храма Солнца,Caña del Templo del Sol,太阳神庙鱼竿
 ROD_OCEAN_1,A simple brown rod with a red and white float,Простая коричневая удочка с красно-белым поплавком,Una caña marrón sencilla con flotador rojo y blanco,一根简单的棕色鱼竿，配红白浮漂
 ROD_OCEAN_2,Blue non-slip grip wrap,Синяя нескользящая обмотка на рукояти,Empuñadura azul antideslizante,手柄缠上蓝色防滑带
 ROD_OCEAN_3,A small wooden reel,Небольшая деревянная катушка,Un pequeño carrete de madera,一个小木头卷线器
@@ -155,6 +156,26 @@ ROD_MOON_17,Two orbit rings spin around the reel,Два орбитальных �
 ROD_MOON_18,Double gravity reels,Двойные гравитационные катушки,Carretes de gravedad dobles,双重力卷线器
 ROD_MOON_19,A glowing quantum line,Светящаяся квантовая леска,Sedal cuántico brillante,发光的量子鱼线
 ROD_MOON_20,Legendary Nebula Navigator!,Легендарный «Навигатор туманностей»!,¡Legendario Navegante de Nebulosas!,传说：星云领航者！
+ROD_JUNGLE_1,A simple bamboo rod with a cork float,Простая бамбуковая удочка с пробковым поплавком,Caña de bambú con flotador de corcho,简单的竹竿，配软木浮漂
+ROD_JUNGLE_2,A grass-rope grip,"Рукоять, обмотанная травяной верёвкой",Mango con cuerda de hierba,草绳缠的握把
+ROD_JUNGLE_3,A small wooden reel,Маленькая деревянная катушка,Un carrete de madera pequeño,小小的木头卷线器
+ROD_JUNGLE_4,A longer rod with vine loops for the line,"Удилище длиннее, с петлями из лиан для лески",Caña más larga con anillas de liana,更长的竿，配藤蔓线圈
+ROD_JUNGLE_5,A coconut-shell float,Поплавок из скорлупы кокоса,Flotador de cáscara de coco,椰子壳浮漂
+ROD_JUNGLE_6,A green vine wrapped along the rod,Зелёная лиана обвивает удилище,Una liana verde enrollada en la caña,绿藤缠绕着竿身
+ROD_JUNGLE_7,A strong palm-fibre line,Прочная леска из пальмового волокна,Sedal fuerte de fibra de palma,结实的棕榈纤维鱼线
+ROD_JUNGLE_8,A carved hardwood reel with a crank,Резная катушка из твёрдого дерева с ручкой,Carrete de madera tallada con manivela,带摇柄的雕花硬木卷线器
+ROD_JUNGLE_9,A carved hardwood rod with temple signs,Удилище из резного дерева с узорами храма,Caña de madera tallada con signos del templo,刻着神庙符号的硬木竿
+ROD_JUNGLE_10,A big leaf float,Поплавок из большого листа,Flotador de hoja grande,大叶子浮漂
+ROD_JUNGLE_11,A parrot-feather bite flag,Флажок поклёвки из пера попугая,Banderita de pluma de loro,鹦鹉羽毛咬钩旗
+ROD_JUNGLE_12,Jade rings on the rod,Нефритовые кольца на удилище,Anillos de jade en la caña,竿上的玉环
+ROD_JUNGLE_13,Two pieces joined by jade,"Две части, соединённые нефритом",Dos piezas unidas con jade,用玉连接的两节竿
+ROD_JUNGLE_14,A jade reel with a turquoise eye,Нефритовая катушка с бирюзовым глазом,Carrete de jade con ojo turquesa,镶绿松石眼的玉卷线器
+ROD_JUNGLE_15,A golden scarab float,Поплавок — золотой скарабей,Flotador de escarabajo dorado,金色圣甲虫浮漂
+ROD_JUNGLE_16,Gold inlays on the handle,Золотые вставки на рукояти,Incrustaciones de oro en el mango,手柄上的金饰
+ROD_JUNGLE_17,A golden line that shines in the water,Золотая леска сияет в воде,Sedal dorado que brilla en el agua,在水里闪光的金鱼线
+ROD_JUNGLE_18,Double golden reels,Двойные золотые катушки,Carretes dorados dobles,双金卷线器
+ROD_JUNGLE_19,A glowing sun gem in the reel,Сияющий солнечный камень в катушке,Gema solar brillante en el carrete,卷线器里发光的太阳宝石
+ROD_JUNGLE_20,Legendary Sun Rod of the Temple!,Легендарная «Удочка Солнца»!,¡Legendaria Caña del Sol del Templo!,传说：神庙太阳竿！
 FISHING_ROD_NEXT,Next: %s,Дальше: %s,Siguiente: %s,下一级：%s
 FISHING_ROD_NOW,Your rod,Твоя удочка,Tu caña,你的鱼竿
 FISHING_ROD_LADDER,All rods of this world,Все удочки этого мира,Todas las cañas de este mundo,这个世界的所有鱼竿

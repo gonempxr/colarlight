@@ -1,12 +1,14 @@
 extends SceneTree
 ## Preview sheet of the factory (room 2) and the office (room 3):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 1700x700 \
-##     -s res://tests/rooms_sheet.gd -- out.png <factory|office> <phone|pc|land> [lang]
+##     -s res://tests/rooms_sheet.gd -- out.png <factory|office> <phone|pc|land|jungle|jungle_pc|jungle_land> [lang]
 ## Each panel is one room at the device's room size (phone portrait 390x604,
 ## PC 900x900, phone landscape 844x262) with a different state: decor 0/2/5,
 ## vault empty/full, plant stages early/late, the second line open, and the
-## four world tints. The window must be big enough for the row of panels:
-## phone 4 x 400 = 1640 x 640, pc 2 x 910 = 1840 x 940, land 2 x 854 = 1720 x 560.
+## four world tints; "jungle*" shows the jungle's temple workshop and
+## explorer's study at several stages on that device. The window must be
+## big enough for the row of panels: phone / jungle 4 x 400 = 1640 x 640,
+## pc / jungle_pc 2 x 910 = 1840 x 940, land / jungle_land 2 x 854 = 1720 x 560.
 
 const SIZES := {"phone": Vector2(390, 604), "pc": Vector2(900, 900), "land": Vector2(844, 262)}
 
@@ -25,6 +27,20 @@ const FACTORY := {
 		{"world": "acid", "stage": 8, "plant2": false, "working": true, "mgr": true},
 		{"world": "moon", "stage": 19, "stage2": 14, "plant2": true, "working": true, "mgr": true},
 	],
+	"jungle": [
+		{"world": "jungle", "stage": 2, "plant2": false, "working": true, "mgr": false},
+		{"world": "jungle", "stage": 7, "stage2": 4, "plant2": true, "working": true, "mgr": true},
+		{"world": "jungle", "stage": 13, "stage2": 10, "plant2": true, "working": false, "mgr": false},
+		{"world": "jungle", "stage": 20, "stage2": 18, "plant2": true, "working": true, "mgr": true},
+	],
+	"jungle_pc": [
+		{"world": "jungle", "stage": 4, "plant2": false, "working": true, "mgr": false},
+		{"world": "jungle", "stage": 17, "stage2": 12, "plant2": true, "working": true, "mgr": true},
+	],
+	"jungle_land": [
+		{"world": "jungle", "stage": 9, "plant2": false, "working": true, "mgr": true},
+		{"world": "jungle", "stage": 19, "stage2": 15, "plant2": true, "working": true, "mgr": true},
+	],
 }
 
 const OFFICE := {
@@ -41,6 +57,20 @@ const OFFICE := {
 	"land": [
 		{"world": "volcano", "decor": 2, "vault": 0.5, "accountant": false, "evo": 2},
 		{"world": "moon", "decor": 5, "vault": 1.0, "accountant": true, "evo": 10},
+	],
+	"jungle": [
+		{"world": "jungle", "decor": 0, "vault": 0.0, "accountant": false, "evo": 0},
+		{"world": "jungle", "decor": 2, "vault": 0.3, "accountant": false, "evo": 1},
+		{"world": "jungle", "decor": 4, "vault": 0.8, "accountant": true, "evo": 2},
+		{"world": "jungle", "decor": 5, "vault": 1.0, "accountant": true, "evo": 3},
+	],
+	"jungle_pc": [
+		{"world": "jungle", "decor": 1, "vault": 0.2, "accountant": false, "evo": 1},
+		{"world": "jungle", "decor": 5, "vault": 1.0, "accountant": true, "evo": 3},
+	],
+	"jungle_land": [
+		{"world": "jungle", "decor": 3, "vault": 0.5, "accountant": false, "evo": 2},
+		{"world": "jungle", "decor": 5, "vault": 1.0, "accountant": true, "evo": 3},
 	],
 }
 
@@ -65,10 +95,10 @@ func _initialize() -> void:
 	bg.color = Color("241a3a")
 	bg.size = Vector2(4000, 4000)
 	root.add_child(bg)
-	var sz: Vector2 = SIZES[device]
+	var sz: Vector2 = SIZES[device.trim_prefix("jungle_") if device != "jungle" else "phone"]
 	var list: Array = (FACTORY if room == "factory" else OFFICE)[device]
 	var script: GDScript = load("res://scripts/ui/factory_room.gd" if room == "factory" else "res://scripts/ui/office_room.gd")
-	var cols := 4 if device == "phone" else 1 if device == "pc" and false else 2
+	var cols := 4 if device in ["phone", "jungle"] else 2
 	for i in list.size():
 		var r: Control = script.new()
 		r.preview = list[i]

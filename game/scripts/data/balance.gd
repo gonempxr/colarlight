@@ -13,8 +13,8 @@ const OFFLINE_CAP_SEC := 8.0 * 3600.0
 const OFFLINE_MIN_REPORT_SEC := 60.0
 const AUTOSAVE_SEC := 10.0
 
-## The worlds, in the order they open (location L is world L % 4, tier
-## L / 4). name: i18n key; char: the worker character; sites: the ids of the
+## The worlds, in the order they open (location L is world L % 5, tier
+## L / 5). name: i18n key; char: the worker character; sites: the ids of the
 ## world's 10 work sites (keys d0..d9, name keys SITE_<ID>).
 const WORLDS: Array[Dictionary] = [
 	{"id": "ocean", "name": "WORLD_OCEAN", "char": "diver",
@@ -25,6 +25,8 @@ const WORLDS: Array[Dictionary] = [
 		"sites": ["slime", "moss", "shroom", "bubble", "venom", "amber", "radiant", "jade", "orchid", "goo_king"]},
 	{"id": "moon", "name": "WORLD_MOON", "char": "astronaut",
 		"sites": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"]},
+	{"id": "jungle", "name": "WORLD_JUNGLE", "char": "explorer",
+		"sites": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]},
 ]
 
 ## The one 10-step site ladder every location uses (ids are the ocean ones;
@@ -102,10 +104,30 @@ const GATE_GROWTH := 1.4
 const GATE_BUMP := 1.45
 ## Price to open the next location, at location 0.
 const LOCATION_PRICE := 2.4e10
-## The last location there is (the Moon): no repeats with stars after it,
+## The last location there is (the Jungle, since 2026-10-13): no repeats after it,
 ## the map shows the next worlds as "coming soon". Older saves further on
 ## are moved back to it (GameState keeps their levels).
-const LAST_LOCATION := 3
+const LAST_LOCATION := 4
+## World stars (the endgame, 2026-10-13). Once the last world is open, any
+## world whose gate checklist is done can take a star: its run restarts
+## (the lift, boat, plant and vault managers stay) and its numbers grow like
+## STAR_LOCS locations. Its gate prices grow the same way (without the
+## per-location GATE_GROWTH) times STAR_GATE (a world you know goes a bit
+## quicker) and STAR_GROWTH per further star. Every star owned adds
+## STAR_BONUS to the income of every world (added up). sim.py --stars: about
+## 70 min for the first stars, then 35-60 min each, slowly longer.
+const STAR_LOCS := 1
+## A world can hold at most MAX_STARS stars (keeps numbers inside a double).
+const MAX_STARS := 50
+const STAR_GATE := 0.6
+const STAR_GROWTH := 2.0
+const STAR_BONUS := 0.25
+## Pearls for a star: STAR_PEARLS + STAR_PEARLS_STEP per star the world had.
+const STAR_PEARLS := 40
+const STAR_PEARLS_STEP := 10
+## Gifts for stars owned in all (wardrobe items unlocked by goal "stars_N").
+const STAR_GIFTS: Array[int] = [1, 3, 5, 10, 15, 25]
+
 ## Worker gear: 4 levels per location (level 1 is the base look, levels
 ## 2..4 are bought with coins, in order). GameState.evo counts the levels
 ## bought (0..EVO_FORMS). EVO_PRICES: price of levels 2..4 at location 0;
@@ -203,10 +225,36 @@ static func loc_gate_scale(location: int) -> float:
 	return loc_scale(l) * pow(GATE_GROWTH, l) * (GATE_BUMP if l > 0 else 1.0)
 
 
+## Values and level prices of world L after `stars` stars.
+static func star_scale(location: int, stars: int) -> float:
+	return loc_scale(location + STAR_LOCS * maxi(0, stars))
+
+
+## Gate prices of world L after `stars` stars (location gate prices with none).
+static func star_gate_scale(location: int, stars: int) -> float:
+	if stars <= 0:
+		return loc_gate_scale(location)
+	return loc_gate_scale(location) * pow(LOC_SCALE_STEP, STAR_LOCS * stars) * STAR_GATE * pow(STAR_GROWTH, stars - 1)
+
+
+## Income multiplier of every world with `total` stars owned.
+static func star_mult(total: int) -> float:
+	return 1.0 + STAR_BONUS * maxi(0, total)
+
+
+## Price of the next star of world L that has `stars` already.
+static func star_cost(location: int, stars: int) -> float:
+	return LOCATION_PRICE * star_gate_scale(location, stars)
+
+
+static func star_pearls(stars: int) -> int:
+	return STAR_PEARLS + STAR_PEARLS_STEP * maxi(0, stars)
+
+
 ## Price of gear level `form` + 1 (form = 1..EVO_FORMS: the levels bought
 ## so far after this one) at location L.
-static func evo_cost(location: int, form: int) -> float:
-	return EVO_PRICES[clampi(form, 1, EVO_FORMS) - 1] * loc_gate_scale(location)
+static func evo_cost(location: int, form: int, stars: int = 0) -> float:
+	return EVO_PRICES[clampi(form, 1, EVO_FORMS) - 1] * star_gate_scale(location, stars)
 
 
 ## Income multiplier with `forms` gear levels bought.

@@ -359,18 +359,24 @@ func _draw_veins(site: int, n: int, view: Rect2) -> void:
 		# The vein glows and sways slowly: drawn once per quarter second.
 		# (each vein on its own beat, so they don't all redraw in one frame)
 		var tq := int(_t * 4.0 + ((site * 5 + j * 3) % 8) / 8.0)
-		var key := hash([40, site, j, tq, walk])
+		var key := hash([40, site, j, tq, walk, WorldLook.location])
 		Art.push(self, Vector2(at.x, ledge))
-		if not Art.cache_begin(self, key):
-			if high and walk:
-				# Air worlds: a wooden scaffold with a ladder; the worker
-				# climbs up and digs a vein on the walkway.
-				_scaffold(sp.y)
-			elif high:
-				# A rock pillar holds the vein up where the hovering diver works.
-				Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+		# The scaffold or pillar never moves: a long-lived cached part of its
+		# own; only the vein is redrawn on its quarter-second beat.
+		if high:
+			var base_key := hash([41, site, j, walk, sp.y, WorldLook.location])
+			if not Art.cache_begin(self, base_key):
+				if walk:
+					# Air worlds: a wooden scaffold with a ladder; the worker
+					# climbs up and digs a vein on the walkway.
+					_scaffold(sp.y)
+				else:
+					# A rock pillar holds the vein up where the hovering diver works.
+					Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+				Art.cache_end(self, base_key)
+		if not Art.cache_begin(self, key, true):
 			OreArt.deposit(self, Vector2(0, at.y - ledge), 30.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
-			Art.cache_end(self, key)
+			Art.cache_end(self, key, true)
 		Art.pop(self)
 
 
@@ -382,6 +388,9 @@ func _scaffold(top: float) -> void:
 	if WorldLook.world == "moon":
 		wood = Color("aab4c8")
 		dark = Color("6c7690")
+	elif WorldLook.world == "jungle":
+		_bamboo_scaffold(top)
+		return
 	for x in [-62.0, 24.0]:
 		Art.t_rect(self, Rect2(x, top, 7.0, -top), 2.0, dark, 2.5, 0.6)
 	# Ladder where the worker climbs.
@@ -396,6 +405,38 @@ func _scaffold(top: float) -> void:
 	# Walkway.
 	Art.t_rect(self, Rect2(-74, top, 112, 9), 3.0, wood, 3.0, 0.7)
 	Art.line(self, Vector2(-70, top + 4.5), Vector2(34, top + 4.5), dark, 1.5)
+
+
+const BAMBOO := Color("c8c25a")
+const BAMBOO_DARK := Color("8a8a32")
+const ROPE := Color("d8b878")
+
+
+## The jungle's scaffold: bamboo poles with nodes, lashed with rope.
+func _bamboo_scaffold(top: float) -> void:
+	for x in [-62.0, 24.0]:
+		Art.t_rect(self, Rect2(x, top, 7.0, -top), 3.0, BAMBOO_DARK, 2.5, 0.5)
+		var y := -14.0
+		while y > top + 8.0:
+			Art.line(self, Vector2(x, y), Vector2(x + 7.0, y), Color(0.3, 0.3, 0.1, 0.6), 1.6)
+			y -= 22.0
+	# Ladder: two bamboo rails, rungs tied with rope.
+	for x in [-58.0, -42.0]:
+		Art.line(self, Vector2(x, 0), Vector2(x, top), Art.INK, 7.0)
+		Art.line(self, Vector2(x, 0), Vector2(x, top), BAMBOO, 3.5)
+	var y := -10.0
+	while y > top + 4.0:
+		Art.line(self, Vector2(-58, y), Vector2(-42, y), BAMBOO, 3.0)
+		Art.dot(self, Vector2(-58, y), 2.2, ROPE)
+		Art.dot(self, Vector2(-42, y), 2.2, ROPE)
+		y -= 14.0
+	# Walkway of poles, rope lashings at the posts.
+	Art.t_rect(self, Rect2(-74, top, 112, 9), 4.5, BAMBOO, 3.0, 0.6)
+	Art.line(self, Vector2(-70, top + 4.5), Vector2(34, top + 4.5), BAMBOO_DARK, 1.5)
+	for x in [-58.0, -22.0, 14.0]:
+		Art.line(self, Vector2(x, top + 1), Vector2(x, top + 8), Color(0.3, 0.3, 0.1, 0.6), 1.4)
+	for x in [-58.5, 27.5]:
+		Art.t_rect(self, Rect2(x - 4, top - 1, 8, 11), 2.0, ROPE, 1.8, 0.0)
 
 
 ## The pose of a diver at point p (0..1) of its trip: where it is, which

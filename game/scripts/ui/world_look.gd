@@ -1,10 +1,10 @@
 class_name WorldLook
 extends RefCounted
 ## The look of the current location: which world it is (ocean, volcano,
-## acid swamp, moon), its colors (sky by day and night, the "sea" on the
+## acid swamp, moon, jungle), its colors (sky by day and night, the "sea" on the
 ## surface, the shaft, the ground) and its ten work sites.
 ##
-## Location L (GameState.location) is world WORLDS[L % 4] at tier L / 4.
+## Location L (GameState.location) is world WORLDS[L % 5] at tier L / 5.
 ## Tier 0 is the hand-made look; later tiers turn the hues a little and add
 ## a star badge to the name ("Volcano ★2").
 ##
@@ -12,7 +12,7 @@ extends RefCounted
 ## the colors from here (and from Art.sea_cols, Art.DEPTH_STYLE and the
 ## DayNight sky stops that apply() sets).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle"]
 
 ## Ten work sites per world (keys d0..d9), deepest last.
 const SITES := {
@@ -20,6 +20,7 @@ const SITES := {
 	"volcano": ["ash", "obsidian", "sulfur", "ruby", "magma", "fire_opal", "garnet", "ember", "phoenix", "dragon"],
 	"acid": ["slime", "moss", "shroom", "bubble", "venom", "amber", "radiant", "jade", "orchid", "goo_king"],
 	"moon": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"],
+	"jungle": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"],
 }
 
 ## sea: the medium on the surface and above the first site, top to deep.
@@ -67,6 +68,19 @@ const LOOKS := {
 		"dusk": 0.0, "night_tint": Color(0.78, 0.80, 0.95), "stars_day": true,
 		"sand": Color("c4c8d6"), "sand_dark": Color("989db2"), "grass": Color("e2e5ee"),
 		"seabed": Color("23263a"), "weed": Color("9fe0ff"), "water": false, "far": Color("5a6288"),
+	},
+	# Jungle ruins: a clear turquoise jungle river, emerald forest, warm
+	# golden temple stone; the work sites are temple tunnels (air: explorers
+	# walk). Sunny and humid: a golden haze on the horizon, teal nights.
+	"jungle": {
+		"name": "WORLD_JUNGLE",
+		"sea": [Color("44e0cc"), Color("20b4aa"), Color("15827f"), Color("0c4a52")],
+		"shaft": [Color("8a7a52"), Color("6e6244"), Color("564c38"), Color("3a3428")],
+		"day": [Color("2b9de2"), Color("7fd3ea"), Color("fff1b4")],
+		"night": [Color("06162a"), Color("0d2e44"), Color("1d4d4c")],
+		"dusk": 1.0, "night_tint": Color(0.58, 0.70, 0.86),
+		"sand": Color("eccb8a"), "sand_dark": Color("c49a58"), "grass": Color("36b856"),
+		"seabed": Color("2a3424"), "weed": Color("4ade6a"), "water": false, "far": Color("5fae7c"),
 	},
 }
 
@@ -138,7 +152,13 @@ static func _hue(c: Color, shift: float) -> Color:
 static func name_of(l: int) -> String:
 	var base := TranslationServer.translate(str(LOOKS[world_of(l)]["name"]))
 	var t := tier_of(l)
-	return base if t == 0 else "%s ★%d" % [base, t + 1]
+	if t > 0:
+		return "%s ★%d" % [base, t + 1]
+	# World stars (the endgame): "Ocean ★3".
+	var tree := Engine.get_main_loop() as SceneTree
+	var gs: Node = tree.root.get_node_or_null("GameState") if tree else null
+	var n: int = gs.stars_of(l) if gs and gs.has_method("stars_of") else 0
+	return base if n <= 0 else "%s ★%d" % [base, n]
 
 
 ## Switches the drawing colors to location l. True when they changed.

@@ -64,6 +64,9 @@ for everyone once each. Never make codes that give a lot.
 | `invites/{code}/joined/{uid}` | t | the new player (once) |
 | `joins/{uid}` | code, t | the new player (once, same batch) |
 | `saves/{uid}` | data | Google cloud save (existing) |
+| `league/{start}/scores/{uid}` | name, score, a, t, p | the player, own doc, from the league's start |
+| `crown/now` | uid, name, k, id, t | whoever beats the holder's score on the race board |
+| `crowndays/{day}/s/{uid}` | name, score (minutes), t | the crown's holder, +1 a minute |
 
 - weekId = weeks since Monday 1970-01-05 00:00 UTC (`OnlineRules.week_id`).
 - CODE = the first 8 letters of the Firebase uid. The game remembers friends
@@ -185,6 +188,67 @@ service cloud.firestore {
         && int(monthId) == request.time.year() * 100 + request.time.month();
     }
 
+    // The Top League (from Fri 16.10.2026 05:15 UTC): its own board; the id
+    // is the league's start (unix seconds), a new start = a fresh board.
+    match /league/{id}/scores/{uid} {
+      allow read: if signedIn();
+      allow delete: if isAdmin();
+      allow create, update: if isMe(uid) && goodScore()
+        && id.matches('^[0-9]{9,11}$')
+        && request.time.toMillis() >= int(id) * 1000;
+    }
+
+    // The crown: crown/now {uid, name, k, id, t} = no. 1 of the race board
+    // (k = 'weeks' or 'league', id = its week / league id). A player takes it
+    // only with a score row on that board higher than the holder's row.
+    function rowPath(k, id, u) { return /databases/$(database)/documents/$(k)/$(id)/scores/$(u); }
+    function goodCrown() {
+      let d = request.resource.data;
+      let mine = rowPath(d.k, d.id, request.auth.uid);
+      return d.keys().hasOnly(['uid', 'name', 'k', 'id', 't'])
+        && d.keys().hasAll(['uid', 'name', 'k', 'id', 't'])
+        && d.uid == request.auth.uid
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
+        && ownName(d.name)
+        && d.k in ['weeks', 'league']
+        && d.id is string && d.id.matches('^[0-9]{1,11}$')
+        && d.t == request.time
+        && !banned()
+        && exists(mine) && get(mine).data.score > 0
+        && (resource == null
+            || resource.data.uid == request.auth.uid
+            || resource.data.k != d.k || resource.data.id != d.id
+            || !exists(rowPath(d.k, d.id, resource.data.uid))
+            || get(mine).data.score > get(rowPath(d.k, d.id, resource.data.uid)).data.score);
+    }
+    match /crown/{doc} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && doc == 'now' && goodCrown();
+      allow delete: if isAdmin();
+    }
+
+    // Minutes at no. 1 per UTC day: crowndays/{day}/s/{uid} {name, score, t}.
+    // Only the crown's holder adds, one minute per write, at most every 50 s.
+    match /crowndays/{day}/s/{uid} {
+      allow read: if signedIn();
+      allow delete: if isAdmin();
+      allow create, update: if isMe(uid) && !banned()
+        && day.matches('^[0-9]{1,6}$')
+        && request.time.toMillis() >= int(day) * 86400000
+        && request.time.toMillis() < (int(day) + 1) * 86400000
+        && get(/databases/$(database)/documents/crown/now).data.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'score', 't'])
+        && request.resource.data.keys().hasAll(['name', 'score', 't'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 24
+        && ownName(request.resource.data.name)
+        && request.resource.data.score is number
+        && request.resource.data.t == request.time
+        && ((resource == null && request.resource.data.score == 1)
+            || (resource != null && request.resource.data.score == resource.data.score + 1
+                && request.time > resource.data.t + duration.value(50, 's')));
+    }
+
     // Clubs: clubs/{id} {name, owner, n, t} with up to 30 members
     // clubs/{id}/m/{uid} {name, s (this week's coins), w (week), t}. Joining
     // and leaving change n by one in the same transaction as the member row.
@@ -297,6 +361,9 @@ service cloud.firestore {
   }
 }
 ```
+Rules v6 (2026-10-14) add the Top League, the crown and the minutes at no. 1
+(`league`, `crown`, `crowndays`). Old clients keep working with them.
+
 No `update` / `delete` is allowed anywhere except the score rows (update only,
 going up), names (owner), clubs (member count by one) and club members
 (own row). Everything else is denied by default.

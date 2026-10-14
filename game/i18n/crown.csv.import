@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://d06sfu073ka3l"
+
+[deps]
+
+files=["res://i18n/crown.en.translation", "res://i18n/crown.ru.translation", "res://i18n/crown.es.translation", "res://i18n/crown.zh.translation"]
+
+source_file="res://i18n/crown.csv"
+dest_files=["res://i18n/crown.en.translation", "res://i18n/crown.ru.translation", "res://i18n/crown.es.translation", "res://i18n/crown.zh.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

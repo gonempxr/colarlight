@@ -24,6 +24,11 @@ extends Control
 ## Drawing cost: what stands still (the hall, windows, machine bodies,
 ## racks, signs) is painted once into _bg (behind) and _front (the balcony
 ## railing, in front); _draw only paints the small moving parts.
+##
+## The jungle's temple workshop (FactoryArt "temple" style) adds its own
+## life on top (_plan_jungle / _draw_jungle): the water wheel under the
+## bamboo aqueduct that drives the line, torches, vines, leaves swaying at
+## the windows, a parrot, a monkey on the beam and butterflies.
 
 signal stage_selected(key: String)
 
@@ -91,6 +96,18 @@ var _cols: Array = []
 var _pipes: Array = []
 var _props: Array = []
 var _steam_next := 2.0
+## The world the dressing was planned for (the jungle adds its own).
+var _plan_world := ""
+## Jungle extras (logical): torches [pos], vines [[top, len, seed]], the
+## wheel {"p", "r", "spout"}, the monkey's beam point, the parrot's perch
+## [pos, facing], butterfly paths [[center, radius, color]].
+var _torches: Array = []
+var _vines: Array = []
+var _wheel: Dictionary = {}
+var _monkey := Vector2(-1, -1)
+var _parrot: Array = []
+var _flies: Array = []
+var _leaves: Array = []
 
 
 func _ready() -> void:
@@ -245,6 +262,20 @@ func _layout() -> void:
 ## Places the windows, lamps, columns, the wall pipes and the props in the
 ## free parts of the wall and floor for the current layout.
 func _plan_dressing() -> void:
+	_plan_world = world_id()
+	_plan_base()
+	_torches.clear()
+	_vines.clear()
+	_wheel = {}
+	_monkey = Vector2(-1, -1)
+	_parrot = []
+	_flies.clear()
+	_leaves.clear()
+	if FactoryArt.is_temple(FactoryArt.look(_plan_world)):
+		_plan_jungle()
+
+
+func _plan_base() -> void:
 	_wins.clear()
 	_lamps.clear()
 	_cols.clear()
@@ -344,6 +375,63 @@ func _plan_dressing() -> void:
 		_props.append({"kind": "window", "r": Rect2(x + 20.0, y_mid + 48.0, minf(150.0, free - 44.0), 86.0)})
 	if not _narrow and _cx > 100.0:
 		_props.append({"kind": "rack", "p": Vector2(14.0, my + 2.0), "w": minf(130.0, _cx - 26.0), "h": 110.0, "min": 3})
+
+
+## The jungle's extras: the fan becomes the water wheel under the
+## aqueduct (its belt drives the first line's crusher), torches flank the
+## windows and pillars, vines hang from the thatch, a parrot sits on a
+## window sill, a monkey hangs from the beam and butterflies drift in the
+## sunlight.
+func _plan_jungle() -> void:
+	var W := _hall.x
+	for p: Dictionary in _props:
+		if str(p["kind"]) == "fan":
+			p["kind"] = "wheel"
+			p["r"] = 28.0 if not _wide else 24.0
+			var spout := -40.0
+			if not _pipes.is_empty():
+				spout = float(_pipes[0][2]) - Vector2(p["p"]).y + 4.0
+			p["spout"] = spout
+			_wheel = p
+		elif str(p["kind"]) == "extinguisher":
+			p["kind"] = "jar"
+	for x in _cols:
+		_torches.append(Vector2(float(x), _floor - 170.0))
+	for r: Rect2 in _wins:
+		_leaves.append([Vector2(r.position.x + 4, r.end.y - 6), minf(40.0, r.size.y * 0.48), -1.25, 0])
+		_leaves.append([Vector2(r.end.x - 2, r.position.y + 8), minf(34.0, r.size.y * 0.42), 2.75, 1])
+		if _cols.is_empty() and r.position.x > 40.0:
+			_torches.append(Vector2(r.position.x - 22.0, r.get_center().y + 6.0))
+	if not _wins.is_empty():
+		var w0: Rect2 = _wins[_wins.size() - 1]
+		_parrot = [Vector2(w0.end.x - 14.0, w0.end.y + 5.0), -1.0]
+		var w1: Rect2 = _wins[0]
+		_flies.append([w1.get_center() + Vector2(10, w1.size.y * 0.9), 30.0, Color("ff8a2a")])
+		_flies.append([w0.get_center() + Vector2(-30, w0.size.y * 1.4), 40.0, Color("3aa6f0")])
+	_flies.append([Vector2(W * 0.7, _floor - 220.0), 36.0, Color("ff4fa8")])
+	# Vines from the thatch in the gaps between the windows.
+	var gaps: Array = []
+	for i in range(1, _wins.size()):
+		gaps.append(((_wins[i - 1] as Rect2).end.x + (_wins[i] as Rect2).position.x) * 0.5)
+	if not _wins.is_empty():
+		gaps.append(maxf(14.0, (_wins[0] as Rect2).position.x * 0.5))
+		gaps.append(minf(W - 14.0, ((_wins[_wins.size() - 1] as Rect2).end.x + W) * 0.5))
+	var k := 0
+	for gx in gaps:
+		var near_lamp := false
+		for l: Array in _lamps:
+			if absf(float(l[0]) - float(gx)) < 30.0:
+				near_lamp = true
+		var vx := float(gx) + (34.0 if near_lamp else 0.0)
+		_vines.append([Vector2(vx, 44.0), 70.0 + 26.0 * float(k % 3), k])
+		k += 1
+	# The monkey hangs from the beam over the far end of the hall.
+	_monkey = Vector2(minf(W - 40.0, _line_pt("plant", Vector2(TUBE_X, 0)).x - 70.0), 52.0)
+	if not _wins.is_empty():
+		for r: Rect2 in _wins:
+			if absf(r.get_center().x - _monkey.x) < r.size.x * 0.5 + 20.0:
+				_monkey.x = r.end.x + 30.0
+		_monkey.x = minf(_monkey.x, W - 30.0)
 
 
 ## Height of the dock door's frame top above the floor.
@@ -516,7 +604,9 @@ func _process(delta: float) -> void:
 		# A valve on the wall pipes lets off a little steam now and then.
 		_steam_next = _t + randf_range(3.0, 6.0)
 		var run: Array = _pipes[0]
-		_fx.append({"kind": "steam", "p": Vector2(lerpf(float(run[0]) + 40.0, float(run[1]) - 40.0, randf()), float(run[2]) - 8.0), "t0": _t})
+		var temple := _plan_world == "jungle" or FactoryArt.is_temple(FactoryArt.look(_plan_world))
+		var px := lerpf(float(run[0]) + 40.0, float(run[1]) - 40.0, randf())
+		_fx.append({"kind": "drip" if temple else "steam", "p": Vector2(px, float(run[2]) + (12.0 if temple else -8.0)), "t0": _t})
 	var i := 0
 	while i < _crates.size():
 		if _t - float(_crates[i]["t0"]) > CRATE_SEC:
@@ -588,6 +678,12 @@ func _paint_bg(ci: CanvasItem) -> void:
 		Art.push(ci, Vector2(float(l[0]), 50))
 		FactoryArt.hanging_lamp(ci, float(l[1]), lk, 170.0)
 		Art.pop(ci)
+	for v: Array in _vines:
+		FactoryArt.vine(ci, v[0], float(v[1]), int(v[2]))
+	for tp: Vector2 in _torches:
+		Art.push(ci, tp)
+		FactoryArt.torch(ci)
+		Art.pop(ci)
 	# The balcony (tall) and the second line.
 	var mx1 := _line_pt("plant", Vector2(TUBE_X - 18, 0)).x
 	if not _wide:
@@ -645,8 +741,22 @@ func _paint_prop(ci: CanvasItem, p: Dictionary, lk: Dictionary) -> void:
 			Art.push(ci, p["p"])
 			FactoryArt.extinguisher(ci)
 			Art.pop(ci)
+		"jar":
+			Art.push(ci, p["p"])
+			FactoryArt.water_jar(ci)
+			Art.pop(ci)
+		"wheel":
+			Art.push(ci, p["p"])
+			FactoryArt.wheel_back(ci, float(p["r"]), float(p["spout"]))
+			Art.pop(ci)
+			# The rope belt from the wheel's hub down to the crusher's pulley.
+			var hub: Vector2 = p["p"]
+			var pul := _line_pt("plant", Vector2(14, -62))
+			Art.line_c(ci, PackedVector2Array([hub + Vector2(-3, 0), pul + Vector2(-5, 0)]), Color("8a5a2c"), 3.0)
+			Art.line_c(ci, PackedVector2Array([hub + Vector2(3, 0), pul + Vector2(5, 0)]), Color("8a5a2c"), 3.0)
+			Art.t_circle(ci, pul, 7, Art.GOLD, 2.2, 0.3)
 		"pennants":
-			FactoryArt.pennants(ci, float(p["x0"]), float(p["x1"]), float(p["y"]), 10.0)
+			FactoryArt.pennants(ci, float(p["x0"]), float(p["x1"]), float(p["y"]), 10.0, lk)
 		"jack":
 			Art.push(ci, p["p"])
 			FactoryArt.pallet_jack(ci, lk)
@@ -707,6 +817,8 @@ func _paint_front(ci: CanvasItem) -> void:
 
 
 func _draw() -> void:
+	if world_id() != _plan_world:
+		_layout()
 	var sig := _sig()
 	if sig != _bg_sig:
 		_bg_sig = sig
@@ -717,6 +829,8 @@ func _draw() -> void:
 	var w1 := _working("plant")
 	Art.push(self, _o, 0.0, Vector2(_k, _k))
 	_draw_wall_live(lk, w1)
+	if FactoryArt.is_temple(lk):
+		_draw_jungle(lk)
 	# The balcony: the second line's moving parts and its crew.
 	if _narrow and open2:
 		_draw_hatch("plant2", lk)
@@ -755,6 +869,11 @@ func _draw_wall_live(lk: Dictionary, on: bool) -> void:
 				FactoryArt.fan_blades(self, float(p["r"]), _t * (9.0 if on else 1.5), lk)
 				FactoryArt.fan_grill(self, float(p["r"]))
 				Art.pop(self)
+			"wheel":
+				Art.push(self, p["p"])
+				FactoryArt.wheel_water(self, float(p["r"]), _t, on)
+				FactoryArt.wheel(self, float(p["r"]), float(_gear["plant"]) * 0.45)
+				Art.pop(self)
 			"clock":
 				Art.push(self, p["p"])
 				FactoryArt.clock_hands(self, _t + 600.0)
@@ -763,6 +882,34 @@ func _draw_wall_live(lk: Dictionary, on: bool) -> void:
 				Art.push(self, p["p"])
 				FactoryArt.panel_live(self, _t, on, lk)
 				Art.pop(self)
+
+
+## The jungle's life: torches, leaves swaying at the windows, the parrot,
+## the monkey and butterflies (all small, moved in steps).
+func _draw_jungle(lk: Dictionary) -> void:
+	for i in _torches.size():
+		Art.push(self, _torches[i])
+		FactoryArt.torch_flame(self, _t + i * 1.7, lk)
+		Art.pop(self)
+	for l: Array in _leaves:
+		var sway := snappedf(sin(_t * 1.3 + float(l[3]) * 2.0) * 0.08, 0.02)
+		FactoryArt._leaf(self, l[0], float(l[1]), float(l[2]) + sway, FactoryArt.LEAF_LIGHT if int(l[3]) == 0 else FactoryArt.LEAF)
+	if not _parrot.is_empty():
+		var cyc := fmod(_t, 7.0)
+		Art.push(self, _parrot[0])
+		FactoryArt.parrot(self, 1.0 if cyc > 5.6 and cyc < 6.4 else 0.0, Chars.blinking(_t, 3.0), float(_parrot[1]))
+		Art.pop(self)
+	if _monkey.x > 0.0:
+		Art.push(self, _monkey, 0.0, Vector2(0.9, 0.9))
+		FactoryArt.monkey(self, sin(_t * 1.4) * 0.22, _t, Chars.blinking(_t, 4.0))
+		Art.pop(self)
+	for i in _flies.size():
+		var f: Array = _flies[i]
+		var ph := _t * (0.5 + i * 0.13) + i * 2.0
+		var c: Vector2 = Vector2(f[0]) + Vector2(cos(ph) * float(f[1]), sin(ph * 1.6) * float(f[1]) * 0.4)
+		Art.push(self, c.round(), 0.0, Vector2(0.9, 0.9))
+		FactoryArt.butterfly(self, absf(sin(_t * 11.0 + i)), f[2])
+		Art.pop(self)
 
 
 func _draw_feed(key: String, running: bool) -> void:
@@ -832,7 +979,7 @@ func _draw_line(key: String, lk: Dictionary) -> void:
 		var ph := fposmod(_t * 0.9, 1.0)
 		var press := (1.0 - ph / 0.8 if ph < 0.8 else (ph - 0.8) / 0.2) if working else 0.0
 		FactoryArt.line_live(self, _stage(key), {"t": _t, "working": working, "gear": _gear[key], "press": press,
-				"flash": _flash[key], "variant": 1 if key == "plant2" else 0, "flame": lk["flame"]})
+				"flash": _flash[key], "variant": 1 if key == "plant2" else 0, "flame": lk["flame"], "style": lk["style"]})
 	Art.pop(self)
 
 
@@ -973,6 +1120,13 @@ func _draw_fx() -> void:
 					continue
 				var p: Vector2 = f["p"] + Vector2(f["v"]) * age + Vector2(0, 300.0 * age * age)
 				Art.dot(self, p, 3.5 * (1.0 - age / 0.6) + 0.5, Color(1.0, 0.85, 0.3, 1.0 - age / 0.6))
+			"drip":
+				# Water dripping from the aqueduct.
+				for k in 2:
+					var u := clampf(age / 1.0 - k * 0.3, 0.0, 1.0)
+					if u <= 0.0 or u >= 1.0:
+						continue
+					Art.dot(self, f["p"] + Vector2(k * 4.0, u * u * 120.0), 2.6, Color(0.7, 0.95, 1.0, 0.9 * (1.0 - u * 0.6)))
 			"steam":
 				for k in 3:
 					var u := clampf(age / 1.4 - k * 0.12, 0.0, 1.0)

@@ -18,9 +18,11 @@ const URCHIN := Color("a36bff")
 
 const _W := 3.0          # outline width at cell scale
 
-## The world the board belongs to (0 ocean, 1 volcano, 2 acid swamp, 3 moon):
-## the other worlds draw their own pieces (TileWorlds). The puzzle sets it.
+## The world the board belongs to (0 ocean, 1 volcano, 2 acid swamp, 3 moon,
+## 4 jungle): the other worlds draw their own pieces (TileWorlds; the jungle
+## also its own specials and blockers, TileJungle). The puzzle sets it.
 static var world := 0
+const JUNGLE := 4
 
 
 ## The color of piece kind i in the current world (bursts, flying pieces).
@@ -212,6 +214,9 @@ static func _urchin(ci: CanvasItem, t: float, lift: float) -> void:
 
 ## Power pieces: "rocket_h", "rocket_v", "bomb", "rainbow".
 static func special(ci: CanvasItem, kind: String, t: float) -> void:
+	if world == JUNGLE:
+		TileJungle.special(ci, kind, t)
+		return
 	match kind:
 		"rocket_h":
 			_rocket(ci, t, 0.0)
@@ -316,6 +321,9 @@ static func _rainbow(ci: CanvasItem, t: float) -> void:
 ## "sand": sand block filling the cell (1 or 2+ layers look different).
 ## "bubble": translucent bubble drawn OVER a piece (2+ layers = double wall).
 static func blocker(ci: CanvasItem, kind: String, layers: int) -> void:
+	if world == JUNGLE:
+		TileJungle.blocker(ci, kind, layers)
+		return
 	match kind:
 		"sand":
 			_sand(ci, layers)

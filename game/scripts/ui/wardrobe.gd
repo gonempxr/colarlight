@@ -175,8 +175,9 @@ static func _cell(c: Dictionary, m: Modal) -> Control:
 		b.icon = Icons.get_icon("lock", 28)
 		b.theme_type_variation = &"DarkButton"
 		b.add_theme_font_size_override("font_size", 17)
-		b.pressed.connect(func(): Sfx.play("deny"); main_toast(m, t("EXCLUSIVE_HOW")))
-		var how := Views.label(t("EXCLUSIVE_HOW"), 15, Art.INK_SOFT)
+		var how_key := str(c.get("how", "EXCLUSIVE_HOW"))
+		b.pressed.connect(func(): Sfx.play("deny"); main_toast(m, t(how_key)))
+		var how := Views.label(t(how_key), 15, Art.INK_SOFT)
 		how.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(how)
 	else:

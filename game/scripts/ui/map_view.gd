@@ -24,6 +24,8 @@ signal closed
 signal location_opened(location: int)
 ## The player went to another opened world (GameState.switch_location).
 signal location_switched(location: int)
+## The "World stars" button (the endgame, StarView) was pressed.
+signal stars_requested
 
 const TITLE_H := 110.0
 const PANEL_W := 600.0
@@ -167,7 +169,37 @@ static func world_name(location: int, with_star: bool = true) -> String:
 	var tier := tier_of(location)
 	if with_star and tier > 0:
 		s += " ★%d" % (tier + 1)
+	elif with_star and stars_of(location) > 0:
+		s += " ★%d" % stars_of(location)
 	return s
+
+
+## World stars of an opened world (GameState.get_star), 0 in demos.
+static func stars_of(location: int) -> int:
+	var gs := _gs()
+	if demo.is_empty() and gs and gs.has_method("stars_of"):
+		return int(gs.call("stars_of", location))
+	return 0
+
+
+static func stars_unlocked() -> bool:
+	var gs := _gs()
+	return demo.is_empty() and gs != null and gs.has_method("stars_unlocked") and bool(gs.call("stars_unlocked"))
+
+
+## The gold "World stars" button for the panels once the last world is open.
+func _stars_button() -> void:
+	if not stars_unlocked():
+		return
+	var b := Button.new()
+	b.theme_type_variation = &"GoldButton"
+	b.text = "★ " + t("STAR_TITLE")
+	b.custom_minimum_size = Vector2(0, 80 if _wide else 74)
+	b.add_theme_font_size_override("font_size", 28)
+	b.pressed.connect(func():
+		_sfx("click")
+		stars_requested.emit())
+	_box.add_child(b)
 
 
 static func goals() -> Array:
@@ -742,6 +774,7 @@ func _go_panel(l: int, from_old: bool) -> void:
 	go.add_theme_font_size_override("font_size", 32 if _wide else 30)
 	go.pressed.connect(func(): _do_switch(l))
 	_box.add_child(go)
+	_stars_button()
 
 
 func _do_switch(l: int) -> void:
@@ -778,6 +811,7 @@ func _soon_panel() -> void:
 	hv.add_child(_label(t("MAP_SOON_TEXT"), 21, Art.INK_SOFT))
 	head.add_child(hv)
 	_box.add_child(head)
+	_stars_button()
 
 
 func _goal_row(g: Dictionary) -> Control:
@@ -930,12 +964,12 @@ func _paint(ci: CanvasItem) -> void:
 			MapArt.soon_tag(ci, Vector2(110, -150), t("MAP_SOON"), tm + l)
 		else:
 			MapArt.mystery(ci, Vector2(0, -10), tm, st == MapArt.NEXT)
-		var label := world_name(l, false) if st != MapArt.LOCKED else "???"
+		var label := world_name(l, true) if st != MapArt.LOCKED else "???"
 		MapArt.plate(ci, Vector2(0, 150), label, st, tier_of(l), 28)
 		if st == MapArt.CURRENT:
-			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_HERE"), tm)
+			MapArt.here_tag(ci, Vector2(0, MapArt.tag_y(w)), t("MAP_HERE"), tm)
 		elif l == _sel:
-			MapArt.here_tag(ci, Vector2(0, -205), t("MAP_GO_TAG"), tm, Color("5fd27a"))
+			MapArt.here_tag(ci, Vector2(0, MapArt.tag_y(w)), t("MAP_GO_TAG"), tm, Color("5fd27a"))
 		Art.pop(ci)
 	if _hint_left > 0.0 and _pos.has(_hint_loc):
 		_hint_bubble(ci, (_pos[_hint_loc] as Vector2) + Vector2(0, -150), _hint_loc == high + 1)

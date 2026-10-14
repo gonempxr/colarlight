@@ -6,7 +6,7 @@ extends CanvasLayer
 ##                     the average and the worst frame of the last second
 ##   ?bench=late       a busy late-game world in a throwaway save (nothing
 ##                     is saved, the player's own saves are not touched),
-##                     with the counter. Also: &world=0..3 &room=0..2
+##                     with the counter. Also: &world=0..4 &room=0..2
 ##                     &q=high|low (graphics quality for this visit only)
 ## The numbers are also put into window.coralightPerf for automated runs.
 
@@ -104,7 +104,7 @@ static func _setup_bench(root: Node, kind: String, world: int) -> void:
 	gs.levels.merge({"lift": 300, "boat": 300, "plant": 300}, true)
 	gs.coins = 1e12
 	gs.evo = 4
-	gs.location = clampi(world, 0, 3)
+	gs.location = clampi(world, 0, Balance.LAST_LOCATION)
 
 
 func _ready() -> void:

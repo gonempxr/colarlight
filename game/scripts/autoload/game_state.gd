@@ -16,8 +16,8 @@ extends Node
 ## the `vault` (room 3) until the player collects them, or by themselves
 ## once the accountant (manager "vault") is hired.
 ##
-## Worlds: the player goes through locations L = 0, 1, 2... (world L % 4,
-## tier L / 4). Every location scales values and prices (Balance.loc_scale).
+## Worlds: the player goes through locations L = 0, 1, 2... (world L % 5,
+## tier L / 5). Every location scales values and prices (Balance.loc_scale).
 ## A location is done when all 10 sites are open with their foremen and the
 ## lift, boats and plants have managers; then a big price opens the next one
 ## (advance_location: the run resets, automation is kept). Worker evolution
@@ -30,6 +30,11 @@ extends Node
 ## time they sat inactive when the player comes back (switch_location).
 ## `max_location` is the highest world opened; the gate to the next world
 ## is only there.
+##
+## Stars (the endgame): once the last world is open, a world whose gate
+## checklist is done can take a star (get_star): its run restarts with its
+## automation, its numbers grow (Balance.star_scale) and every star owned
+## adds Balance.STAR_BONUS income to every world. `world_stars`.
 
 signal changed
 signal cycle_started(key: String, amount: float)
@@ -48,11 +53,15 @@ signal vault_changed
 ## switch_location() moved to another opened world; `away` = coins its
 ## automation earned while it waited (0 if none).
 signal location_switched(L: int, away: float)
+## A world took a star: `stars` = how many it has now.
+signal star_gained(L: int, stars: int)
 
 ## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
 ## 4: worlds and locations, 10 sites (v3 saves fold with V3_SITE_FOLD into
 ## location 0; their Dive count becomes legacy_mult).
-const SAVE_VERSION := 4
+## 5: the fifth world (Jungle) is location 4; older saves never go past the
+## Moon (3) (location 4 there was the old "Ocean ★2" repeat).
+const SAVE_VERSION := 5
 ## Save version 3 -> 4: which old sites (of 15) each of the 10 sites takes
 ## its level and foreman from (the best of them).
 const V3_SITE_FOLD: Array = [[0], [1], [2], [3], [4], [5], [6], [7, 8, 9], [10, 11], [12, 13, 14]]
@@ -78,12 +87,11 @@ var autosave_enabled := true
 
 var coins := 0.0
 var total_earned := 0.0
-## Location index L (world L % 4), 0..Balance.LAST_LOCATION.
+## Location index L (world L % 5), 0..Balance.LAST_LOCATION.
 var location := 0:
 	set(value):
 		location = clampi(value, 0, Balance.LAST_LOCATION)
-		_scale = Balance.loc_scale(location)
-		_gate_scale = Balance.loc_gate_scale(location)
+		_rescale()
 ## Highest location opened so far (>= location). The gate lives there.
 var max_location := 0:
 	set(value):
@@ -92,6 +100,8 @@ var max_location := 0:
 ## (_run_snapshot). A world opened before this existed (old saves) has none
 ## and starts a fresh run on its first visit (see _fresh_world_run).
 var worlds_runs: Dictionary = {}
+## Stars of each world: str(L) -> count (0 when missing). Kept forever.
+var world_stars: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -107,7 +117,7 @@ var prestige_count: int:
 		return location
 	set(value):
 		location = value
-## Cached Balance.loc_scale / loc_gate_scale of the location.
+## Cached Balance.star_scale / star_gate_scale of the location (with its stars).
 var _scale := 1.0
 var _gate_scale := 1.0
 var levels: Dictionary = {}
@@ -201,6 +211,7 @@ func reset() -> void:
 	location = 0
 	max_location = 0
 	worlds_runs = {}
+	world_stars = {}
 	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
@@ -208,6 +219,7 @@ func reset() -> void:
 	_boosted = false
 	managers = {}
 	_reset_run()
+	_rescale()
 
 
 func _reset_run(keep_automation: bool = false) -> void:
@@ -309,7 +321,7 @@ func is_open(key: String) -> bool:
 ## Everything that multiplies every stage: the location's scale, evolution
 ## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
-	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult \
+	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult * star_mult() \
 			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0))
 
 
@@ -340,7 +352,7 @@ func gear_level() -> int:
 
 ## Price of gear purchase `form` (1..3 = gear level 2..4) in this location.
 func evo_cost(form: int) -> float:
-	return Balance.evo_cost(location, form)
+	return Balance.evo_cost(location, form, stars_of(location))
 
 
 func can_buy_evo() -> bool:
@@ -421,7 +433,7 @@ func can_advance_location() -> bool:
 	return is_max_location() and not is_last_location() and location_ready() and coins + vault >= next_location_cost()
 
 
-## The Moon: there is no next world yet.
+## The last world (the Jungle): there is no next world yet.
 func is_last_location() -> bool:
 	return location >= Balance.LAST_LOCATION
 
@@ -445,6 +457,73 @@ func advance_location() -> bool:
 	changed.emit()
 	save_game()
 	return true
+
+
+# --- Stars (the endgame) ----------------------------------------------------------
+
+func _rescale() -> void:
+	var n := stars_of(location)
+	_scale = Balance.star_scale(location, n)
+	_gate_scale = Balance.star_gate_scale(location, n)
+
+
+func stars_of(l: int) -> int:
+	return maxi(0, int(_num(world_stars.get(str(l)), 0.0)))
+
+
+func total_stars() -> int:
+	var n := 0
+	for k in world_stars:
+		n += maxi(0, int(_num(world_stars[k], 0.0)))
+	return n
+
+
+## Income multiplier of every world from all the stars owned.
+func star_mult() -> float:
+	return Balance.star_mult(total_stars())
+
+
+## Stars open up once the last world is open.
+func stars_unlocked() -> bool:
+	return max_location >= Balance.LAST_LOCATION
+
+
+func star_cost() -> float:
+	return Balance.star_cost(location, stars_of(location))
+
+
+## This world's checklist is done (stars are open): saving up for a star.
+func star_ready() -> bool:
+	return stars_unlocked() and location_ready() and stars_of(location) < Balance.MAX_STARS
+
+
+func can_get_star() -> bool:
+	return star_ready() and coins + vault >= star_cost()
+
+
+## Takes a star for this world: pays the price, restarts its run (the lift,
+## boats, plants and vault managers stay), bigger numbers from now on, and a
+## bonus for every world. Gives pearls.
+func get_star() -> bool:
+	if not can_get_star():
+		return false
+	collect_vault()
+	var price := star_cost()
+	var n := stars_of(location) + 1
+	_flush_cycles()
+	world_stars[str(location)] = n
+	_reset_run(true)
+	coins = 0.0
+	upgraded_from = {}
+	_rescale()
+	var progress := get_node_or_null("/root/Progress")
+	if progress:
+		progress.add_pearls(Balance.star_pearls(n - 1))
+	star_gained.emit(location, n)
+	location_changed.emit(location)
+	changed.emit()
+	save_game()
+	return price > 0.0
 
 
 # --- Switching between opened worlds -------------------------------------------------
@@ -1028,6 +1107,7 @@ func save_game() -> bool:
 		"location": location,
 		"max_location": max_location,
 		"worlds_runs": worlds_runs,
+		"stars": world_stars,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1120,9 +1200,9 @@ func _apply_save(data: Dictionary) -> void:
 			saved_levels = folded[0]
 			saved_managers = folded[1]
 	else:
-		# Saves from the old repeats (Ocean ★2 and on) stay on the Moon, the
-		# last world, with their levels, coins and helpers.
-		location = clampi(int(_num(data.get("location"), 0.0)), 0, Balance.LAST_LOCATION)
+		# Saves from the old repeats (Ocean ★2 and on) stay on the Moon (the
+		# last world before version 5), with their levels, coins and helpers.
+		location = clampi(int(_num(data.get("location"), 0.0)), 0, Balance.LAST_LOCATION if version >= 5 else 3)
 		legacy_mult = maxf(1.0, _num(data.get("legacy_mult"), 1.0))
 		if data.has("gear"):
 			evo = clampi(int(_num(data.get("gear"), 0.0)), 0, Balance.EVO_FORMS)
@@ -1168,7 +1248,15 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 	worlds_runs = {}
 	if version < 4:
 		return
-	max_location = maxi(location, int(_num(data.get("max_location"), float(location))))
+	max_location = maxi(location, mini(int(_num(data.get("max_location"), float(location))), Balance.LAST_LOCATION if version >= 5 else 3))
+	var st = data.get("stars")
+	if st is Dictionary:
+		for k in st:
+			var sl: int = str(k).to_int() if str(k).is_valid_int() else -1
+			var sn := int(_num(st[k], 0.0))
+			if sl >= 0 and sl <= Balance.LAST_LOCATION and sn > 0:
+				world_stars[str(sl)] = mini(sn, Balance.MAX_STARS)
+	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:
 		return

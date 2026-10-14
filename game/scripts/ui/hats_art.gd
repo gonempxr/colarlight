@@ -5,7 +5,7 @@ extends RefCounted
 ## over the top of the head (drawn after Chars.head with hat "none").
 ## Hoods (dino, frog, shark) are a cap over the head top with a face opening.
 
-const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder", "coral_crown", "trident"]
+const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder", "coral_crown", "trident", "explorer", "star_crown", "day_king"]
 
 const W := 2.5
 
@@ -30,6 +30,9 @@ static func draw(ci: CanvasItem, id: String) -> void:
 		"founder": FounderArt.hat(ci)
 		"coral_crown": _coral_crown(ci)
 		"trident": _trident(ci)
+		"explorer": _explorer(ci)
+		"star_crown": _star_crown(ci)
+		"day_king": _day_king(ci)
 
 
 # --- Shared bits ------------------------------------------------------------------------
@@ -408,3 +411,61 @@ static func _trident(ci: CanvasItem) -> void:
 	Art.flat(ci, Art.ellipse_pts(Vector2(-1.3, -23), Vector2(1.2, 1.8), 8, 0.0), Color(1, 1, 1, 0.8))
 	for x: float in [-14.0, 14.0]:
 		Art.t_circle(ci, Vector2(x, -12.5), 2.0, Color("fff6f0"), 1.2, 0.0)
+
+
+## Jungle explorer's pith helmet: a khaki dome, a wide brim, a green band
+## with a little feather.
+static func _explorer(ci: CanvasItem) -> void:
+	var khaki := Color("e8cf94")
+	Art.t_ellipse(ci, Vector2(0, -14), Vector2(31, 7.5), Art.shade_of(khaki, 0.1), W, 0.3)
+	var dome := PackedVector2Array()
+	for i in 19:
+		var a := PI + PI * i / 18.0
+		dome.append(Vector2(cos(a) * 21.0, -15.0 + sin(a) * 21.0))
+	Art.toon(ci, dome, khaki, W, 0.6)
+	Art.t_circle(ci, Vector2(0, -36), 3.0, Art.shade_of(khaki, 0.2), 1.8, 0.0)
+	Art.flat(ci, Art.clipped(Art.rrect_pts(Rect2(-24, -22, 48, 6), 1), dome), Color("2f9a52"))
+	Art.line(ci, Vector2(-14, -31), Vector2(-4, -35), Color(1, 1, 1, 0.55), 2.2)
+	var feather := Art.smooth_pts(PackedVector2Array([Vector2(13, -20), Vector2(18, -30), Vector2(25, -38),
+			Vector2(23, -29), Vector2(17, -19)]), 3)
+	Art.toon(ci, feather, Color("ff6a3d"), 1.6, 0.3)
+	Art.line(ci, Vector2(14, -20), Vector2(23, -35), Color("ffd23f"), 1.2)
+	_shine(ci, Vector2(-9, -27), Vector2(5, 2.2), -0.5)
+
+
+## Star crown: a gold crown of five stars with a
+## glowing middle star.
+static func _star_crown(ci: CanvasItem) -> void:
+	var band := PackedVector2Array()
+	for i in 13:
+		var a := PI + 0.35 + (PI - 0.7) * i / 12.0
+		band.append(Vector2(0, -2) + Vector2(cos(a) * 22.0, sin(a) * 15.0))
+	for i in 13:
+		var a := TAU - 0.35 - (PI - 0.7) * i / 12.0
+		band.append(Vector2(0, 5) + Vector2(cos(a) * 22.0, sin(a) * 15.0))
+	var stars := [[Vector2(-18, -22), 6.0], [Vector2(18, -22), 6.0], [Vector2(-9, -30), 7.5], [Vector2(9, -30), 7.5]]
+	for st: Array in stars:
+		Art.toon(ci, Art.star_pts(st[0], st[1], st[1] * 0.45, 5), Art.GOLD, 1.8, 0.4)
+	Art.glow(ci, Vector2(0, -36), 18.0, Color(1.0, 0.95, 0.5, 0.5), 12)
+	Art.toon(ci, Art.star_pts(Vector2(0, -36), 10.0, 4.4, 5), Color("fff27a"), 2.0, 0.5)
+	Art.toon(ci, band, Art.GOLD, W, 0.6)
+	for x: float in [-11.0, 0.0, 11.0]:
+		Art.t_circle(ci, Vector2(x, -14.5 + absf(x) * 0.12), 2.4, Color("6a5ae0") if x == 0.0 else Color("9fe8ff"), 1.3, 0.0)
+
+
+## The day's king (OnlineRules.CROWN_ITEM): a royal crown, five points with
+## pearls, rubies on a gold band over white fur.
+static func _day_king(ci: CanvasItem) -> void:
+	Art.glow(ci, Vector2(0, -22), 26.0, Color(1.0, 0.85, 0.3, 0.35), 12)
+	var top := PackedVector2Array([Vector2(-21, -6), Vector2(-24, -30), Vector2(-12, -18), Vector2(-6, -36), Vector2(0, -22),
+		Vector2(6, -36), Vector2(12, -18), Vector2(24, -30), Vector2(21, -6)])
+	Art.toon(ci, top, Art.GOLD, W, 0.5)
+	for pt: Vector2 in [Vector2(-24, -32), Vector2(-6, -38), Vector2(6, -38), Vector2(24, -32)]:
+		Art.t_circle(ci, pt, 3.6, Color("fff8e8"), 1.6, 0.3)
+	Art.t_circle(ci, Vector2(0, -25), 4.2, Color("e0284a"), 1.6, 0.4)
+	var fur := Art.rrect_pts(Rect2(-24, -9, 48, 13), 6.0)
+	Art.toon(ci, fur, Color("fbf6ee"), W, 0.3)
+	for x: float in [-16.0, -5.0, 6.0, 17.0]:
+		Art.t_circle(ci, Vector2(x, -2.5), 1.6, Art.INK, 0.0, 0.0)
+	for x: float in [-13.0, 13.0]:
+		Art.t_circle(ci, Vector2(x, -15), 3.0, Color("2f8cff"), 1.4, 0.4)

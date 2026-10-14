@@ -9,8 +9,10 @@ extends RefCounted
 ## Seen marks live in Progress.stats as "g_<id>" (per profile).
 
 ## Bump when "What's new" should show again (with new WHATS_NEW ids).
-const NEWS_VERSION := 2
-const WHATS_NEW := ["board", "pass"]
+const NEWS_VERSION := 3
+const WHATS_NEW := ["pass", "challenge", "ach", "clubs", "season", "puzzle_board", "friends", "titles", "jungle", "stars", "board"]
+## What the "What's new" dialog of this NEWS_VERSION lists.
+const NEWS_NOW := ["jungle", "stars", "board", "pass"]
 ## The update's notes shown on top of "What's new" (NEWS_NOTE_<n>).
 const NEWS_NOTES := 5
 ## Long enough in the game to be told about news (new players learn as they go).
@@ -43,6 +45,8 @@ static func entries(main: Node) -> Array:
 		["office", "coin", "base", true, func(): main.show_room(2)],
 		["evo", "helmet", "base", main._evo_shown(), func(): main.open_evolution()],
 		["map", "play", "base", true, func(): main.open_map()],
+		["jungle", "play", "base", true, func(): main.open_map()],
+		["stars", "star", "base", GameState.stars_unlocked(), func(): main.open_stars()],
 		["hint", "bolt", "base", true, null],
 		["daily", "gift", "fun", Progress.has_feature("daily"), func(): main.open_feature("daily")],
 		["streak", "bolt", "fun", Progress.has_feature("daily"), func(): main.open_streak()],
@@ -92,7 +96,7 @@ static func build(m: Modal, main: Node, only_new := false) -> void:
 		m.text(t("GUIDE_INTRO"), 20, Art.INK_SOFT)
 	var all := entries(main)
 	for group in ["base", "fun", "online"]:
-		var rows := all.filter(func(e): return e[2] == group and (not only_new or e[0] in WHATS_NEW))
+		var rows := all.filter(func(e): return e[2] == group and (not only_new or e[0] in NEWS_NOW))
 		if rows.is_empty():
 			continue
 		if not only_new:
