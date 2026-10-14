@@ -193,9 +193,12 @@ static func week_id(unix: float) -> int:
 
 ## The Top League (2026-10-16, Mark): a board of its own from each start
 ## (unix seconds; a start wipes the board: the new league gets a new id =
-## its start). Only the board starts over, never the game. 05:15 UTC =
-## 8:15 in Tallinn (summer time).
-const LEAGUE_STARTS: Array[int] = [1792127700]
+## its start). 05:15 UTC = 8:15 in Tallinn (summer time).
+## Since 2026-10-14 the league is played in its own fresh save (a league
+## profile, Profiles.enter_league); the first start is one second after
+## 05:15 so that builds which still counted every profile (beta / CrazyGames
+## zip of 2026-10-14) write to another board than the fresh-save one.
+const LEAGUE_STARTS: Array[int] = [1792127701]
 
 
 ## The league running at `unix` (its start), 0 before the first one.

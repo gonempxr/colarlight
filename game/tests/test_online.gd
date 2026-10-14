@@ -599,7 +599,7 @@ func _initialize() -> void:
 
 	# --- The Top League and the crown (no. 1 of the race) --------------------------------------
 	var ls := OnlineRules.LEAGUE_STARTS[0]
-	_check(ls == 1792127700, "the Top League starts Fri 16.10.2026 8:15 Tallinn (05:15 UTC)")
+	_check(ls == 1792127701, "the Top League starts Fri 16.10.2026 8:15 Tallinn (05:15:01 UTC, a board of its own)")
 	_check(OnlineRules.league_id(ls - 1) == 0 and OnlineRules.league_id(ls) == ls and OnlineRules.league_id(ls + 9.0e6) == ls, "league id = its start")
 	_check(OnlineRules.next_league(ls - 100) == ls and OnlineRules.next_league(ls) == 0, "the next league start")
 	_check(OnlineRules.countdown(3661).ends_with("01:01:01") and OnlineRules.countdown(90061).begins_with("1") and OnlineRules.countdown(-5) == "00:00:00", "the countdown text")
@@ -686,7 +686,8 @@ func _initialize() -> void:
 	online.check_crown_prize(t0 + 86400.0)
 	_check(pr.pearls == cp0 + 150 and int(online.data["crown_prize"]) == dk, "a day with no minutes pays nothing")
 	online.pending_thanks.clear()
-	# The league score starts from zero at the league start; the game's progress stays.
+	# The league is its own fresh game (a league profile): coins earned in the
+	# ordinary game never count there, the ordinary game stays as it is.
 	online.data["league"] = 0
 	online.data["league_score"] = 0.0
 	online.data["week_score"] = 0.0
@@ -700,9 +701,31 @@ func _initialize() -> void:
 	online.track(ls + 10.0)
 	gs.total_earned = 1.8e6
 	online.track(ls + 20.0)
-	_check(int(online.data["league"]) == ls and float(online.data["league_score"]) == 3.0e5, "the league counts from its start")
-	_check(gs.total_earned == 1.8e6 and float(online.data["all_best"]) >= 1.8e6, "the wipe touches only the league board")
-	_check(wbefore > 0.0, "the week counted before")
+	_check(int(online.data["league"]) == ls and float(online.data["league_score"]) == 0.0, "the ordinary game earns nothing for the league")
+	_check(float(online.data["week_score"]) > wbefore, "but still counts for the week")
+	var profiles: Node = root.get_node("Profiles")
+	var home_id: String = profiles.current_id
+	var n_before: int = profiles.list.size()
+	var home_name: String = profiles.player_name()
+	gs.save_game()
+	var lgp: String = profiles.enter_league(ls)
+	_check(lgp != "" and profiles.current_id == lgp and profiles.in_league(ls) and not profiles.in_league(ls + 1), "joining the league switches to its profile")
+	_check(profiles.list.size() == n_before + 1 and profiles.player_name() == home_name, "a new league profile with the same name")
+	_check(gs.total_earned == 0.0 and int(gs.max_location) == 0, "the league starts from zero")
+	_check(profiles.can_add() == (n_before < profiles.MAX_PROFILES), "the league profile doesn't take a player's place")
+	online.track(ls + 30.0)
+	gs.total_earned = 4000.0
+	online.track(ls + 40.0)
+	_check(float(online.data["league_score"]) == 4000.0, "coins earned in the league game count there")
+	_check(profiles.enter_league(ls) == lgp and profiles.list.size() == n_before + 1, "joining again goes back to the same league game")
+	profiles.leave_league()
+	_check(profiles.current_id == home_id and gs.total_earned == 1.8e6, "leaving goes back to the ordinary game, untouched")
+	gs.total_earned = 1.9e6
+	online.track(ls + 50.0)
+	_check(float(online.data["league_score"]) == 4000.0, "and the ordinary game still adds nothing to the league")
+	_check(not profiles.league_profile(ls).is_empty() and profiles.league_profile(0).is_empty(), "the league profile is found by its league")
+	profiles.remove(lgp)
+	_check(profiles.league_profile(ls).is_empty() and profiles.current_id == home_id, "a league profile can be removed")
 	for ck_key in ["LEAGUE_TAB", "LEAGUE_SOON_TEXT", "CROWN_TOAST_NEW", "CROWN_TOAST_LOST", "CROWN_TOAST_ME", "CROWN_TOAST_FIRST", "LEAGUE_TOAST_SOON", "LEAGUE_TOAST_GO", "THANKS_CROWN", "ITEM_HAT_DAY_KING"]:
 		_check(TranslationServer.translate(ck_key) != ck_key, "words for %s" % ck_key)
 	_check(TranslationServer.translate("CROWN_TOAST_NEW").contains("%s"), "the toast names the player")

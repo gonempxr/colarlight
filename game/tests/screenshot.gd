@@ -15,7 +15,7 @@ extends SceneTree
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
 ## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
-## board:<month|friends|clubs|league> (":admin" = as the leader) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
+## board:<month|friends|clubs|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -428,6 +428,18 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			for k in ["all", "month", "friends", "clubs", "puzzle", "league"]:
 				if k in parts:
 					ov.tab = k
+			if "live" in parts:
+				# The league is running (a day after its start); "in" = playing it.
+				var clock := root.get_node("Clock")
+				clock._base = float(OnlineRules.LEAGUE_STARTS[0]) + 86400.0
+				clock._base_us = Time.get_ticks_usec()
+				online.track()
+				var pf := root.get_node("Profiles")
+				var lp: Dictionary = pf.league_profile(OnlineRules.LEAGUE_STARTS[0])
+				if "in" in parts:
+					pf.enter_league(OnlineRules.LEAGUE_STARTS[0])
+				elif not lp.is_empty():
+					pf.remove(lp["id"])
 			online.check_crown()
 			if "king" in parts:
 				online.crown = {"uid": online.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"]), "score": 9e9}
