@@ -544,6 +544,14 @@ static func _ready_set(k: int, g: Array, fill: Color, line: Color) -> Array:
 static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 	var outer := PackedVector2Array()
 	var fringe := PackedVector2Array()
+	# Drawn shrunk (ore in a wall, a diver's sack, small icons), a shape
+	# keeps only the detail one canvas pixel can show: points closer than
+	# a sixth of a pixel to the outline, soft edges of shapes under
+	# fringe_min pixels and bands under a pixel are left out. Shapes drawn
+	# at full size or bigger are built exactly as before.
+	var sc := minf(1.0, pow(2.0, _st / _INK_STEPS)) if fringe_min > 0.0 else 1.0
+	if sc < 1.0:
+		pts = _simplify(pts, 0.16 / sc)
 	if w > 0.0:
 		var best := PackedVector2Array()
 		var best_a := 0.0
@@ -558,7 +566,7 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 		outer = _tris(best)
 		# Small shapes (eyes, gloves, rivets, icons) go without the soft edge:
 		# at that size it can't be seen, and it is half of their triangles.
-		if not outer.is_empty() and smooth and maxf(_bounds(pts).size.x, _bounds(pts).size.y) >= fringe_min:
+		if not outer.is_empty() and smooth and maxf(_bounds(pts).size.x, _bounds(pts).size.y) * sc >= fringe_min:
 			fringe = _fringe(best, _aa())
 	var fill := _tris(pts)
 	var shadow := PackedVector2Array()
@@ -567,12 +575,12 @@ static func _build(pts: PackedVector2Array, w: float, shade: float) -> Array:
 		var r := _bounds(pts)
 		var d := clampf(r.size.y * 0.18, 1.5, 16.0) * shade
 		# Bands thinner than a pixel can't be seen: skip their triangles.
-		if d >= 1.0:
+		if d * sc >= 1.0:
 			for p in Geometry2D.clip_polygons(pts, moved(pts, Vector2(0, -d))):
 				if Geometry2D.is_polygon_clockwise(p) == Geometry2D.is_polygon_clockwise(pts):
 					shadow.append_array(_tris(p))
 		var inset: Array[PackedVector2Array] = []
-		if d >= 2.0:
+		if d * sc >= 2.0:
 			inset = Geometry2D.offset_polygon(pts, -clampf(r.size.y * 0.07, 1.0, 4.0))
 		if inset.size() == 1:
 			var ip: PackedVector2Array = inset[0]
