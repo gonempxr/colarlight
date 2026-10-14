@@ -104,7 +104,7 @@ static func _setup_bench(root: Node, kind: String, world: int) -> void:
 	gs.levels.merge({"lift": 300, "boat": 300, "plant": 300}, true)
 	gs.coins = 1e12
 	gs.evo = 4
-	gs.location = clampi(world, 0, 3)
+	gs.location = clampi(world, 0, Balance.LAST_LOCATION)
 
 
 func _ready() -> void:
