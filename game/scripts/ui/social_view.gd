@@ -148,8 +148,12 @@ static func profile(m: Modal, row: Dictionary, main: Node = null) -> void:
 	var you: bool = row.get("you", false)
 	var p := Online.parse_profile(Online.profile_info() if you else str(row.get("p", "")))
 	var look: Dictionary = Settings.avatar if you else OnlineView._look(str(row.get("a", "")))
+	var king := Online.row_is_king(row)
 	m.add(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
-		Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 4.0, look, "happy", Chars.blinking(tt, 3.0), Color("bfe8ff")), Vector2(0, 130), true))
+		var r := minf(s.x, s.y) / 2.0 - 4.0
+		Chars.portrait(ci, s / 2.0 + Vector2(0, 8 if king else 0), r - (8.0 if king else 0.0), look, "happy", Chars.blinking(tt, 3.0), Color("bfe8ff"))
+		if king:
+			KingArt.on_portrait(ci, s / 2.0 + Vector2(0, 8), r - 8.0, tt), Vector2(0, 130), true))
 	m.title(str(row.get("name", "")))
 	if int(p["t"]) > 0:
 		var tr := title_pill(int(p["t"]), 20)

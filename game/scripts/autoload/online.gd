@@ -1018,6 +1018,16 @@ func is_king() -> bool:
 	return not crown.is_empty() and str(crown.get("uid", "")) == uid and uid != ""
 
 
+## True when a board row belongs to the crown's holder (also a joined row).
+func row_is_king(row: Dictionary) -> bool:
+	var k := str(crown.get("uid", ""))
+	if k == "":
+		return false
+	if bool(row.get("you", false)) and is_king():
+		return true
+	return str(row.get("uid", "")) == k or k in row.get("also", [])
+
+
 ## Reads the crown; takes it when this player's sent score is higher than
 ## the holder's (the rules check the same on the server).
 func check_crown() -> void:

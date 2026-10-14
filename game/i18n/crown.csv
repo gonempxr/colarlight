@@ -34,3 +34,6 @@ TESTER_ITEMS,All items and features,Все предметы и функции,To
 TESTER_WORLD,Finish this world: go to the next,Пройти мир: в следующий,Completar este mundo: al siguiente,完成本世界：前往下一个
 TESTER_DONE,Done!,Готово!,¡Hecho!,完成！
 TESTER_STAYS,"Cheats were used on this device, so it stays off the leaderboards for good.","На этом устройстве уже были читы, поэтому оно навсегда остаётся вне таблиц.","En este dispositivo se usaron trucos, así que queda fuera de las tablas para siempre.",此设备已使用作弊，因此将永久不进入排行榜。
+CHASE_CLOSE,%s is hunting you! Only %d%% behind. Hold the crown!,%s догоняет тебя! Отстаёт всего на %d%%. Держи корону!,"¡%s te está cazando! Solo un %d%% detrás. ¡Defiende la corona!",%s正在追你！只差%d%%。守住王冠！
+CHASE_FAR,You are No. 1! %s is after your crown (%d%% behind).,Ты №1! %s охотится за твоей короной (отстаёт на %d%%).,"¡Eres el n.º 1! %s va a por tu corona (a un %d%%).",你是第一名！%s在争夺你的王冠（落后%d%%）。
+CHASE_NEAR,The crown is close! %s is only %d%% ahead of you.,Корона близко! %s впереди всего на %d%%.,"¡La corona está cerca! %s solo te saca un %d%%.",王冠就在眼前！%s只领先你%d%%。

@@ -420,12 +420,17 @@ func _online_overlay(main: Node, overlay: String) -> void:
 				for i in 20:
 					await process_frame
 				main._modal._scroll.scroll_vertical = 100000
+		"king":
+			# This player holds the crown (the HUD portrait wears it).
+			online.crown = {"uid": online.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"]), "score": 9e9}
 		"board":
 			ov.tab = "week"
 			for k in ["all", "month", "friends", "clubs", "puzzle", "league"]:
 				if k in parts:
 					ov.tab = k
 			online.check_crown()
+			if "king" in parts:
+				online.crown = {"uid": online.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"]), "score": 9e9}
 			ov.open_board(main)
 			if "end" in parts:
 				for i in 20:

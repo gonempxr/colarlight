@@ -400,3 +400,32 @@ static func invite_ok(ref: String, own_code: String, referred_by: String, total_
 ## Pearls still due to an inviter: friends joined (capped) minus those already paid.
 static func invite_due(joined: int, credited: int) -> int:
 	return maxi(0, mini(joined, INVITE_CAP) - credited)
+
+
+## How far behind `b` is from `a` (a > b), in whole percent of a, 1..99.
+static func gap_pct(a: float, b: float) -> int:
+	if a <= 0.0:
+		return 99
+	return clampi(ceili((a - b) / a * 100.0), 1, 99)
+
+
+## The chase toast for the race: the crown's holder hears who is hunting
+## them, a player close behind hears how near the crown is.
+## Returns {key, name, pct} or {} (nothing worth saying).
+static func chase(king: bool, mine: float, other_name: String, other: float) -> Dictionary:
+	if mine <= 0.0 or other <= 0.0 or other_name == "":
+		return {}
+	if king:
+		if other > mine:
+			return {}
+		var pct := gap_pct(mine, other)
+		return {"key": "CHASE_CLOSE" if pct <= CHASE_CLOSE_PCT else "CHASE_FAR", "name": other_name, "pct": pct}
+	if mine >= other or mine < other * (1.0 - CHASE_NEAR_PCT / 100.0):
+		return {}
+	return {"key": "CHASE_NEAR", "name": other_name, "pct": gap_pct(other, mine)}
+
+
+## Within this many percent the hunter is "close"; players this close to
+## the crown hear how near it is.
+const CHASE_CLOSE_PCT := 15
+const CHASE_NEAR_PCT := 30

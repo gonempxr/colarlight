@@ -1369,7 +1369,7 @@ func _draw_scene() -> void:
 	# The player with the rod.
 	var pose := _player_pose()
 	var feet := _player + Vector2(0, -12.0 * _k)
-	Chars.person(ci, feet, s, 1.0, Settings.avatar, pose)
+	Chars.person(ci, feet, s, 1.0, KingArt.look(Settings.avatar) if Online.is_king() else Settings.avatar, pose)
 	var hand := _hand(feet, s, float(pose["arm_r"]))
 	var ang := _rod_angle()
 	var lv := _rod_level()
