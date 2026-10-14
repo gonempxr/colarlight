@@ -239,7 +239,56 @@ static func leader_tools(m: Modal, row: Dictionary, main: Node) -> void:
 				if m.is_open():
 					m.close()))
 		h.add_child(b)
+	gift_tools(v, row)
 	m.add(c)
+
+
+## Only for the leader: give this player coins ("18ad") and/or open the
+## worlds up to one (every world before it fully built). It reaches them
+## within a few minutes, in their ordinary game.
+static func gift_tools(v: VBoxContainer, row: Dictionary) -> void:
+	var head := Views.label(t("GIFT_TITLE"), 21, Color("2a6a8a"), true)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.custom_minimum_size.x = 160
+	v.add_child(head)
+	var amount := LineEdit.new()
+	amount.placeholder_text = t("GIFT_COINS")
+	amount.max_length = 12
+	amount.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	amount.custom_minimum_size = Vector2(0, 56)
+	amount.add_theme_font_size_override("font_size", 22)
+	v.add_child(amount)
+	var world := OptionButton.new()
+	world.add_theme_font_size_override("font_size", 20)
+	world.custom_minimum_size = Vector2(0, 56)
+	world.add_item(t("GIFT_NO_WORLDS"), 0)
+	for l in range(1, Balance.LAST_LOCATION + 1):
+		world.add_item(t("GIFT_UPTO") % WorldLook.name_of(l), l)
+	v.add_child(world)
+	var status := Views.label(t("GIFT_HINT"), 17, Art.INK_SOFT)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.custom_minimum_size.x = 160
+	v.add_child(status)
+	var b := Button.new()
+	b.text = t("GIFT_SEND")
+	b.theme_type_variation = &"BlueButton"
+	b.custom_minimum_size = Vector2(0, 64)
+	v.add_child(b)
+	var busy := [false]
+	b.pressed.connect(func():
+		Sfx.play("click")
+		if busy[0]:
+			return
+		var coins := 0.0 if amount.text.strip_edges() == "" else OnlineRules.parse_amount(amount.text)
+		var upto := world.get_selected_id() if world.get_selected_id() > 0 else -1
+		if coins < 0.0 or (coins == 0.0 and upto < 0):
+			status.text = t("GIFT_BAD")
+			return
+		busy[0] = true
+		status.text = t("ONLINE_LOADING")
+		Online.send_gift(row, coins, upto, func(res: String):
+			busy[0] = false
+			status.text = t("GIFT_DONE") % NumFormat.short(coins) if res == "ok" else t("LEADER_FAIL")))
 
 
 ## The leader's list of banned players, each with "Unban".

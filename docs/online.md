@@ -38,6 +38,7 @@ Auth** + **Firestore**. All protection is in the Firestore security rules below.
 | `DIVE2026` | +30 pearls and x2 coins for 1 hour (the ad boost timer, `GameState.add_boost`) | p2 |
 | `THANKYOU` | +25 pearls and the Founder Cap | p3 |
 | (Mark has them) | 200ac coins / 100ac coins, not counted on the boards | p4 / p5 |
+| (Mark has them) | 8 codes 10ad coins, 7 codes 100ad coins | p6–p13 / p14–p20 |
 
 Codes are typed in any case with spaces around; the game trims and upper-cases
 them and compares the **SHA-256** with `OnlineRules.PROMOS`
@@ -109,6 +110,18 @@ service cloud.firestore {
         && request.resource.data.total is number && request.resource.data.total >= 0;
     }
     // Banned players: {name, o, t}; their scores are refused.
+    // The leader's gift to one player: gifts/{uid} {id, coins, upto, t}.
+    // Only admins write it; the player reads it, applies it once, deletes it.
+    match /gifts/{uid} {
+      allow read: if isMe(uid) || isAdmin();
+      allow delete: if isMe(uid) || isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'coins', 'upto', 't'])
+        && request.resource.data.id is string && request.resource.data.id.size() <= 40
+        && request.resource.data.coins is number && request.resource.data.coins >= 0
+        && request.resource.data.upto is number && request.resource.data.upto >= -1 && request.resource.data.upto <= 4
+        && request.resource.data.t == request.time;
+    }
     match /bans/{uid} {
       allow read: if signedIn();
       allow create, update: if isAdmin()
@@ -225,15 +238,32 @@ service cloud.firestore {
         && d.t == request.time
         && !banned()
         && exists(mine) && get(mine).data.score > 0
+        && (request.time < friCut() || resource == null || exists(friPath()))
         && (resource == null
             || resource.data.uid == request.auth.uid
             || resource.data.k != d.k || resource.data.id != d.id
             || !exists(rowPath(d.k, d.id, resource.data.uid))
             || get(mine).data.score > get(rowPath(d.k, d.id, resource.data.uid)).data.score);
     }
+    // The race to Friday: crown/fri = crown/now as it stood at the cutoff,
+    // written once by the first player after it (before it is there nobody
+    // may take crown/now, so the copy is the holder at the cutoff).
+    function friCut() { return timestamp.value('2026-10-16T05:15:00Z'); }
+    function friPath() { return /databases/$(database)/documents/crown/fri; }
+    function goodFri() {
+      let d = request.resource.data;
+      let now = get(/databases/$(database)/documents/crown/now).data;
+      return request.time >= friCut()
+        && d.keys().hasOnly(['uid', 'name', 'k', 'id', 't'])
+        && d.keys().hasAll(['uid', 'name', 'k', 'id', 't'])
+        && d.t == request.time
+        && now.k == 'weeks' && d.k == 'weeks'
+        && d.uid == now.uid && d.name == now.name && d.id == now.id;
+    }
     match /crown/{doc} {
       allow read: if signedIn();
       allow create, update: if signedIn() && doc == 'now' && goodCrown();
+      allow create: if signedIn() && doc == 'fri' && goodFri();
       allow delete: if isAdmin();
     }
 
@@ -371,6 +401,9 @@ service cloud.firestore {
   }
 }
 ```
+Rules v7 (2026-10-14) add gifts/{uid} (the leader gives a player coins and
+opened worlds, from the player's card) and crown/fri, the race to Friday (the crown holder
+at Fri 16.10 05:15 UTC wins 1000ad coins + 500 pearls, paid in-game).
 Rules v6 (2026-10-14) add the Top League, the crown and the minutes at no. 1
 (`league`, `crown`, `crowndays`). Old clients keep working with them.
 

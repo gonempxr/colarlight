@@ -1129,6 +1129,24 @@ window.coralightFirebase = (function () {
 				store(d);
 				return later('ok');
 			},
+			// The leader's gift to one player: gifts/{uid} {id, coins, upto}.
+			gift_send: function (a) {
+				const d = fix(load());
+				(d.gifts = d.gifts || {})[a.to] = { id: a.id, coins: a.coins, upto: a.upto };
+				store(d);
+				return later('ok');
+			},
+			gift_get: function () {
+				const d = fix(load());
+				const g = (d.gifts || {})[uid];
+				return later(g ? JSON.stringify(g) : 'none');
+			},
+			gift_done: function () {
+				const d = fix(load());
+				delete (d.gifts || {})[uid];
+				store(d);
+				return later('ok');
+			},
 			// The donation board: a few made-up donors for testing.
 			donors: function () {
 				return later(JSON.stringify({ list: [{ name: 'Test donor', total: 20 }, { name: 'Coral fan', total: 5 }] }));
@@ -1151,6 +1169,16 @@ window.coralightFirebase = (function () {
 				}
 				const t = (c.k === 'league' ? d.league : d.weeks)[c.id] || {};
 				return later(JSON.stringify({ uid: c.uid, name: c.name, k: c.k, id: c.id, score: t[c.uid] ? t[c.uid].score : 0 }));
+			},
+			// The race to Friday: crown/fri = crown/now as it stood at the
+			// cutoff (written once by the first player after it).
+			crown_fri: function (a) {
+				const d = fix(load());
+				if (!d.crownfri && Date.now() >= a.cut * 1000 && d.crown && d.crown.k === 'weeks') {
+					d.crownfri = { uid: d.crown.uid, name: d.crown.name, k: d.crown.k, id: d.crown.id };
+					store(d);
+				}
+				return later(d.crownfri ? JSON.stringify(d.crownfri) : 'none');
 			},
 			crown_take: function (a) {
 				const d = fix(load());
@@ -1399,6 +1427,30 @@ window.coralightFirebase = (function () {
 					});
 				});
 			},
+			// The race to Friday: crown/fri is crown/now as it stood at the
+			// cutoff; the first player after it copies it (the rules check the
+			// copy and let nobody take crown/now after the cutoff before it).
+			crown_fri: function (a) {
+				const fri = F.db.collection('crown').doc('fri');
+				const out = function (x) { return JSON.stringify({ uid: String(x.uid), name: String(x.name || ''), k: String(x.k), id: String(x.id) }); };
+				return fri.get().then(function (f) {
+					if (f.exists) {
+						return out(f.data());
+					}
+					if (Date.now() < a.cut * 1000) {
+						return 'none';
+					}
+					return crownRef().get().then(function (c) {
+						if (!c.exists || c.data().k !== 'weeks') {
+							return 'none';
+						}
+						const x = c.data();
+						return fri.set({ uid: x.uid, name: x.name, k: x.k, id: x.id, t: ts() }).then(function () { return out(x); }, function () {
+							return fri.get().then(function (g) { return g.exists ? out(g.data()) : 'error'; });
+						});
+					});
+				});
+			},
 			crown_take: function (a) {
 				return crownRef().set({ uid: me(), name: a.name, k: a.k, id: String(a.id), t: ts() }).then(function () { return 'ok'; }, function (e) {
 					if (denied(e)) {
@@ -1485,6 +1537,25 @@ window.coralightFirebase = (function () {
 						return 'ok';
 					}, function () { return 'ok'; });
 				});
+			},
+			// The leader's gift to one player: gifts/{uid} {id, coins, upto, t}
+			// (only admins write it; the player reads it, applies it once
+			// and deletes it).
+			gift_send: function (a) {
+				return F.db.collection('gifts').doc(String(a.to)).set({ id: String(a.id), coins: Number(a.coins) || 0, upto: Number(a.upto), t: ts() })
+					.then(function () { return 'ok'; });
+			},
+			gift_get: function () {
+				return F.db.collection('gifts').doc(me()).get().then(function (g) {
+					if (!g.exists) {
+						return 'none';
+					}
+					const x = g.data();
+					return JSON.stringify({ id: String(x.id), coins: Number(x.coins) || 0, upto: Number(x.upto) });
+				});
+			},
+			gift_done: function () {
+				return F.db.collection('gifts').doc(me()).delete().then(function () { return 'ok'; });
 			},
 			// The donation board (our own site only): donors/{id} {name, total},
 			// added by hand by the leader in the Firebase console.
@@ -1642,6 +1713,10 @@ window.coralightFirebase = (function () {
 		admin: function () { return api.admin(); },
 		crown: function () { return api.crown(); },
 		crown_take: function (arg) { return api.crown_take(JSON.parse(arg)); },
+		crown_fri: function (arg) { return api.crown_fri(JSON.parse(arg)); },
+		gift_send: function (arg) { return api.gift_send(JSON.parse(arg)); },
+		gift_get: function () { return api.gift_get(); },
+		gift_done: function () { return api.gift_done(); },
 		crown_tick: function (arg) { return api.crown_tick(JSON.parse(arg)); },
 		kings: function (arg) { return api.kings(JSON.parse(arg)); },
 		bans: function () { return api.bans(); },
