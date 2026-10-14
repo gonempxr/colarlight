@@ -947,6 +947,8 @@ window.coralightFirebase = (function () {
 			d.clubweeks = d.clubweeks || {};
 			d.puzzle = d.puzzle || {};
 			d.bans = d.bans || {};
+			d.league = d.league || {};
+			d.crowndays = d.crowndays || {};
 			return d;
 		};
 		const clubTotal = function (d, id, w) {
@@ -976,6 +978,9 @@ window.coralightFirebase = (function () {
 				if (a.pz > 0) {
 					ok = ok | put(d.puzzle[a.w] || (d.puzzle[a.w] = {}), { name: a.name, score: a.pz, a: a.a, p: a.p });
 				}
+				if (a.l > 0 && a.league > 0) {
+					ok = ok | put(d.league[a.l] || (d.league[a.l] = {}), { name: a.name, score: a.league, a: a.a, p: a.p });
+				}
 				if (a.club && d.clubs[a.club] && d.clubs[a.club].m[uid]) {
 					d.clubs[a.club].m[uid] = { name: a.name, score: a.week, w: a.w };
 				}
@@ -991,6 +996,8 @@ window.coralightFirebase = (function () {
 					table = d.months[a.m] || {};
 				} else if (a.kind === 'puzzle') {
 					table = d.puzzle[a.w] || {};
+				} else if (a.kind === 'league') {
+					table = d.league[a.l] || {};
 				} else if (a.kind === 'clubs') {
 					table = d.clubweeks[a.w] || {};
 				} else if (a.kind === 'friends') {
@@ -1128,8 +1135,64 @@ window.coralightFirebase = (function () {
 				store(d);
 				return later('ok');
 			},
+			// The crown (the race board's no. 1) and the minutes at no. 1 per day.
+			crown: function () {
+				const d = fix(load());
+				const c = d.crown;
+				if (!c) {
+					return later('none');
+				}
+				const t = (c.k === 'league' ? d.league : d.weeks)[c.id] || {};
+				return later(JSON.stringify({ uid: c.uid, name: c.name, k: c.k, id: c.id, score: t[c.uid] ? t[c.uid].score : 0 }));
+			},
+			crown_take: function (a) {
+				const d = fix(load());
+				const t = (a.k === 'league' ? d.league : d.weeks)[a.id] || {};
+				const mine = t[uid] ? t[uid].score : 0;
+				const c = d.crown;
+				if (d.bans[uid] || !(mine > 0)) {
+					return deny();
+				}
+				if (c && c.k === a.k && c.id === a.id && c.uid !== uid && t[c.uid] && !(mine > t[c.uid].score)) {
+					return later('lower');
+				}
+				d.crown = { uid: uid, name: a.name, k: a.k, id: a.id, t: Date.now() };
+				store(d);
+				return later('ok');
+			},
+			crown_tick: function (a) {
+				const d = fix(load());
+				if (!d.crown || d.crown.uid !== uid) {
+					return deny();
+				}
+				const day = d.crowndays[a.day] || (d.crowndays[a.day] = {});
+				const old = day[uid];
+				if (old && Date.now() - old.t < 50000) {
+					return later('error:limit');
+				}
+				day[uid] = { name: a.name, score: (old ? old.score : 0) + 1, t: Date.now(), a: '' };
+				store(d);
+				return later('ok:' + day[uid].score);
+			},
+			kings: function (a) {
+				const d = fix(load());
+				const list = function (day) {
+					const t = d.crowndays[day] || {};
+					return Object.keys(t).map(function (k) { return { uid: k, name: t[k].name, score: t[k].score }; })
+						.sort(function (x, y) { return y.score - x.score; }).slice(0, 5);
+				};
+				return later(JSON.stringify({ today: list(a.day), yesterday: list(a.day - 1) }));
+			},
 			rank: function (a) {
 				const d = fix(load());
+				if (a.kind === 'crown') {
+					const t = d.crowndays[a.id] || {};
+					const s = t[uid] ? t[uid].score : 0;
+					if (!(s > 0)) {
+						return later('none');
+					}
+					return later('r:' + (Object.keys(t).filter(function (k) { return t[k].score > s; }).length + 1) + ':' + s);
+				}
 				const wk = (a.kind === 'month' ? d.months[a.id] : (a.kind === 'puzzle' ? d.puzzle[a.w] : d.weeks[a.w !== undefined ? a.w : a.id])) || {};
 				const mine = wk[uid] ? wk[uid].score : 0;
 				if (!(mine > 0)) {
@@ -1153,6 +1216,10 @@ window.coralightFirebase = (function () {
 		const weekCol = function (w) { return F.db.collection('weeks').doc(String(w)).collection('scores'); };
 		const monthCol = function (m) { return F.db.collection('months').doc(String(m)).collection('scores'); };
 		const puzzleCol = function (w) { return F.db.collection('puzzleweeks').doc(String(w)).collection('scores'); };
+		const leagueCol = function (l) { return F.db.collection('league').doc(String(l)).collection('scores'); };
+		const crownRef = function () { return F.db.collection('crown').doc('now'); };
+		const crownDay = function (day) { return F.db.collection('crowndays').doc(String(day)).collection('s'); };
+		const boardCol = function (k, id) { return k === 'league' ? leagueCol(id) : weekCol(id); };
 		const clubRef = function (id) { return F.db.collection('clubs').doc(id); };
 		const memberRef = function (id) { return clubRef(id).collection('m').doc(me()); };
 		const clubWeekRef = function (w, id) { return F.db.collection('clubweeks').doc(String(w)).collection('clubs').doc(id); };
@@ -1196,6 +1263,13 @@ window.coralightFirebase = (function () {
 				if (a.club) {
 					memberRef(a.club).update({ name: a.name, s: a.week, w: a.w, t: ts() }).catch(function () {});
 				}
+				// The Top League: its own board from its start (wiped = a new id).
+				const league = (a.l > 0 && a.league > 0) ? put(leagueCol(a.l).doc(me()), a.league) : null;
+				if (league) {
+					return Promise.allSettled([all, week, league]).then(function (r) {
+						return r.some(function (x) { return x.status === 'fulfilled'; }) ? 'ok' : 'error:' + ((r[0].reason && r[0].reason.code) || 'other');
+					});
+				}
 				return Promise.allSettled([all, week]).then(function (r) {
 					return (r[0].status === 'fulfilled' || r[1].status === 'fulfilled') ? 'ok' : 'error:' + ((r[0].reason && r[0].reason.code) || 'other');
 				});
@@ -1217,7 +1291,8 @@ window.coralightFirebase = (function () {
 						return { rows: rows, rank: at + 1 };
 					});
 				}
-				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : (a.kind === 'puzzle' ? puzzleCol(a.w) : F.db.collection('lb_all')));
+				const col = a.kind === 'week' ? weekCol(a.w) : (a.kind === 'month' ? monthCol(a.m) : (a.kind === 'puzzle' ? puzzleCol(a.w)
+					: (a.kind === 'league' ? leagueCol(a.l) : F.db.collection('lb_all'))));
 				return col.orderBy('score', 'desc').limit(120).get().then(function (snap) {
 					const rows = [];
 					snap.forEach(function (d) { rows.push(rowOf(d)); });
@@ -1303,8 +1378,52 @@ window.coralightFirebase = (function () {
 			},
 			// The player's place on a past week's (or month's) board:
 			// 'r:<rank>:<score>' or 'none'.
+			// The crown: crown/now {uid, name, k, id, t} = the race board's
+			// no. 1 (the rules let a player take it only with a higher score
+			// on that board); the answer adds the holder's score there.
+			crown: function () {
+				return crownRef().get().then(function (c) {
+					if (!c.exists) {
+						return 'none';
+					}
+					const x = c.data();
+					return boardCol(x.k, x.id).doc(String(x.uid)).get().then(function (r) {
+						return JSON.stringify({ uid: String(x.uid), name: String(x.name || ''), k: String(x.k), id: String(x.id), score: r.exists ? (Number(r.data().score) || 0) : 0 });
+					});
+				});
+			},
+			crown_take: function (a) {
+				return crownRef().set({ uid: me(), name: a.name, k: a.k, id: String(a.id), t: ts() }).then(function () { return 'ok'; }, function (e) {
+					if (denied(e)) {
+						return 'lower';
+					}
+					throw e;
+				});
+			},
+			// A minute at no. 1 today: crowndays/{day}/s/{uid} {name, score (minutes), t}.
+			crown_tick: function (a) {
+				const ref = crownDay(a.day).doc(me());
+				return F.db.runTransaction(function (tx) {
+					return tx.get(ref).then(function (d) {
+						const n = (d.exists ? (Number(d.data().score) || 0) : 0) + 1;
+						tx.set(ref, { name: a.name, score: n, t: ts() });
+						return 'ok:' + n;
+					});
+				});
+			},
+			kings: function (a) {
+				const list = function (day) {
+					return crownDay(day).orderBy('score', 'desc').limit(5).get().then(function (snap) {
+						const rows = [];
+						snap.forEach(function (d) { rows.push({ uid: d.id, name: String(d.data().name || ''), score: Number(d.data().score) || 0 }); });
+						return rows;
+					}, function () { return []; });
+				};
+				return Promise.all([list(a.day), list(a.day - 1)]).then(function (r) { return JSON.stringify({ today: r[0], yesterday: r[1] }); });
+			},
 			rank: function (a) {
-				const col = a.kind === 'month' ? monthCol(a.id) : (a.kind === 'puzzle' ? puzzleCol(a.w) : weekCol(a.w !== undefined ? a.w : a.id));
+				const col = a.kind === 'month' ? monthCol(a.id) : (a.kind === 'puzzle' ? puzzleCol(a.w)
+					: (a.kind === 'crown' ? crownDay(a.id) : weekCol(a.w !== undefined ? a.w : a.id)));
 				return col.doc(me()).get().then(function (d) {
 					const s = d.exists ? (Number(d.data().score) || 0) : 0;
 					if (!(s > 0)) {
@@ -1491,6 +1610,10 @@ window.coralightFirebase = (function () {
 	club_leave: function (arg) { return api.club_leave(JSON.parse(arg)); },
 	club: function (arg) { return api.club(JSON.parse(arg)); },
 		admin: function () { return api.admin(); },
+		crown: function () { return api.crown(); },
+		crown_take: function (arg) { return api.crown_take(JSON.parse(arg)); },
+		crown_tick: function (arg) { return api.crown_tick(JSON.parse(arg)); },
+		kings: function (arg) { return api.kings(JSON.parse(arg)); },
 		bans: function () { return api.bans(); },
 		kick: function (arg) { return api.kick(JSON.parse(arg)); },
 		unban: function (arg) { return api.unban(JSON.parse(arg)); },

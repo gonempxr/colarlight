@@ -89,7 +89,7 @@ static func board(m: Modal, main: Node) -> void:
 		_offline(m, func(): open_board(main))
 		return
 	# Two rows of tabs: the races (week, season, all time), then friends and clubs.
-	for line in [[["week", "ONLINE_WEEK"], ["month", "ONLINE_MONTH"], ["all", "ONLINE_ALL"]],
+	for line in [[["league", "LEAGUE_TAB"], ["week", "ONLINE_WEEK"], ["month", "ONLINE_MONTH"], ["all", "ONLINE_ALL"]],
 			[["puzzle", "ONLINE_PUZZLE"], ["friends", "ONLINE_FRIENDS"], ["clubs", "ONLINE_CLUBS"]]]:
 		var tabs := HBoxContainer.new()
 		tabs.add_theme_constant_override("separation", 8)
@@ -108,8 +108,15 @@ static func board(m: Modal, main: Node) -> void:
 			tabs.add_child(b)
 		Views.fit_button_row(tabs, 22)
 		m.add(tabs)
-	GuideView.mark({"week": "board", "month": "season", "puzzle": "puzzle_board", "friends": "friends", "clubs": "clubs", "all": "board"}.get(tab, "board"))
+	GuideView.mark({"league": "board", "week": "board", "month": "season", "puzzle": "puzzle_board", "friends": "friends", "clubs": "clubs", "all": "board"}.get(tab, "board"))
+	# The Top League: a countdown until it starts.
+	if tab == "league" and int(Online.data["league"]) <= 0:
+		_league_wait(m)
+		m.add(_crown_card(m))
+		return
 	match tab:
+		"league":
+			m.text(t("LEAGUE_HINT"), 18, Art.INK_SOFT)
 		"week":
 			m.text(t("ONLINE_WEEK_HINT"), 18, Art.INK_SOFT)
 		"puzzle":
@@ -156,8 +163,10 @@ static func board(m: Modal, main: Node) -> void:
 		m.text(t("ONLINE_EMPTY"), 22, Art.INK)
 	else:
 		m.add(_podium(rows, unit, main))
-	if kind == "week":
-		m.add(_race(rows, my_at + 1 if my_at >= 0 else int(got.get("rank", 0)), Online.score("week")))
+	if kind == Online.race_kind():
+		m.add(_crown_card(m))
+	if kind == "week" or kind == "league":
+		m.add(_race(rows, my_at + 1 if my_at >= 0 else int(got.get("rank", 0)), Online.score(kind)))
 	# The player's own place right under the podium (the list is long).
 	if my_at >= 3:
 		m.text(t("ONLINE_YOUR_PLACE") % (my_at + 1), 20, Art.INK)
@@ -337,6 +346,77 @@ static func _race(rows: Array, rank: int, mine: float) -> Control:
 	sat.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sat.custom_minimum_size.x = 160
 	v.add_child(sat)
+	return card
+
+
+## Until the Top League starts: a live countdown and what will happen.
+static func _league_wait(m: Modal) -> void:
+	var card := Views.card(Color("2b2f6b"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	card.add_child(v)
+	v.add_child(_center(Views.label(t("LEAGUE_SOON_TITLE"), 24, Color("ffe08a"), true)))
+	var clock := _center(Views.label("", 44, Art.WHITE, true))
+	clock.autowrap_mode = TextServer.AUTOWRAP_OFF
+	v.add_child(clock)
+	var tick := func() -> void:
+		var next := OnlineRules.next_league(Clock.now())
+		clock.text = OnlineRules.countdown(float(next) - Clock.now()) if next > 0 else ""
+	tick.call()
+	var timer := Timer.new()
+	timer.wait_time = 1.0
+	timer.autostart = true
+	timer.timeout.connect(func():
+		tick.call()
+		# Started: show the league's board.
+		if OnlineRules.league_id(Clock.now()) > 0 and m.is_open():
+			Online.track()
+			m.rebuild())
+	clock.add_child(timer)
+	var txt := _center(Views.label(t("LEAGUE_SOON_TEXT"), 19, Color("dfe4ff")))
+	v.add_child(txt)
+	m.add(card)
+
+
+## The crown: who is no. 1 now, yesterday's king, today's longest at no. 1
+## and what the day's best get.
+static func _crown_card(m: Modal) -> Control:
+	var card := Views.card(Color("fff1c2"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	card.add_child(v)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	head.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _crown(ci, s / 2.0 + Vector2(0, 9), 1.1), Vector2(60, 40)))
+	var c := Online.crown
+	var now_text := t("CROWN_FREE")
+	if Online.is_king():
+		now_text = t("CROWN_YOU") % OnlineRules.crown_time(Online.crown_minutes)
+	elif not c.is_empty():
+		now_text = t("CROWN_NOW") % str(c["name"])
+	var hl := Views.label(now_text, 23, Art.GOLD_DARK.darkened(0.3), true)
+	hl.custom_minimum_size.x = 160
+	hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(hl)
+	v.add_child(head)
+	var kings: Dictionary = _boards.get("kings", {})
+	if kings.is_empty():
+		_boards["kings"] = {"loading": true}
+		Online.fetch_kings(func(res: Dictionary):
+			_boards["kings"] = res
+			if m.is_open():
+				m.rebuild.call_deferred())
+		kings = _boards.get("kings", {})
+	if kings.get("ok", false):
+		var y: Array = kings["yesterday"]
+		if not y.is_empty():
+			v.add_child(_center(Views.label(t("CROWN_YESTERDAY") % [str(y[0]["name"]), OnlineRules.crown_time(int(y[0]["score"]))], 20, Art.INK, true)))
+		var td: Array = kings["today"]
+		if not td.is_empty():
+			v.add_child(_center(Views.label(t("CROWN_TODAY") % [str(td[0]["name"]), OnlineRules.crown_time(int(td[0]["score"]))], 19, Art.INK_SOFT)))
+	v.add_child(_center(Views.label(t("CROWN_PRIZE"), 17, Color("2a8a4a"), true)))
 	return card
 
 
@@ -744,14 +824,16 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 	m.add(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		if kind == "founder":
 			FounderArt.medal(ci, s / 2.0 + Vector2(0, 18), 54.0, n, tt)
-		elif kind == "week" or kind == "season" or kind == "puzzle":
+		elif kind in ["week", "season", "puzzle", "crown"]:
 			FounderArt.podium(ci, s / 2.0 + Vector2(0, 14), 1.7, tt)
 		elif kind in ["join", "inviter"]:
 			FounderArt.letter(ci, s / 2.0 + Vector2(0, 6), 1.7, tt)
 		else:
 			_draw_ticket(ci, s / 2.0, tt), Vector2(0, 140), true))
-	m.title({"week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE")}.get(kind, t("THANKS_TITLE")))
+	m.title({"crown": t("THANKS_CROWN_TITLE"), "week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE")}.get(kind, t("THANKS_TITLE")))
 	match kind:
+		"crown":
+			m.text(t("THANKS_CROWN") % [n, OnlineRules.crown_time(int(info.get("min", 0)))], 25, Art.GOLD_DARK.darkened(0.2))
 		"puzzle":
 			m.text(t("THANKS_PUZZLE") % n if n > 0 else t("THANKS_PUZZLE_ALL"), 25, Art.GOLD_DARK.darkened(0.2))
 		"season":
@@ -766,7 +848,7 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 			m.text(t("THANKS_JOIN"), 24, Color("1c7fb8"))
 		"inviter":
 			m.text(t("THANKS_INVITER") % n, 24, Color("1c7fb8"))
-	if not kind in ["week", "season", "puzzle"]:
+	if not kind in ["week", "season", "puzzle", "crown"]:
 		var c := Views.card(Color("fff1c2"))
 		var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
 		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

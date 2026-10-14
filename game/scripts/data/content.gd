@@ -135,6 +135,7 @@ const COSMETICS: Array[Dictionary] = [
 	{"id": "hat_explorer", "slot": "hat", "art": "explorer", "unlock": "goal", "goal": "stars_3", "rarity": 2},
 	{"id": "pet_parrot", "slot": "pet", "art": "parrot", "unlock": "goal", "goal": "stars_5", "rarity": 2},
 	{"id": "boat_temple", "slot": "boat", "art": "temple", "unlock": "goal", "goal": "stars_10", "rarity": 3},
+	{"id": "hat_day_king", "slot": "hat", "art": "day_king", "unlock": "exclusive", "how": "CROWN_ITEM_HOW", "rarity": 3},
 	{"id": "hat_star_crown", "slot": "hat", "art": "star_crown", "unlock": "goal", "goal": "stars_15", "rarity": 3},
 	{"id": "pet_monkey", "slot": "pet", "art": "monkey", "unlock": "goal", "goal": "stars_25", "rarity": 3},
 	# Player outfits (room 3). Pearls or goals only, never real money.

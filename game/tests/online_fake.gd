@@ -9,6 +9,10 @@ var weeks := {}
 var months := {}
 ## Week -> the puzzle board (stars won that week).
 var puzzle_weeks := {}
+## League id -> board; the crown {uid, name, k, id}; day -> {uid: {name, score (minutes)}}.
+var leagues := {}
+var crown := {}
+var crown_days := {}
 ## Club id -> {name, owner, m: {uid: {name, score, w}}}; week -> {club id: {name, s, n}}.
 var clubs := {}
 var club_weeks := {}
@@ -82,6 +86,10 @@ func request(method: String, arg: String) -> String:
 				var pzw: Dictionary = puzzle_weeks.get(int(a["w"]), {})
 				puzzle_weeks[int(a["w"])] = pzw
 				ok = _put(pzw, a["name"], float(a["pz"]), str(a.get("a", "")), p) or ok
+			if int(a.get("l", 0)) > 0 and float(a.get("league", 0.0)) > 0.0:
+				var lg: Dictionary = leagues.get(int(a["l"]), {})
+				leagues[int(a["l"])] = lg
+				ok = _put(lg, a["name"], float(a["league"]), str(a.get("a", "")), p) or ok
 			var club := str(a.get("club", ""))
 			if club != "" and clubs.has(club) and clubs[club]["m"].has(uid):
 				clubs[club]["m"][uid] = {"name": a["name"], "score": float(a["week"]), "w": int(a["w"])}
@@ -96,6 +104,8 @@ func request(method: String, arg: String) -> String:
 					table = months.get(int(a.get("m", 0)), {})
 				"puzzle":
 					table = puzzle_weeks.get(int(a["w"]), {})
+				"league":
+					table = leagues.get(int(a.get("l", 0)), {})
 				"friends":
 					table = {}
 					for id in all:
@@ -150,6 +160,45 @@ func request(method: String, arg: String) -> String:
 			if old != "" and old != key and names.get(old, "") == uid:
 				names.erase(old)
 			return "ok"
+		"crown":
+			if crown.is_empty():
+				return "none"
+			var t: Dictionary = _crown_board(str(crown["k"]), str(crown["id"]))
+			return JSON.stringify({"uid": crown["uid"], "name": crown["name"], "k": crown["k"], "id": crown["id"],
+				"score": float(t.get(crown["uid"], {}).get("score", 0.0))})
+		"crown_take":
+			var a: Dictionary = JSON.parse_string(arg)
+			var t: Dictionary = _crown_board(str(a["k"]), str(a["id"]))
+			var mine := float(t.get(uid, {}).get("score", 0.0))
+			if banned.has(uid) or mine <= 0.0:
+				return "lower"
+			if not crown.is_empty() and crown["k"] == a["k"] and crown["id"] == str(a["id"]) and crown["uid"] != uid \
+					and t.has(crown["uid"]) and mine <= float(t[crown["uid"]]["score"]):
+				return "lower"
+			crown = {"uid": uid, "name": str(a["name"]), "k": str(a["k"]), "id": str(a["id"])}
+			return "ok"
+		"crown_tick":
+			var a: Dictionary = JSON.parse_string(arg)
+			if crown.get("uid", "") != uid:
+				return "error:permission-denied"
+			var day: Dictionary = crown_days.get(int(a["day"]), {})
+			crown_days[int(a["day"])] = day
+			var n := int(day.get(uid, {}).get("score", 0)) + 1
+			day[uid] = {"name": str(a["name"]), "score": n}
+			return "ok:%d" % n
+		"kings":
+			var a: Dictionary = JSON.parse_string(arg)
+			return JSON.stringify({"today": _kings(int(a["day"])), "yesterday": _kings(int(a["day"]) - 1)})
+		"rank" when str(JSON.parse_string(arg).get("kind", "")) == "crown":
+			var day: Dictionary = crown_days.get(int(JSON.parse_string(arg)["id"]), {})
+			if not day.has(uid):
+				return "none"
+			var mine := int(day[uid]["score"])
+			var above := 0
+			for id in day:
+				if int(day[id]["score"]) > mine:
+					above += 1
+			return "r:%d:%d" % [above + 1, mine]
 		"rank":
 			var a: Dictionary = JSON.parse_string(arg)
 			var wk: Dictionary = weeks.get(int(a.get("w", a.get("id", 0))), {})
@@ -215,6 +264,19 @@ func _put(table: Dictionary, name: String, score: float, a: String, p := "") -> 
 		return false
 	table[uid] = {"name": name, "score": score, "a": a, "p": p}
 	return true
+
+
+func _crown_board(k: String, id: String) -> Dictionary:
+	return leagues.get(int(id), {}) if k == "league" else weeks.get(int(id), {})
+
+
+func _kings(day: int) -> Array:
+	var rows := []
+	var t: Dictionary = crown_days.get(day, {})
+	for id in t:
+		rows.append({"uid": id, "name": t[id]["name"], "score": t[id]["score"]})
+	rows.sort_custom(func(x, y): return int(x["score"]) > int(y["score"]))
+	return rows.slice(0, 5)
 
 
 func _club_total(id: String, w: int) -> void:

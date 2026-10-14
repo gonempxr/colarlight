@@ -5,7 +5,7 @@ extends RefCounted
 ## over the top of the head (drawn after Chars.head with hat "none").
 ## Hoods (dino, frog, shark) are a cap over the head top with a face opening.
 
-const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder", "coral_crown", "trident", "explorer", "star_crown"]
+const IDS: Array[String] = ["cat_ears", "bunny_ears", "dino_hood", "unicorn", "party", "headphones", "flower_crown", "viking", "chef", "wizard", "frog", "shark_hood", "astronaut", "pumpkin", "flame", "founder", "coral_crown", "trident", "explorer", "star_crown", "day_king"]
 
 const W := 2.5
 
@@ -32,6 +32,7 @@ static func draw(ci: CanvasItem, id: String) -> void:
 		"trident": _trident(ci)
 		"explorer": _explorer(ci)
 		"star_crown": _star_crown(ci)
+		"day_king": _day_king(ci)
 
 
 # --- Shared bits ------------------------------------------------------------------------
@@ -450,3 +451,21 @@ static func _star_crown(ci: CanvasItem) -> void:
 	Art.toon(ci, band, Art.GOLD, W, 0.6)
 	for x: float in [-11.0, 0.0, 11.0]:
 		Art.t_circle(ci, Vector2(x, -14.5 + absf(x) * 0.12), 2.4, Color("6a5ae0") if x == 0.0 else Color("9fe8ff"), 1.3, 0.0)
+
+
+## The day's king (OnlineRules.CROWN_ITEM): a royal crown, five points with
+## pearls, rubies on a gold band over white fur.
+static func _day_king(ci: CanvasItem) -> void:
+	Art.glow(ci, Vector2(0, -22), 26.0, Color(1.0, 0.85, 0.3, 0.35), 12)
+	var top := PackedVector2Array([Vector2(-21, -6), Vector2(-24, -30), Vector2(-12, -18), Vector2(-6, -36), Vector2(0, -22),
+		Vector2(6, -36), Vector2(12, -18), Vector2(24, -30), Vector2(21, -6)])
+	Art.toon(ci, top, Art.GOLD, W, 0.5)
+	for pt: Vector2 in [Vector2(-24, -32), Vector2(-6, -38), Vector2(6, -38), Vector2(24, -32)]:
+		Art.t_circle(ci, pt, 3.6, Color("fff8e8"), 1.6, 0.3)
+	Art.t_circle(ci, Vector2(0, -25), 4.2, Color("e0284a"), 1.6, 0.4)
+	var fur := Art.rrect_pts(Rect2(-24, -9, 48, 13), 6.0)
+	Art.toon(ci, fur, Color("fbf6ee"), W, 0.3)
+	for x: float in [-16.0, -5.0, 6.0, 17.0]:
+		Art.t_circle(ci, Vector2(x, -2.5), 1.6, Art.INK, 0.0, 0.0)
+	for x: float in [-13.0, 13.0]:
+		Art.t_circle(ci, Vector2(x, -15), 3.0, Color("2f8cff"), 1.4, 0.4)

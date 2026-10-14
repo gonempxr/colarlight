@@ -1,0 +1,24 @@
+keys,en,ru,es,zh
+LEAGUE_TAB,Top League,Высшая лига,Liga Superior,顶级联赛
+LEAGUE_SOON_TITLE,The Top League starts in,Высшая лига начнётся через,La Liga Superior empieza en,顶级联赛开始倒计时
+LEAGUE_SOON_TEXT,"On Friday, October 16 at 8:15 (Tallinn time) the league board starts from zero: everyone gets the same chance to be No. 1. Your game progress stays!","В пятницу, 16 октября, в 8:15 (по Таллину) таблица лиги начнётся с нуля: у всех будет равный шанс стать №1. Твой прогресс в игре останется!","El viernes 16 de octubre a las 8:15 (hora de Tallin) la tabla de la liga empieza de cero: todos tendrán la misma oportunidad de ser el n.º 1. ¡Tu progreso en el juego se queda!",10月16日星期五8:15（塔林时间）联赛榜单将从零开始：每个人都有同样的机会成为第一名。你的游戏进度会保留！
+LEAGUE_HINT,"Coins earned since the league started. Only the board started over, your game is safe.","Монеты, заработанные с начала лиги. С нуля начала только таблица, твоя игра на месте.","Monedas ganadas desde que empezó la liga. Solo la tabla empezó de cero, tu juego está a salvo.",联赛开始以来赚到的金币。只有榜单从零开始，你的游戏进度安全无恙。
+CROWN_NOW,No. 1 right now: %s,Сейчас №1: %s,N.º 1 ahora: %s,当前第一名：%s
+CROWN_FREE,No. 1 is free: take it!,Первое место свободно: займи его!,"El n.º 1 está libre: ¡tómalo!",第一名空缺：快来抢！
+CROWN_YOU,You are No. 1! Today at the top: %s,Ты №1! Сегодня на вершине: %s,"¡Eres el n.º 1! Hoy en la cima: %s",你是第一名！今天在榜首：%s
+CROWN_YESTERDAY,Yesterday's King: %s (%s at No. 1),Король вчерашнего дня: %s (%s на 1-м месте),Rey de ayer: %s (%s en el n.º 1),昨日之王：%s（第一名%s）
+CROWN_TODAY,Longest at No. 1 today: %s (%s),Дольше всех №1 сегодня: %s (%s),Más tiempo en el n.º 1 hoy: %s (%s),今天在第一名最久：%s（%s）
+CROWN_PRIZE,"Longest at No. 1 in a day: 150 pearls, x2 coins for 2 h and the King's Crown. 2nd: 70 pearls, 3rd: 35.","Кто дольше всех №1 за день: 150 жемчуга, x2 монеты на 2 ч и Корона короля. 2-е место: 70 жемчуга, 3-е: 35.","Más tiempo en el n.º 1 en un día: 150 perlas, x2 monedas 2 h y la Corona del Rey. 2.º: 70 perlas, 3.º: 35.",一天中在第一名最久：150珍珠、2小时双倍金币和国王王冠。第二名：70珍珠，第三名：35。
+CROWN_HM,%d h %d min,%d ч %d мин,%d h %d min,%d小时%d分钟
+CROWN_M,%d min,%d мин,%d min,%d分钟
+CROWN_DAYS_SHORT,d,д,d,天
+CROWN_TOAST_NEW,%s is No. 1 now! Overtake them!,%s теперь №1! Обгони!,"¡%s es el n.º 1 ahora! ¡Supéralo!",%s现在是第一名！超过他！
+CROWN_TOAST_LOST,%s overtook you! Win No. 1 back!,%s обогнал тебя! Верни 1-е место!,"¡%s te ha superado! ¡Recupera el n.º 1!",%s超过了你！夺回第一名！
+CROWN_TOAST_ME,You are No. 1! Hold on to the crown!,Ты №1! Держи корону!,"¡Eres el n.º 1! ¡No sueltes la corona!",你是第一名！守住王冠！
+CROWN_TOAST_FIRST,No. 1 right now: %s. Can you beat them?,Сейчас №1: %s. Обгонишь?,N.º 1 ahora: %s. ¿Puedes superarlo?,当前第一名：%s。你能超过他吗？
+LEAGUE_TOAST_SOON,Top League in %s: the board starts from zero!,Высшая лига через %s: таблица начнётся с нуля!,"Liga Superior en %s: ¡la tabla empieza de cero!",顶级联赛还有%s：榜单将从零开始！
+LEAGUE_TOAST_GO,The Top League has started! Everyone starts from zero.,Высшая лига началась! Все начинают с нуля.,"¡La Liga Superior ha empezado! Todos empiezan de cero.",顶级联赛开始了！所有人从零开始。
+CROWN_ITEM_HOW,Be No. 1 the longest in a day,Будь №1 дольше всех за день,Sé el n.º 1 más tiempo en un día,一天中在第一名最久
+ITEM_HAT_DAY_KING,King's Crown,Корона короля,Corona del Rey,国王王冠
+THANKS_CROWN_TITLE,King of the day!,Король дня!,¡Rey del día!,今日之王！
+THANKS_CROWN,"Yesterday you were No. %d by time at the top (%s)!","Вчера ты был %d-м по времени на 1-м месте (%s)!","¡Ayer fuiste el n.º %d por tiempo en la cima (%s)!",昨天你在榜首时间排名第%d（%s）！

@@ -13,9 +13,9 @@ extends SceneTree
 ## gear panel) | gear4 (it at the last level) | skins (its skins tab) | decor[:slot] | map (the world map) | tut:<step> (the
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
-## thanks:<founder|promo|join|inviter|week|season> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
+## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
 ## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
-## board:<month|friends|clubs> (":admin" = as the leader) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
+## board:<month|friends|clubs|league> (":admin" = as the leader) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -307,7 +307,7 @@ func _initialize() -> void:
 
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
-## thanks:<founder|promo|join|inviter|week|season> (the thank-you dialog); board:taken (the name is someone else's);
+## thanks:<founder|promo|join|inviter|week|season|crown> (the thank-you dialog); board:taken (the name is someone else's);
 ## pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
@@ -350,6 +350,16 @@ func _online_overlay(main: Node, overlay: String) -> void:
 	fake.invites["Shot0001"] = {"a": true, "b": true}
 	online.data["all_best"] = 2.4e6
 	online.data["week_score"] = 1.9e5
+	# The crown: the week's leader holds it; minutes at no. 1 today and yesterday.
+	var lead := ""
+	for id in wk:
+		if lead == "" or float(wk[id]["score"]) > float(wk[lead]["score"]):
+			lead = id
+	fake.crown = {"uid": lead, "name": wk[lead]["name"], "k": "weeks", "id": str(online.data["week"])}
+	var cday := OnlineRules.day_id(Time.get_unix_time_from_system())
+	var cids: Array = wk.keys()
+	fake.crown_days[cday] = {lead: {"name": wk[lead]["name"], "score": 47}, cids[3]: {"name": wk[cids[3]]["name"], "score": 21}}
+	fake.crown_days[cday - 1] = {cids[5]: {"name": wk[cids[5]]["name"], "score": 312}, lead: {"name": wk[lead]["name"], "score": 140}}
 	online.data["seen_profile"] = ""
 	if "taken" in parts:
 		fake.names[OnlineRules.name_key(OnlineRules.board_name(root.get_node("Profiles").player_name(), fake.uid))] = "Other001xxxxxxxxxxxxxxxxxxxx"
@@ -398,9 +408,10 @@ func _online_overlay(main: Node, overlay: String) -> void:
 				main._modal._scroll.scroll_vertical = 100000
 		"board":
 			ov.tab = "week"
-			for k in ["all", "month", "friends", "clubs", "puzzle"]:
+			for k in ["all", "month", "friends", "clubs", "puzzle", "league"]:
 				if k in parts:
 					ov.tab = k
+			online.check_crown()
 			ov.open_board(main)
 			if "end" in parts:
 				for i in 20:
@@ -423,7 +434,8 @@ func _online_overlay(main: Node, overlay: String) -> void:
 				"join": {"kind": "join", "pearls": 30},
 				"inviter": {"kind": "inviter", "pearls": 60, "n": 2},
 				"week": {"kind": "week", "pearls": 300, "boost": 10800.0, "n": 2},
-				"season": {"kind": "season", "pearls": 600, "n": 3}}.get(kind, {})
+				"season": {"kind": "season", "pearls": 600, "n": 3},
+				"crown": {"kind": "crown", "pearls": 150, "boost": 7200.0, "n": 1, "min": 312}}.get(kind, {})
 			main._top.open(func(m): ov.thanks(m, main, info))
 
 

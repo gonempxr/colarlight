@@ -117,6 +117,14 @@ This file is the quick picture; keep it up to date when something big changes.
   "Jungle Ruins" (docs/jungle-world.md) + world stars. Saves v5; older saves
   are clamped to the Moon on load. Screenshots overlay `in:N:<overlay>`.
   Perf: jungle mine is the heaviest view (PC ~10-13 ms headless).
+- 2026-10-14 (worlds + beta, branch `crown`): the crown and the Top League
+  (docs/online.md rules v6, Mark must publish them). Crown = no. 1 of the race
+  board (week, or the league once it runs); minutes at no. 1 per UTC day are
+  counted while the holder plays; yesterday's top 3 by minutes get pearls +
+  x2, the 1st also the "Корона короля" hat (`hat_day_king`). Toasts "X is
+  No. 1 now" (`main._on_crown_changed`, max one per 3 min for others).
+  Top League starts Fri 16.10.2026 05:15 UTC (`OnlineRules.LEAGUE_STARTS`,
+  8:15 Tallinn): only the league board starts from zero, progress stays.
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:

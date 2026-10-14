@@ -191,6 +191,67 @@ static func week_id(unix: float) -> int:
 	return floori((day - 4) / 7.0)
 
 
+## The Top League (2026-10-16, Mark): a board of its own from each start
+## (unix seconds; a start wipes the board: the new league gets a new id =
+## its start). Only the board starts over, never the game. 05:15 UTC =
+## 8:15 in Tallinn (summer time).
+const LEAGUE_STARTS: Array[int] = [1792127700]
+
+
+## The league running at `unix` (its start), 0 before the first one.
+static func league_id(unix: float) -> int:
+	var id := 0
+	for s in LEAGUE_STARTS:
+		if unix >= float(s):
+			id = s
+	return id
+
+
+## The next league start after `unix`, 0 when none is planned.
+static func next_league(unix: float) -> int:
+	for s in LEAGUE_STARTS:
+		if float(s) > unix:
+			return s
+	return 0
+
+
+## "2d 07:45:12" / "07:45:12" until `seconds` run out.
+static func countdown(seconds: float) -> String:
+	var s := maxi(0, int(ceil(seconds)))
+	var d := s / 86400
+	var hms := "%02d:%02d:%02d" % [(s / 3600) % 24, (s / 60) % 60, s % 60]
+	return ("%d%s %s" % [d, TranslationServer.translate("CROWN_DAYS_SHORT"), hms]) if d > 0 else hms
+
+
+## The crown: who is no. 1 on the race board (the league once it runs, the
+## week before). Minutes at no. 1 count per UTC day; yesterday's best pay.
+static func day_id(unix: float) -> int:
+	return floori(unix / 86400.0)
+
+
+## "3 h 12 min" for minutes at no. 1.
+static func crown_time(minutes: int) -> String:
+	if minutes >= 60:
+		return TranslationServer.translate("CROWN_HM") % [minutes / 60, minutes % 60]
+	return TranslationServer.translate("CROWN_M") % minutes
+
+
+## A day at no. 1 must last at least this long to pay.
+const CROWN_MIN_MINUTES := 5
+## [place, pearls, x2 hours]; the day's king also gets the crown hat (once).
+const CROWN_PRIZES := [[1, 150, 2], [2, 70, 1], [3, 35, 0]]
+const CROWN_ITEM := "hat_day_king"
+
+
+static func crown_prize(rank: int, minutes: float) -> Dictionary:
+	if rank <= 0 or minutes < CROWN_MIN_MINUTES:
+		return {}
+	for p in CROWN_PRIZES:
+		if rank == int(p[0]):
+			return {"pearls": int(p[1]), "boost": float(p[2]) * 3600.0, "item": rank == 1}
+	return {}
+
+
 static func week_start(id: int) -> float:
 	return float(id * 7 + 4) * 86400.0
 
