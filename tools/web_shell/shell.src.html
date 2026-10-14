@@ -1118,7 +1118,10 @@ window.coralightFirebase = (function () {
 				}
 				const d = fix(load());
 				(a.uids || []).forEach(function (id) {
-					[d.all, d.weeks[a.w] || {}, d.months[a.m] || {}, d.puzzle[a.w] || {}].forEach(function (t) { delete t[id]; });
+					[d.all, d.weeks[a.w] || {}, d.months[a.m] || {}, d.puzzle[a.w] || {}, d.league[a.l] || {}].forEach(function (t) { delete t[id]; });
+					if (d.crown && d.crown.uid === id) {
+						d.crown = null;
+					}
 					if (a.ban) {
 						d.bans[id] = { name: a.name, o: a.o || '' };
 					}
@@ -1462,11 +1465,22 @@ window.coralightFirebase = (function () {
 					b.delete(weekCol(a.w).doc(id));
 					b.delete(monthCol(a.m).doc(id));
 					b.delete(puzzleCol(a.w).doc(id));
+					if (a.l > 0) {
+						b.delete(leagueCol(a.l).doc(id));
+					}
 					if (a.ban) {
 						b.set(F.db.collection('bans').doc(id), { name: String(a.name || '').slice(0, 24), o: String(a.o || '').slice(0, 12), t: ts() });
 					}
 				});
-				return b.commit().then(function () { return 'ok'; });
+				// The crown goes too when one of them holds it.
+				return b.commit().then(function () {
+					return crownRef().get().then(function (c) {
+						if (c.exists && (a.uids || []).indexOf(String(c.data().uid)) >= 0) {
+							return crownRef().delete().then(function () { return 'ok'; });
+						}
+						return 'ok';
+					}, function () { return 'ok'; });
+				});
 			},
 			unban: function (a) {
 				return F.db.collection('bans').doc(a.uid).delete().then(function () { return 'ok'; });

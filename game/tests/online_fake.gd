@@ -59,8 +59,10 @@ func request(method: String, arg: String) -> String:
 				return "error:permission-denied"
 			var a: Dictionary = JSON.parse_string(arg)
 			for id in a["uids"]:
-				for t in [all, weeks.get(int(a["w"]), {}), months.get(int(a["m"]), {}), puzzle_weeks.get(int(a["w"]), {})]:
+				for t in [all, weeks.get(int(a["w"]), {}), months.get(int(a["m"]), {}), puzzle_weeks.get(int(a["w"]), {}), leagues.get(int(a.get("l", 0)), {})]:
 					t.erase(str(id))
+				if str(crown.get("uid", "")) == str(id):
+					crown = {}
 				if a.get("ban", false):
 					banned[str(id)] = {"name": str(a["name"]), "o": str(a.get("o", ""))}
 			return "ok"

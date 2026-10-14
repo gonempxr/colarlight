@@ -689,6 +689,55 @@ func _initialize() -> void:
 		_check(TranslationServer.translate(ck_key) != ck_key, "words for %s" % ck_key)
 	_check(TranslationServer.translate("CROWN_TOAST_NEW").contains("%s"), "the toast names the player")
 
+	# --- The leader's test mode: free things, never on a board --------------------------------
+	var tf = load("res://tests/online_fake.gd").new()
+	tf.uid = "Adm00001qqqqqqqqqqqqqqqqqqqq"
+	tf.founders = 100
+	DirAccess.remove_absolute(online.SAVE_PATH)
+	online.load_data()
+	online.crown = {}
+	online.use_backend(tf)
+	online.data["week"] = OnlineRules.week_id(Time.get_unix_time_from_system())
+	tf.weeks[int(online.data["week"])] = {tf.uid: {"name": "Mark", "score": 5.0e6, "a": "", "p": ""}}
+	tf.all[tf.uid] = {"name": "Mark", "score": 9.0e6, "a": "", "p": ""}
+	tf.crown = {"uid": tf.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"])}
+	online.admin = false
+	var tr := [""]
+	online.set_tester(true, func(r): tr[0] = r)
+	_check(tr[0] == "admin" and not online.tester(), "only the leader can turn test mode on")
+	_check(not online.cheat("coins"), "no cheats without test mode")
+	online.admin = true
+	tf.is_admin = true
+	online.set_tester(true, func(r): tr[0] = r)
+	_check(tr[0] == "ok" and online.tester(), "the leader turns test mode on")
+	_check(not tf.all.has(tf.uid) and not tf.weeks[int(online.data["week"])].has(tf.uid) and tf.crown.is_empty(), "their rows and the crown leave the boards")
+	var tc0: float = gs.coins
+	var tp0: int = pr.pearls
+	_check(online.cheat("coins") and gs.coins >= tc0 + 1.0e9, "free coins")
+	_check(online.cheat("pearls") and pr.pearls == tp0 + 5000, "free pearls")
+	_check(online.cheat("items") and pr.is_owned("hat_day_king") and pr.is_owned(OnlineRules.EXCLUSIVE_ITEM), "every item")
+	var loc0: int = gs.location
+	if not gs.is_last_location():
+		_check(online.cheat("world") and gs.location == loc0 + 1, "the next world at once")
+	gs.total_earned += 1.0e12
+	online._since_submit = 999.0
+	var sent := [null]
+	online.submit(func(ok): sent[0] = ok)
+	_check(sent[0] == false and not tf.all.has(tf.uid), "nothing is sent in test mode")
+	online._sent["week"] = 1.0e15
+	online.check_crown()
+	_check(tf.crown.is_empty() and not online.is_king(), "the crown is never taken in test mode")
+	online.set_tester(false, func(r): tr[0] = r)
+	_check(tr[0] == "cheated" and online.tester(), "after cheats the device stays off the boards")
+	DirAccess.remove_absolute(online.SAVE_PATH)
+	online.load_data()
+	online.set_tester(true)
+	online.set_tester(false, func(r): tr[0] = r)
+	_check(tr[0] == "ok" and not online.tester(), "without cheats it can be turned off")
+	online.admin = false
+	for tk in ["TESTER_TITLE", "TESTER_TEXT", "TESTER_COINS", "TESTER_WORLD", "TESTER_STAYS"]:
+		_check(TranslationServer.translate(tk) != tk, "words for %s" % tk)
+
 	# --- The guide: every entry has words ------------------------------------------------------
 	var guide_src := FileAccess.get_file_as_string("res://scripts/ui/guide_view.gd")
 	var rx := RegEx.create_from_string('\\["([a-z0-9_]+)", "[a-z]+", "(base|fun|online)"')

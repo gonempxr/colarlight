@@ -277,7 +277,7 @@ func defaults() -> Dictionary:
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
 		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1, "owner": "",
-		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0}
+		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "tester": false, "cheated": false}
 
 
 func load_data() -> void:
@@ -500,6 +500,11 @@ func submit(done: Callable = Callable()) -> void:
 
 
 func _submit_now(done: Callable) -> void:
+	# The leader's test mode: never on any board.
+	if tester():
+		if done.is_valid():
+			done.call(false)
+		return
 	var name := board_name()
 	var p := profile_info()
 	var changed := score("all") != float(_sent["all"]) or score("week") != float(_sent["week"]) or name != str(_sent["name"]) \
@@ -661,8 +666,8 @@ func kick(row: Dictionary, ban: bool, done: Callable) -> void:
 	for other in row.get("also", []):
 		if str(other) != uid and not ids.has(str(other)):
 			ids.append(str(other))
-	var arg := JSON.stringify({"uids": ids, "w": int(data["week"]), "m": int(data["month"]), "name": str(row.get("name", "")),
-		"o": row_owner(row), "ban": ban})
+	var arg := JSON.stringify({"uids": ids, "w": int(data["week"]), "m": int(data["month"]), "l": int(data["league"]),
+		"name": str(row.get("name", "")), "o": row_owner(row), "ban": ban})
 	_request("kick", arg, func(res: String):
 		if res == "ok":
 			_boards = {}
@@ -692,6 +697,84 @@ func ban_list() -> Array:
 		if not str(k).begins_with("o:"):
 			out.append({"uid": str(k), "name": str(bans[k])})
 	return out
+
+
+# --- The leader's test mode ------------------------------------------------------------
+# Lets the leader check everything without playing for it: free coins,
+# pearls, items and worlds. While it is on (and once a cheat was used, for
+# good on this device) nothing is sent to the boards, the crown is never
+# taken and no board prizes are paid.
+
+func tester() -> bool:
+	return bool(data["tester"])
+
+
+## Turns test mode on (the leader only; their rows leave the boards) or
+## off (refused once a cheat was used): done.call("ok" | "admin" | "cheated").
+func set_tester(on: bool, done: Callable = Callable()) -> void:
+	if on and not admin:
+		if done.is_valid():
+			done.call("admin")
+		return
+	if not on and bool(data["cheated"]):
+		if done.is_valid():
+			done.call("cheated")
+		return
+	data["tester"] = on
+	save_data()
+	if on:
+		hide_self()
+	state_changed.emit()
+	if done.is_valid():
+		done.call("ok")
+
+
+## Takes this player's own rows off every board (and the crown).
+func hide_self() -> void:
+	if uid == "" or not admin:
+		return
+	var arg := JSON.stringify({"uids": [uid], "w": int(data["week"]), "m": int(data["month"]), "l": int(data["league"]),
+		"name": board_name(), "o": str(data.get("owner", "")), "ban": false})
+	_request("kick", arg, func(res: String):
+		if res == "ok":
+			_boards = {}
+			if is_king():
+				_set_crown({}))
+
+
+## A cheat of test mode: "coins", "pearls", "items" or "world" (finish
+## this world and go to the next). False when test mode is off.
+func cheat(kind: String) -> bool:
+	if not tester():
+		return false
+	data["cheated"] = true
+	save_data()
+	match kind:
+		"coins":
+			GameState.coins += maxf(1.0e9, GameState.coins * 1000.0)
+			GameState.changed.emit()
+		"pearls":
+			Progress.add_pearls(5000)
+		"items":
+			# All at once, without a toast for each.
+			for c in Content.COSMETICS:
+				Progress.owned[str(c["id"])] = true
+			for f in Content.FEATURES:
+				Progress.features[f] = true
+			Progress.changed.emit()
+		"world":
+			if GameState.is_last_location():
+				return false
+			for k in GameState.stage_keys():
+				GameState.levels[k] = maxi(int(GameState.levels.get(k, 0)), 1)
+				GameState.managers[k] = true
+			for k in GameState.AUTOMATED:
+				GameState.managers[k] = true
+			GameState.coins += GameState.next_location_cost()
+			return GameState.advance_location()
+	Progress.save_game()
+	GameState.save_game()
+	return true
 
 
 # --- Promo codes ------------------------------------------------------------------------
@@ -949,7 +1032,7 @@ func on_crown(res: String) -> void:
 	var mine := float(_sent.get(race_kind(), -1.0))
 	var stale := info.is_empty() or str(info["k"]) != str(b["k"]) or str(info["id"]) != str(b["id"])
 	_set_crown({} if stale else info)
-	if mine > 0.0 and str(info.get("uid", "")) != uid and (stale or mine > float(info.get("score", 0.0))):
+	if mine > 0.0 and not tester() and str(info.get("uid", "")) != uid and (stale or mine > float(info.get("score", 0.0))):
 		_take_crown(mine)
 
 
@@ -983,6 +1066,8 @@ func _take_crown(mine: float) -> void:
 ## The holder adds a minute at no. 1 to today's count (refused once the
 ## crown went to someone else: then it is read again).
 func _crown_tick(now: float = -1.0) -> void:
+	if tester():
+		return
 	var t := now if now >= 0.0 else Clock.now()
 	var arg := JSON.stringify({"day": OnlineRules.day_id(t), "name": board_name()})
 	_request("crown_tick", arg, func(res: String):
@@ -1019,6 +1104,8 @@ func fetch_kings(done: Callable, now: float = -1.0) -> void:
 ## Yesterday's place by minutes at no. 1 pays once (the day's king also
 ## gets the crown hat the first time).
 func check_crown_prize(now: float = -1.0) -> void:
+	if tester():
+		return
 	var t := now if now >= 0.0 else Clock.now()
 	var last := OnlineRules.day_id(t) - 1
 	if int(data["crown_prize"]) >= last:

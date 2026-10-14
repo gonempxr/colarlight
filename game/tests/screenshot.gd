@@ -289,7 +289,7 @@ func _initialize() -> void:
 					load("res://scripts/ui/pass_view.gd").open(main)
 			elif overlay == "x2":
 				root.get_node("GameState").x2_force = true
-			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club", "guide"]:
+			elif overlay.split(":")[0] in ["board", "promo", "invite", "thanks", "onlinebtn", "ach", "card", "club", "guide", "tester"]:
 				await _online_overlay(main, overlay)
 			elif overlay.begins_with("feature:"):
 				main._news.append(overlay.split(":")[1])
@@ -396,6 +396,12 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			load("res://scripts/ui/social_view.gd").open_profile(main, rows[0])
 		"club":
 			load("res://scripts/ui/social_view.gd").open_clubs(main)
+		"tester":
+			online.admin = true
+			fake.is_admin = true
+			if "on" in parts:
+				online.set_tester(true)
+			load("res://scripts/ui/social_view.gd").open_tester(main)
 		"guide":
 			if "new" in parts:
 				main._news.append("whatsnew")

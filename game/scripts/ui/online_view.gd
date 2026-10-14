@@ -207,6 +207,8 @@ static func board(m: Modal, main: Node) -> void:
 	if Online.admin:
 		var lb := m.button(t("LEADER_BANS") % Online.ban_list().size(), func(): Sfx.play("click"); SocialView.open_bans(main), &"RedButton")
 		lb.icon = Icons.get_icon("people", 32)
+	if Online.admin or Online.tester():
+		m.button(t("TESTER_TITLE_ON" if Online.tester() else "TESTER_TITLE"), func(): Sfx.play("click"); SocialView.open_tester(main), &"CreamButton")
 	_my_id(m)
 	var name_row := m.row(10)
 	var nl := Views.label(t("ONLINE_NAME") % Online.board_name(), 19, Art.INK_SOFT)

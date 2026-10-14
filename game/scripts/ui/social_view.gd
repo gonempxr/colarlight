@@ -239,6 +239,45 @@ static func leader_tools(m: Modal, row: Dictionary, main: Node) -> void:
 
 
 ## The leader's list of banned players, each with "Unban".
+## The leader's test mode: free coins, pearls, items and worlds, while
+## this device stays off every board (Online.set_tester / cheat).
+static func open_tester(main: Node) -> void:
+	main._top.open(func(m): tester(m, main))
+
+
+static func tester(m: Modal, main: Node) -> void:
+	m.title(t("TESTER_TITLE"))
+	m.banner(UiTheme.BANNER_RED)
+	var on := Online.tester()
+	m.text(t("TESTER_ON") if on else t("TESTER_TEXT"), 20, Art.INK if on else Art.INK_SOFT)
+	if not on:
+		m.button(t("TESTER_START"), func():
+			Sfx.play("click")
+			Online.set_tester(true, func(_r: String):
+				if m.is_open():
+					m.rebuild()), &"GoldButton")
+		return
+	for c: Array in [["coins", "TESTER_COINS"], ["pearls", "TESTER_PEARLS"], ["items", "TESTER_ITEMS"], ["world", "TESTER_WORLD"]]:
+		if c[0] == "world" and GameState.is_last_location():
+			continue
+		var kind: String = c[0]
+		m.button(t(c[1]), func():
+			if Online.cheat(kind):
+				Sfx.play("unlock")
+				main._show_toast(t("TESTER_DONE"))
+				m.rebuild()
+			else:
+				Sfx.play("deny"), &"GoldButton")
+	if bool(Online.data["cheated"]):
+		m.text(t("TESTER_STAYS"), 18, Art.INK_SOFT)
+	else:
+		m.button(t("TESTER_STOP"), func():
+			Sfx.play("click")
+			Online.set_tester(false, func(_r: String):
+				if m.is_open():
+					m.rebuild()), &"CreamButton")
+
+
 static func open_bans(main: Node) -> void:
 	main._top.open(func(m): bans(m, main))
 

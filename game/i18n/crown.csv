@@ -22,3 +22,15 @@ CROWN_ITEM_HOW,Be No. 1 the longest in a day,Будь №1 дольше всех
 ITEM_HAT_DAY_KING,King's Crown,Корона короля,Corona del Rey,国王王冠
 THANKS_CROWN_TITLE,King of the day!,Король дня!,¡Rey del día!,今日之王！
 THANKS_CROWN,"Yesterday you were No. %d by time at the top (%s)!","Вчера ты был %d-м по времени на 1-м месте (%s)!","¡Ayer fuiste el n.º %d por tiempo en la cima (%s)!",昨天你在榜首时间排名第%d（%s）！
+TESTER_TITLE,Test mode,Режим проверки,Modo de prueba,测试模式
+TESTER_TITLE_ON,Test mode: ON,Режим проверки: ВКЛ,Modo de prueba: ACTIVO,测试模式：开启
+TESTER_TEXT,"For the leader only: free coins, pearls, items and worlds to check the game. This device leaves every leaderboard and the crown, and sends no scores while the mode is on.","Только для тебя (админа): бесплатные монеты, жемчуг, предметы и миры, чтобы всё проверить. Это устройство уходит из всех таблиц и короны и не отправляет очки, пока режим включён.","Solo para el líder: monedas, perlas, objetos y mundos gratis para revisar el juego. Este dispositivo sale de todas las tablas y de la corona y no envía puntos mientras el modo está activo.",仅限管理员：免费金币、珍珠、物品和世界，用于检查游戏。开启期间此设备退出所有排行榜和王冠，不发送分数。
+TESTER_START,Turn on,Включить,Activar,开启
+TESTER_STOP,Turn off,Выключить,Desactivar,关闭
+TESTER_ON,Test mode is on: you are not on any leaderboard.,Режим проверки включён: тебя нет ни в одной таблице.,El modo de prueba está activo: no apareces en ninguna tabla.,测试模式已开启：你不在任何排行榜上。
+TESTER_COINS,Lots of coins,Много монет,Muchas monedas,大量金币
+TESTER_PEARLS,+5000 pearls,+5000 жемчуга,+5000 perlas,+5000珍珠
+TESTER_ITEMS,All items and features,Все предметы и функции,Todos los objetos y funciones,所有物品和功能
+TESTER_WORLD,Finish this world: go to the next,Пройти мир: в следующий,Completar este mundo: al siguiente,完成本世界：前往下一个
+TESTER_DONE,Done!,Готово!,¡Hecho!,完成！
+TESTER_STAYS,"Cheats were used on this device, so it stays off the leaderboards for good.","На этом устройстве уже были читы, поэтому оно навсегда остаётся вне таблиц.","En este dispositivo se usaron trucos, así que queda fuera de las tablas para siempre.",此设备已使用作弊，因此将永久不进入排行榜。
