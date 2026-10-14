@@ -147,8 +147,12 @@ This file is the quick picture; keep it up to date when something big changes.
   site = that build (rollback: `save/v3.2`, `save/site-v3.2`). Firestore
   rules v5 + v6 must be published for it (Mark).
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
-  CrazyGames build (CG allows payments only via Xsolla). Plus a separate
-  donation board. Scheme still being agreed with Mark.
+  CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
+  2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by
+  sum), Ko-fi + DonationAlerts buttons (`OnlineRules.donate_urls`, empty =
+  tab hidden), "under 18 only with parents" note, no in-game advantage.
+  Donors = Firestore `donors/{id}` {name, total €} added by Mark by hand;
+  rules v7 in docs/online.md. Waiting for Mark's two links.
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:
