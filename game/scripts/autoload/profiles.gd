@@ -211,7 +211,7 @@ func _load_all() -> void:
 	var settings := get_node_or_null("/root/Settings")
 	if settings:
 		settings.reload_avatar()
-	for n in ["GameState", "Progress"]:
+	for n in ["GameState", "Progress", "Atlas"]:
 		var node := get_node_or_null("/root/" + n)
 		if node:
 			node.switch_profile()

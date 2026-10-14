@@ -72,6 +72,7 @@ var _map: MapView
 var _boost_btn: SideButton
 var _rivals_btn: SideButton
 var _pass_btn: SideButton
+var _atlas_btn: SideButton
 ## The real players' leaderboard (OnlineView), under the side buttons.
 var _online_btn: OnlineButton
 var _ad_overlay: AdOverlay
@@ -262,6 +263,9 @@ func _ready() -> void:
 	_pass_btn = SideButton.make("pass")
 	_pass_btn.pressed.connect(func(): PassView.open(self))
 	add_child(_pass_btn)
+	_atlas_btn = SideButton.make("atlas")
+	_atlas_btn.pressed.connect(open_atlas)
+	add_child(_atlas_btn)
 	_online_btn = OnlineButton.new()
 	_online_btn.pressed.connect(func(): OnlineView.open_board(self))
 	add_child(_online_btn)
@@ -431,7 +435,7 @@ func _process(delta: float) -> void:
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or _room != MINE
+	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or is_instance_valid(_atlas) or _room != MINE
 	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
 	# under it: nothing there needs drawing until it closes.
 	World.calm = _modal.visible or _top.visible
@@ -541,7 +545,7 @@ func _move_slide(delta: float) -> void:
 ## Rooms side by side, moved by the slide; only the ones on screen show.
 ## True while an opaque screen covers the whole window (fully faded in).
 func _covering() -> bool:
-	for c in [_puzzle, _fishing, _pass]:
+	for c in [_puzzle, _fishing, _pass, _atlas]:
 		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
 			return true
 	return _map.visible and _map.modulate.a >= 0.999
@@ -1358,11 +1362,13 @@ func _place_side_buttons() -> void:
 	_rivals_btn.visible = settled and Rivals.reward_pending()
 	_online_btn.visible = settled and Online.present()
 	_pass_btn.visible = settled
-	for b in [_pass_btn, _boost_btn, _rivals_btn, _online_btn]:
+	# The Atlas belongs to the Top League's game (from its first minute).
+	_atlas_btn.visible = _started and Atlas.available()
+	for b in [_atlas_btn, _pass_btn, _boost_btn, _rivals_btn, _online_btn]:
 		if b.visible:
 			b.position = Vector2(x, y)
 			# The boost's time tag and the pass level hang below them.
-			y += SideButton.SIZE + (22.0 if (b == _boost_btn and GameState.boost_left > 0.0) or b == _pass_btn else 10.0)
+			y += SideButton.SIZE + (22.0 if (b == _boost_btn and GameState.boost_left > 0.0) or b == _pass_btn or b == _atlas_btn else 10.0)
 
 
 func open_boost() -> void:
@@ -1383,6 +1389,23 @@ func open_pass() -> void:
 	move_child(_pass, _fx.get_index())
 	_pass.tree_exited.connect(func():
 		_pass = null
+		_show_next_news())
+
+
+var _atlas: Control
+
+
+## The Atlas of the Deep (league games) on its own screen, like the pass.
+func open_atlas() -> void:
+	if is_instance_valid(_atlas) or not Atlas.available():
+		return
+	_modal.close()
+	_atlas = AtlasScreen.new()
+	_atlas.main = self
+	add_child(_atlas)
+	move_child(_atlas, _fx.get_index())
+	_atlas.tree_exited.connect(func():
+		_atlas = null
 		_show_next_news())
 
 

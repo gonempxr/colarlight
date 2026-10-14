@@ -7,6 +7,13 @@ any game/i18n/*.csv:
     python3 tools/subset_fonts.py
 Sources (SIL Open Font License), fetched via fonts.googleapis.com css2:
     Rubik 600/800, Noto Sans SC 700.
+When Google Fonts is blocked (cloud sessions): the Debian package
+fonts-noto-cjk (`apt-get download fonts-noto-cjk`, `dpkg-deb -x`) has
+NotoSansCJK-Bold.ttc; save its "Noto Sans CJK SC" face (fontTools
+TTCollection) as ~/fontsrc/NotoSansSC-Bold.ttf - same design.
+Characters already in the current subset are always kept (some come from
+code, not from the csv files). Only kerning (the SC face is already the right one) and no
+hinting: the CJK font's alternates and vertical forms cost ~200 KB.
 """
 import csv
 import os
@@ -25,10 +32,16 @@ for name in sorted(os.listdir(I18N)):
         with open(os.path.join(I18N, name), encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 text += row["zh"]
-chars = sorted({c for c in text if ord(c) > 0x2000 or c in EXTRA})
+chars = {c for c in text if ord(c) > 0x2000 or c in EXTRA}
+current = os.path.join(OUT, "NotoSansSC-Bold-subset.ttf")
+if os.path.exists(current):
+    from fontTools.ttLib import TTFont
+    chars |= {chr(u) for u in TTFont(current).getBestCmap()}
+chars = sorted(chars)
 
 opts = subset.Options()
-opts.layout_features = ["*"]
+opts.layout_features = ["kern"]
+opts.hinting = False
 opts.name_IDs = ["*"]
 opts.notdef_outline = True
 font = subset.load_font(os.path.join(SRC, "NotoSansSC-Bold.ttf"), opts)
