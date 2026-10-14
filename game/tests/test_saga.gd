@@ -43,8 +43,50 @@ func _initialize() -> void:
 		_check(TranslationServer.translate("SITE_" + gs.site_id(i).to_upper()) != "SITE_" + gs.site_id(i).to_upper(), "name of site %d" % i)
 	for k in ["WORLD_TWILIGHT", "MAP_W_TWILIGHT", "GEAR_TWILIGHT_1", "GEAR_TWILIGHT_4", "MAP_W_SUNKEN", "MAP_W_ABYSS"]:
 		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	# --- Mine bosses ------------------------------------------------------------------------
+	_check(MineBoss.guard("twilight", 3) == "crabblack" and MineBoss.guard("twilight", 14) == "warden" and MineBoss.guard("ocean", 3) == "", "guards of the saga only")
+	for k in MineBoss.BOSSES:
+		_check(TranslationServer.translate(MineBoss.name_key(k)) != MineBoss.name_key(k), "name of boss %s" % k)
+	gs.reset()
+	for i in 3:
+		gs.levels["d%d" % i] = 10
+	_check(gs.next_depth() == "d3" and gs.boss_at("d3") == "crabblack", "Captain Crabblack guards the fourth site")
+	gs.coins = gs.unlock_cost("d3") * 10.0
+	_check(not gs.open_depth("d3") and not gs.is_open("d3"), "the site can't be opened past its guard")
+	var hp: float = gs.boss_hp("d3")
+	_check(hp > 0.0 and is_equal_approx(hp, gs.unlock_cost("d3") * float(MineBoss.data("crabblack")["hp"])), "the guard's health follows the gate price")
+	var h1: float = gs.boss_hit("d3")
+	for k in ["d0", "d1", "d2", "lift", "boat", "plant"]:
+		gs.levels[k] = 150
+		gs.managers[k] = true
+	var h2: float = gs.boss_hit("d3")
+	_check(h2 > h1 and is_equal_approx(gs.boss_hit("d3", true), h2 * MineBoss.PERFECT_MULT), "a stronger mine hits harder; a perfect tap twice")
+	_check(gs.boss_hit("d3") >= hp * MineBoss.MIN_HIT, "even a weak mine moves the bar")
+	_check(MineBoss.judge("crabblack", MineBoss.SPOT_AT) == 2 and MineBoss.judge("crabblack", MineBoss.SPOT_AT + 0.1) == 1 and MineBoss.judge("crabblack", 0.1) == 0, "miss, hit and perfect taps")
+	var p0: int = pr.pearls
+	var c0: float = gs.total_earned
+	var got: Dictionary = gs.defeat_boss("d3")
+	_check(got.get("boss", "") == "crabblack" and pr.pearls == p0 + 20 and gs.total_earned > c0, "a beaten guard pays pearls and coins")
+	_check(gs.boss_at("d3") == "" and gs.defeat_boss("d3").is_empty(), "and stays beaten")
+	_check(gs.open_depth("d3") and gs.is_open("d3"), "now the site opens")
+	gs.save_path = "user://saga_test_save.json"
+	gs.save_game()
+	gs.bosses = {}
+	gs.load_game()
+	_check(gs.bosses.has("d3"), "beaten guards are saved")
+	var snap: Dictionary = gs._run_snapshot()
+	gs._apply_run(snap)
+	_check(gs.bosses.has("d3"), "and kept with the world's run")
+	gs._reset_run(true)
+	_check(gs.bosses.is_empty() and gs.boss_at("d3") == "crabblack", "a new run (a star) brings the guards back")
+	DirAccess.remove_absolute("user://saga_test_save.json")
+
 	pf.leave_league()
 	_check(pf.current_id == home and not Balance.saga and gs.world_id() == "ocean", "back home: the usual worlds")
+	gs.reset()
+	for i in 3:
+		gs.levels["d%d" % i] = 10
+	_check(gs.boss_at("d3") == "", "no guards in the usual worlds")
 	WorldLook.apply(0)
 	_check(WorldLook.world == "ocean", "the look follows back (same location number, other world)")
 	pf.remove(pf.league_profile(lg).get("id", ""))

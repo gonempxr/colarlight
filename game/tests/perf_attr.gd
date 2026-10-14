@@ -1,7 +1,7 @@
 extends SceneTree
 ## Where the frame time goes, per script (needs a renderer):
 ##   xvfb-run -a godot --rendering-driver opengl3 --path . --resolution 390x844 \
-##     -s res://tests/perf_attr.gd -- [phone] [room=0|1|2] [world=0..3] [scroll=px] [attr] [frames=N]
+##     -s res://tests/perf_attr.gd -- [phone] [room=0|1|2] [world=0..3] [saga] [scroll=px] [attr] [frames=N]
 ## Prints the average frame cost (process + render cpu) and, with "attr",
 ## how much each script's nodes cost: all nodes running that script are
 ## hidden and stop processing, and the saving is reported.
@@ -22,6 +22,12 @@ func _initialize() -> void:
 	Engine.max_fps = 0
 	OS.low_processor_usage_mode_sleep_usec = 1
 	await process_frame
+	# "saga": a Top League game (the saga's world, all 15 sites busy).
+	var pf = root.get_node("Profiles")
+	if opt.has("saga"):
+		pf.enter_league(OnlineRules.LEAGUE_STARTS[0])
+	elif pf.league_game():
+		pf.leave_league()
 	var gs = root.get_node("GameState")
 	gs.autosave_enabled = false
 	gs.save_path = "user://perf_attr_save.json"
@@ -64,7 +70,7 @@ func _initialize() -> void:
 		main.show_room(room, false)
 	if float(opt["scroll"]) > 0.0:
 		main._scroller.scroll_to(float(opt["scroll"]))
-	# open=fishing|puzzle|map|evo|wardrobe|decor|rivals|atlas|fight: a screen over the world.
+	# open=fishing|puzzle|map|evo|wardrobe|decor|rivals|boss: a screen over the world.
 	match opt.get("open", ""):
 		"fishing":
 			main.open_fishing()
@@ -80,19 +86,16 @@ func _initialize() -> void:
 			main.open_decor("sofa")
 		"rivals":
 			main.open_rivals()
-		"atlas", "fight":
-			# The league Atlas (and a dive's fight) in a league game.
+		"boss":
+			# A mine boss fight in a league game (the saga's world).
 			root.get_node("Profiles").enter_league(OnlineRules.LEAGUE_STARTS[0])
-			var at = root.get_node("Atlas")
-			at.autosave_enabled = false
-			at.reset()
-			at.cleared = {"a1": true, "a2": true, "a3": true}
-			if opt["open"] == "fight":
-				at.start_dive("a2", [], 3, 1000)
-				while at.dive["fight"].is_empty() and at.dive["done"] == "":
-					var o: Array = at.dive["options"]
-					at.choose(o.find("monster") if "monster" in o else 0)
-			main.open_atlas()
+			var g = root.get_node("GameState")
+			g.reset()
+			for k in 3:
+				g.levels["d%d" % k] = 10
+			main.open_boss(g.next_depth())
+			await process_frame
+			main._boss._start()
 	for i in 30:
 		await process_frame
 	_vp = root.get_viewport_rid()

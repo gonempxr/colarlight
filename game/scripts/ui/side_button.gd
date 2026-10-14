@@ -39,7 +39,7 @@ func _ready() -> void:
 
 
 func _tip() -> String:
-	return tr({"boost": "BOOST_BTN", "rivals": "RIVALS", "pass": "BP_TITLE", "atlas": "ATLAS_TITLE"}.get(kind, "RIVALS"))
+	return tr({"boost": "BOOST_BTN", "rivals": "RIVALS", "pass": "BP_TITLE"}.get(kind, "RIVALS"))
 
 
 func _get_tooltip(at_position: Vector2) -> String:
@@ -84,9 +84,6 @@ func _process(delta: float) -> void:
 		var left: float = GameState.boost_left
 		if left > 0.0:
 			tag = NumFormat.duration(left)
-	elif kind == "atlas":
-		badge = not Atlas.dive.is_empty()
-		tag = t_atlas()
 	elif kind == "pass":
 		badge = BattlePass.waiting() > 0
 		tag = "%d" % BattlePass.level()
@@ -112,17 +109,6 @@ func _draw() -> void:
 			var tag := Rect2(c.x - w / 2.0, SIZE - 16.0, w, 24.0)
 			Art.t_rect(self, tag, 9.0, Art.GOLD, 3.0, 0.4)
 			Art.text(self, Vector2(c.x, SIZE + 1.5), _tag, 17, Art.INK, 0)
-	elif kind == "atlas":
-		Art.t_circle(self, c, r, Color("1b3a8c"), 4.0, 0.6)
-		AtlasArt.draw_icon(self, c, r * 0.72)
-		var font := UiTheme.heavy_font()
-		var w := font.get_string_size(_tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 16.0
-		Art.t_rect(self, Rect2(c.x - w / 2.0, SIZE - 16.0, w, 24.0), 9.0, Color("7fd0ff"), 3.0, 0.4)
-		Art.text(self, Vector2(c.x, SIZE + 1.5), _tag, 17, Art.INK, 0)
-		if _badge:
-			var b := c + Vector2(SIZE * 0.32, -SIZE * 0.32)
-			Art.t_circle(self, b, 12.0, Art.RED, 3.0, 0.0)
-			Art.text(self, b + Vector2(0, 7), "!", 19, Art.WHITE, 0)
 	elif kind == "pass":
 		Art.t_circle(self, c, r, Color("e9f3ff"), 4.0, 0.6)
 		PassView.draw_icon(self, c + Vector2(0, -2), r * 0.62)
@@ -142,11 +128,6 @@ func _draw() -> void:
 			var b := c + Vector2(SIZE * 0.32, -SIZE * 0.32)
 			Art.t_circle(self, b, 12.0, Art.RED, 3.0, 0.0)
 			Art.text(self, b + Vector2(0, 7), "!", 19, Art.WHITE, 0)
-
-
-## The atlas button's tag: nodes cleared out of all.
-static func t_atlas() -> String:
-	return "%d/%d" % [Atlas.cleared.size(), Atlas.NODES.size()]
 
 
 ## A big coin with "×2" and a small round play badge (an ad to watch).

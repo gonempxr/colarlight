@@ -17,6 +17,8 @@ var index := 0
 
 var card: StageCard
 var _open_btn: PriceButton
+## "Fight!" instead of "Open" while a mine boss guards the site (MineBoss).
+var _boss_btn: Button
 var _lock_label: Label
 var _t := 0.0
 var _flash := 0.0
@@ -61,6 +63,20 @@ func _ready() -> void:
 	_open_btn.custom_minimum_size = Vector2(270, 74)
 	_open_btn.pressed.connect(_on_open)
 	add_child(_open_btn)
+	_boss_btn = Button.new()
+	_boss_btn.theme_type_variation = &"RedButton"
+	_boss_btn.custom_minimum_size = Vector2(270, 74)
+	_boss_btn.add_theme_font_size_override("font_size", 26)
+	_boss_btn.pressed.connect(func():
+		if not Scroller.is_drag():
+			Sfx.play("click")
+			GameState.boss_requested.emit(key()))
+	_boss_btn.visible = false
+	add_child(_boss_btn)
+	GameState.boss_defeated.connect(func(k: String, _b: String):
+		if k == key():
+			_check_now = true
+			refresh())
 	GameState.cycle_finished.connect(_on_cycle_finished)
 	GameState.depth_opened.connect(_on_depth_opened)
 	refresh()
@@ -103,11 +119,15 @@ func refresh() -> void:
 	var open := GameState.is_open(key())
 	card.visible = open
 	var is_next := GameState.next_depth() == key()
-	_open_btn.visible = not open and is_next
+	var boss := GameState.boss_at(key()) if is_next and not open else ""
+	_open_btn.visible = not open and is_next and boss == ""
+	_boss_btn.visible = boss != ""
 	_lock_label.visible = not open
 	var name := WorldLook.site_name(index)
+	if boss != "":
+		_boss_btn.text = tr("BOSS_GUARD_BTN")
 	if not open:
-		_lock_label.text = name if is_next else "???"
+		_lock_label.text = (tr("BOSS_GUARDS") % tr(MineBoss.name_key(boss))) if boss != "" else (name if is_next else "???")
 		_open_btn.set_price(tr("OPEN"), NumFormat.short(GameState.unlock_cost(key())))
 		_open_btn.theme_type_variation = &"GoldButton" if GameState.coins >= GameState.unlock_cost(key()) else &"DarkButton"
 	else:
@@ -126,6 +146,8 @@ func _notification(what: int) -> void:
 		_lock_label.position = Vector2(cx - _lock_label.size.x / 2.0, LOCK_Y + 34.0 if far else 64.0)
 		_open_btn.size = _open_btn.custom_minimum_size
 		_open_btn.position = Vector2(cx - _open_btn.size.x / 2.0, 118)
+		_boss_btn.size = _boss_btn.custom_minimum_size
+		_boss_btn.position = Vector2(cx - _boss_btn.size.x / 2.0, 118)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -172,7 +194,7 @@ func _process(delta: float) -> void:
 	if not _check_now and (Engine.get_process_frames() + index) % 6 != 0:
 		return
 	_check_now = false
-	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale(), WorldLook.location]
+	var sig := [GameState.is_open(key()), GameState.next_depth() == key(), size, TranslationServer.get_locale(), WorldLook.location, GameState.boss_at(key())]
 	if sig != _bg_sig:
 		_bg_sig = sig
 		_bg.queue_redraw()
@@ -709,6 +731,17 @@ static var _CRATER_IN := Art.ellipse_pts(Vector2(0, -3), Vector2(34, 6), 24)
 func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) -> void:
 	Art.flat(ci, cave_poly, Color(0.02, 0.04, 0.12, 0.55))
 	var is_next := GameState.next_depth() == key()
+	var boss := GameState.boss_at(key()) if is_next else ""
+	if boss != "":
+		# The guard waits in the cave, lit from behind.
+		# The guard stands in the card column (where the lock would be), the
+		# name and the "Fight!" button sit over the cave.
+		Art.flat(ci, cave_poly, Color(0.35, 0.05, 0.25, 0.25))
+		_cave_edge(ci, cave_poly)
+		var bc := Vector2(world.card_x() + World.CARD_W / 2.0, World.ROW_H / 2.0 + 14.0)
+		Art.glow(ci, bc, World.CARD_W * 0.75, Color(1.0, 0.35, 0.6, 0.45))
+		BossArt.draw(ci, boss, bc, World.CARD_W / 270.0, 0.0)
+		return
 	if is_next:
 		Props.boards(ci, Rect2(cave.position.x + 20, cave.position.y + 30, cave.size.x - 40, cave.size.y - 60))
 		# The card column rock is empty on closed rows: a lock there.
@@ -2687,7 +2720,7 @@ func _cocoa_branch(a: float, b: float, top: float) -> Array:
 # --- The Twilight Zone (saga act I): a glowing deep -----------------------------------------
 
 ## Decor of the Twilight Zone's halls: everything glows. Animated bits move
-## in steps (cache friendly); jellies and fish come from Props / AtlasArt.
+## in steps (cache friendly); jellies and fish come from Props / DeepArt.
 func _draw_decor_twilight(st: Dictionary, cave: Rect2) -> bool:
 	if not str(st["deco"]).begins_with("tw_"):
 		return false
@@ -2759,7 +2792,7 @@ func _draw_decor_twilight(st: Dictionary, cave: Rect2) -> bool:
 			# Small anglerfish hunting with their lures; bones on the floor.
 			for k in 2:
 				var c := Vector2(lerpf(x0 + 10, x1 - 10, k), top + 90 + (bob if k == 0 else -bob))
-				AtlasArt.draw_angler(self, c, 0.75 - k * 0.12, _t + k, Color("4a3a8c"))
+				DeepArt.draw_angler(self, c, 0.75 - k * 0.12, _t + k, Color("4a3a8c"))
 			for k in 3:
 				Art.push(self, Vector2(lerpf(x0 - 20, x1 + 30, k / 2.0), y + 4), 0.3 * (k - 1), Vector2.ONE * 0.7)
 				Art.toon(self, Art.rrect_pts(Rect2(-14, -4, 28, 7), 3.5), Color("f4ecd8"), 2.0, 0.3)

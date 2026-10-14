@@ -47,3 +47,29 @@ ROD_TWILIGHT_17,Abyss sparkles,Искры Бездны,Destellos abisales,深渊
 ROD_TWILIGHT_18,A golden reel,Золотая катушка,Carrete dorado,金色线轮
 ROD_TWILIGHT_19,A light that never goes out,"Свет, который не гаснет",Una luz que nunca se apaga,永不熄灭的光
 ROD_TWILIGHT_20,Legendary Coral Light rod!,Легендарная удочка Кораллового Света!,¡Legendaria Caña de la Luz de Coral!,传说：珊瑚之光鱼竿！
+BOSS_CRABBLACK,Captain Crabblack,Капитан Крабблэк,Capitán Cangrejonegro,黑蟹船长
+BOSS_MOTHER_JELLY,Mother Jelly,Мать-Медуза,Madre Medusa,水母之母
+BOSS_SHADOW_EEL,Shadow Eel,Угорь-Тень,Anguila Sombra,影子鳗鱼
+BOSS_KRAKEN,Young Kraken,Юный Кракен,Kraken Joven,小海怪
+BOSS_WARDEN,The Twilight Warden,Страж Сумерек,El Guardián del Crepúsculo,暮光守卫
+BOSS_GUARD_BTN,Fight!,В бой!,¡A luchar!,开战！
+BOSS_GUARDS,%s guards this site,%s охраняет эту шахту,%s protege esta mina,%s守着这个矿
+BOSS_SEC,s,с,s,秒
+BOSS_MISS,Miss!,Мимо!,¡Fallo!,没打中！
+BOSS_PERFECT,Perfect!,Идеально!,¡Perfecto!,完美！
+BOSS_HINT,Tap when the ring hits the glowing spot! Hits in a row grow stronger.,"Тапай, когда кольцо дойдёт до светящейся точки! Удары подряд становятся сильнее.",¡Toca cuando el anillo llegue al punto brillante! Los golpes seguidos son más fuertes.,当圆圈碰到发光点时点击！连续命中会越来越强。
+BOSS_READY,"Health: %s
+Your hit: %s (it grows with your mine's income)
+Time: %d seconds","Здоровье: %s
+Твой удар: %s (растёт вместе с доходом шахты)
+Время: %d секунд","Salud: %s
+Tu golpe: %s (crece con los ingresos de tu mina)
+Tiempo: %d segundos","生命：%s
+你的攻击：%s（随矿山收入增长）
+时间：%d秒"
+BOSS_FIGHT,Fight!,В бой!,¡A luchar!,开战！
+BOSS_WON,"Victory! +%d pearls, +%s coins. The way down is open!","Победа! +%d жемчуга, +%s монет. Путь вниз открыт!","¡Victoria! +%d perlas, +%s monedas. ¡El camino abajo está abierto!",胜利！珍珠+%d，金币+%s。往下的路打开了！
+BOSS_COLLECT,Collect,Забрать,Recoger,领取
+BOSS_LOST,Out of time! The guard healed. Upgrade your mine: your hits grow with its income.,Время вышло! Страж восстановился. Прокачай шахту: удары растут вместе с доходом.,¡Se acabó el tiempo! El guardián se curó. Mejora tu mina: tus golpes crecen con sus ingresos.,时间到了！守卫恢复了。升级你的矿山：攻击会随收入增长。
+BOSS_AGAIN,Try again,Ещё раз,Otra vez,再试一次
+HINT_BOSS,%s guards the way down: fight it! Upgrading the mine makes your hits stronger.,%s преграждает путь вниз: сразись! Прокачка шахты усиливает удары.,%s bloquea el camino: ¡lucha! Mejorar la mina hace tus golpes más fuertes.,%s挡住了往下的路：开战吧！升级矿山会让攻击更强。

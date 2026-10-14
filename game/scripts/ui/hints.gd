@@ -47,6 +47,10 @@ static func pick(main: Node) -> Dictionary:
 			var card: StageCard = main.stage_card(k)
 			return _hint("buy_" + k, t("HINT_" + k.to_upper()), true, func(): return _control(card._unit_btns[1] if card._unit_btns[1].visible else card._upgrade), "", main.room_of(k))
 	var next: String = gs.next_depth()
+	if next != "" and gs.boss_at(next) != "":
+		# A mine boss guards the next site: fight it (hits grow with income).
+		var brow: DepthRow = world.rows[gs.depth_index(next)]
+		return _hint("boss", t("HINT_BOSS") % t(MineBoss.name_key(gs.boss_at(next))), true, func(): return _control(brow._boss_btn), "")
 	if next != "" and gs.coins >= gs.unlock_cost(next):
 		var row: DepthRow = world.rows[gs.depth_index(next)]
 		return _hint("open_depth", t("HINT_OPEN_DEPTH") % Views.stage_name(next), true, func(): return _control(row._open_btn), "")
