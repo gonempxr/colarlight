@@ -361,16 +361,22 @@ func _draw_veins(site: int, n: int, view: Rect2) -> void:
 		var tq := int(_t * 4.0 + ((site * 5 + j * 3) % 8) / 8.0)
 		var key := hash([40, site, j, tq, walk, WorldLook.location])
 		Art.push(self, Vector2(at.x, ledge))
-		if not Art.cache_begin(self, key):
-			if high and walk:
-				# Air worlds: a wooden scaffold with a ladder; the worker
-				# climbs up and digs a vein on the walkway.
-				_scaffold(sp.y)
-			elif high:
-				# A rock pillar holds the vein up where the hovering diver works.
-				Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+		# The scaffold or pillar never moves: a long-lived cached part of its
+		# own; only the vein is redrawn on its quarter-second beat.
+		if high:
+			var base_key := hash([41, site, j, walk, sp.y, WorldLook.location])
+			if not Art.cache_begin(self, base_key):
+				if walk:
+					# Air worlds: a wooden scaffold with a ladder; the worker
+					# climbs up and digs a vein on the walkway.
+					_scaffold(sp.y)
+				else:
+					# A rock pillar holds the vein up where the hovering diver works.
+					Art.toon(self, _PILLAR, (Art.DEPTH_STYLE[site]["rock"] as Color).lightened(0.12), 3.0, 0.6)
+				Art.cache_end(self, base_key)
+		if not Art.cache_begin(self, key, true):
 			OreArt.deposit(self, Vector2(0, at.y - ledge), 30.0 if high else 36.0, site, site * 13 + j, tq * 0.25, 2, false)
-			Art.cache_end(self, key)
+			Art.cache_end(self, key, true)
 		Art.pop(self)
 
 

@@ -1033,9 +1033,9 @@ func _draw_board() -> void:
 					# animation, 15 steps a second, recorded once and pasted.
 					var tt := snappedf(_t + (i % 5) * 0.37, 1.0 / 15.0)
 					var key := hash([77, world, k, sel, tt])
-					if not Art.cache_begin(_board, key):
+					if not Art.cache_begin(_board, key, true):
 						TileArt.draw(_board, TileArt.KINDS[k], tt, sel)
-						Art.cache_end(_board, key)
+						Art.cache_end(_board, key, true)
 				if bubs[i] > 0:
 					TileArt.blocker(_board, "bubble", bubs[i])
 			Art.pop(_board)

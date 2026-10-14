@@ -421,8 +421,15 @@ func _draw() -> void:
 	var dp := deposit_pos()
 	var glow := 0.12 + 0.05 * sin(_t * 2.0 + index) + _flash * 0.3
 	Art.flat(self, Art.clipped(Art.circle_pts(Vector2(cave.end.x - 30, LEDGE_Y - 50), 90, 32), cave_poly), Color(st["ore"], glow))
-	OreArt.deposit(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, index, index * 7 + 1, _t, 3, false)
-	OreArt.deposit(self, Vector2(dp.x, LEDGE_Y + 2), 70, index, index * 31 + 3, _t, 5)
+	# The ore moves slowly: drawn four times a second (like the small veins
+	# of the divers) and pasted from the cache in between.
+	var tq := int(_t * 4.0 + (index % 4) / 4.0)
+	var ck := hash([42, index, tq, dp, cave.end.x, WorldLook.location])
+	if not Art.cache_begin(self, ck, true):
+		var tt := tq / 4.0
+		OreArt.deposit(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, index, index * 7 + 1, tt, 3, false)
+		OreArt.deposit(self, Vector2(dp.x, LEDGE_Y + 2), 70, index, index * 31 + 3, tt, 5)
+		Art.cache_end(self, ck, true)
 
 
 ## Edge of the cave, drawn again over the vein so the glow stays inside.

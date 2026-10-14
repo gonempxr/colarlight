@@ -310,6 +310,8 @@ static func clear_cache() -> void:
 	_pc.clear()
 	_pc_old.clear()
 	_pc_verts = 0
+	_brief.clear()
+	_brief_verts = 0
 
 
 # Caches in two generations: when the young one is full it becomes the old
@@ -718,11 +720,15 @@ static var _rec_stack: Array[Transform2D] = []
 
 ## True when the part for `key` was already cached and has been drawn. False
 ## means: draw it now, then call cache_end with the same key.
-static func cache_begin(ci: CanvasItem, key: int) -> bool:
+## `brief`: a time-stepped part whose key never comes back once its moment
+## has passed (an animation drawn a few times a second). Those go in their
+## own small cache, so they never push out the long-lived parts (faces,
+## props), which then had to be built again all at once (a frame hitch).
+static func cache_begin(ci: CanvasItem, key: int, brief := false) -> bool:
 	# Parts drawn at another scale step have other outline widths.
 	key = hash([key, _scale_step(_rec_xf * _xf if _rec else _xf)])
-	var e = _pc.get(key)
-	if e == null:
+	var e = _brief.get(key) if brief else _pc.get(key)
+	if e == null and not brief:
 		e = _pc_old.get(key)
 		if e != null:
 			_pc_store(key, e)
@@ -787,13 +793,28 @@ static func _pc_store(key: int, e: Array) -> void:
 	_pc_verts += n
 
 
-static func cache_end(ci: CanvasItem, key: int) -> void:
+static func cache_end(ci: CanvasItem, key: int, brief := false) -> void:
 	key = hash([key, _scale_step(_rec_xf)])
 	if not _rec or _rec_key != key:
 		return
 	var r := _rec_finish()
-	_pc_store(key, [r[0], r[1]])
+	if brief:
+		var n := (r[0] as PackedVector2Array).size()
+		if _brief_verts + n > BRIEF_CACHE_VERTS:
+			_brief = {}
+			_brief_verts = 0
+		_brief[key] = [r[0], r[1]]
+		_brief_verts += n
+	else:
+		_pc_store(key, [r[0], r[1]])
 	_put(ci, r[0], r[1])
+
+
+## The cache of brief parts (see cache_begin): simply emptied when full, as
+## its parts are only reused for a moment.
+const BRIEF_CACHE_VERTS := 200000
+static var _brief := {}
+static var _brief_verts := 0
 
 
 # --- Sprite slots -------------------------------------------------------------------
