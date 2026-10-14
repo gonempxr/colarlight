@@ -108,6 +108,9 @@ const LOCATION_PRICE := 2.4e10
 ## the map shows the next worlds as "coming soon". Older saves further on
 ## are moved back to it (GameState keeps their levels).
 const LAST_LOCATION := 4
+## Coin exchange: a world takes at most this share of its own gate price
+## (LOCATION_PRICE x its gate scale) from older worlds' wallets, in all.
+const EXCHANGE_SHARE := 0.1
 ## World stars (the endgame, 2026-10-13). Once the last world is open, any
 ## world whose gate checklist is done can take a star: its run restarts
 ## (the lift, boat, plant and vault managers stay) and its numbers grow like

@@ -102,6 +102,9 @@ var max_location := 0:
 var worlds_runs: Dictionary = {}
 ## Stars of each world: str(L) -> count (0 when missing). Kept forever.
 var world_stars: Dictionary = {}
+## Coins already sent into a world by the coin exchange: "<world>:<stars>" ->
+## coins received there (capped, see exchange_cap()).
+var exchanged: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -212,6 +215,7 @@ func reset() -> void:
 	max_location = 0
 	worlds_runs = {}
 	world_stars = {}
+	exchanged = {}
 	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
@@ -495,6 +499,65 @@ func star_cost() -> float:
 ## This world's checklist is done (stars are open): saving up for a star.
 func star_ready() -> bool:
 	return stars_unlocked() and location_ready() and stars_of(location) < Balance.MAX_STARS
+
+
+# --- Coin exchange (2026-10-14) -------------------------------------------------------
+# An older (smaller) world's wallet can be sent to the world the player is
+# in, at the gap between their prices (Moon -> Jungle about 1400 : 1), so a
+# rich older world gives a good start in the new one. In all, a world takes
+# at most Balance.EXCHANGE_SHARE of its own gate price (the new world still
+# has to be played). Exchanged coins are not earnings: the boards don't move.
+
+func _gate_of(l: int) -> float:
+	return Balance.star_gate_scale(l, stars_of(l))
+
+
+func _exchange_key() -> String:
+	return "%d:%d" % [location, stars_of(location)]
+
+
+## How many coins this world can still take from the exchange.
+func exchange_room() -> float:
+	var cap := Balance.LOCATION_PRICE * _gate_of(location) * Balance.EXCHANGE_SHARE
+	return maxf(0.0, cap - _num(exchanged.get(_exchange_key()), 0.0))
+
+
+## Coins of world `from` per coin arriving here (0 = no exchange that way).
+func exchange_rate(from: int) -> float:
+	if from == location or from < 0 or from > max_location:
+		return 0.0
+	var r := _gate_of(location) / _gate_of(from)
+	return r if r >= 10.0 else 0.0
+
+
+## {"give": coins taken from `from`, "get": coins arriving here}.
+func exchange_preview(from: int) -> Dictionary:
+	var rate := exchange_rate(from)
+	if rate <= 0.0:
+		return {"give": 0.0, "get": 0.0}
+	var amount := minf(world_coins(from) / rate, exchange_room())
+	if amount < 1.0:
+		return {"give": 0.0, "get": 0.0}
+	return {"give": amount * rate, "get": amount}
+
+
+## Sends world `from`'s coins here. Returns the coins received.
+func exchange_from(from: int) -> float:
+	var p := exchange_preview(from)
+	var amount := float(p["get"])
+	if amount <= 0.0:
+		return 0.0
+	var snap = worlds_runs.get(str(from))
+	if not snap is Dictionary:
+		return 0.0
+	snap["coins"] = maxf(0.0, _num(snap.get("coins"), 0.0) - float(p["give"]))
+	worlds_runs[str(from)] = snap
+	exchanged[_exchange_key()] = _num(exchanged.get(_exchange_key()), 0.0) + amount
+	# Into the wallet directly: not earnings (total_earned and the boards stay).
+	coins += amount
+	changed.emit()
+	save_game()
+	return amount
 
 
 func can_get_star() -> bool:
@@ -1108,6 +1171,7 @@ func save_game() -> bool:
 		"max_location": max_location,
 		"worlds_runs": worlds_runs,
 		"stars": world_stars,
+		"exchanged": exchanged,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1256,6 +1320,12 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 			var sn := int(_num(st[k], 0.0))
 			if sl >= 0 and sl <= Balance.LAST_LOCATION and sn > 0:
 				world_stars[str(sl)] = mini(sn, Balance.MAX_STARS)
+	var ex = data.get("exchanged")
+	if ex is Dictionary:
+		for k in ex:
+			var v := _num(ex[k], 0.0)
+			if v > 0.0 and str(k).length() <= 12:
+				exchanged[str(k)] = v
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

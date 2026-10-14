@@ -125,6 +125,11 @@ This file is the quick picture; keep it up to date when something big changes.
   No. 1 now" (`main._on_crown_changed`, max one per 3 min for others).
   Top League starts Fri 16.10.2026 05:15 UTC (`OnlineRules.LEAGUE_STARTS`,
   8:15 Tallinn): only the league board starts from zero, progress stays.
+- 2026-10-14 coin exchange (worlds/beta/CG zip): on the map, an older world's
+  panel sends its wallet to the current (bigger) world at the gate-price gap
+  (Moon -> Jungle ~1400:1), up to `Balance.EXCHANGE_SHARE` (10%) of that
+  world's gate price in all (`GameState.exchange_*`, saved as `exchanged`);
+  not earnings, boards don't move. sim: Jungle 150 -> 95 min with a full purse.
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:

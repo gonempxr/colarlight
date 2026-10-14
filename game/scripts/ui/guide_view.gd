@@ -9,10 +9,12 @@ extends RefCounted
 ## Seen marks live in Progress.stats as "g_<id>" (per profile).
 
 ## Bump when "What's new" should show again (with new WHATS_NEW ids).
-const NEWS_VERSION := 2
-const WHATS_NEW := ["pass", "challenge", "ach", "clubs", "season", "puzzle_board", "friends", "titles", "jungle", "stars"]
+const NEWS_VERSION := 3
+const WHATS_NEW := ["pass", "challenge", "ach", "clubs", "season", "puzzle_board", "friends", "titles", "jungle", "stars", "board"]
 ## What the "What's new" dialog of this NEWS_VERSION lists.
-const NEWS_NOW := ["jungle", "stars"]
+const NEWS_NOW := ["jungle", "stars", "board", "pass"]
+## The update's notes shown on top of "What's new" (NEWS_NOTE_<n>).
+const NEWS_NOTES := 6
 ## Long enough in the game to be told about news (new players learn as they go).
 const NEWS_AFTER_SEC := 300.0
 
@@ -87,6 +89,7 @@ static func build(m: Modal, main: Node, only_new := false) -> void:
 		Progress.stats["news_v"] = NEWS_VERSION
 		m.text(t("NEW_FEATURE"), 24, Color("d8363c"))
 		m.title(t("GUIDE_NEWS_TITLE"))
+		m.add(_notes())
 		m.text(t("GUIDE_NEWS_HINT"), 20, Art.INK_SOFT)
 	else:
 		m.title(t("GUIDE_TITLE"))
@@ -103,6 +106,26 @@ static func build(m: Modal, main: Node, only_new := false) -> void:
 		for e in rows:
 			m.add(_entry(m, e))
 	m.button(t("THANKS_OK"), func(): Sfx.play("click"); m.close(), &"BlueButton")
+
+
+## The update's notes: a short list on a gold card.
+static func _notes() -> Control:
+	var c := Views.card(Color("fff4d6"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	c.add_child(v)
+	for i in range(1, NEWS_NOTES + 1):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var ic := Views.icon("star", 26)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		h.add_child(ic)
+		var l := Views.label(t("NEWS_NOTE_%d" % i), 19, Art.INK)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.custom_minimum_size.x = 120
+		h.add_child(l)
+		v.add_child(h)
+	return c
 
 
 static func _entry(m: Modal, e: Array) -> Control:

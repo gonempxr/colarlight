@@ -87,6 +87,9 @@ def loc_gate_scale(L: int) -> float:
 # STAR_GROWTH per further star (so the growing bonus doesn't make runs trivial). Every star the
 # player owns adds STAR_BONUS to the income of every world.
 LAST_LOCATION = 4
+# Coin exchange: a world takes at most this share of its gate price from
+# older wallets (start purse); --locs runs ignore it. 10%: Jungle 150 -> 95 min.
+EXCHANGE_SHARE = 0.1
 STAR_LOCS = 1
 STAR_GATE = 0.6
 STAR_GROWTH = 2.0

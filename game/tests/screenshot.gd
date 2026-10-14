@@ -215,6 +215,14 @@ func _initialize() -> void:
 			main.open_evolution()
 		"map":
 			main.open_map()
+		"map:exchange":
+			# In the Jungle with a rich Moon: the Moon's panel offers the exchange.
+			var run: Dictionary = gs.worlds_runs.get("3", {})
+			run["coins"] = 1.8e25
+			gs.worlds_runs["3"] = run
+			main.open_map()
+			main._map._sel = 3
+			main._map._build_panel()
 		"stars":
 			main.open_stars()
 		"stars:map":

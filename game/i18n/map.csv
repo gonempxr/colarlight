@@ -30,3 +30,7 @@ MAP_SOON,Soon!,Скоро!,¡Pronto!,即将开放！
 MAP_SOON_TITLE,A new world is coming!,Скоро новый мир!,¡Llega un mundo nuevo!,新世界即将到来！
 MAP_SOON_TEXT,"You reached the last world for now. A secret island is being built: keep mining in the Jungle, your levels keep growing!","Ты дошёл до последнего мира. Тайный остров ещё строится: копай дальше в Джунглях, уровни продолжают расти!","Llegaste al último mundo por ahora. Se está construyendo una isla secreta: sigue minando en la Selva, ¡tus niveles siguen creciendo!",你已到达目前最后一个世界。一座神秘岛屿正在建造中：继续在丛林采矿，等级还会不断提升！
 MAP_SOON_HINT,This island is still being built. Coming soon!,Этот остров ещё строится. Скоро!,Esta isla aún se está construyendo. ¡Pronto!,这座岛还在建造中，敬请期待！
+MAP_EXCHANGE,Send coins: +%s,Перевести монеты: +%s,Enviar monedas: +%s,转移金币：+%s
+MAP_EXCHANGE_D,Exchange rate %s : 1. You get +%s in %s. Doesn't count on the leaderboard.,Курс %s : 1. Получишь +%s в мире «%s». В таблицу лидеров не идёт.,Cambio %s : 1. Recibes +%s en %s. No cuenta en la clasificación.,汇率 %s : 1。你将获得 +%s（%s）。不计入排行榜。
+MAP_EXCHANGE_FULL,%s has already taken the most it can from the exchange.,Мир «%s» уже получил максимум по обмену.,%s ya recibió el máximo del cambio.,%s 已达到兑换上限。
+MAP_EXCHANGE_EMPTY,No coins here to send.,Здесь нет монет для перевода.,Aquí no hay monedas para enviar.,这里没有可转移的金币。

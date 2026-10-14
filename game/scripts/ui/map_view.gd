@@ -767,6 +767,7 @@ func _go_panel(l: int, from_old: bool) -> void:
 	wv.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	wallet.add_child(wv)
 	_box.add_child(wallet)
+	_exchange_box(l)
 	var go := Button.new()
 	go.theme_type_variation = &"GoldButton"
 	go.text = t("MAP_GO") % name
@@ -775,6 +776,48 @@ func _go_panel(l: int, from_old: bool) -> void:
 	go.pressed.connect(func(): _do_switch(l))
 	_box.add_child(go)
 	_stars_button()
+
+
+## The coin exchange: this older world's wallet sent to the world the
+## player is in (GameState.exchange_from), with what arrives shown first.
+func _exchange_box(l: int) -> void:
+	var gs := _gs()
+	if gs == null or not gs.has_method("exchange_preview") or not demo.is_empty():
+		return
+	if float(gs.exchange_rate(l)) <= 0.0:
+		return
+	var here := world_name(cur_location())
+	var p: Dictionary = gs.exchange_preview(l)
+	var card := PanelContainer.new()
+	var sb := UiTheme.panel_box(Color("e3f6e0"), 16, 0)
+	sb.shadow = 0.0
+	sb.line_w = 2.5
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 10
+	card.add_theme_stylebox_override("panel", sb)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	card.add_child(v)
+	if float(p["get"]) <= 0.0:
+		var why := t("MAP_EXCHANGE_FULL") % here if float(gs.exchange_room()) < 1.0 else t("MAP_EXCHANGE_EMPTY")
+		v.add_child(_label(why, 19, Art.INK_SOFT))
+		_box.add_child(card)
+		return
+	v.add_child(_label(t("MAP_EXCHANGE_D") % [NumFormat.short(float(gs.exchange_rate(l))), NumFormat.short(float(p["get"])), here], 19, Art.INK))
+	var b := Button.new()
+	b.theme_type_variation = &"BlueButton"
+	b.text = t("MAP_EXCHANGE") % NumFormat.short(float(p["get"]))
+	b.icon = Icons.get_icon("coin", 32)
+	b.custom_minimum_size = Vector2(0, 72)
+	b.add_theme_font_size_override("font_size", 24)
+	b.pressed.connect(func():
+		var got := float(gs.exchange_from(l))
+		_sfx("unlock" if got > 0.0 else "deny")
+		_build_panel())
+	v.add_child(b)
+	_box.add_child(card)
 
 
 func _do_switch(l: int) -> void:
