@@ -1125,6 +1125,15 @@ func _paint_far(ci: CanvasItem) -> void:
 				Art.pop(ci)
 		"jungle":
 			WorldArt.jungle_hills(ci, w, sy, DayNight.far_color(0.0, sp), DayNight.far_color(0.7, sp).darkened(0.12), DayNight.daylight(sp))
+		"twilight":
+			# Far coral spires with glowing tips over the dusk sea.
+			for f: Vector3 in [Vector3(0.1, 110, 0.0), Vector3(0.26, 70, 0.3), Vector3(0.8, 130, 0.2), Vector3(0.93, 80, 0.5)]:
+				var b := Vector2(w * f.x, sy)
+				var c := DayNight.far_color(f.z, sp)
+				Art.flat(ci, PackedVector2Array([b + Vector2(-16, 0), b + Vector2(-8, -f.y), b + Vector2(-2, -f.y - 10), b + Vector2(6, -f.y + 6), b + Vector2(16, 0)]), c)
+				Art.flat(ci, PackedVector2Array([b + Vector2(10, 0), b + Vector2(18, -f.y * 0.55), b + Vector2(26, 0)]), c)
+				Art.glow(ci, b + Vector2(-2, -f.y - 14), 14.0, Color(0.42, 0.97, 1.0, 0.25 + 0.4 * lights))
+				Art.disc(ci, b + Vector2(-2, -f.y - 14), 3.0, Color(0.75, 1.0, 1.0, 0.6 + 0.4 * lights))
 		_:
 			Art.push(ci, Vector2(w * 0.2, sy))
 			Props.far_island(ci, 170, DayNight.far_color(0.0, sp))
@@ -1223,6 +1232,12 @@ func _draw_sky_fx(ci: CanvasItem) -> void:
 			var spin := float(c["seed"]) * 1.3 + _t * 0.05 + Motion.ease_out_cubic(poke) * TAU
 			Art.push(ci, _cloud_pos(c), spin, Vector2(s * (1.0 + puff), s * (1.0 + puff)))
 			WorldArt.asteroid(ci, int(c["seed"]), cf, cl)
+		elif wl == "twilight" and int(c["seed"]) % 2 == 1:
+			# Every other cloud is a big sky jellyfish drifting along.
+			var jc := Color("ff9af0") if int(c["seed"]) % 4 == 1 else Color("9afcff")
+			Art.glow(ci, _cloud_pos(c), 70.0 * s, Color(jc, 0.25))
+			Art.push(ci, _cloud_pos(c), 0.0, Vector2.ONE * s * 2.4 * (1.0 + puff))
+			Props.jelly(ci, _t + float(c["seed"]), jc)
 		else:
 			if wl == "jungle":
 				# After its shower a rainbow shines under the cloud for a moment.

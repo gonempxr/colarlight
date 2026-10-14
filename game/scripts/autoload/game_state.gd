@@ -55,6 +55,10 @@ signal vault_changed
 signal location_switched(L: int, away: float)
 ## A world took a star: `stars` = how many it has now.
 signal star_gained(L: int, stars: int)
+## A mine boss was beaten (MineBoss): its site can be opened now.
+signal boss_defeated(key: String, boss: String)
+## The player wants to fight the guard of site `key` (main opens BossScreen).
+signal boss_requested(key: String)
 
 ## 3: 15 dive sites instead of 30 (older saves are folded, see OLD_DEPTH_FOLD).
 ## 4: worlds and locations, 10 sites (v3 saves fold with V3_SITE_FOLD into
@@ -90,13 +94,13 @@ var total_earned := 0.0
 ## Location index L (world L % 5), 0..Balance.LAST_LOCATION.
 var location := 0:
 	set(value):
-		location = clampi(value, 0, Balance.LAST_LOCATION)
+		location = clampi(value, 0, Balance.last_location())
 		_rescale()
 		_ensure_keys()
 ## Highest location opened so far (>= location). The gate lives there.
 var max_location := 0:
 	set(value):
-		max_location = clampi(value, 0, Balance.LAST_LOCATION)
+		max_location = clampi(value, 0, Balance.last_location())
 ## Runs of the opened worlds that are not active: str(L) -> snapshot
 ## (_run_snapshot). A world opened before this existed (old saves) has none
 ## and starts a fresh run on its first visit (see _fresh_world_run).
@@ -106,6 +110,8 @@ var world_stars: Dictionary = {}
 ## Coins already sent into a world by the coin exchange: "<world>:<stars>" ->
 ## coins received there (capped, see exchange_cap()).
 var exchanged: Dictionary = {}
+## Mine bosses beaten in this run: site key -> true (MineBoss).
+var bosses: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -241,6 +247,7 @@ func _reset_run(keep_automation: bool = false) -> void:
 		_timer[key] = -1.0
 		_load[key] = 0.0
 	managers[VAULT] = kept.get(VAULT, false)
+	bosses = {}
 	evo = 0
 	vault = 0.0
 	levels["d0"] = 1
@@ -349,7 +356,7 @@ func income_mult() -> float:
 # --- Worlds and locations --------------------------------------------------------
 
 func world_index() -> int:
-	return posmod(location, Balance.WORLDS.size())
+	return Balance.world_index_of(location)
 
 
 func world_id() -> String:
@@ -461,7 +468,7 @@ func can_advance_location() -> bool:
 
 ## The last world (the Jungle): there is no next world yet.
 func is_last_location() -> bool:
-	return location >= Balance.LAST_LOCATION
+	return location >= Balance.last_location()
 
 
 ## Opens the next location: L + 1 with a fresh run (coins, levels, foremen,
@@ -511,7 +518,7 @@ func star_mult() -> float:
 
 ## Stars open up once the last world is open.
 func stars_unlocked() -> bool:
-	return max_location >= Balance.LAST_LOCATION
+	return max_location >= Balance.last_location()
 
 
 func star_cost() -> float:
@@ -759,7 +766,7 @@ func _run_snapshot() -> Dictionary:
 	return {
 		"coins": coins, "vault": vault, "gear": evo,
 		"levels": levels.duplicate(), "managers": managers.duplicate(),
-		"pit": pit, "hold": hold, "dock": dock, "left_at": now(),
+		"pit": pit, "hold": hold, "dock": dock, "left_at": now(), "bosses": bosses.duplicate(),
 	}
 
 
@@ -775,6 +782,7 @@ func _apply_run(d: Dictionary) -> void:
 	pit = maxf(0.0, _num(d.get("pit"), 0.0))
 	hold = maxf(0.0, _num(d.get("hold"), 0.0))
 	dock = maxf(0.0, _num(d.get("dock"), 0.0))
+	_read_bosses(d.get("bosses"))
 	if has_manager(VAULT) and vault > 0.0:
 		coins += vault
 		vault = 0.0
@@ -1038,13 +1046,64 @@ func open_building(key: String) -> bool:
 
 
 func open_depth(key: String) -> bool:
-	if key != next_depth() or coins < unlock_cost(key):
+	if key != next_depth() or coins < unlock_cost(key) or boss_at(key) != "":
 		return false
 	coins -= unlock_cost(key)
 	levels[key] = 1
 	depth_opened.emit(key)
 	changed.emit()
 	return true
+
+
+# --- Mine bosses (MineBoss, the saga's worlds) ----------------------------------------
+
+## The boss still guarding site `key` ("" = none, or beaten).
+func boss_at(key: String) -> String:
+	var i := depth_index(key)
+	if i < 0 or bosses.has(key):
+		return ""
+	return MineBoss.guard(world_id(), i)
+
+
+## The guard's health in coins: a share of the site's unlock price.
+func boss_hp(key: String) -> float:
+	var id := MineBoss.guard(world_id(), depth_index(key))
+	return unlock_cost(key) * float(MineBoss.data(id)["hp"]) if id != "" else 0.0
+
+
+## Damage of a hit (`perfect`: twice): seconds of the game's income, at
+## least a small share of the boss's health.
+func boss_hit(key: String, perfect: bool = false) -> float:
+	var hit := maxf(income_rate() * MineBoss.HIT_SEC, boss_hp(key) * MineBoss.MIN_HIT)
+	return hit * (MineBoss.PERFECT_MULT if perfect else 1.0)
+
+
+## The guard of `key` is beaten: the site can be opened. Pays its pearls
+## and some seconds of income. Returns {"boss", "pearls", "coins"} ({} when
+## there was no guard).
+func defeat_boss(key: String) -> Dictionary:
+	var id := boss_at(key)
+	if id == "":
+		return {}
+	bosses[key] = true
+	var d := MineBoss.data(id)
+	var c := income_rate() * float(d["coins_sec"])
+	if c > 0.0:
+		_earn(c)
+	var pr := get_node_or_null("/root/Progress")
+	if pr:
+		pr.add_pearls(int(d["pearls"]))
+	boss_defeated.emit(key, id)
+	changed.emit()
+	return {"boss": id, "pearls": int(d["pearls"]), "coins": c}
+
+
+func _read_bosses(v) -> void:
+	bosses = {}
+	if v is Dictionary:
+		for k in v:
+			if depth_index(str(k)) >= 0 and v[k] == true:
+				bosses[str(k)] = true
 
 
 func hire_manager(key: String) -> bool:
@@ -1233,6 +1292,7 @@ func save_game() -> bool:
 		"worlds_runs": worlds_runs,
 		"stars": world_stars,
 		"exchanged": exchanged,
+		"bosses": bosses,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1387,6 +1447,7 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 			var v := _num(ex[k], 0.0)
 			if v > 0.0 and str(k).length() <= 12:
 				exchanged[str(k)] = v
+	_read_bosses(data.get("bosses"))
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

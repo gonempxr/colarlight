@@ -145,17 +145,18 @@ static func world_coins(location: int) -> float:
 
 static func world_of(location: int) -> String:
 	if is_soon(location):
-		return MapArt.SOON_WORLDS[mini(location - Balance.LAST_LOCATION - 1, MapArt.SOON_WORLDS.size() - 1)]
+		var soon := MapArt.soon_worlds()
+		return soon[mini(location - Balance.last_location() - 1, soon.size() - 1)]
 	return MapArt.world_of(location)
 
 
 ## Islands after the last world: not in the game yet ("Soon!").
 static func is_soon(location: int) -> bool:
-	return location > Balance.LAST_LOCATION
+	return location > Balance.last_location()
 
 
 static func tier_of(location: int) -> int:
-	return mini(maxi(0, location), Balance.LAST_LOCATION) / MapArt.WORLDS.size()
+	return Balance.tier_of(mini(maxi(0, location), Balance.last_location()))
 
 
 static func world_name(location: int, with_star: bool = true) -> String:
@@ -433,7 +434,7 @@ func _process(delta: float) -> void:
 func _place() -> void:
 	# Every world from the ocean to the moon, then the "Soon!" islands.
 	_first = 0
-	_last = Balance.LAST_LOCATION + MapArt.SOON_WORLDS.size()
+	_last = Balance.last_location() + MapArt.soon_worlds().size()
 	_pos.clear()
 	var view := get_viewport_rect().size
 	_wide = view.x > view.y * 1.05
@@ -842,7 +843,7 @@ func _soon_panel() -> void:
 	var pic := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
 		var k := minf(s.x, s.y) / 470.0
 		Art.push(ci, s / 2.0 + Vector2(0, 10), 0.0, Vector2(k, k))
-		MapArt.island(ci, MapArt.SOON_WORLDS[0], MapArt.SOON, tt)
+		MapArt.island(ci, MapArt.soon_worlds()[0], MapArt.SOON, tt)
 		Art.pop(ci)
 		MapArt.mystery(ci, s / 2.0 + Vector2(-4, 2), tt, true, 0.4), Vector2(104, 104))
 	pic.custom_minimum_size = Vector2(104, 104)
@@ -850,8 +851,8 @@ func _soon_panel() -> void:
 	var hv := VBoxContainer.new()
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hv.add_theme_constant_override("separation", 4)
-	hv.add_child(_label(t("MAP_SOON_TITLE"), 30, Art.INK, true))
-	hv.add_child(_label(t("MAP_SOON_TEXT"), 21, Art.INK_SOFT))
+	hv.add_child(_label(t("SAGA_SOON_TITLE" if Balance.saga else "MAP_SOON_TITLE"), 30, Art.INK, true))
+	hv.add_child(_label(t("SAGA_SOON_TEXT" if Balance.saga else "MAP_SOON_TEXT"), 21, Art.INK_SOFT))
 	head.add_child(hv)
 	_box.add_child(head)
 	_stars_button()

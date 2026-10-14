@@ -11,7 +11,7 @@ extends RefCounted
 ## static part is cached as one piece (Art.cache_begin); only small things
 ## move (waterfalls, smoke, bubbles, boats).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight"]
 
 ## Island states on the map.
 const DONE := 0
@@ -26,8 +26,10 @@ const SOON := 4
 ## its silhouette exists). "sky" (a city in the clouds) keeps its drawing
 ## for a later update.
 const SOON_WORLDS: Array[String] = ["ice"]
+## The saga's next parts (league games): "coming soon" islands after act I.
+const SAGA_SOON: Array[String] = ["sunken", "abyss"]
 ## The glow around their silhouettes, a hint of what they hold.
-const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a")}
+const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a"), "sunken": Color("6af8ff"), "abyss": Color("ff5a8a")}
 
 const RX := 200.0
 const RY := 100.0
@@ -63,6 +65,9 @@ const LOOK := {
 	"jungle": {"top": Color("4fc463"), "side": Color("c99a58"), "under": Color("9c8456"), "under2": Color("bba271"),
 		"med": Color("3fd6c0"), "med_rim": Color("13857f"), "path": Color("ffe27a"), "tease": Color("5ee07a"),
 		"boat": Color("b8743a"), "boat2": Color("e8603c")},
+	"twilight": {"top": Color("f4c8ea"), "side": Color("a07ad6"), "under": Color("5a3ec8"), "under2": Color("7a5ae0"),
+		"med": Color("3ee8e0"), "med_rim": Color("1f8ac2"), "path": Color("ff9af0"), "tease": Color("ff7ae6"),
+		"boat": Color("6a4ae0"), "boat2": Color("ff6ad8")},
 }
 
 ## Where things stand on each island (local coordinates): the mine, the
@@ -83,6 +88,9 @@ const SPOTS := {
 	"jungle": {"mine": Vector2(-128, -10), "factory": Vector2(122, -8), "office": Vector2(150, -58),
 		"boat": [Vector2(-96, 12), Vector2(-40, 24), Vector2(24, 22), Vector2(88, 10)],
 		"nodes": [Vector2(-140, 52), Vector2(-56, 72), Vector2(40, 74), Vector2(128, 54)]},
+	"twilight": {"mine": Vector2(122, -28), "factory": Vector2(-24, -14), "office": Vector2(-118, -50),
+		"boat": [Vector2(104, -22), Vector2(76, -8), Vector2(40, -6), Vector2(14, -14)],
+		"nodes": [Vector2(-140, 46), Vector2(-50, 70), Vector2(42, 70), Vector2(128, 50)]},
 }
 
 ## Small hue turn for the repeats (tier 1+), so a second ocean looks new.
@@ -94,7 +102,12 @@ static var _sil := {}
 
 
 static func world_of(location: int) -> String:
-	return WORLDS[posmod(location, WORLDS.size())]
+	return str(Balance.world_of(location)["id"])
+
+
+## The "Soon!" islands of this game (the saga's in a league game).
+static func soon_worlds() -> Array[String]:
+	return SAGA_SOON if Balance.saga else SOON_WORLDS
 
 
 static func spots(world: String) -> Dictionary:
@@ -119,7 +132,7 @@ static func top_pts(world: String) -> PackedVector2Array:
 		return _tops[world]
 	var idx := WORLDS.find(world)
 	if idx < 0:
-		idx = WORLDS.size() + SOON_WORLDS.find(world)
+		idx = WORLDS.size() + maxi(SOON_WORLDS.find(world), SAGA_SOON.find(world) + 3)
 	var seed := float(idx) * 1.7 + 0.5
 	var pts := PackedVector2Array()
 	for i in 48:
@@ -481,6 +494,55 @@ static func _ocean(ci: CanvasItem) -> void:
 	_raft(ci, spots("ocean")["mine"], 0.8)
 	Art.t_ellipse(ci, Vector2(-180, 40), Vector2(9, 5), Color("ffc6d6"), 2.0, 0.4)
 	_star_badge(ci, Vector2(90, 52), 7, Color("ff8a3d"))
+	_debris(ci, _c(lk["under"]), DEBRIS)
+
+
+## The Twilight Zone (saga act I): a rosy-lilac island at dusk with a
+## glowing lagoon, coral towers with lights, the Coral Light's beacon and
+## jellyfish drifting over it; glowing tendrils hang from below.
+static func _twilight(ci: CanvasItem) -> void:
+	_body(ci, "twilight", 53)
+	var lk := look("twilight")
+	# Glowing tendrils and corals hanging from the underside.
+	for c in [[Vector2(-110, 110), Color("ff6ad8")], [Vector2(-30, 160), Color("6af8ff")], [Vector2(70, 150), Color("ff9af0")], [Vector2(130, 100), Color("6af8ff")]]:
+		var p: Vector2 = c[0]
+		Art.line_c(ci, PackedVector2Array([p, p + Vector2(-6, 30), p + Vector2(4, 56), p + Vector2(-2, 80)]), Color(c[1], 0.8), 4.0)
+		Art.glow(ci, p + Vector2(-2, 84), 14.0, Color(c[1], 0.6))
+		Art.t_circle(ci, p + Vector2(-2, 84), 4.5, c[1], 1.8, 0.0)
+	_coral(ci, Vector2(-80, 130), 20, Color("ff6ad8"))
+	_coral(ci, Vector2(20, 190), 22, Color("8a5aff"))
+	# Glowing moss hill and the lagoon.
+	var hill := Art.union([Art.ellipse_pts(Vector2(-100, -38), Vector2(84, 42), 24), Art.ellipse_pts(Vector2(-160, -10), Vector2(36, 26), 16)])
+	Art.toon(ci, hill, Color("3ae2c2"), 3.0, 0.7)
+	for p in [Vector2(-140, -40), Vector2(-90, -60), Vector2(-60, -30), Vector2(-170, -10)]:
+		Art.dot(ci, p, 3.0, Color("e8fff8"))
+	_medium(ci, "twilight", [[Vector2(66, -20), Vector2(98, 40)], [Vector2(150, 8), Vector2(42, 24)], [Vector2(178, 22), Vector2(16, 12)]])
+	for p in [Vector2(40, -20), Vector2(80, -8), Vector2(120, -30), Vector2(150, 6)]:
+		Art.dot(ci, p, 2.5, Color(1, 1, 1, 0.85))
+	# Coral towers with lights on top.
+	for c in [[Vector2(-176, -14), 70.0, Color("ff6ad8")], [Vector2(-40, -70), 60.0, Color("8a5aff")], [Vector2(164, -46), 64.0, Color("ff9af0")]]:
+		var b: Vector2 = c[0]
+		var h: float = c[1]
+		Art.toon(ci, PackedVector2Array([b + Vector2(-10, 0), b + Vector2(-6, -h), b + Vector2(6, -h), b + Vector2(10, 0)]), c[2], 2.6, 0.6)
+		Art.glow(ci, b + Vector2(0, -h - 6), 20.0, Color(Color("6af8ff"), 0.6))
+		Art.t_circle(ci, b + Vector2(0, -h - 6), 7.0, Color("bff8ff"), 2.2, 0.0)
+	# The Coral Light's beacon: a coral tower crowned with the glowing shard.
+	var bc := Vector2(64, -60)
+	Art.toon(ci, PackedVector2Array([bc + Vector2(-18, 40), bc + Vector2(-12, -64), bc + Vector2(12, -64), bc + Vector2(18, 40)]), Color("f4c8ea"), 3.0, 0.7)
+	for k in 3:
+		Art.t_rect(ci, Rect2(bc + Vector2(-17, 18 - k * 28), Vector2(34, 7)), 3, Color("ff6ad8"), 2.0, 0.0)
+	Art.t_rect(ci, Rect2(bc + Vector2(-20, -74), Vector2(40, 12)), 4, Color("5a3ec8"), 2.5, 0.3)
+	Art.toon(ci, PackedVector2Array([bc + Vector2(0, -116), bc + Vector2(14, -92), bc + Vector2(0, -74), bc + Vector2(-14, -92)]), Color("6af8ff"), 2.6, 0.4)
+	Art.flat(ci, PackedVector2Array([bc + Vector2(-3, -108), bc + Vector2(4, -96), bc + Vector2(-4, -88)]), Color(1, 1, 1, 0.85))
+	# Jellyfish drifting over the island.
+	for c in [[Vector2(-150, -120), Color("ff9af0")], [Vector2(150, -130), Color("6af8ff")]]:
+		Art.push(ci, c[0], 0.0, Vector2.ONE * 1.4)
+		Props.jelly(ci, 0.0, c[1])
+		Art.pop(ci)
+	_hut(ci, spots("twilight")["office"], 0.95)
+	_factory(ci, spots("twilight")["factory"], 0.85, Color("fff0fa"), Color("6a4ae0"), Color("ff6ad8"))
+	_raft(ci, spots("twilight")["mine"], 0.8)
+	_star_badge(ci, Vector2(90, 52), 7, Color("ffd23f"))
 	_debris(ci, _c(lk["under"]), DEBRIS)
 
 
@@ -1091,6 +1153,7 @@ static func island(ci: CanvasItem, world: String, state: int, t: float, tier: in
 				"acid": _acid(ci)
 				"moon": _moon(ci)
 				"jungle": _jungle(ci)
+				"twilight": _twilight(ci)
 				_: _ocean(ci)
 		Art.cache_end(ci, key)
 	if not dark:
@@ -1150,6 +1213,13 @@ static func _fx(ci: CanvasItem, world: String, t: float) -> void:
 			Art.glow(ci, spots("moon")["office"] + Vector2(-38, -130), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
 		"jungle":
 			_jungle_fx(ci, t)
+		"twilight":
+			# The Coral Light's beam breathing, motes of light drifting up.
+			var b := 0.5 + 0.5 * sin(t * 2.0)
+			Art.glow(ci, Vector2(64, -150), 46.0 + 10.0 * b, Color(0.42, 0.97, 1.0, 0.22 + 0.18 * b))
+			for i in 7:
+				var f := fposmod(t * 0.3 + i / 7.0, 1.0)
+				Art.dot(ci, Vector2(-170 + i * 56 + sin(t + i) * 8, 30 - f * 140), 2.0 + (i % 2), Color(1.0, 0.6, 0.95, 0.9 * (1.0 - f)) if i % 2 == 0 else Color(0.5, 1.0, 0.95, 0.9 * (1.0 - f)))
 
 
 ## "?" and padlock over a locked island; `pulse` makes the next one breathe.
@@ -1464,6 +1534,7 @@ static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, 
 			"acid": _acid(ci)
 			"moon": _moon(ci)
 			"jungle": _jungle(ci)
+			"twilight": _twilight(ci)
 			_: _ocean(ci)
 		Art.pop(ci)
 		Art.fit_recorded(start, Vector2.ZERO, radius - 1.0, Vector2.ZERO, 1.0)

@@ -62,3 +62,11 @@ GIFT_DONE,Sent: %s coins,Отправлено: %s монет,Enviado: %s monedas
 THANKS_GIFT_TITLE,A gift from the leader!,Подарок от лидера!,¡Un regalo del líder!,来自领袖的礼物！
 THANKS_GIFT,+%s coins,+%s монет,+%s monedas,+%s金币
 THANKS_GIFT_WORLDS,Worlds opened: %d,Открыто миров: %d,Mundos abiertos: %d,已开放世界：%d
+DONORS_TAB,Donations,Донаты,Donaciones,支持
+DONORS_TITLE,Support Coralight,Поддержи Coralight,Apoya Coralight,支持Coralight
+DONORS_TEXT,The game is free and stays free. A donation helps make new worlds. It gives no advantage in the game: only a place on this board and our big thanks!,Игра бесплатная и такой останется. Донат помогает делать новые миры. Он не даёт преимуществ в игре: только место в этой таблице и наше большое спасибо!,El juego es gratis y lo seguirá siendo. Una donación ayuda a crear nuevos mundos. No da ventajas en el juego: solo un lugar en esta tabla y nuestro gran agradecimiento.,游戏免费，并将一直免费。你的支持帮助我们制作新世界。它不会让你在游戏中更强：只有这个榜单上的位置和我们的感谢！
+DONORS_PARENTS,Under 18? Only with your parents' permission!,Тебе нет 18? Только с разрешения родителей!,¿Menor de 18? ¡Solo con permiso de tus padres!,未满18：请先得到家长同意！
+DONORS_HOW,Write your nickname in the donation message: it appears here after a check (usually within a day).,Напиши свой ник в сообщении к донату: он появится здесь после проверки (обычно в течение дня).,Escribe tu apodo en el mensaje de la donación: aparecerá aquí tras una revisión (normalmente en un día).,请在留言里留下你的昵称：确定后会显示在这里（通常一天内）。
+DONORS_EMPTY,No donations yet. Be the first!,Донатов пока нет. Будь первым!,Aún no hay donaciones. ¡Sé el primero!,还没有人支持。来做第一个吧！
+DONATE_KOFI,Donate on Ko-fi,Донат через Ko-fi,Donar en Ko-fi,通过Ko-fi支持
+DONATE_DONATIONALERTS,Donate on DonationAlerts,Донат через DonationAlerts,Donar en DonationAlerts,通过DonationAlerts支持

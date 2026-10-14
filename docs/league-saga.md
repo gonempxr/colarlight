@@ -33,6 +33,44 @@ Decisions on the decision card (2026-10-14):
   name comes from the CrazyGames account (`_take_portal_name`), or a guest
   stays "Diver####" until they change it.
 
+## Built: the saga's act I as a real world + mine bosses (2026-10-14, branch `saga`)
+Mark (2026-10-14) rejected the separate Atlas screen ("the design limps, it
+should be different: mines and all the core gameplay as before, only now
+with bosses and new content; and make the design better"). The Atlas code
+was removed; its tap-ring fight lives on in the bosses.
+- **Saga mode** (`Balance.saga`, set by `Profiles._apply_mode` for league
+  profiles): a league game plays the saga's worlds instead of the usual
+  five. Location L is world `SAGA_FIRST + L` from the first numbers (a
+  fresh start), `Balance.last_location()` = `SAGA_LAST` (0: act I only),
+  15 sites per saga world. Looks, map (`MapArt.soon_worlds`: "sunken",
+  "abyss" teasers), mini map, stars and quests follow the mode.
+- **World 6 "The Twilight Zone"** (`twilight`): violet-rose dusk sky over a
+  glowing turquoise sea; underwater sites (abyss divers swim, 4 gear
+  levels `GEAR_TWILIGHT`); 15 site styles + decor (`tw_*` in DepthRow:
+  plankton, lantern fish, jellies, ghost ship, anglers, siren clams,
+  falling stars, eyes in the dark); 5 new ores (`OreArt.twilight_piece`),
+  the rest recolored kin; surface: far coral spires, the Coral Light
+  beacon (`WorldArt.landmark`), pink clouds and sky jellies; map island
+  (`MapArt._twilight`); puzzle pieces (TileWorlds world 5); rods (ocean
+  rods in the twilight palette, `RodArt.TWILIGHT`); factory palette.
+  Office, boats and fishing scene use the shared looks.
+- **Mine bosses** (`MineBoss`, `GameState.boss_*`, `BossScreen`, `BossArt`):
+  guards before sites 4, 7, 10, 13 and 15 (Captain Crabblack, Mother
+  Jelly, Shadow Eel, Young Kraken, the Twilight Warden). The site can't be
+  opened until its guard is beaten. Fight: 45 s, a ring shrinks onto a
+  glowing weak spot; a hit = 8 s of the game's income (perfect x2), combo
+  +10% per hit in a row up to x2; a miss costs 2 s. HP = the site's unlock
+  price x 1.0..1.5, so a stronger mine wins: bosses sit inside the core
+  loop. Lost: the boss heals, try again (no wait). Win: pearls (20..100) +
+  60..120 s of income. Beaten guards are part of the world's run (a star
+  brings them back, stronger). The lightbulb points to the boss.
+- Perf (tools: `tests/perf_attr.gd saga [open=boss]`): the saga mine 6-10 ms
+  median vs the Jungle 8-11 ms; the boss screen ~3 ms (rooms hidden under it).
+- Tests: `tests/test_saga.gd` (mode, world, bosses, save); screenshots
+  `saga[:overlay]`, `saga:boss[:row|:fight|:won|:lost]`; `tests/boss_sheet.gd`.
+- Chinese font: rebuilt from the Debian fonts-noto-cjk SC face (see
+  tools/subset_fonts.py); kerning only, ~219 KB (was 292 KB).
+
 ## The story
 The Coral Light that feeds all five worlds is going out. The Murk (Мгла)
 rises from below the deepest trench. The player's expedition goes where

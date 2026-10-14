@@ -637,6 +637,16 @@ func check_admin() -> void:
 			state_changed.emit())
 
 
+## The donation board: done.call({"ok": bool, "rows": [...]}) (OnlineRules.parse_donors).
+func fetch_donors(done: Callable) -> void:
+	_request("donors", "", func(res: String): done.call(OnlineRules.parse_donors(res)))
+
+
+## Donations show only on our own site (never on a portal) once a link is set.
+func donations_shown() -> bool:
+	return not Platform.on_portal() and not OnlineRules.donate_links().is_empty()
+
+
 func load_bans(done: Callable = Callable()) -> void:
 	_request("bans", "", func(res: String):
 		var d = JSON.parse_string(res) if res.begins_with("{") else null

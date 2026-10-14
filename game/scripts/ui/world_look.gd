@@ -12,7 +12,7 @@ extends RefCounted
 ## the colors from here (and from Art.sea_cols, Art.DEPTH_STYLE and the
 ## DayNight sky stops that apply() sets).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight"]
 
 ## Ten work sites per world (keys d0..d9), the Jungle 15 (d0..d14), deepest last.
 const SITES := {
@@ -22,6 +22,8 @@ const SITES := {
 	"moon": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"],
 	"jungle": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
 		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"],
+	"twilight": ["glow_sand", "lantern_shell", "jelly_pearl", "anchor_iron", "ghost_coin", "angler_light", "ink_crystal",
+		"bone_coral", "siren_scale", "nautilus", "abyss_opal", "kraken_tooth", "deep_star", "warden_eye", "coral_light"],
 }
 
 ## sea: the medium on the surface and above the first site, top to deep.
@@ -83,6 +85,20 @@ const LOOKS := {
 		"sand": Color("eccb8a"), "sand_dark": Color("c49a58"), "grass": Color("36b856"),
 		"seabed": Color("2a3424"), "weed": Color("4ade6a"), "water": false, "far": Color("5fae7c"),
 	},
+	# The saga, act I "The Twilight Zone" (league games): an endless violet
+	# and rose dusk over a glowing turquoise sea full of plankton; lilac sand,
+	# teal glow-moss; underwater sites (divers swim) going from bright
+	# turquoise down to a deep indigo lit by jellyfish and lanterns.
+	"twilight": {
+		"name": "WORLD_TWILIGHT",
+		"sea": [Color("3ee8e0"), Color("1fa6d2"), Color("2c55b4"), Color("1c1c62")],
+		"shaft": [Color("3ee8e0"), Color("1fa6d2"), Color("2c55b4"), Color("1c1c62")],
+		"day": [Color("5b3fcf"), Color("c75ad6"), Color("ffb48c")],
+		"night": [Color("0f0b30"), Color("24165e"), Color("3d2c8f")],
+		"dusk": 0.7, "night_tint": Color(0.64, 0.62, 0.96),
+		"sand": Color("f4c8ea"), "sand_dark": Color("c98ccb"), "grass": Color("3ae2c2"),
+		"seabed": Color("1e1752"), "weed": Color("ff6ad8"), "water": true, "far": Color("8b7ce2"),
+	},
 }
 
 ## Outline width of the big scenery shapes (ground, rock and cave edges,
@@ -113,15 +129,15 @@ static func location_now() -> int:
 
 
 static func world_of(l: int) -> String:
-	return WORLDS[posmod(l, WORLDS.size())]
+	return WORLDS[world_index(l)]
 
 
 static func world_index(l: int) -> int:
-	return posmod(l, WORLDS.size())
+	return Balance.world_index_of(l)
 
 
 static func tier_of(l: int) -> int:
-	return maxi(l, 0) / WORLDS.size()
+	return Balance.tier_of(l)
 
 
 ## Location l's look: its world's colors, turned a little for later tiers.
@@ -164,7 +180,8 @@ static func name_of(l: int) -> String:
 
 ## Switches the drawing colors to location l. True when they changed.
 static func apply(l: int) -> bool:
-	if l == location:
+	# The same location number is another world in a league game.
+	if l == location and world_of(l) == world:
 		return false
 	location = l
 	world = world_of(l)

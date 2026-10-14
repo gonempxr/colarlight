@@ -227,6 +227,41 @@ static func week_id(unix: float) -> int:
 	return floori((day - 4) / 7.0)
 
 
+## Donations (2026-10-14, Mark): only on our own site, never on a portal
+## (CrazyGames allows payments only through Xsolla). Empty link = no button.
+## The board lists donors/{id} {name, total in euro}, added by hand.
+static var donate_urls := {"kofi": "", "donationalerts": ""}
+
+
+## The donate buttons that have a link, in order: [[id, url], ...].
+static func donate_links() -> Array:
+	var out := []
+	for id in ["kofi", "donationalerts"]:
+		var url := str(donate_urls.get(id, ""))
+		if url.begins_with("https://"):
+			out.append([id, url])
+	return out
+
+
+## Rows of the donation board from the shell's answer, high to low;
+## names go through the same filter as the score boards.
+static func parse_donors(res: String) -> Dictionary:
+	var d = JSON.parse_string(res) if res.begins_with("{") else null
+	if not (d is Dictionary and d.get("list") is Array):
+		return {"ok": false}
+	var rows := []
+	for x in d["list"]:
+		if not x is Dictionary:
+			continue
+		var total = x.get("total", 0)
+		var name := strip_name(str(x.get("name", "")))
+		if name == "" or not (total is float or total is int) or not is_finite(float(total)) or float(total) <= 0.0:
+			continue
+		rows.append({"uid": "", "name": name, "score": snappedf(float(total), 0.01), "a": "", "p": "", "you": false, "donor": true})
+	rows.sort_custom(func(a, b): return float(a["score"]) > float(b["score"]))
+	return {"ok": true, "rows": rows.slice(0, 100)}
+
+
 ## The Top League (2026-10-16, Mark): a board of its own from each start
 ## (unix seconds; a start wipes the board: the new league gets a new id =
 ## its start). 05:15 UTC = 8:15 in Tallinn (summer time).

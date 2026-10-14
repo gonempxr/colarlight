@@ -304,6 +304,7 @@ func _ready() -> void:
 		if not _top.visible and _started:
 			ask_nickname(tr("ONLINE_NAME_TAKEN") % name))
 	Online.crown_changed.connect(_on_crown_changed)
+	GameState.boss_requested.connect(open_boss)
 	_setup_league_timer()
 	CloudSave.account_changed.connect(func():
 		if _modal.is_open():
@@ -332,6 +333,10 @@ func _ready() -> void:
 	Progress.feature_unlocked.connect(func(id):
 		_news.append(id)
 		_show_next_news())
+	# News held back by the first tutorial steps shows once they are done.
+	Progress.changed.connect(func():
+		if not _news.is_empty() and not _tutorial_start_busy():
+			_show_next_news())
 	Progress.artifact_leveled.connect(func(id, lv):
 		_show_toast(tr("ARTIFACT_UP") % [tr("ART_" + id.to_upper()), lv]))
 	Progress.item_unlocked.connect(func(id):
@@ -427,7 +432,7 @@ func _process(delta: float) -> void:
 	if _refresh_left <= 0.0:
 		_refresh_left = REFRESH_SEC
 		_refresh()
-	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or _room != MINE
+	Scroller.locked = _modal.visible or _top.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_title) or is_instance_valid(_pass) or is_instance_valid(_boss) or _room != MINE
 	# A full-screen opaque screen (puzzle, fishing, the map) hides the rooms
 	# under it: nothing there needs drawing until it closes.
 	World.calm = _modal.visible or _top.visible
@@ -537,7 +542,7 @@ func _move_slide(delta: float) -> void:
 ## Rooms side by side, moved by the slide; only the ones on screen show.
 ## True while an opaque screen covers the whole window (fully faded in).
 func _covering() -> bool:
-	for c in [_puzzle, _fishing, _pass]:
+	for c in [_puzzle, _fishing, _pass, _boss]:
 		if is_instance_valid(c) and c.visible and c.modulate.a >= 0.999:
 			return true
 	return _map.visible and _map.modulate.a >= 0.999
@@ -1382,6 +1387,24 @@ func open_pass() -> void:
 		_show_next_news())
 
 
+var _boss: Control
+
+
+## A mine boss fight (MineBoss) on its own screen.
+func open_boss(key: String) -> void:
+	if is_instance_valid(_boss) or GameState.boss_at(key) == "":
+		return
+	_modal.close()
+	_boss = BossScreen.new()
+	_boss.main = self
+	_boss.key = key
+	add_child(_boss)
+	move_child(_boss, _fx.get_index())
+	_boss.tree_exited.connect(func():
+		_boss = null
+		_show_next_news())
+
+
 func open_rivals() -> void:
 	_modal.open(func(m): RivalsView.build(m, self))
 
@@ -1410,8 +1433,14 @@ func open_feature(id: String) -> void:
 			open_fishing()
 
 
+## The first tutorial steps (tap, upgrade, hire) are never covered by a
+## "something new" dialog: news waits until they are done.
+func _tutorial_start_busy() -> bool:
+	return Progress.tutorial_step < Tutor.STEPS.find("open_depth")
+
+
 func _show_next_news() -> void:
-	if _news.is_empty() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_pass) or not _started:
+	if _news.is_empty() or _tutorial_start_busy() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_pass) or not _started:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")

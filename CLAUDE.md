@@ -146,9 +146,21 @@ This file is the quick picture; keep it up to date when something big changes.
 - 2026-10-14: Mark approved the beta: `main` = `worlds` 08f10fe and the main
   site = that build (rollback: `save/v3.2`, `save/site-v3.2`). Firestore
   rules v5 + v6 must be published for it (Mark).
+- 2026-10-14 (branch `saga`, docs/league-saga.md "Built"): league games play
+  the saga: `Balance.saga` (set per profile) maps location 0 to world 6 "The
+  Twilight Zone" (15 underwater sites, full core loop, own art) from a fresh
+  start; mine bosses (`MineBoss`, `BossScreen`, `BossArt`) guard sites 4, 7,
+  10, 13, 15 (tap-ring fight, hits = income). The Atlas screen was removed
+  (Mark: "should be the mines and the core loop, with bosses"). Acts II-III
+  (`MapArt.SAGA_SOON`), league points and the end-of-league carry-over are
+  not built yet.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
-  CrazyGames build (CG allows payments only via Xsolla). Plus a separate
-  donation board. Scheme still being agreed with Mark.
+  CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
+  2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by
+  sum), Ko-fi + DonationAlerts buttons (`OnlineRules.donate_urls`, empty =
+  tab hidden), "under 18 only with parents" note, no in-game advantage.
+  Donors = Firestore `donors/{id}` {name, total €} added by Mark by hand;
+  rules v7 in docs/online.md. Waiting for Mark's two links.
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:

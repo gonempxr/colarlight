@@ -36,6 +36,8 @@ const LOOKS := [
 	{"bg": ["3f8a3a", "1f5a2a", "0a2a14"], "floor": "5a6a3a", "frame": "8aa04a", "back": "1f3a1a", "plant": "7fd04a"},
 	{"bg": ["1a1a4a", "0d0d2e", "05051a"], "floor": "b8bccb", "frame": "9aa0b4", "back": "1a1a3a", "plant": "c8ccd8"},
 	{"bg": ["bff0c8", "5cc68a", "1f6a4c"], "floor": "5a8a3a", "frame": "d9bb7c", "back": "173d34", "plant": "3fbf4a"},
+	# The Twilight Zone (saga act I): violet dusk water, rosy sand, pink weed.
+	{"bg": ["7a4ae0", "2c55b4", "1c1c62"], "floor": "f4c8ea", "frame": "c98ccb", "back": "1e1752", "plant": "ff6ad8"},
 ]
 const JUNGLE := 4
 const NO_CELL := Vector2i(-1, -1)

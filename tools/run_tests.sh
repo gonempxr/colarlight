@@ -13,7 +13,7 @@ godot --headless --path . --import >/dev/null 2>&1
 # fixed 60 fps, r = needs a renderer via xvfb)
 TESTS="check_scripts:h test_economy:h test_progress:h test_match3:h test_puzzle_ui:h
 test_fishing:h test_world_taps:h test_diver_trip:h test_ads:h test_cloud:h test_map:h
-test_worlds:h test_rooms:h test_streak:h test_switch:h test_online:h test_clock:h
+test_worlds:h test_rooms:h test_streak:h test_switch:h test_online:h test_clock:h test_saga:h
 test_ui:p test_second:p test_lift:p test_rooms_ui:p test_motion:m test_governor:r"
 
 fails=0

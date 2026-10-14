@@ -104,6 +104,8 @@ static func cloud_colors(world: String, day: float) -> Array:
 			return [Color("d8f0c0").lerp(Color("4a6a5e"), 1.0 - day), Color("7aa88a").lerp(Color("23403a"), 1.0 - day)]
 		"moon":
 			return [Color("a6a2b4").lerp(Color("6a6880"), 1.0 - day * 0.5), Color("4a4660")]
+		"twilight":
+			return [Color("ffd6f2").lerp(Color("6a5ab8"), 1.0 - day), Color("c47ad8").lerp(Color("3a2a7a"), 1.0 - day)]
 	return []
 
 
@@ -527,6 +529,19 @@ static func ridge(ci: CanvasItem, width: float, color: Color) -> void:
 ## lamp sits at LANDMARK_LAMP like the lighthouse's.
 static func landmark(ci: CanvasItem, world: String, rock: Color, haze: Color, lit: float) -> void:
 	match world:
+		"twilight":
+			# The Coral Light's beacon: a coral tower on a reef, its shard
+			# glowing at the top (brighter at night).
+			var reef := Art.smooth_pts(PackedVector2Array([Vector2(-66, 2), Vector2(-40, -20), Vector2(-6, -30), Vector2(34, -22), Vector2(72, 2)]), 4)
+			Art.flat(ci, reef, rock)
+			var ink := INK.lerp(haze, 0.3)
+			var tower := Color("f4c8ea").lerp(haze, 0.35)
+			Art.toon(ci, PackedVector2Array([Vector2(-14, -26), Vector2(-9, -100), Vector2(9, -100), Vector2(14, -26)]), tower, 2.0, 0.0, ink)
+			for y: float in [-48.0, -74.0]:
+				Art.toon(ci, Art.rrect_pts(Rect2(-12, y, 24, 6), 2), Color("ff6ad8").lerp(haze, 0.3), 1.6, 0.0, ink)
+			Art.toon(ci, Art.rrect_pts(Rect2(-15, -108, 30, 9), 3), Color("6a4ae0").lerp(haze, 0.3), 1.8, 0.0, ink)
+			var shard := Props.LAMP_OFF.lerp(Color("6af8ff"), Props._q(maxf(lit, 0.35), 6.0))
+			Art.toon(ci, PackedVector2Array([Vector2(0, -140), Vector2(10, -122), Vector2(0, -108), Vector2(-10, -122)]), shard, 2.0, 0.0, ink)
 		"acid":
 			var cliff := Art.smooth_pts(PackedVector2Array([Vector2(-60, 2), Vector2(-40, -18), Vector2(-10, -28), Vector2(30, -22), Vector2(70, 2)]), 4)
 			Art.flat(ci, cliff, rock)

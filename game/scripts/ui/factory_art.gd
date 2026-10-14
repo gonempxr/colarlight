@@ -61,7 +61,12 @@ const LOOKS := {
 	"jungle": {"wall": Color("e8cd94"), "wall2": Color("dcbc80"), "low": Color("b98f58"), "beam": Color("7a4a26"),
 		"col": Color("dcc28a"), "pipe": Color("d6c25e"), "haz": Color("d6c25e"),
 		"floor": Color("c4a676"), "floor2": Color("8a7048"), "sky": Color("7fd0f2"), "sky2": Color("d4f2dc"),
-		"accent": Color("3fd6c0"), "flame": Color("ff8a2a"), "glow": Color("ffd98a"), "style": "temple"},
+		"accent": Color("3fd6c0"), "flame": Color("ff8a2a"), "glow": Color("ffd98a"), "style": "temple"},	# The Twilight Zone (saga act I): a coral workshop at dusk, lilac tiles,
+	# violet beams, pink pipes, cyan glow; the window shows the dusk sea.
+	"twilight": {"wall": Color("eed6f4"), "wall2": Color("e0c2ec"), "low": Color("8a5ad8"), "beam": Color("4a2e9a"),
+		"col": Color("6a4ab8"), "pipe": Color("ff6ad8"), "haz": Color("6af8ff"),
+		"floor": Color("a088cc"), "floor2": Color("8a70b8"), "sky": Color("c75ad6"), "sky2": Color("3ee8e0"),
+		"accent": Color("6af8ff"), "flame": Color("ff6ad8"), "glow": Color("9afcff"), "style": "tiles"},
 }
 
 ## Machine materials per tier: body, trim, dark parts, light/glow.

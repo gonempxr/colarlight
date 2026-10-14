@@ -23,7 +23,11 @@ const VOLCANO := 1
 const ACID := 2
 const MOON := 3
 const JUNGLE := 4
-const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON", "JUNGLE"]
+## The saga's act I: the ocean's rods in the Twilight Zone's colors.
+const TWILIGHT := 5
+## The palette the ocean rods are drawn in (OCEAN, or TWILIGHT).
+static var _pw := 0
+const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON", "JUNGLE", "TWILIGHT"]
 const LEVELS := 20
 const UNIT := 110.0
 const SIL := Color("b4b2cc")
@@ -173,6 +177,7 @@ const PAL := [
 	{"blank": Color("5d8a3c"), "blank2": Color("6fa046"), "handle": Color("2f3a35"), "accent": Color("b6f36a"), "reel": Color("e8c64a"), "metal": Color("b8c4a8"), "glow": Color("b6ff5a")},
 	{"blank": Color("c9d3e6"), "blank2": Color("e2e8f4"), "handle": Color("3a3f6e"), "accent": Color("8a6cf0"), "reel": Color("dfe6f5"), "metal": Color("aab4cc"), "glow": Color("7ff0ff")},
 	{"blank": Color("cdb85a"), "blank2": Color("3fbf8a"), "handle": Color("c8a46a"), "accent": Color("3fbf4a"), "reel": Color("c98249"), "metal": Color("ffc93c"), "glow": Color("ffd84a")},
+	{"blank": Color("7a4ae0"), "blank2": Color("a07ae8"), "handle": Color("2a1a6a"), "accent": Color("ff6ad8"), "reel": Color("6af8ff"), "metal": Color("e8d8ff"), "glow": Color("ff7ae6")},
 ]
 
 
@@ -232,7 +237,12 @@ static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int,
 		_aura(ci, world, t)
 	match posmod(world, KEYS.size()):
 		OCEAN:
+			_pw = OCEAN
 			_ocean(ci, lv, t)
+		TWILIGHT:
+			_pw = TWILIGHT
+			_ocean(ci, lv, t)
+			_pw = OCEAN
 		VOLCANO:
 			_volcano(ci, lv, t)
 		ACID:
@@ -262,13 +272,13 @@ static func _aura(ci: CanvasItem, world: int, t: float) -> void:
 # --- Ocean: wood, steel, blue, turquoise, coral, pearl ------------------------------------
 
 static func _ocean(ci: CanvasItem, lv: int, t: float) -> void:
-	var blank := pal(OCEAN, "blank") if lv < 20 else Color("5fc8d8")
-	var handle := pal(OCEAN, "handle")
+	var blank := pal(_pw, "blank") if lv < 20 else Color("5fc8d8")
+	var handle := pal(_pw, "handle")
 	var hf := 0.25
 	# Blank: one piece, two from level 13 (with a sleeve).
 	if lv >= 13:
 		_tube(ci, hf - 0.02, 0.6, 6.0, 4.4, blank)
-		_tube(ci, 0.6, 1.0, 4.2, 2.4, pal(OCEAN, "blank2") if lv < 20 else Color("bff0f8"))
+		_tube(ci, 0.6, 1.0, 4.2, 2.4, pal(_pw, "blank2") if lv < 20 else Color("bff0f8"))
 		_band(ci, 0.6, 9.0, 8.0, Art.BRASS)
 	else:
 		_tube(ci, hf - 0.02, 1.0, 6.0, 2.6, blank)
@@ -277,7 +287,7 @@ static func _ocean(ci: CanvasItem, lv: int, t: float) -> void:
 		for f in [0.46, 0.68, 0.88]:
 			_in(ci, f)
 			Art.arc(ci, Vector2(0, 5.5), 2.6, 0.0, TAU, 10, Art.INK, 2.6)
-			Art.arc(ci, Vector2(0, 5.5), 2.6, 0.0, TAU, 10, _c(pal(OCEAN, "metal")), 1.2)
+			Art.arc(ci, Vector2(0, 5.5), 2.6, 0.0, TAU, 10, _c(pal(_pw, "metal")), 1.2)
 			_out(ci)
 	# Handle (with the blue wrap from level 2).
 	_tube(ci, 0.0, hf, 9.0, 8.0, Color("2f6ee8") if lv >= 2 else handle)
@@ -334,13 +344,13 @@ static func _ocean(ci: CanvasItem, lv: int, t: float) -> void:
 	if lv >= 3:
 		var rf := hf - 0.05
 		_in(ci, rf)
-		Art.t_rect(ci, Rect2(-3, 0, 6, 6), 1.5, _c(pal(OCEAN, "metal")), 1.8, 0.0)
+		Art.t_rect(ci, Rect2(-3, 0, 6, 6), 1.5, _c(pal(_pw, "metal")), 1.8, 0.0)
 		var r := 8.0 if lv < 14 else 7.0
 		var c := Vector2(0, 10.5)
 		if lv >= 18:
-			Art.t_circle(ci, c + Vector2(-5.5, 0.5), r * 0.75, _c(pal(OCEAN, "metal")), 2.0, 0.3)
+			Art.t_circle(ci, c + Vector2(-5.5, 0.5), r * 0.75, _c(pal(_pw, "metal")), 2.0, 0.3)
 			Art.t_rect(ci, Rect2(-10, 13, 6, 3), 1.5, _c(Art.RED), 1.6, 0.0)
-		Art.t_circle(ci, c, r, _c(Color("e8f0f8") if lv >= 8 else pal(OCEAN, "reel")), 2.2, 0.4)
+		Art.t_circle(ci, c, r, _c(Color("e8f0f8") if lv >= 8 else pal(_pw, "reel")), 2.2, 0.4)
 		if lv >= 14:
 			Art.t_circle(ci, c, r * 0.68, _c(Color("2f6ee8")), 1.6, 0.3)
 		if lv >= 19:
@@ -352,7 +362,7 @@ static func _ocean(ci: CanvasItem, lv: int, t: float) -> void:
 		if lv >= 8:
 			# Bail over the reel and a crank with a smooth knob.
 			Art.arc(ci, c, r + 2.6, PI * 0.95, PI * 2.05, 10, Art.INK, 2.6)
-			Art.arc(ci, c, r + 2.6, PI * 0.95, PI * 2.05, 10, _c(pal(OCEAN, "metal")), 1.2)
+			Art.arc(ci, c, r + 2.6, PI * 0.95, PI * 2.05, 10, _c(pal(_pw, "metal")), 1.2)
 			_crank(ci, c, r, t, Color("2f6ee8"))
 		_out(ci)
 

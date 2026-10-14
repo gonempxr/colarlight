@@ -28,7 +28,22 @@ const WORLDS: Array[Dictionary] = [
 	{"id": "jungle", "name": "WORLD_JUNGLE", "char": "explorer",
 		"sites": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
 			"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]},
+	# The saga "The Leviathan's Abyss" (Top League games only, see SAGA).
+	{"id": "twilight", "name": "WORLD_TWILIGHT", "char": "abyss_diver",
+		"sites": ["glow_sand", "lantern_shell", "jelly_pearl", "anchor_iron", "ghost_coin", "angler_light", "ink_crystal",
+			"bone_coral", "siren_scale", "nautilus", "abyss_opal", "kraken_tooth", "deep_star", "warden_eye", "coral_light"]},
 ]
+
+## The usual game cycles through the first REGULAR worlds (location L is
+## world L % REGULAR, tier L / REGULAR). A Top League game (`saga` on, set
+## by Profiles for league profiles) plays the saga instead: location L is
+## world SAGA_FIRST + L, from the first site's numbers (a fresh start), with
+## every saga world's 15 sites. SAGA_LAST = the last saga location built
+## (act I only for now).
+const REGULAR := 5
+const SAGA_FIRST := 5
+const SAGA_LAST := 0
+static var saga := false
 
 ## The site ladder every location uses (the first 10 steps; the Jungle all 15) (ids are the ocean ones;
 ## GameState.site_id(i) gives the current world's). value = coins/s per
@@ -224,17 +239,30 @@ static func growth_of(data: Dictionary) -> float:
 
 # --- Worlds and locations ------------------------------------------------------
 
+## Index in WORLDS of location L (the saga's worlds in a league game).
+static func world_index_of(location: int) -> int:
+	if saga:
+		return SAGA_FIRST + clampi(location, 0, WORLDS.size() - 1 - SAGA_FIRST)
+	return posmod(location, REGULAR)
+
+
 static func world_of(location: int) -> Dictionary:
-	return WORLDS[posmod(location, WORLDS.size())]
+	return WORLDS[world_index_of(location)]
 
 
-## Number of work sites of location L (10, the Jungle 15).
+## The last location the game can reach (the Jungle; act I in the saga).
+static func last_location() -> int:
+	return SAGA_LAST if saga else LAST_LOCATION
+
+
+## Number of work sites of location L (10; the Jungle and the saga 15).
 static func site_count(location: int) -> int:
-	return LONG_SITES if posmod(location, WORLDS.size()) == LONG_WORLD else SITES
+	var w := world_index_of(location)
+	return LONG_SITES if w == LONG_WORLD or w >= SAGA_FIRST else SITES
 
 
 static func tier_of(location: int) -> int:
-	return maxi(0, location) / WORLDS.size()
+	return 0 if saga else maxi(0, location) / REGULAR
 
 
 ## Values and level prices of location L.

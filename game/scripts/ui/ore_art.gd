@@ -11,12 +11,20 @@ extends RefCounted
 ## The art kind of each site id (the id itself when it has its own art).
 ## Sites come from the current world (Art.site_ids, set by WorldLook).
 const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "nebula": "void", "cosmic_heart": "heart",
-		"shroom": "glow", "garnet": "garnet", "ember": "ember"}
+		"shroom": "glow", "garnet": "garnet", "ember": "ember",
+		# The Twilight Zone (saga act I): own art for the signature ores, the
+		# others recolored kin (iron nuggets, ink crystals, bone coral, ...).
+		"glow_sand": "moon", "anchor_iron": "copper", "ink_crystal": "crystal", "bone_coral": "coral",
+		"nautilus": "fossil", "abyss_opal": "sapphire", "kraken_tooth": "kraken", "deep_star": "star",
+		"warden_eye": "void", "coral_light": "heart"}
+## The Twilight Zone's own piece kinds (twilight_piece).
+const TWILIGHT: Array[String] = ["lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale"]
 ## Kinds that give off light (a soft pulsing glow behind them).
 const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
 		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
 		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
-		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown",
+		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale"]
 ## Kinds that sit in a mound of rock.
 const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust",
 		"turquoise", "tiger_eye"]
@@ -166,6 +174,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			jungle_piece(ci, kind, ore, ore2, t, i)
 		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown":
 			jungle_deep_piece(ci, kind, ore, ore2, t, i)
+		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale":
+			twilight_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)
@@ -190,6 +200,8 @@ static func chunk(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: flo
 			piece(ci, kind, Vector2(0, 18 * s), s * 1.25, 0.0, st, 0.0, 0)
 		"cocoa", "idol", "serpent", "sky_feather":
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.05, 0.0, st, 0.0, 0)
+		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale":
+			piece(ci, kind, Vector2(0, 19 * s), s * 1.15, 0.0, st, 0.0, 0)
 		"jade_jaguar", "emerald_scarab", "rain_crystal", "sun_crown":
 			piece(ci, kind, Vector2(0, 18 * s), s * 1.25, 0.0, st, 0.0, 0)
 		"crown", "void", "heart":
@@ -225,6 +237,10 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 			Art.toon(ci, _CHIP, Color("2b2340"), 1.2, 0.0)
 		"clay", "cocoa":
 			Art.toon(ci, _CHIP, c.lightened(0.1), 1.2, 0.0)
+		"jelly_pearl", "angler_light":
+			Art.t_circle(ci, Vector2.ZERO, 3.0, st["ore2"] if kind == "jelly_pearl" else c, 1.2, 0.0)
+		"ghost_coin", "lantern_shell", "siren_scale":
+			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5.0, 2.2, 4), c.lightened(0.25), 1.2, 0.0)
 		"mask":
 			Art.toon(ci, _CHIP, Color("8e8e78"), 1.2, 0.0)
 		_:
@@ -243,7 +259,7 @@ static func _tilt(kind: String) -> float:
 				"vent", "whale", "dragon", "crown", "void", "time", "heart", "ash", "fire_opal", "slime", "moss", "bubble", \
 				"venom", "goo_king", "dust", "comet", "alien_egg", "ufo", "clay", "cocoa", "turquoise", "old_coins", "mask", \
 				"tiger_eye", "idol", "sun_disc", "serpent", "temple_heart", "jade_jaguar", "emerald_scarab", "sky_feather", \
-				"rain_crystal", "sun_crown":
+				"rain_crystal", "sun_crown", "jelly_pearl", "ghost_coin", "angler_light":
 			return 0.35
 	return 1.0
 
@@ -2092,3 +2108,63 @@ static var _GOD_CROWN := PackedVector2Array([Vector2(-15, 0), Vector2(-15, -24),
 		Vector2(15, -24), Vector2(15, 0)])
 static var _GOD_CUSHION := Art.smooth_pts(PackedVector2Array([Vector2(-24, -1), Vector2(-26, -8), Vector2(-18, -11), Vector2(18, -11),
 		Vector2(26, -8), Vector2(24, -1), Vector2(0, 1)]), 2)
+
+
+# --- The Twilight Zone (saga act I) -------------------------------------------------------
+
+## The Twilight Zone's own pieces (unit space, ~40 tall, standing on 0,0):
+## a spiral shell with a glowing mouth, a pearl inside a pink jelly bell,
+## a stack of glowing ghost doubloons, an angler's lure on its stalk and a
+## shimmering siren scale. Glows breathe in steps (cache friendly).
+static func twilight_piece(ci: CanvasItem, kind: String, c: Color, c2: Color, t: float, i: int) -> void:
+	var pulse := snappedf(0.5 + 0.5 * sin(t * 2.4 + i * 1.3), 0.25)
+	match kind:
+		"lantern_shell":
+			Art.glow(ci, Vector2(6, -14), 20.0, Color(c, 0.35 + 0.25 * pulse))
+			var body := Art.smooth_pts(PackedVector2Array([Vector2(-16, 0), Vector2(-18, -14), Vector2(-8, -30), Vector2(4, -36),
+				Vector2(14, -26), Vector2(16, -10), Vector2(10, 0)]), 3)
+			Art.toon(ci, body, c2, 2.4, 0.6)
+			for k in 3:
+				Art.arc_c(ci, Vector2(-2, -16), 6.0 + k * 5.0, -2.6, 0.4, 10, Color(Art.INK, 0.35), 1.6)
+			Art.t_ellipse(ci, Vector2(8, -10), Vector2(7, 9), c, 2.0, 0.0, 0.3)
+			Art.flat(ci, Art.ellipse_pts(Vector2(7, -12), Vector2(3, 4), 10, 0.3), Color(1, 1, 1, 0.8))
+		"jelly_pearl":
+			Art.glow(ci, Vector2(0, -16), 24.0, Color(c, 0.3 + 0.2 * pulse))
+			var bell := Art.smooth_pts(PackedVector2Array([Vector2(-17, -4), Vector2(-16, -22), Vector2(0, -36), Vector2(16, -22), Vector2(17, -4),
+				Vector2(8, -1), Vector2(0, -4), Vector2(-8, -1)]), 3)
+			Art.toon(ci, bell, Color(c, 0.75), 2.4, 0.4)
+			Art.t_circle(ci, Vector2(0, -16), 8.0, c2, 2.0, 0.6)
+			Art.flat(ci, Art.ellipse_pts(Vector2(-3, -19), Vector2(2.5, 2), 8), Color(1, 1, 1, 0.9))
+			for k in 3:
+				var x := -8.0 + k * 8.0
+				Art.line_c(ci, PackedVector2Array([Vector2(x, -2), Vector2(x - 2, 4), Vector2(x + 1, 9)]), Color(c, 0.8), 2.0)
+		"ghost_coin":
+			Art.glow(ci, Vector2(0, -14), 22.0, Color(c, 0.35 + 0.2 * pulse))
+			for k in 3:
+				var y := -4.0 - k * 7.0
+				Art.t_ellipse(ci, Vector2((k % 2) * 3.0 - 1.5, y), Vector2(15, 6), c2 if k == 2 else c, 2.2, 0.4)
+			Art.t_ellipse(ci, Vector2(1.5, -26), Vector2(11, 11), c2, 2.4, 0.5, 0.0)
+			draw_skull_mark(ci, Vector2(1.5, -26), 5.5, c)
+		"angler_light":
+			Art.polyline(ci, Art.smooth_pts(PackedVector2Array([Vector2(-10, 0), Vector2(-12, -14), Vector2(-4, -26), Vector2(6, -28)]), 3), Art.INK, 4.0)
+			Art.polyline(ci, Art.smooth_pts(PackedVector2Array([Vector2(-10, 0), Vector2(-12, -14), Vector2(-4, -26), Vector2(6, -28)]), 3), Color("4a3a8c"), 2.0)
+			Art.glow(ci, Vector2(8, -26), 26.0, Color(c, 0.45 + 0.3 * pulse))
+			Art.t_circle(ci, Vector2(8, -26), 9.0, c, 2.4, 0.3)
+			Art.t_circle(ci, Vector2(8, -26), 4.5, Color(1, 1, 0.85), 0.0, 0.0)
+			Art.t_ellipse(ci, Vector2(-8, -1), Vector2(10, 4), Color("4a3a8c"), 2.0, 0.3)
+		"siren_scale":
+			var tear := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(-14, -12), Vector2(-12, -28), Vector2(0, -38), Vector2(12, -28),
+				Vector2(14, -12)]), 3)
+			Art.glow(ci, Vector2(0, -18), 22.0, Color(c, 0.25 + 0.2 * pulse))
+			Art.toon(ci, tear, c, 2.4, 0.7)
+			Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(0, -8), Vector2(-8, -16), Vector2(-7, -26), Vector2(0, -31), Vector2(7, -26),
+				Vector2(8, -16)]), 3), c2, 0.0, 0.0)
+			Art.flat(ci, Art.ellipse_pts(Vector2(-4, -26), Vector2(2.5, 5), 8, 0.3), Color(1, 1, 1, 0.75))
+
+
+## A tiny skull on a ghost doubloon.
+static func draw_skull_mark(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	var dark := col.darkened(0.55)
+	Art.flat(ci, Art.circle_pts(c + Vector2(0, -r * 0.15), r * 0.75, 12), dark)
+	for sx in [-1.0, 1.0]:
+		Art.flat(ci, Art.circle_pts(c + Vector2(sx * r * 0.3, -r * 0.2), r * 0.2, 8), col.lightened(0.5))

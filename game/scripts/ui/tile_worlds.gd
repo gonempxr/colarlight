@@ -18,6 +18,7 @@ const COLORS := {
 	2: [Color("8ff03c"), Color("e8423c"), Color("2fc4a0"), Color("d45cf0"), Color("ffae2a"), Color("4fc8ff")],
 	3: [Color("e8f4ff"), Color("ff9a4a"), Color("ffe04a"), Color("6ee05a"), Color("d8553a"), Color("a77bff")],
 	4: [Color("ffe03a"), Color("3a9cff"), Color("ff4a86"), Color("9a6234"), Color("ffa21e"), Color("2fd27a")],
+	5: [Color("ff7ae6"), Color("ffd23f"), Color("ece0ff"), Color("2ae0c0"), Color("ff9a3d"), Color("8a5aff")],
 }
 
 
@@ -49,6 +50,12 @@ static func draw(ci: CanvasItem, world: int, slot: int, t: float, lift: float) -
 		34: _meteor(ci, t, col)
 		35: _ufo(ci, t, col)
 		40, 41, 42, 43, 44, 45: TileJungle.piece(ci, slot, t, col)
+		50: _jelly(ci, t, col)
+		51: _lantern_fish(ci, t, col)
+		52: _glow_pearl(ci, t, col)
+		53: _seahorse(ci, t, col)
+		54: _nautilus(ci, t, col)
+		55: _abyss_crystal(ci, t, col)
 
 
 static func _shine(ci: CanvasItem, c: Vector2, radii: Vector2, rot: float, a: float = 0.8) -> void:
@@ -341,6 +348,7 @@ static func block_colors(world: int) -> Array:
 		2: return [Color("7fae4a"), Color("4f7a2a")]
 		3: return [Color("c8ccd8"), Color("8f95a8")]
 		4: return [Color("d9bb7c"), Color("a8844a")]
+		5: return [Color("c98ccb"), Color("8a5aa8")]
 	return [Art.SAND, Art.SAND_DARK]
 
 
@@ -351,4 +359,66 @@ static func bubble_colors(world: int) -> Array:
 		2: return [Color(0.6, 1.0, 0.4, 0.32), Color("3f8a1a")]
 		3: return [Color(0.75, 0.65, 1.0, 0.32), Color("5a3fb0")]
 		4: return [Color(0.55, 1.0, 0.75, 0.22), Color("2f8a3a")]
+		5: return [Color(1.0, 0.6, 0.95, 0.3), Color("a03ab0")]
 	return [Color(0.72, 0.93, 1.0, 0.3), Color("2f7fc0")]
+
+
+# --- The Twilight Zone (saga act I) ---------------------------------------------------
+
+## Jellyfish: a round pink bell with a happy face and wavy tentacles.
+static func _jelly(ci: CanvasItem, t: float, col: Color) -> void:
+	var sway := snappedf(sin(t * 3.0) * 2.0, 0.5)
+	for k in 4:
+		var x := -12.0 + k * 8.0
+		Art.polyline(ci, PackedVector2Array([Vector2(x, 4), Vector2(x + sway, 12), Vector2(x - sway, 20)]), col.darkened(0.25), 3.0)
+	var bell := Art.smooth_pts(PackedVector2Array([Vector2(-20, 6), Vector2(-19, -8), Vector2(-8, -20), Vector2(8, -20), Vector2(19, -8), Vector2(20, 6)]), 4)
+	Art.toon(ci, bell, col, _W, 0.6)
+	_shine(ci, Vector2(-8, -11), Vector2(5, 3), -0.4)
+	_eyes(ci, Vector2(0, -3), 6.0, 3.2)
+
+
+## Lantern fish: a round yellow fish with a glowing lure.
+static func _lantern_fish(ci: CanvasItem, t: float, col: Color) -> void:
+	Art.toon(ci, PackedVector2Array([Vector2(-14, 0), Vector2(-24, -10), Vector2(-24, 10)]), col.darkened(0.2), _W, 0.3)
+	Art.toon(ci, Art.ellipse_pts(Vector2(2, 0), Vector2(18, 15), 28), col, _W, 0.6)
+	Art.polyline(ci, PackedVector2Array([Vector2(8, -13), Vector2(14, -22), Vector2(20, -20)]), Art.INK, 2.5)
+	Art.t_circle(ci, Vector2(20, -19), 4.5, Color("bff8ff"), 2.0, 0.0)
+	_shine(ci, Vector2(-4, -7), Vector2(5, 3), -0.3)
+	Art.t_circle(ci, Vector2(9, -2), 4.0, Art.WHITE, 2.0, 0.0)
+	Art.flat(ci, Art.circle_pts(Vector2(10, -2), 2.2, 10), Art.INK)
+
+
+## Glowing pearl: a big pearl on a little pink shell.
+static func _glow_pearl(ci: CanvasItem, t: float, col: Color) -> void:
+	Art.toon(ci, Art.smooth_pts(PackedVector2Array([Vector2(-22, 12), Vector2(-14, 4), Vector2(0, 8), Vector2(14, 4), Vector2(22, 12), Vector2(0, 20)]), 3), Color("ff9af0"), _W, 0.4)
+	Art.t_circle(ci, Vector2(0, -4), 16.0, col, _W, 0.7)
+	_shine(ci, Vector2(-6, -10), Vector2(5, 3.5), -0.5, 0.95)
+	_twinkle(ci, Vector2(10, -16), 6.0, t, 0.0)
+
+
+## Seahorse: a curled teal seahorse.
+static func _seahorse(ci: CanvasItem, t: float, col: Color) -> void:
+	var body := Art.smooth_pts(PackedVector2Array([Vector2(-4, -20), Vector2(8, -18), Vector2(10, -8), Vector2(4, 2), Vector2(8, 12), Vector2(2, 20),
+		Vector2(-8, 18), Vector2(-4, 12), Vector2(-8, 4), Vector2(-10, -8)]), 3)
+	Art.toon(ci, body, col, _W, 0.6)
+	Art.toon(ci, PackedVector2Array([Vector2(6, -16), Vector2(20, -14), Vector2(20, -9), Vector2(8, -10)]), col, _W, 0.3)
+	Art.toon(ci, PackedVector2Array([Vector2(-10, -6), Vector2(-18, -2), Vector2(-10, 4)]), Color("ff9af0"), 2.2, 0.0)
+	Art.t_circle(ci, Vector2(1, -13), 3.2, Art.WHITE, 1.8, 0.0)
+	Art.flat(ci, Art.circle_pts(Vector2(1.6, -13), 1.8, 8), Art.INK)
+
+
+## Nautilus: an orange striped spiral shell.
+static func _nautilus(ci: CanvasItem, t: float, col: Color) -> void:
+	Art.toon(ci, Art.circle_pts(Vector2(0, 0), 20.0, 32), col, _W, 0.6)
+	for k in 3:
+		Art.arc_c(ci, Vector2(-2, 0), 6.0 + k * 5.0, -1.8, 1.6, 12, Color("fff4dc"), 3.0)
+	Art.t_circle(ci, Vector2(-2, 0), 4.0, col.lightened(0.3), 1.8, 0.0)
+	_shine(ci, Vector2(-8, -12), Vector2(5, 3), -0.5)
+
+
+## Abyss crystal: a tall violet gem cluster.
+static func _abyss_crystal(ci: CanvasItem, t: float, col: Color) -> void:
+	Art.crystal(ci, Vector2(-9, 18), 26, 8, -0.35, col.darkened(0.15), 2.6)
+	Art.crystal(ci, Vector2(10, 18), 28, 8, 0.3, col.darkened(0.15), 2.6)
+	Art.crystal(ci, Vector2(0, 20), 40, 11, 0.0, col, _W)
+	_twinkle(ci, Vector2(3, -12), 6.0, t, 1.0)

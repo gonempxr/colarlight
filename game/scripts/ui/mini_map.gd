@@ -41,7 +41,7 @@ func set_big(on: bool) -> void:
 
 
 func _refresh() -> void:
-	_loc = mini(MapView.cur_location() if location_override < 0 else location_override, Balance.LAST_LOCATION)
+	_loc = mini(MapView.cur_location() if location_override < 0 else location_override, Balance.last_location())
 	_name = MapView.world_name(_loc)
 	tooltip_text = TranslationServer.translate("MAP_TITLE")
 	_ready_gate = MapView.can_advance()

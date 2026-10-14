@@ -38,6 +38,7 @@ func _ready() -> void:
 		_save()
 	if find(current_id).is_empty():
 		current_id = list[0]["id"]
+	_apply_mode()
 
 
 func current() -> Dictionary:
@@ -195,9 +196,16 @@ func select(id: String) -> void:
 	_save_all()
 	current_id = id
 	_save()
+	_apply_mode()
 	_load_all()
 	if has_node("/root/Fishing"): get_node("/root/Fishing").switch_profile()
 	switched.emit()
+
+
+## A league game plays the saga's worlds (Balance.saga), the others the
+## usual five. Set before the game of the profile loads.
+func _apply_mode() -> void:
+	Balance.saga = league_game()
 
 
 func _save_all() -> void:

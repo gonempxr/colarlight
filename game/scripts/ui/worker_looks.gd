@@ -24,7 +24,9 @@ extends RefCounted
 ## swing, upright). Workers whose legs are a tail, tentacles, a blob or a
 ## wisp glide instead of stepping.
 
-const WORLDS := ["ocean", "volcano", "acid", "moon", "jungle"]
+const WORLDS := ["ocean", "volcano", "acid", "moon", "jungle", "twilight"]
+## Worlds whose workers swim (the rest walk).
+const WATER_WORLDS := [0, 5]
 ## Gear levels per world.
 const GEARS := 4
 ## Look codes per world (gear + 4 * slot, slot 0..15).
@@ -36,7 +38,7 @@ const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b0
 ## Color of each gear level's badge (level 1..4).
 const GEAR_COLORS: Array[Color] = [Color("8ec9f0"), Color("5cd05f"), Color("ff9a2e"), Color("ffc93c")]
 ## Soft rim light of each world's silhouettes.
-const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff"), Color("ffd86a")]
+const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff"), Color("ffd86a"), Color("ff7ae6")]
 ## Heads of the gear looks are a bit bigger than the old forms' (the
 ## reference sheets: big round heads on small bodies).
 const GEAR_HEAD := 1.16
@@ -636,6 +638,32 @@ const GEAR_JUNGLE: Array[Dictionary] = [
 	"th": Color("1e4a44"), "wrap": Color("2ad0c0"), "fx": ["sparkles"], "glow": Color("ffd23f"), "mk": ["suit", "arm_c", "leg_c"]},
 ]
 
+## The saga's act I (league games): abyss divers lit by their own glow.
+const GEAR_TWILIGHT: Array[Dictionary] = [
+	# 1 a violet wetsuit with glowing cyan trim, a head lamp and a tank
+	{"head": "hood", "hc": Color("2ad0c0"), "visor": Color("ff6ad8"), "suit": Color("7a4ae0"), "trim": Color("6af8ff"),
+	"belt": Color("2a1a6a"), "glove": Color("2a1a6a"), "cuff": Color("6af8ff"), "legs": "fins", "leg_c": Color("7a4ae0"),
+	"boot": Color("ff6ad8"), "back": ["tank"], "tank_c": Color("bff4ff"), "tool": "pick", "tc": Color("c8f4ff"),
+	"th": Color("2a1a6a"), "fx": ["bubbles"], "mk": ["suit", "arm_c", "leg_c"]},
+	# 2 twin tanks, a pink visor ring and jelly-glow stripes
+	{"head": "hood", "hc": Color("ff6ad8"), "visor": Color("6af8ff"), "suit": Color("3a2aa8"), "pattern": "stripes",
+	"pc": Color("6af8ff"), "trim": Color("ff9af0"), "belt": Color("ff6ad8"), "glove": Color("1a1450"), "cuff": Color("ff9af0"),
+	"legs": "fins", "leg_c": Color("3a2aa8"), "boot": Color("6af8ff"), "back": ["twin_tanks", "hose"], "tank_c": Color("ffd0f4"),
+	"tool": "pick", "tc": Color("e8f8ff"), "th": Color("ff6ad8"), "fx": ["bubbles", "glow"], "glow": Color("6af8ff"),
+	"mk": ["suit", "arm_c", "leg_c"]},
+	# 3 a silver-teal deep helmet with a lantern, glowing cuffs
+	{"head": "brass", "hc": Color("7fe8e0"), "suit": Color("5a3ad0"), "trim": Color("6af8ff"), "belt": Color("ffc93c"),
+	"glove": Color("1a1450"), "cuff": Color("6af8ff"), "legs": "fins", "leg_c": Color("5a3ad0"), "boot": Color("ff6ad8"),
+	"back": ["tank", "hose"], "tank_c": Color("ffc93c"), "tool": "pick", "tc": Color("6af8ff"), "th": Color("ffc93c"),
+	"fx": ["bubbles", "glow"], "glow": Color("ff7ae6"), "mk": ["suit", "arm_c", "leg_c"]},
+	# 4 abyss armour: a glass dome, a glowing chest plate and a trident
+	{"head": "dome", "hc": Color("bff4ff"), "torso": "armor", "suit": Color("2a1e7a"), "plate": Color("6af8ff"),
+	"emblem": "sun_disc", "ec": Color("ff6ad8"), "belt": Color("ffc93c"), "arms": "pauldron", "arm_c": Color("2a1e7a"),
+	"glove": Color("6af8ff"), "cuff": Color("ff6ad8"), "legs": "fins", "leg_c": Color("2a1e7a"), "boot": Color("ff6ad8"),
+	"back": ["twin_tanks"], "tank_c": Color("6af8ff"), "tool": "trident", "tc": Color("ffd23f"), "th": Color("2a1e7a"),
+	"orb": Color("6af8ff"), "fx": ["sparkles", "glow"], "glow": Color("6af8ff"), "mk": ["suit", "arm_c", "leg_c"]},
+]
+
 # --- Pattern skins ----------------------------------------------------------------------
 # main: the suit color (MAIN_KEYS of the gear); motif + mc / mc2: what is
 # drawn over the helmet, suit, sleeves and legs; set: other keys to change.
@@ -692,7 +720,7 @@ static func _spec(w: int, form: int) -> Dictionary:
 	if s != null:
 		return s
 	w = clampi(w, 0, WORLDS.size() - 1)
-	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON, GEAR_JUNGLE]
+	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON, GEAR_JUNGLE, GEAR_TWILIGHT]
 	var g: Dictionary = gears[w][gear_of(form)]
 	var d: Dictionary = DEFAULT.duplicate()
 	d.merge(g, true)
@@ -793,7 +821,7 @@ static func draw(ci: CanvasItem, pos: Vector2, scale: float, world: String, form
 		depth: int, pose: Dictionary) -> void:
 	_use(world, form)
 	Chars._small = scale < 1.0
-	var water := _w == 0
+	var water := _w in WATER_WORLDS
 	if not water and arm == "swim":
 		arm = "walk"
 	if arm == "walk":

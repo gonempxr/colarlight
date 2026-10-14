@@ -1005,11 +1005,11 @@ func load_game() -> bool:
 	quests = _parse_quests(d.get("quests"))
 	# Saves from before per-world quests: the list belongs to the world
 	# being played.
-	quest_loc = clampi(_int(d.get("quest_loc")), 0, Balance.LAST_LOCATION) if d.has("quest_loc") else int(GameState.location)
+	quest_loc = clampi(_int(d.get("quest_loc")), 0, Balance.last_location()) if d.has("quest_loc") else int(GameState.location)
 	if d.get("world_quests") is Dictionary:
 		for k in d["world_quests"]:
 			var l: int = str(k).to_int() if str(k).is_valid_int() else -1
-			if l >= 0 and l <= Balance.LAST_LOCATION and l != quest_loc:
+			if l >= 0 and l <= Balance.last_location() and l != quest_loc:
 				world_quests[str(l)] = _parse_quests(d["world_quests"][k])
 	if quest_loc != int(GameState.location):
 		_swap_quests(int(GameState.location))

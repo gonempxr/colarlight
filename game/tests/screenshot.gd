@@ -14,8 +14,8 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
-## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
-## board:<month|friends|clubs|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
+## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | boss[:row|:fight|:won|:lost] (a mine boss, saga games) | stars[:confirm|:map] |
+## board:<month|friends|clubs|donors|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -30,6 +30,15 @@ func _initialize() -> void:
 	root.get_node("Settings").language = lang
 	root.get_node("Settings").ui_scale = ui_scale
 	TranslationServer.set_locale(lang)
+	# "saga[:overlay]": the shot in a Top League game (the saga's worlds).
+	var pf0 := root.get_node("Profiles")
+	if overlay.begins_with("saga"):
+		pf0.enter_league(OnlineRules.LEAGUE_STARTS[0])
+		overlay = overlay.trim_prefix("saga").trim_prefix(":")
+		if overlay == "":
+			overlay = "-"
+	elif pf0.league_game():
+		pf0.leave_league()
 	var gs := root.get_node("GameState")
 	gs.autosave_enabled = false
 	gs.save_path = "user://screenshot_save.json"
@@ -292,6 +301,42 @@ func _initialize() -> void:
 			elif overlay.begins_with("nick"):
 				root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "")
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
+			elif overlay.begins_with("boss"):
+				# A mine boss (saga games): the guarded row ("boss:row"), the
+				# fight screen (ready, ":fight", ":won", ":lost").
+				var g := root.get_node("GameState")
+				var nd: String = g.next_depth()
+				var guard := ""
+				for i in g.site_count():
+					if guard == "" and not g.is_open("d%d" % i):
+						for j in range(i, g.site_count()):
+							if MineBoss.guard(g.world_id(), j) != "":
+								guard = "d%d" % j
+								break
+				if guard != "" and guard != nd:
+					for i in g.depth_index(guard):
+						if g.levels.get("d%d" % i, 0) == 0:
+							g.levels["d%d" % i] = 1
+				if overlay != "boss:row":
+					main.open_boss(g.next_depth())
+					for i in 4:
+						await process_frame
+					var bs: Node = main._boss
+					if bs and overlay != "boss":
+						bs._start()
+						if overlay == "boss:fight":
+							bs._pause = 0.0
+							bs._ring_t = bs._cycle() * 0.55
+							bs._hp = bs._hp_max * 0.62
+							bs._combo = 4
+							bs._hurt = 0.6
+							bs._pops = [[bs._center() + Vector2(30, -60), "-1.2M", Color.WHITE, 0.3, 30], [bs._center() + Vector2(30, -110), TranslationServer.translate("BOSS_PERFECT"), Color("7fffb0"), 0.2, 32]]
+						elif overlay == "boss:won":
+							bs._hp = 0.0
+							bs._end(true)
+						else:
+							bs._left = 0.0
+							bs._end(false)
 			elif overlay.begins_with("pass"):
 				# The sea pass at level 7 with three rewards waiting.
 				var bpass = load("res://scripts/data/battle_pass.gd")
@@ -322,7 +367,7 @@ func _initialize() -> void:
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the thank-you dialog); board:taken (the name is someone else's);
-## pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
+pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")
@@ -431,7 +476,12 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			online.crown = {"uid": online.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"]), "score": 9e9}
 		"board":
 			ov.tab = "week"
-			for k in ["all", "month", "friends", "clubs", "puzzle", "league"]:
+			if "donors" in parts:
+				# The donation board with a few donors (links set for the picture).
+				OnlineRules.donate_urls = {"kofi": "https://ko-fi.com/coralight", "donationalerts": "https://www.donationalerts.com/r/coralight"}
+				fake.donors = [{"name": "Маша", "total": 50}, {"name": "Petya", "total": 25}, {"name": "DiverKing", "total": 15},
+					{"name": "Lena", "total": 10}, {"name": "Coral", "total": 5}]
+			for k in ["all", "month", "friends", "clubs", "puzzle", "league", "donors"]:
 				if k in parts:
 					ov.tab = k
 			if "live" in parts:
