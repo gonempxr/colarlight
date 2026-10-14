@@ -301,7 +301,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":3391440,"index.wasm":30453421},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":3397232,"index.wasm":30453421},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 
 // Frame budget, set before the engine starts:
@@ -1131,6 +1131,10 @@ window.coralightFirebase = (function () {
 				store(d);
 				return later('ok');
 			},
+			// The donation board: a few made-up donors for testing.
+			donors: function () {
+				return later(JSON.stringify({ list: [{ name: 'Test donor', total: 20 }, { name: 'Coral fan', total: 5 }] }));
+			},
 			unban: function (a) {
 				if (!(q && q.get('admin') === '1')) {
 					return deny();
@@ -1484,6 +1488,18 @@ window.coralightFirebase = (function () {
 					}, function () { return 'ok'; });
 				});
 			},
+			// The donation board (our own site only): donors/{id} {name, total},
+			// added by hand by the leader in the Firebase console.
+			donors: function () {
+				return F.db.collection('donors').orderBy('total', 'desc').limit(100).get().then(function (snap) {
+					const list = [];
+					snap.forEach(function (d) {
+						const x = d.data();
+						list.push({ name: String(x.name || '').slice(0, 24), total: Number(x.total) || 0 });
+					});
+					return JSON.stringify({ list: list });
+				});
+			},
 			unban: function (a) {
 				return F.db.collection('bans').doc(a.uid).delete().then(function () { return 'ok'; });
 			},
@@ -1633,6 +1649,7 @@ window.coralightFirebase = (function () {
 		bans: function () { return api.bans(); },
 		kick: function (arg) { return api.kick(JSON.parse(arg)); },
 		unban: function (arg) { return api.unban(JSON.parse(arg)); },
+		donors: function () { return api.donors(); },
 		link: function (arg) { return linkFor(arg); },
 		share: function (arg) { return online.share(JSON.parse(arg)); },
 	};
