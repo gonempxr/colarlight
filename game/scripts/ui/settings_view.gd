@@ -221,6 +221,8 @@ static func players(m: Modal, main: Node) -> void:
 			Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, look, "happy", Chars.blinking(tt, 3.0), Color("ffd98a")),
 			Vector2(76, 76), true))
 		var name_text: String = p["name"] if p["name"] != "" else "?"
+		if int(p.get("league", 0)) > 0:
+			name_text += " · " + t("LEAGUE_BADGE")
 		var l := Views.label(name_text, 26, Art.INK, true)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF

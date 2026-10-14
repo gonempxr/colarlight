@@ -130,6 +130,13 @@ This file is the quick picture; keep it up to date when something big changes.
   (Moon -> Jungle ~1400:1), up to `Balance.EXCHANGE_SHARE` (10%) of that
   world's gate price in all (`GameState.exchange_*`, saved as `exchanged`);
   not earnings, boards don't move. sim: Jungle 150 -> 95 min with a full purse.
+- 2026-10-14 (branch `league`, docs/league-saga.md): the Top League is now
+  its OWN fresh save (a league profile, `Profiles.enter_league`); only coins
+  earned there count on the league board, the usual game stays untouched.
+  League start moved to 05:15:01 UTC (board id ...701) so builds that
+  counted all progress write elsewhere. Saga "The Leviathan's Abyss"
+  (3 acts + PoE2-style Atlas of sea charts, bounties) is agreed but not built.
+  CrazyGames: no nickname dialog at start, the CG account name is used.
 - Open requests from Mark:
   1. New promo video for CrazyGames + TikTok + Instagram (vertical), same
      style as `tools/promo_video` (he loved it) but a new meme plot:

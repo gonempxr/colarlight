@@ -387,8 +387,10 @@ func _announce_ready() -> void:
 	print("CORALIGHT_READY")
 
 
-## The web game asks a new player for a nickname right at the start.
-var ask_nick_at_start := OS.has_feature("web")
+## The web game asks a new player for a nickname right at the start, except
+## on a portal (CrazyGames wants players straight in the game): there the
+## name comes from the portal account, or stays "Diver####" until changed.
+var ask_nick_at_start := OS.has_feature("web") and not Platform.on_portal()
 
 
 func _after_title() -> void:
@@ -397,6 +399,11 @@ func _after_title() -> void:
 	Platform.gameplay_start()
 	if ask_nick_at_start and Profiles.player_name() == "":
 		ask_nickname()
+	elif Platform.on_portal() and Profiles.player_name() == "":
+		_take_portal_name()
+	# A game in the Top League's own save says so (it is not the usual game).
+	if Profiles.in_league(int(Profiles.current().get("league", 0))):
+		get_tree().create_timer(1.5).timeout.connect(func(): _show_toast(tr("LEAGUE_IN_TEXT")))
 	if GuideView.news_due():
 		_news.append("whatsnew")
 	var report := GameState.take_offline_report()
@@ -1589,6 +1596,20 @@ func ask_name(id: String, done: Callable) -> void:
 		edit.text_submitted.connect(submit)
 		r.add_child(ok)
 		edit.grab_focus.call_deferred())
+
+
+## On a portal a new player takes their portal account's name without a
+## dialog (the SDK may still be starting: a few tries). A guest keeps the
+## "Diver####" board name; a taken name brings the dialog later as usual.
+func _take_portal_name(tries: int = 6) -> void:
+	if Profiles.player_name() != "":
+		return
+	var u := OnlineRules.strip_name(Profiles.clean_name(Platform.cg_user()))
+	if u != "" and not OnlineRules.is_rude(u):
+		Profiles.set_name_of(Profiles.current_id, u)
+		return
+	if tries > 1:
+		get_tree().create_timer(2.0).timeout.connect(_take_portal_name.bind(tries - 1))
 
 
 ## The nickname dialog (a new player, or the online name was taken): the

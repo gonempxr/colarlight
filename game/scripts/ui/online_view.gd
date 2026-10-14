@@ -116,6 +116,7 @@ static func board(m: Modal, main: Node) -> void:
 		return
 	match tab:
 		"league":
+			_league_join(m, main)
 			m.text(t("LEAGUE_HINT"), 18, Art.INK_SOFT)
 		"week":
 			m.text(t("ONLINE_WEEK_HINT"), 18, Art.INK_SOFT)
@@ -349,6 +350,41 @@ static func _race(rows: Array, rank: int, mine: float) -> Control:
 	sat.custom_minimum_size.x = 160
 	v.add_child(sat)
 	return card
+
+
+## The Top League is its own fresh game (a league profile): join it / play
+## it, or go back to the usual game.
+static func _league_join(m: Modal, main: Node) -> void:
+	var lg := OnlineRules.league_id(Clock.now())
+	if lg <= 0:
+		return
+	var inside: bool = Profiles.in_league(lg)
+	var card := Views.card(Color("2b2f6b"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	card.add_child(v)
+	if inside:
+		v.add_child(_center(Views.label(t("LEAGUE_IN_TEXT"), 19, Color("dfe4ff"))))
+	else:
+		v.add_child(_center(Views.label(t("LEAGUE_JOIN_TITLE"), 24, Color("ffe08a"), true)))
+		v.add_child(_center(Views.label(t("LEAGUE_JOIN_TEXT"), 19, Color("dfe4ff"))))
+	m.add(card)
+	var has_game: bool = not Profiles.league_profile(lg).is_empty()
+	var label := t("LEAGUE_BACK") if inside else (t("LEAGUE_PLAY") if has_game else t("LEAGUE_JOIN"))
+	var b := m.button(label, func():
+		Sfx.play("start")
+		if inside:
+			Profiles.leave_league()
+		else:
+			# A new league game skips the tutorial the player already did.
+			var step: int = Progress.tutorial_step
+			Profiles.enter_league(lg)
+			Progress.advance_tutorial(step)
+		main.after_profile_switch()
+		if not inside:
+			main._show_toast(t("LEAGUE_ENTERED"))
+		m.rebuild(), &"Button" if inside else &"GoldButton")
+	b.icon = Icons.get_icon("star", 32)
 
 
 ## Until the Top League starts: a live countdown and what will happen.
