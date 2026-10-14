@@ -248,3 +248,5 @@ MY_ID,Your ID: %s,Твой ID: %s,Tu ID: %s,你的 ID：%s
 COPIED,Copied!,Скопировано!,¡Copiado!,已复制！
 BP_BONUS_BUY,Open: %d pearls,Открыть: %d жемчуга,Abrir: %d perlas,开启：%d珍珠
 BP_BONUS_NO_PEARLS,You need %d pearls. Pearls come from quests and challenges!,Нужно %d жемчуга. Жемчуг дают задания и испытания!,Necesitas %d perlas. ¡Las perlas salen de misiones y desafíos!,需要%d珍珠。完成任务和挑战可获得珍珠！
+PZ_STREAK,Win streak %d! +%d pearls and more coins,"Серия побед: %d! +%d жемчуга и больше монет","¡Racha de %d victorias! +%d perlas y más monedas",连胜%d次！+%d珍珠，金币更多
+PZ_TREASURE,Treasure level! +%d pearls,"Уровень-сокровище! +%d жемчуга","¡Nivel tesoro! +%d perlas",宝藏关卡！+%d珍珠

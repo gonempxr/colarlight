@@ -435,6 +435,11 @@ func _see_looks() -> void:
 
 ## Rewards for a finished puzzle. Returns what was given, for the win panel:
 ## {"coins", "pearls", "piece": artifact id or "", "level": new level or 0}.
+## Win streak cap (x2 coins, +10 pearls) and the pearls of each 10th level.
+const PZ_STREAK_MAX := 5
+const PZ_TREASURE_PEARLS := 40
+
+
 func puzzle_reward(result: Dictionary) -> Dictionary:
 	var won: bool = result.get("won", false)
 	var stars := clampi(int(result.get("stars", 0)), 0, 3)
@@ -461,6 +466,21 @@ func puzzle_reward(result: Dictionary) -> Dictionary:
 		stats["puzzle_stars"] = int(stats.get("puzzle_stars", 0)) + clampi(stars, 1, 3)
 		puzzle_level += 1
 		_count("puzzle", 1)
+		# A win streak (no timer: it only ends with a lost puzzle) adds
+		# pearls and coins; every 10th level is a treasure level.
+		var streak := int(stats.get("pz_streak", 0)) + 1
+		stats["pz_streak"] = streak
+		stats["pz_best_streak"] = maxi(streak, int(stats.get("pz_best_streak", 0)))
+		out["streak"] = streak
+		if streak >= 2:
+			out["streak_pearls"] = mini(streak, PZ_STREAK_MAX) * 2
+			out["pearls"] += out["streak_pearls"]
+			out["coins"] *= 1.0 + 0.25 * (mini(streak, PZ_STREAK_MAX) - 1)
+		if puzzle_level % 10 == 0:
+			out["treasure"] = PZ_TREASURE_PEARLS + puzzle_level / 2
+			out["pearls"] += out["treasure"]
+	else:
+		stats["pz_streak"] = 0
 	GameState.add_coins(out["coins"])
 	add_pearls(out["pearls"])
 	streak_action()

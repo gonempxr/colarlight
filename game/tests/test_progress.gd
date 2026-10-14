@@ -133,6 +133,15 @@ func test_artifacts_and_puzzle() -> void:
 	check(int(pr.stats.get("puzzles_won", 0)) == need, "wins are counted")
 	var bad: Dictionary = pr.puzzle_reward({"won": true, "stars": 1, "artifact": "nonsense"})
 	check(bad["piece"] == Content.ARTIFACTS[1]["id"], "unknown artifact falls back to the target")
+	var st0 := int(pr.stats.get("pz_streak", 0))
+	var w1: Dictionary = pr.puzzle_reward({"won": true, "stars": 2})
+	check(int(w1["streak"]) == st0 + 1 and int(w1.get("streak_pearls", 0)) == mini(st0 + 1, pr.PZ_STREAK_MAX) * 2, "wins in a row build a streak with pearls")
+	pr.puzzle_reward({"won": false, "fragments": 0})
+	check(int(pr.stats["pz_streak"]) == 0 and int(pr.stats["pz_best_streak"]) >= st0 + 1, "a lost puzzle ends the streak, the best is kept")
+	while (pr.puzzle_level + 1) % 10 != 0:
+		pr.puzzle_level += 1
+	var tr10: Dictionary = pr.puzzle_reward({"won": true, "stars": 3})
+	check(int(tr10.get("treasure", 0)) >= pr.PZ_TREASURE_PEARLS and pr.puzzle_level % 10 == 0, "every 10th level is a treasure level")
 	# Coins follow the puzzle level too: late in the game the first puzzle
 	# level pays a little, new deeper levels pay more; every win still pays
 	# at least half a minute of income, more stars pay more.

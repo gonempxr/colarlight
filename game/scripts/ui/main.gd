@@ -1487,6 +1487,10 @@ func _puzzle_rewards(result: Dictionary) -> Array:
 		lines.append(["coin", "+" + NumFormat.short(r["coins"])])
 	if r["pearls"] > 0:
 		lines.append(["pearl", "+%d" % r["pearls"]])
+	if int(r.get("streak", 0)) >= 2:
+		lines.append(["star", tr("PZ_STREAK") % [int(r["streak"]), int(r["streak_pearls"])]])
+	if int(r.get("treasure", 0)) > 0:
+		lines.append(["star", tr("PZ_TREASURE") % int(r["treasure"])])
 	if r["piece"] != "":
 		var id: String = r["piece"]
 		if r["level"] > 0:
