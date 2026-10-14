@@ -34,14 +34,14 @@ func _initialize() -> void:
 	for f in load("res://scripts/data/content.gd").FEATURES:
 		pr.features[f] = true
 	pr.daily_last = pr.today()
+	if gs.get("location") != null:
+		gs.set("location", int(opt["world"]))
 	for k in gs.stage_keys():
 		gs.levels[k] = 150
 		gs.managers[k] = true
 	gs.levels.merge({"lift": 300, "boat": 300, "plant": 300}, true)
 	gs.coins = 1e12
 	gs.evo = 4
-	if gs.get("location") != null:
-		gs.set("location", int(opt["world"]))
 	load("res://scripts/ui/main.gd").show_title = false
 	if opt.has("phone"):
 		root.get_node("Settings").quality = "low"

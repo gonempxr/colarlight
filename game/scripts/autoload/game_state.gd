@@ -92,6 +92,7 @@ var location := 0:
 	set(value):
 		location = clampi(value, 0, Balance.LAST_LOCATION)
 		_rescale()
+		_ensure_keys()
 ## Highest location opened so far (>= location). The gate lives there.
 var max_location := 0:
 	set(value):
@@ -257,9 +258,25 @@ func _reset_run(keep_automation: bool = false) -> void:
 
 # --- Queries ------------------------------------------------------------------
 
-static func stage_keys() -> Array[String]:
+## Every stage of the current world has its level, manager and cycle
+## entries (a world with more sites than the last one, e.g. a save loading
+## into the Jungle after reset()).
+func _ensure_keys() -> void:
+	for key in stage_keys():
+		if not levels.has(key):
+			levels[key] = 0
+		if not managers.has(key):
+			managers[key] = false
+		if not _timer.has(key):
+			_timer[key] = -1.0
+			_load[key] = 0.0
+
+
+## The current world's stages: its sites (d0..d9, the Jungle d0..d14), the
+## lift and the buildings.
+func stage_keys() -> Array[String]:
 	var keys: Array[String] = []
-	for i in Balance.DEPTHS.size():
+	for i in site_count():
 		keys.append("d%d" % i)
 	keys.append("lift")
 	keys.append_array(BUILDINGS)
@@ -343,7 +360,12 @@ func tier() -> int:
 	return Balance.tier_of(location)
 
 
-## Id of site i (0..9) in the current world ("shells", "ash", ...).
+## Work sites of the current world (10, the Jungle 15).
+func site_count() -> int:
+	return Balance.site_count(location)
+
+
+## Id of site i (0..site_count() - 1) in the current world ("shells", "ash", ...).
 func site_id(i: int) -> String:
 	var sites: Array = Balance.WORLDS[world_index()]["sites"]
 	return sites[clampi(i, 0, sites.size() - 1)]
@@ -403,7 +425,7 @@ func collect_vault() -> float:
 func location_goals() -> Array:
 	var sites := 0
 	var foremen := 0
-	for i in Balance.DEPTHS.size():
+	for i in site_count():
 		var key := "d%d" % i
 		if is_open(key):
 			sites += 1
@@ -414,8 +436,8 @@ func location_goals() -> Array:
 		if is_open(k) and has_manager(k):
 			mgrs += 1
 	return [
-		{"id": "sites", "have": sites, "need": Balance.DEPTHS.size()},
-		{"id": "foremen", "have": foremen, "need": Balance.DEPTHS.size()},
+		{"id": "sites", "have": sites, "need": site_count()},
+		{"id": "foremen", "have": foremen, "need": site_count()},
 		{"id": "managers", "have": mgrs, "need": AUTOMATED.size()},
 	]
 
@@ -800,7 +822,7 @@ func rate(key: String) -> float:
 
 func dives_rate() -> float:
 	var total := 0.0
-	for i in Balance.DEPTHS.size():
+	for i in site_count():
 		total += rate("d%d" % i)
 	return total
 
@@ -839,7 +861,7 @@ func bottleneck() -> String:
 ## Index of the deepest open dive site.
 func deepest_open() -> int:
 	var deepest := 0
-	for i in Balance.DEPTHS.size():
+	for i in site_count():
 		if levels.get("d%d" % i, 0) > 0:
 			deepest = i
 	return deepest
@@ -922,7 +944,7 @@ func prestige_cost() -> float:
 ## Ladder id of the first closed site (the last one when all are open).
 func prestige_gate_depth() -> String:
 	var next := next_depth()
-	return Balance.DEPTHS[depth_index(next) if next != "" else Balance.DEPTHS.size() - 1]["id"]
+	return Balance.DEPTHS[depth_index(next) if next != "" else site_count() - 1]["id"]
 
 
 func prestige_gate_open() -> bool:

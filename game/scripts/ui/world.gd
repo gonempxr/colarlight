@@ -95,7 +95,7 @@ func _ready() -> void:
 	card.z_index = 0
 	card.position += lift.position
 	add_child(card)
-	custom_minimum_size.y = height()
+	_sync_rows()
 	for i in FISH:
 		_fish.append({"x": _rng.randf(), "y": _rng.randf_range(SURFACE_Y + 50.0, TOP_H - 50.0), "speed": _rng.randf_range(0.015, 0.04),
 				"dir": 1.0 if i % 2 == 0 else -1.0, "size": _rng.randf_range(10, 16), "dart": -99.0, "face": 1.0 if i % 2 == 0 else -1.0,
@@ -132,7 +132,24 @@ func _ready() -> void:
 
 
 static func height() -> float:
-	return TOP_H + ROW_H * Balance.DEPTHS.size() + BOTTOM_H
+	return TOP_H + ROW_H * site_rows() + BOTTOM_H
+
+
+## Sites shown in the world now (10, the Jungle 15). All Balance.DEPTHS rows
+## exist; the ones past the world's sites are hidden.
+static func site_rows() -> int:
+	return Balance.site_count(maxi(0, WorldLook.location))
+
+
+## Shows the rows of the world being shown and sizes the mine to them.
+func _sync_rows() -> void:
+	var n := site_rows()
+	for row in rows:
+		var on := row.index < n
+		row.visible = on
+		row.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+	custom_minimum_size.y = height()
+	size.y = height()
 
 
 static func row_y(index: int) -> float:
@@ -404,6 +421,7 @@ func _process(delta: float) -> void:
 		_painted_light = -1.0
 		_painted_tint = -1.0
 		_bubbles.clear()
+		_sync_rows()
 		repaint_still()
 		for row in rows:
 			row._check_now = true
@@ -831,7 +849,7 @@ func _paint_floor(ci: CanvasItem) -> void:
 ## Deep rock is dark, so a lighter lip runs along both outlines and the
 ## shaft's end is lit from inside: the end reads clearly.
 func _paint_rock_end(ci: CanvasItem, w: float, top: float) -> void:
-	var last := Balance.DEPTHS.size() - 1
+	var last := site_rows() - 1
 	var rock: Color = Art.calm(WorldLook.room_style(last)["rock"])
 	var lip := rock.lerp(Color.WHITE, 0.28)
 	var edge := PackedVector2Array([Vector2(-10, top - 12)])

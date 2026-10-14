@@ -208,7 +208,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 		_rock_texture(ci, w, h, rock)
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
-	var f := 0.15 + index * 0.85 / maxf(1.0, Art.DEPTH_STYLE.size() - 1.0)
+	var f := 0.15 + index * 0.85 / maxf(1.0, World.site_rows() - 1.0)
 	var water: Color = Art.calm(Art.water_color(f)) if WorldLook.is_water() else WorldLook.shaft_color(f)
 	Art.grad(ci, PackedVector2Array([shaft.position, Vector2(shaft.end.x, shaft.position.y), shaft.end, Vector2(shaft.position.x, shaft.end.y)]), PackedColorArray([water, water, water.darkened(0.1), water.darkened(0.1)]))
 	# Cave and the passage from the shaft.
@@ -2026,7 +2026,7 @@ func _edge_drapes(ci: CanvasItem, cave: Rect2) -> void:
 		Art.toon(ci, Art.moved(_MOSS_LOW, p), JG_LEAF_DARK, 1.8, 0.3)
 
 
-# --- Set pieces of the ten temple halls -------------------------------------------------
+# --- Set pieces of the temple halls -------------------------------------------------
 
 ## Decor of the jungle halls (true when drawn).
 func _draw_decor_jungle(st: Dictionary, cave: Rect2) -> bool:
@@ -2130,6 +2130,84 @@ func _draw_decor_jungle(st: Dictionary, cave: Rect2) -> bool:
 			_serpent_wall(st, cave, x0, x1, top, fit)
 		"jg_heart":
 			_heart_altar(st, Vector2(mid + 4, y + 3), top, x0, x1, fit)
+		_:
+			return _draw_decor_jungle_deep(st, cave)
+	return true
+
+
+## The sealed halls under the temple heart (Jungle sites 11..15): one set
+## piece each, few shapes (the jungle mine is the busiest view).
+func _draw_decor_jungle_deep(st: Dictionary, cave: Rect2) -> bool:
+	var y := LEDGE_Y
+	var top := CAVE_TOP + 4.0
+	var x0 := World.CAVE_L + 130.0
+	var x1 := cave.end.x - 140.0
+	var mid := (x0 + x1) / 2.0
+	var ore: Color = st["ore"]
+	var ore2: Color = st["ore2"]
+	var glow: Color = st.get("glow", ore)
+	var fit := clampf((cave.end.x - World.CAVE_L) / 520.0, 0.55, 1.0)
+	match st["deco"]:
+		"jg_jade":
+			# A jade jaguar on its pedestal between two jade-fire urns.
+			Art.glow(self, Vector2(mid, y - 50), 90.0 * fit + 20.0, Color(glow, 0.2), 16)
+			OreArt.jungle_deep_centerpiece(self, "jade_jaguar", Vector2(mid, y + 3), 1.15 * fit + 0.3, st, _t, index)
+			for x: float in [x0 - 10, x1 + 24]:
+				Art.push(self, Vector2(x, y + 3))
+				Art.toon(self, _URN_FIRE, Color("6a8a74"), 2.2, 0.4)
+				Art.pop(self)
+				_small_flame(Vector2(x, y - 14), glow)
+			_twinkles(x0, x1, top + 20, y - 40, ore2, 3)
+		"jg_scarab":
+			# A great scarab carved in the wall, little ones crawling below.
+			Art.glow(self, Vector2(mid, top + 80), 70.0 * fit + 20.0, Color(glow, 0.18), 14)
+			Art.t_circle(self, Vector2(mid, top + 86), 34.0 * fit + 10.0, Color(st["floor"]).darkened(0.12), 2.4, 0.4)
+			Art.arc_c(self, Vector2(mid, top + 86), 28.0 * fit + 8.0, 0, TAU, 24, Color(JG_GOLD, 0.7), 2.0)
+			OreArt.piece(self, "emerald_scarab", Vector2(mid, top + 108 + 10.0 * fit), 1.5 * fit + 0.2, 0.0, st, _t, 0)
+			for k in 2:
+				var f := fposmod(_t * 0.05 + k * 0.5, 1.0)
+				var cx := lerpf(x0 - 30, x1 + 40, f if k == 0 else 1.0 - f)
+				Art.push(self, Vector2(cx, y + 2), (PI / 2.0) * (1.0 if k == 0 else -1.0), Vector2.ONE * 0.4)
+				OreArt.piece(self, "emerald_scarab", Vector2(0, 14), 1.0, 0.0, st, _t, k)
+				Art.pop(self)
+			for p: Vector3 in [Vector3(x0 - 16, 0.7, 0), Vector3(x1 + 30, 0.6, 1)]:
+				OreArt.piece(self, "emerald_scarab", Vector2(p.x, y + 3), p.y, 0.0, st, _t, int(p.z))
+		"jg_feather":
+			# The quetzal headdress on a stand; loose plumes drift down.
+			Art.t_rect(self, Rect2(mid - 5, y - 30, 10, 30), 3, JG_STONE, 2.2, 0.4)
+			OreArt.jungle_deep_centerpiece(self, "sky_feather", Vector2(mid, y - 26), 1.25 * fit + 0.25, st, _t, index)
+			for k in 3:
+				var f := fposmod(_t * 0.05 + k * 0.33, 1.0)
+				var p := Vector2(lerpf(x0 - 40, x1 + 50, fposmod(k * 0.37 + 0.1, 1.0)) + sin(_t * 0.9 + k) * 18.0, lerpf(top + 6, y - 10, f))
+				Art.push(self, p, sin(_t * 1.1 + k) * 0.6 + 0.9, Vector2.ONE * 0.5)
+				OreArt.piece(self, "sky_feather", Vector2(0, 22), 1.0, 0.0, st, _t, k)
+				Art.pop(self)
+		"jg_rain":
+			# Rain crystals grow from the floor; drops fall from the roof
+			# into a shallow pool.
+			Art.t_ellipse(self, Vector2(mid, y + 1), Vector2(70.0 * fit + 16.0, 7.0), Color(ore, 0.45), 2.0, 0.0)
+			for p: Vector3 in [Vector3(x0 - 14, 1.0, 0), Vector3(x1 + 26, 0.85, 1)]:
+				OreArt.jungle_deep_centerpiece(self, "rain_crystal", Vector2(p.x, y + 3), p.y, st, _t, int(p.z))
+			for k in 3:
+				var f := fposmod(_t * 0.45 + k * 0.37, 1.0)
+				var dx := mid + (k - 1) * 40.0 * fit
+				Art.push(self, Vector2(dx, lerpf(top + 6, y - 6, f)), 0.0, Vector2.ONE * 0.24)
+				OreArt.piece(self, "rain_crystal", Vector2(0, 20), 1.0, 0.0, st, _t, 0)
+				Art.pop(self)
+			_twinkles(x0, x1, top + 10, y - 30, ore2, 3)
+		"jg_crown":
+			# The sun god's throne hall: the crown on its cushion, golden
+			# pillars, heaps of coins.
+			Art.glow(self, Vector2(mid, y - 60), 110.0 * fit + 20.0, Color(glow, 0.24), 18)
+			for x: float in [mid - 112.0 * fit - 16.0, mid + 112.0 * fit + 16.0]:
+				Art.t_rect(self, Rect2(x - 9, top + 10, 18, y - top - 8), 3, JG_GOLD, 2.4, 0.5)
+				Art.t_rect(self, Rect2(x - 13, top + 4, 26, 10), 3, Color("e0a52c"), 2.2, 0.3)
+				Art.t_rect(self, Rect2(x - 13, y - 8, 26, 10), 3, Color("e0a52c"), 2.2, 0.3)
+			Art.t_rect(self, Rect2(mid - 46, y - 16, 92, 16), 3, Color("8a3a2a"), 2.4, 0.4)
+			OreArt.jungle_deep_centerpiece(self, "sun_crown", Vector2(mid, y - 13), 1.6 * fit + 0.3, st, _t, index)
+			for k in 4:
+				OreArt.piece(self, "old_coins", Vector2(x0 + 4 + k * 10, y + 4), 0.32, 1.2 + k * 0.4, st, _t, 2)
+			_twinkles(x0, x1, top, y, Color("fff1a8"), 4)
 		_:
 			return false
 	return true

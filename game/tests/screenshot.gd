@@ -118,6 +118,12 @@ func _initialize() -> void:
 		var parts := overlay.split(":")
 		if gs.get("location") != null:
 			gs.set("location", int(parts[1]))
+			if scenario == "deep":
+				# The Jungle's sites 11..15 open too.
+				for k in gs.stage_keys():
+					if gs.depth_index(k) >= 0 and gs.levels[k] == 0:
+						gs.levels[k] = 60
+						gs.managers[k] = true
 		else:
 			gs.prestige_count = int(parts[1])
 		load("res://scripts/ui/day_night.gd").fixed_phase = 0.75 if "night" in parts else (0.47 if "dusk" in parts else 0.2)

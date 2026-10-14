@@ -4,8 +4,8 @@ Models one location of the tycoon chain: work sites -> lift -> boat -> plant
 -> vault -> wallet. A greedy "reasonable player" buys whatever gives the best
 income gain per coin, opens sites and hires managers when they are a few
 minutes of income away, buys worker gear levels (x1.4, x2, x3 income) and, once
-the location gate is met (all 10 sites open, 10 foremen, lift + boat + boat2
-+ plant + plant2 managers), saves up for the location price. Gear is an
+the location gate is met (all sites open with foremen: 10, the Jungle 15;
+lift + boat + boat2 + plant + plant2 managers), saves up for the location price. Gear is an
 optional booster, not part of the gate.
 
 Every location scales values and prices by loc_scale(L); the gate prices
@@ -26,7 +26,8 @@ MILESTONE_STEP = 25
 # chain keeps up with ten sites within one location.
 CHAIN_GROWTH = 1.05
 
-# The one 10-step site ladder (ids are the ocean ones; other worlds rename them).
+# The site ladder (ids are the ocean ones; other worlds rename them). Most
+# worlds use the first 10 steps, the Jungle all 15 (site_count).
 # value: coins/s per level; cost0: level 1->2; unlock: price to open;
 # manager: price of the site's foreman.
 DEPTHS = [
@@ -40,7 +41,21 @@ DEPTHS = [
     {"id": "glow",     "value": 7.8e5,  "cost0": 6.0e7, "unlock": 6.0e8, "manager": 1.2e9},
     {"id": "atlantis", "value": 5.5e6,  "cost0": 6.0e8, "unlock": 1.2e9, "manager": 2.4e9},
     {"id": "heart",    "value": 3.8e7,  "cost0": 6.0e9, "unlock": 3.0e9, "manager": 6.0e9},
+    # Sites 11..15: only the Jungle (the last, longest world) has them.
+    {"id": "jade_jaguar",    "value": 2.7e8,   "cost0": 6.0e10, "unlock": 5.0e9,  "manager": 1.0e10},
+    {"id": "emerald_scarab", "value": 1.9e9,   "cost0": 6.0e11, "unlock": 7.5e9,  "manager": 1.5e10},
+    {"id": "sky_feather",    "value": 1.35e10, "cost0": 6.0e12, "unlock": 1.1e10, "manager": 2.2e10},
+    {"id": "rain_crystal",   "value": 9.5e10,  "cost0": 6.0e13, "unlock": 1.6e10, "manager": 3.2e10},
+    {"id": "sun_crown",      "value": 6.7e11,  "cost0": 6.0e14, "unlock": 2.5e10, "manager": 5.0e10},
 ]
+# Sites per world: 10, the Jungle (world 4) 15 (balance.gd site_count).
+SITES = 10
+LONG_SITES = 15
+LONG_WORLD = 4
+
+
+def site_count(L: int) -> int:
+    return LONG_SITES if L % 5 == LONG_WORLD else SITES
 # The lift's trip speed (balance.gd LIFT_LOOK_SPEED, LIFT_SPEED_PER_LEVEL,
 # LIFT_SPEED_MAX, LIFT_MIN_TRIP*) is not modelled here on purpose: a trip
 # carries rate x trip time, so a faster lift moves the same ore per second.
@@ -153,7 +168,8 @@ class Game:
         self.gs = star_gate_scale(L, n)
         self.coins = 0.0
         self.vault = 0.0
-        self.depth_lv = [1] + [0] * (len(DEPTHS) - 1)
+        self.sites = DEPTHS[:site_count(L)]
+        self.depth_lv = [1] + [0] * (len(self.sites) - 1)
         self.lv = {"lift": 1, "boat": 1, "plant": 1, "boat2": 0, "plant2": 0}
         self.managers = set(keep)
         self.evo = 0
@@ -164,7 +180,7 @@ class Game:
 
     def stage_rates(self):
         dives = 0.0
-        for k, d in enumerate(DEPTHS):
+        for k, d in enumerate(self.sites):
             eff = FOREMAN_MULT if f"d{k}" in self.managers else 1.0
             dives += output(d["value"], self.depth_lv[k]) * eff
         r = {}
@@ -177,9 +193,9 @@ class Game:
 
     def gate(self):
         sites = sum(1 for lv in self.depth_lv if lv > 0)
-        foremen = sum(1 for k in range(len(DEPTHS)) if f"d{k}" in self.managers)
+        foremen = sum(1 for k in range(len(self.sites)) if f"d{k}" in self.managers)
         mgrs = sum(1 for k in ("lift", "boat", "plant", "boat2", "plant2") if k in self.managers and self.lv[k] > 0)
-        return {"sites": (sites, 10), "foremen": (foremen, 10), "managers": (mgrs, 5)}
+        return {"sites": (sites, len(self.sites)), "foremen": (foremen, len(self.sites)), "managers": (mgrs, 5)}
 
     def ready(self) -> bool:
         return all(h >= n for h, n in self.gate().values())
@@ -189,7 +205,7 @@ class Game:
         s = self.s
         gs = self.gs
         opts = []
-        for k, d in enumerate(DEPTHS):
+        for k, d in enumerate(self.sites):
             lv = self.depth_lv[k]
             if lv == 0:
                 if self.depth_lv[k - 1] > 0:

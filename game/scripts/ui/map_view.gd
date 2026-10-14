@@ -283,7 +283,7 @@ static func boat_progress(key: String) -> float:
 	return float(gs.cycle_progress(key))
 
 
-## Lit level nodes on the current island (4 nodes for the 10 sites).
+## Lit level nodes on the current island (4 nodes for its 10 or 15 sites).
 static func lit_nodes() -> int:
 	for g in goals():
 		if g["id"] == "sites":

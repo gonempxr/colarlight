@@ -14,13 +14,14 @@ extends RefCounted
 
 const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle"]
 
-## Ten work sites per world (keys d0..d9), deepest last.
+## Ten work sites per world (keys d0..d9), the Jungle 15 (d0..d14), deepest last.
 const SITES := {
 	"ocean": ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "glow", "atlantis", "heart"],
 	"volcano": ["ash", "obsidian", "sulfur", "ruby", "magma", "fire_opal", "garnet", "ember", "phoenix", "dragon"],
 	"acid": ["slime", "moss", "shroom", "bubble", "venom", "amber", "radiant", "jade", "orchid", "goo_king"],
 	"moon": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"],
-	"jungle": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"],
+	"jungle": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"],
 }
 
 ## sea: the medium on the surface and above the first site, top to deep.
@@ -202,17 +203,11 @@ static func shaft_color(f: float) -> Color:
 	return (cols[i] as Color).lerp(cols[i + 1], x - i)
 
 
-## Site ids of a world, one per Balance.DEPTHS entry. The ocean keeps the
-## old ids while the economy still has more than ten sites.
+## Site ids of a world, one per site it has (10, the Jungle 15).
 static func site_ids_of(w: String) -> Array[String]:
 	var out: Array[String] = []
-	var list: Array = SITES[w]
-	var n := Balance.DEPTHS.size()
-	for i in n:
-		if w == "ocean" and n != list.size():
-			out.append(String(Balance.DEPTHS[i]["id"]))
-		else:
-			out.append(String(list[mini(i, list.size() - 1)]))
+	for id in SITES[w]:
+		out.append(String(id))
 	return out
 
 
@@ -222,7 +217,7 @@ static func site_ids() -> Array[String]:
 	var gs: Node = tree.root.get_node_or_null("GameState") if tree else null
 	if gs != null and gs.has_method("site_id") and gs.get("location") != null and int(gs.get("location")) == location:
 		var out: Array[String] = []
-		for i in Balance.DEPTHS.size():
+		for i in int(gs.call("site_count")):
 			out.append(String(gs.call("site_id", i)))
 		return out
 	return site_ids_of(world)

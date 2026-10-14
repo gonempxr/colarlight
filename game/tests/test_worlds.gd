@@ -43,6 +43,7 @@ func _initialize() -> void:
 	test_advance_location()
 	test_world_cycling()
 	test_stars()
+	test_jungle_sites()
 	test_v3_migration()
 	test_decor()
 	test_suit_refund()
@@ -70,12 +71,13 @@ func test_balance_tables() -> void:
 	var ids := []
 	for w in Balance.WORLDS:
 		ids.append(w["id"])
-		check(w["sites"].size() == 10, "%s has 10 sites" % w["id"])
+		var want := 15 if w["id"] == "jungle" else 10
+		check(w["sites"].size() == want, "%s has %d sites" % [w["id"], want])
 		check(str(w["name"]) == "WORLD_" + str(w["id"]).to_upper(), "%s name key" % w["id"])
 	check(ids == ["ocean", "volcano", "acid", "moon", "jungle"], "worlds in order")
-	check(Balance.DEPTHS.size() == 10, "one 10-step ladder")
+	check(Balance.DEPTHS.size() == 15, "one 15-step ladder (10 for most worlds)")
 	var rising := true
-	for i in range(1, 10):
+	for i in range(1, 15):
 		var a: Dictionary = Balance.DEPTHS[i - 1]
 		var b: Dictionary = Balance.DEPTHS[i]
 		rising = rising and b["value"] > a["value"] and b["cost0"] > a["cost0"] and b["unlock"] > a["unlock"] and b["manager"] >= a["manager"]
@@ -493,6 +495,76 @@ func test_stars() -> void:
 	gs.reset()
 	gs.load_game()
 	check(gs.stars_of(0) == 0 and gs.stars_of(2) == 0 and gs.stars_of(1) == 2 and gs.total_stars() == 2, "bad star values are dropped")
+	_fresh()
+
+
+## The Jungle has 15 sites (2026-10-14): old 10-site jungle saves keep
+## everything, the new sites start closed, switching keeps both worlds and
+## the jungle's star needs all 15.
+func test_jungle_sites() -> void:
+	_fresh()
+	for l in 4:
+		check(Balance.site_count(l) == 10, "world %d has 10 sites" % l)
+	check(Balance.site_count(4) == 15 and Balance.site_count(Balance.LAST_LOCATION) == 15, "the Jungle has 15")
+	check(gs.site_count() == 10 and not gs.stage_keys().has("d10"), "the ocean has no 11th site")
+	# A jungle save from before: 10 sites, all open with foremen.
+	gs.location = 4
+	gs.max_location = 4
+	gs._reset_run(true)
+	check(gs.site_count() == 15 and gs.stage_keys().has("d14") and gs.stage_keys().size() == 20, "the Jungle has keys d0..d14")
+	for i in 10:
+		gs.levels["d%d" % i] = 40 - i
+		gs.managers["d%d" % i] = true
+	gs.evo = 2
+	gs.coins = 1.0e20
+	gs.save_game()
+	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
+	for i in range(10, 15):
+		saved["levels"].erase("d%d" % i)
+		saved["managers"].erase("d%d" % i)
+	saved["version"] = 5
+	var f := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(saved))
+	f.close()
+	gs.reset()
+	gs.load_game()
+	check(gs.location == 4 and gs.get_level("d0") == 40 and gs.get_level("d9") == 31 and gs.has_manager("d9"), "an old jungle save keeps its sites and foremen")
+	check(gs.evo == 2 and near(gs.coins, 1.0e20, 0.001), "and its gear and coins")
+	check(not gs.is_open("d10") and not gs.is_open("d14") and gs.next_depth() == "d10", "sites 11..15 start closed, 11 is next")
+	var goals: Array = gs.location_goals()
+	check(goals[0]["need"] == 15 and goals[0]["have"] == 10 and goals[1]["need"] == 15, "the jungle's checklist counts 15 sites and foremen")
+	check(not gs.location_ready() and not gs.star_ready(), "no star with 10 of 15 sites")
+	gs.advance(1.0)
+	check(gs.income_rate() > 0.0, "the old jungle run still earns")
+	gs.coins = gs.unlock_cost("d10") + 1.0
+	check(gs.open_depth("d10") and gs.is_open("d10") and gs.next_depth() == "d11", "site 11 opens")
+	check(gs.unlock_cost("d11") > gs.unlock_cost("d10") and gs.unlock_cost("d10") > Balance.DEPTHS[9]["unlock"] * gs._gate_scale, "deeper sites cost more")
+	gs.advance(30.0)
+	check(gs.rate("d10") > 0.0 and Balance.DEPTHS[10]["value"] > Balance.DEPTHS[9]["value"], "site 11 earns, and is worth more per level")
+	# Switch to the ocean and back: both worlds keep their runs.
+	gs.switch_location(0)
+	check(gs.location == 0 and gs.site_count() == 10 and not gs.levels.has("d10"), "the ocean shows 10 sites")
+	for k in ["d1", "d2", "d3"]:
+		gs.levels[k] = 7
+	gs.switch_location(4)
+	check(gs.location == 4 and gs.is_open("d10") and gs.get_level("d0") == 40 and gs.has_manager("d9"), "back in the jungle, site 11 is still open")
+	gs.save_game()
+	gs.reset()
+	gs.load_game()
+	check(gs.location == 4 and gs.is_open("d10") and not gs.is_open("d11"), "the 11th site is saved")
+	gs.switch_location(0)
+	check(gs.get_level("d3") == 7 and gs.stage_keys().size() == 15, "the ocean kept its run")
+	gs.switch_location(4)
+	# The jungle's star: all 15 sites and foremen.
+	_complete_location()
+	check(gs.is_open("d14") and gs.has_manager("d14") and gs.location_ready(), "15 sites + foremen meet the gate")
+	gs.managers["d14"] = false
+	check(not gs.location_ready(), "the 15th foreman counts")
+	gs.managers["d14"] = true
+	gs.coins = gs.star_cost() + 1.0
+	check(gs.get_star(), "the jungle takes a star")
+	check(gs.stars_of(4) == 1 and gs.get_level("d0") == 1 and not gs.is_open("d1") and not gs.is_open("d14"), "the jungle run starts over")
+	check(gs.stage_keys().size() == 20 and gs.location_goals()[0]["need"] == 15, "still 15 sites after the star")
 	_fresh()
 
 

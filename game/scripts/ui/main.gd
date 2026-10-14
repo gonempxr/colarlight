@@ -961,7 +961,8 @@ func _refresh() -> void:
 	if _factory_card.is_visible_in_tree():
 		_factory_card.refresh()
 	for row in _world.rows:
-		row.refresh_if_shown()
+		if row.visible:
+			row.refresh_if_shown()
 	_world.lift.refresh()
 	if _panel.visible:
 		_panel.refresh()
@@ -1285,7 +1286,7 @@ func on_evo_bought(from: Vector2) -> void:
 	_fx.burst(from, 40)
 	_fx.float_text(from + Vector2(0, -50), tr("GEAR_NEW"), Art.GOLD, 36)
 	_show_toast(tr("GEAR_BOUGHT") % tr(WorkerLooks.gear_key(GameState.world_id(), GameState.evo)))
-	for i in Balance.DEPTHS.size():
+	for i in GameState.site_count():
 		if GameState.is_open("d%d" % i):
 			_world.react("d%d" % i, "joy", 2.5, true)
 

@@ -781,7 +781,7 @@ func _swap_quests(l: int) -> void:
 	changed.emit()
 
 
-## Open dive sites of the active world ("d0".."d9").
+## Open dive sites of the active world ("d0".."d9", the Jungle to "d14").
 static func _open_sites() -> Array:
 	return GameState.stage_keys().filter(func(k): return GameState.depth_index(k) >= 0 and GameState.is_open(k))
 
