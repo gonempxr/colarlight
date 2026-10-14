@@ -454,7 +454,8 @@ static func _podium(rows: Array, unit: String, main: Node) -> Control:
 		var col: Control
 		if place <= rows.size():
 			var r: Dictionary = rows[place - 1]
-			col = ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_col(ci, s, place, r, unit), Vector2(0, PODIUM_H))
+			col = ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): _podium_col(ci, s, place, r, unit, tt), Vector2(0, PODIUM_H),
+					Online.row_is_king(r))
 			SocialView.on_tap(col, func(): SocialView.open_profile(main, r))
 		else:
 			col = ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_col(ci, s, place, {}, unit), Vector2(0, PODIUM_H))
@@ -482,7 +483,7 @@ static func _podium_back(ci: CanvasItem, s: Vector2) -> void:
 
 
 ## One winner: portrait (crown or medal), name, score and the pedestal.
-static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, unit: String) -> void:
+static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, unit: String, tt := 0.0) -> void:
 	var tall: float = {1: 86.0, 2: 62.0, 3: 46.0}[place]
 	var fill: Color = {1: Art.GOLD, 2: Color("d9e2ef"), 3: Color("e8a06a")}[place]
 	var w := minf(s.x - 6.0, 108.0)
@@ -500,7 +501,9 @@ static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, u
 	var look := Settings.avatar if you else _look(str(r.get("a", "")))
 	Chars.portrait(ci, pc, pr, look, "happy", false, Color("ffd98a") if you else Color("bfe8ff"))
 	Art.ring(ci, Art.circle_pts(pc, pr + 1.5, 32), fill, 4.0)
-	if place == 1:
+	if Online.row_is_king(r):
+		KingArt.on_portrait(ci, pc, pr, tt)
+	elif place == 1:
 		_crown(ci, pc + Vector2(0, -pr - 6.0), 1.0)
 	else:
 		Art.t_circle(ci, pc + Vector2(pr * 0.72, pr * 0.72), 11.0, fill, 2.5, 0.6)
@@ -562,9 +565,12 @@ static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _draw_rank(ci, s / 2.0, place),
 			Vector2(44 if place < 100 else 58, 50)))
 	var look := Settings.avatar if you else _look(str(row.get("a", "")))
-	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float):
-		Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, look, "happy", false, Color("ffd98a") if you else Color("bfe8ff")),
-			Vector2(48, 48)))
+	var king := Online.row_is_king(row)
+	h.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float):
+		Chars.portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, look, "happy", false, Color("ffd98a") if you else Color("bfe8ff"))
+		if king:
+			KingArt.on_portrait(ci, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, tt),
+			Vector2(48, 48), king))
 	var text := str(row["name"])
 	if you:
 		text = t("ONLINE_YOU") + " · " + text

@@ -95,6 +95,9 @@ var _news: Array[String] = []
 var _started := false
 var _crown_toast_at := -1000.0
 var _league_seen := -1
+## The chase toasts (see _check_chase): at most one every CHASE_GAP seconds.
+const CHASE_GAP := 240.0
+var _chase_at := 0.0
 var _sheet_tween: Tween
 ## The room shown (0 mine, 1 factory, 2 office) and the slide between rooms
 ## (a float index: 0.5 is halfway from the mine to the factory).
@@ -1061,6 +1064,7 @@ func _setup_league_timer() -> void:
 func _check_league() -> void:
 	if not _online_settled() or _top.visible or _modal.visible:
 		return
+	_check_chase()
 	var now := Clock.now()
 	var lg := OnlineRules.league_id(now)
 	if _league_seen < 0:
@@ -1074,6 +1078,33 @@ func _check_league() -> void:
 		if lg > 0:
 			_show_toast(tr("LEAGUE_TOAST_GO"))
 			Sfx.play("milestone")
+
+
+## The race for the crown, every few minutes: the no. 1 hears who is
+## hunting them (one board read), a player close behind how near it is.
+func _check_chase() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _chase_at < CHASE_GAP or now - _crown_toast_at < 60.0 or Online.crown.is_empty():
+		return
+	_chase_at = now
+	var mine := Online.score(Online.race_kind())
+	if not Online.is_king():
+		_chase_toast(OnlineRules.chase(false, mine, str(Online.crown.get("name", "")), float(Online.crown.get("score", 0.0))))
+		return
+	Online.fetch_board(Online.race_kind(), func(b: Dictionary):
+		if not b.get("ok", false) or not Online.is_king():
+			return
+		for r: Dictionary in b["rows"]:
+			if not Online.row_is_king(r):
+				_chase_toast(OnlineRules.chase(true, mine, str(r["name"]), float(r["score"])))
+				return)
+
+
+func _chase_toast(c: Dictionary) -> void:
+	if c.is_empty() or _top.visible or _modal.visible:
+		return
+	_show_toast(tr(c["key"]) % [c["name"], c["pct"]])
+	_crown_toast_at = Time.get_ticks_msec() / 1000.0
 
 
 func _show_toast(text: String) -> void:

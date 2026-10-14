@@ -282,6 +282,9 @@ static func _hat(ci: CanvasItem, hat: String) -> void:
 	if hat in HatsArt.IDS:
 		HatsArt.draw(ci, hat)
 		return
+	if hat == KingArt.HAT:
+		KingArt.crown(ci, Vector2(0, -12), 58.0, 0.0)
+		return
 	match hat:
 		"tophat":
 			Art.t_rect(ci, Rect2(-15, -52, 30, 36), 5, Color("2e2a3d"), 2.5, 0.5)

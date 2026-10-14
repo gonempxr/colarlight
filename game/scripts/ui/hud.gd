@@ -309,11 +309,17 @@ func _draw_avatar() -> void:
 	Art.flat(_avatar, Art.rrect_pts(Rect2(-7, -2.5, 12, 5), 1), Art.WHITE)
 	Art.flat(_avatar, PackedVector2Array([Vector2(5, -2.5), Vector2(9, 0), Vector2(5, 2.5)]), Art.WHITE)
 	Art.pop(_avatar)
+	if Online.is_king():
+		KingArt.on_portrait(_avatar, s / 2.0, minf(s.x, s.y) / 2.0 - 2.0, _t, true)
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and _avatar:
 		_avatar.tooltip_text = tr("PROFILE")
+
+
+## The no. 1's crown sparkles: the portrait is redrawn 8 times a second.
+var _king_step := -1
 
 
 func _process(delta: float) -> void:
@@ -322,8 +328,10 @@ func _process(delta: float) -> void:
 		_update_reveal(delta)
 	_bump = maxf(0.0, _bump - delta * 4.0)
 	var blink := Chars.blinking(_t, 1.0)
-	if blink != _blink:
+	var king_step := int(_t * 8.0) if Online.is_king() else -1
+	if blink != _blink or king_step != _king_step:
 		_blink = blink
+		_king_step = king_step
 		_avatar.queue_redraw()
 	# Count up smoothly instead of jumping.
 	var target := GameState.coins
