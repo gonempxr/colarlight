@@ -246,3 +246,8 @@ LEADER_NO_BANS,Nobody is banned.,Никто не забанен.,Nadie está blo
 LEADER_UNBAN,Unban,Разбанить,Desbloquear,解封
 MY_ID,Your ID: %s,Твой ID: %s,Tu ID: %s,你的 ID：%s
 COPIED,Copied!,Скопировано!,¡Copiado!,已复制！
+NEWS_NOTE_1,New leaderboard: a podium for the top 3 and the top 100 players.,Новая таблица лидеров: пьедестал для тройки лучших и топ-100 игроков.,Nueva tabla: podio para los 3 mejores y el top 100.,全新排行榜：前三名领奖台，前100名玩家。
+NEWS_NOTE_2,"One player, one row: playing on two devices no longer makes a copy.",Один игрок — одна строка: игра с двух устройств больше не делает копию.,"Un jugador, una fila: jugar en dos dispositivos ya no crea una copia.",一人一行：在两台设备上玩不再出现重复。
+NEWS_NOTE_3,Fair play: moving the device clock no longer gives coins or gifts.,Честная игра: перевод часов на устройстве больше не даёт монет и подарков.,Juego limpio: cambiar la hora del dispositivo ya no da monedas ni regalos.,公平游戏：修改设备时间不再获得金币或礼物。
+NEWS_NOTE_4,"Fresh look: new windows, bigger text, smooth edges on phones.","Новый вид: новые окна, крупнее текст, гладкие края на телефонах.","Nuevo aspecto: ventanas nuevas, texto más grande, bordes suaves en móviles.",新外观：全新窗口、更大字体、手机上边缘更平滑。
+NEWS_NOTE_5,"The Sea Pass has its own screen with two reward tracks. Free, nothing to buy.","У Морского пропуска свой экран и две дорожки наград. Бесплатно, ничего не продаётся.","El Pase del Mar tiene su propia pantalla con dos pistas de premios. Gratis, nada que comprar.",海洋通行证有了独立界面和两条奖励路线。免费，无需购买。
