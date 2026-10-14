@@ -332,6 +332,10 @@ func _ready() -> void:
 	Progress.feature_unlocked.connect(func(id):
 		_news.append(id)
 		_show_next_news())
+	# News held back by the first tutorial steps shows once they are done.
+	Progress.changed.connect(func():
+		if not _news.is_empty() and not _tutorial_start_busy():
+			_show_next_news())
 	Progress.artifact_leveled.connect(func(id, lv):
 		_show_toast(tr("ARTIFACT_UP") % [tr("ART_" + id.to_upper()), lv]))
 	Progress.item_unlocked.connect(func(id):
@@ -1410,8 +1414,14 @@ func open_feature(id: String) -> void:
 			open_fishing()
 
 
+## The first tutorial steps (tap, upgrade, hire) are never covered by a
+## "something new" dialog: news waits until they are done.
+func _tutorial_start_busy() -> bool:
+	return Progress.tutorial_step < Tutor.STEPS.find("open_depth")
+
+
 func _show_next_news() -> void:
-	if _news.is_empty() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_pass) or not _started:
+	if _news.is_empty() or _tutorial_start_busy() or _top.visible or _modal.visible or _map.visible or is_instance_valid(_puzzle) or is_instance_valid(_fishing) or is_instance_valid(_pass) or not _started:
 		return
 	var id: String = _news.pop_front()
 	Sfx.play("unlock")

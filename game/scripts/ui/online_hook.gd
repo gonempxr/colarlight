@@ -33,7 +33,7 @@ func _process(delta: float) -> void:
 	_left = LOOK_SEC
 	if Online.pending_thanks.is_empty() or not is_instance_valid(main):
 		return
-	if not main._started or main._blocked() or main.is_busy():
+	if not main._started or main._blocked() or main.is_busy() or main._tutorial_start_busy():
 		return
 	var info := Online.take_thanks()
 	if info.is_empty():
