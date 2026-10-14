@@ -1347,7 +1347,7 @@ func _place_side_buttons() -> void:
 			y += _mini_world.size.y * PHONE_MINI + 10.0
 	# Not in the first minutes: the game comes first, then the extras.
 	var settled := _started and Progress.has_feature("quests")
-	_boost_btn.visible = settled and Platform.ads_available()
+	_boost_btn.visible = settled and Platform.ads_available() and not Profiles.league_game()
 	# The league lives in the Profile; the trophy shows up only while last
 	# week's pearls wait there.
 	_rivals_btn.visible = settled and Rivals.reward_pending()
@@ -1723,7 +1723,7 @@ func _open_offline(report: Dictionary) -> void:
 			if Progress.daily_ready():
 				(func(): open_feature("daily")).call_deferred()
 		var b: Button
-		if Platform.ads_available():
+		if Platform.ads_available() and not Profiles.league_game():
 			# The coins are already in; an ad (only if the player wants)
 			# doubles them. Both buttons the same size (portal rules).
 			m.text(tr("OFFLINE_X2_HINT"), 20, Art.INK_SOFT)

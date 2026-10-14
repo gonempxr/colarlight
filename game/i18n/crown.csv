@@ -1,7 +1,7 @@
 keys,en,ru,es,zh
 LEAGUE_TAB,Top League,Высшая лига,Liga Superior,顶级联赛
 LEAGUE_SOON_TITLE,The Top League starts in,Высшая лига начнётся через,La Liga Superior empieza en,顶级联赛开始倒计时
-LEAGUE_SOON_TEXT,"On Friday, October 16 at 8:15 (Tallinn time) the Top League opens: a separate game where everyone starts from zero with the same chances. Your usual game stays saved!","В пятницу, 16 октября, в 8:15 (по Таллину) откроется Высшая лига: отдельная игра, где все начинают с нуля с равными шансами. Твоя обычная игра сохранится!",El viernes 16 de octubre a las 8:15 (hora de Tallin) abre la Liga Superior: una partida aparte donde todos empiezan de cero con las mismas opciones. ¡Tu partida normal se guarda!,10月16日星期五8:15（塔林时间）顶级联赛开启：这是单独的游戏，所有人从零开始，机会相同。你原来的游戏会保留！
+LEAGUE_SOON_TEXT,"On Friday, October 16 at 8:15 (Tallinn time) the Top League opens for everyone who reached the Jungle Ruins: a separate game where everyone starts from zero. Your usual game stays saved!","В пятницу, 16 октября, в 8:15 (по Таллину) откроется Высшая лига для всех, кто дошёл до Джунглей: отдельная игра, где все начинают с нуля. Твоя обычная игра сохранится!",El viernes 16 de octubre a las 8:15 (hora de Tallin) abre la Liga Superior para quien haya llegado a las Ruinas de la Selva: una partida aparte donde todos empiezan de cero. ¡Tu partida normal se guarda!,10月16日星期五8:15（塔林时间）到达丛林遗迹的玩家可以加入顶级联赛：这是单独的游戏，所有人从零开始。你原来的游戏会保留！
 LEAGUE_HINT,Coins earned in the league game (it started from zero for everyone).,"Монеты, заработанные в игре лиги (она у всех началась с нуля).",Monedas ganadas en la partida de la liga (empezó de cero para todos).,在联赛游戏中赚到的金币（所有人都从零开始）。
 CROWN_NOW,No. 1 right now: %s,Сейчас №1: %s,N.º 1 ahora: %s,当前第一名：%s
 CROWN_FREE,No. 1 is free: take it!,Первое место свободно: займи его!,El n.º 1 está libre: ¡tómalo!,第一名空缺：快来抢！
@@ -45,3 +45,5 @@ LEAGUE_IN_TEXT,You are playing in the Top League. Your usual game is saved.,Ты
 LEAGUE_BACK,Back to my game,Вернуться в свою игру,Volver a mi partida,回到我的游戏
 LEAGUE_ENTERED,Welcome to the Top League! Everyone starts from zero.,Добро пожаловать в Высшую лигу! Все начинают с нуля.,¡Bienvenido a la Liga Superior! Todos empiezan de cero.,欢迎来到顶级联赛！所有人从零开始。
 LEAGUE_BADGE,League,Лига,Liga,联赛
+LEAGUE_LOCKED,Open the Jungle Ruins to join the league.,"Открой Джунгли, чтобы вступить в лигу.",Abre las Ruinas de la Selva para unirte a la liga.,开启丛林遗迹后即可加入联赛。
+LEAGUE_NO_ADS,No x2 for ads in the league: everyone plays on equal terms.,В лиге нет x2 за рекламу: все играют на равных.,En la liga no hay x2 por anuncios: todos juegan en igualdad.,联赛中没有看广告得双倍：大家公平竞争。

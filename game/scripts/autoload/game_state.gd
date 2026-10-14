@@ -764,6 +764,8 @@ func now() -> float:
 
 ## Can a watched ad add its full 30 minutes without passing the cap?
 func can_ad_boost() -> bool:
+	if Profiles.league_game():
+		return false
 	return boost_left <= AD_BOOST_CAP_SEC - AD_BOOST_SEC + 1.0
 
 

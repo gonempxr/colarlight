@@ -106,6 +106,18 @@ func league_profile(lg: int) -> Dictionary:
 	return {}
 
 
+## The current game is a league game (any league): coin ads are off there,
+## so an ad never helps on the league board (Mark, 2026-10-14).
+func league_game() -> bool:
+	return int(current().get("league", 0)) > 0
+
+
+## The Top League opens for a player whose game reached the last world
+## (the Jungle); a league game started before stays open to them.
+func can_join_league(lg: int, max_location: int) -> bool:
+	return lg > 0 and (max_location >= Balance.LAST_LOCATION or not league_profile(lg).is_empty())
+
+
 ## The current profile plays league `lg`.
 func in_league(lg: int) -> bool:
 	return lg > 0 and int(current().get("league", 0)) == lg
