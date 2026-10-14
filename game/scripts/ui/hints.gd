@@ -50,7 +50,7 @@ static func pick(main: Node) -> Dictionary:
 	if next != "" and gs.coins >= gs.unlock_cost(next):
 		var row: DepthRow = world.rows[gs.depth_index(next)]
 		return _hint("open_depth", t("HINT_OPEN_DEPTH") % Views.stage_name(next), true, func(): return _control(row._open_btn), "")
-	for i in Balance.DEPTHS.size():
+	for i in gs.site_count():
 		var k := "d%d" % i
 		if gs.is_open(k) and not gs.has_manager(k) and gs.coins >= gs.manager_cost(k):
 			var card: StageCard = main.stage_card(k)
@@ -110,7 +110,7 @@ static func _weakest(gs: Node) -> String:
 		return group
 	var best := ""
 	var best_cost := INF
-	for i in Balance.DEPTHS.size():
+	for i in gs.site_count():
 		var k := "d%d" % i
 		if gs.is_open(k) and gs.upgrade_cost(k) < best_cost:
 			best_cost = gs.upgrade_cost(k)
@@ -192,7 +192,7 @@ static func build(m: Modal, main: Node, h: Dictionary) -> void:
 	var gs := GameState
 	var foremen := 0
 	var open_sites := 0
-	for i in Balance.DEPTHS.size():
+	for i in gs.site_count():
 		if gs.is_open("d%d" % i):
 			open_sites += 1
 			if gs.has_manager("d%d" % i):

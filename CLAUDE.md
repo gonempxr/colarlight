@@ -30,7 +30,7 @@ This file is the quick picture; keep it up to date when something big changes.
   else's newer beta with an older build.
 
 ## The game now (worlds, 2026-10-09)
-- Loop: divers mine ore at 10 sites per world → lift → boat → factory →
+- Loop: divers mine ore at 10 sites per world (the Jungle 15) → lift → boat → factory →
   coins. Managers automate. Three rooms: Mine, Factory, Office (vault,
   decor). Income = min of the chain.
 - Worlds: Ocean → Volcano → Acid swamp → Moon → Jungle Ruins (5 since
@@ -115,7 +115,9 @@ This file is the quick picture; keep it up to date when something big changes.
   CTR on launch day was 0.8% (bottom 20%); check again after the new cover.
 - 2026-10-14 (worlds + beta only, not main / not the CG zip yet): world 5
   "Jungle Ruins" (docs/jungle-world.md) + world stars. Saves v5; older saves
-  are clamped to the Moon on load. Screenshots overlay `in:N:<overlay>`.
+  are clamped to the Moon on load. Since branch `crown2` the Jungle has 15
+  sites (`Balance.site_count`, d10..d14, the longest run: sim 256 min vs
+  Moon 133); the other worlds keep 10 (docs/jungle-world.md §4). Screenshots overlay `in:N:<overlay>`.
   Perf: jungle mine is the heaviest view (PC ~10-13 ms headless).
 - 2026-10-14 (worlds + beta, branch `crown`): the crown and the Top League
   (docs/online.md rules v6, Mark must publish them). Crown = no. 1 of the race

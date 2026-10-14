@@ -207,7 +207,7 @@ func _update_divers(redraw: bool) -> void:
 	var gs := GameState
 	var view := world.visible_rect()
 	var seen := {}
-	for i in Balance.DEPTHS.size():
+	for i in gs.site_count():
 		var key: String = _KEYS[i]
 		if not gs.is_open(key):
 			continue
@@ -266,7 +266,7 @@ func _draw() -> void:
 				if not hinted and view.grow(60.0).has_point(at):
 					hinted = true
 					_draw_tap_hint(at)
-	for i in Balance.DEPTHS.size():
+	for i in gs.site_count():
 		var key: String = _KEYS[i]
 		if not gs.is_open(key):
 			continue

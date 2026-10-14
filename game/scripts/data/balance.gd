@@ -15,7 +15,7 @@ const AUTOSAVE_SEC := 10.0
 
 ## The worlds, in the order they open (location L is world L % 5, tier
 ## L / 5). name: i18n key; char: the worker character; sites: the ids of the
-## world's 10 work sites (keys d0..d9, name keys SITE_<ID>).
+## world's work sites (keys d0..d9, the Jungle d0..d14; name keys SITE_<ID>).
 const WORLDS: Array[Dictionary] = [
 	{"id": "ocean", "name": "WORLD_OCEAN", "char": "diver",
 		"sites": ["shells", "coral", "pearl", "copper", "emerald", "crystal", "gold", "glow", "atlantis", "heart"]},
@@ -26,10 +26,11 @@ const WORLDS: Array[Dictionary] = [
 	{"id": "moon", "name": "WORLD_MOON", "char": "astronaut",
 		"sites": ["dust", "meteor", "crater_ice", "moonstone", "star", "comet", "nebula", "alien_egg", "ufo", "cosmic_heart"]},
 	{"id": "jungle", "name": "WORLD_JUNGLE", "char": "explorer",
-		"sites": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]},
+		"sites": ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
+			"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]},
 ]
 
-## The one 10-step site ladder every location uses (ids are the ocean ones;
+## The site ladder every location uses (the first 10 steps; the Jungle all 15) (ids are the ocean ones;
 ## GameState.site_id(i) gives the current world's). value = coins/s per
 ## level; cost0 = price of level 1 -> 2; unlock = price to open; manager =
 ## price of its foreman; cycle = seconds for one dive (down, 3 hits, up).
@@ -48,7 +49,21 @@ const DEPTHS: Array[Dictionary] = [
 	{"id": "glow", "value": 7.8e5, "cost0": 6.0e7, "unlock": 6.0e8, "manager": 1.2e9, "cycle": 8.9},
 	{"id": "atlantis", "value": 5.5e6, "cost0": 6.0e8, "unlock": 1.2e9, "manager": 2.4e9, "cycle": 9.5},
 	{"id": "heart", "value": 3.8e7, "cost0": 6.0e9, "unlock": 3.0e9, "manager": 6.0e9, "cycle": 10.1},
+	# Sites 11..15 (keys d10..d14): only the Jungle has them (site_count).
+	# Their gate prices grow gently: the chain, not the sites, limits income
+	# this late, so steep unlocks would be walls. sim.py: Jungle 149 -> 256 min.
+	{"id": "jade_jaguar", "value": 2.7e8, "cost0": 6.0e10, "unlock": 5.0e9, "manager": 1.0e10, "cycle": 10.7},
+	{"id": "emerald_scarab", "value": 1.9e9, "cost0": 6.0e11, "unlock": 7.5e9, "manager": 1.5e10, "cycle": 11.3},
+	{"id": "sky_feather", "value": 1.35e10, "cost0": 6.0e12, "unlock": 1.1e10, "manager": 2.2e10, "cycle": 11.9},
+	{"id": "rain_crystal", "value": 9.5e10, "cost0": 6.0e13, "unlock": 1.6e10, "manager": 3.2e10, "cycle": 12.5},
+	{"id": "sun_crown", "value": 6.7e11, "cost0": 6.0e14, "unlock": 2.5e10, "manager": 5.0e10, "cycle": 13.1},
 ]
+## Work sites per world: SITES, the last world (the Jungle, LONG_WORLD) has
+## LONG_SITES (2026-10-14: the longest, hardest run). DEPTHS holds them all;
+## a world uses the first site_count(L) rows.
+const SITES := 10
+const LONG_SITES := 15
+const LONG_WORLD := 4
 const FOREMAN_MULT := 2.0
 
 ## The boat and the plant change their look (and name) as they grow, like
@@ -213,6 +228,11 @@ static func world_of(location: int) -> Dictionary:
 	return WORLDS[posmod(location, WORLDS.size())]
 
 
+## Number of work sites of location L (10, the Jungle 15).
+static func site_count(location: int) -> int:
+	return LONG_SITES if posmod(location, WORLDS.size()) == LONG_WORLD else SITES
+
+
 static func tier_of(location: int) -> int:
 	return maxi(0, location) / WORLDS.size()
 
@@ -314,7 +334,7 @@ static func prestige_cost(times: int) -> float:
 
 ## Index of the depth that must be open before the next Dive Deeper.
 static func prestige_gate(times: int) -> int:
-	return mini(PRESTIGE_GATE_FIRST + PRESTIGE_GATE_STEP * times, DEPTHS.size() - 1)
+	return mini(PRESTIGE_GATE_FIRST + PRESTIGE_GATE_STEP * times, SITES - 1)
 
 
 static func prestige_mult(times: int) -> float:

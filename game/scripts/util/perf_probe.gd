@@ -98,13 +98,14 @@ static func _setup_bench(root: Node, kind: String, world: int) -> void:
 	if kind == "start":
 		gs.coins = 12.0
 		return
+	# The world first: the Jungle has 15 sites to open.
+	gs.location = clampi(world, 0, Balance.LAST_LOCATION)
 	for k in gs.stage_keys():
 		gs.levels[k] = 150
 		gs.managers[k] = true
 	gs.levels.merge({"lift": 300, "boat": 300, "plant": 300}, true)
 	gs.coins = 1e12
 	gs.evo = 4
-	gs.location = clampi(world, 0, Balance.LAST_LOCATION)
 
 
 func _ready() -> void:

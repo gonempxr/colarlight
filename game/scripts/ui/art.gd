@@ -101,6 +101,14 @@ const SITE_STYLE := {
 	"sun_disc": {"rock": Color("8a5a3a"), "floor": Color("c09258"), "ore": Color("ffb02e"), "ore2": Color("fff0a0"), "suit": Color("2de2c5"), "water": Color("48301f"), "deco": "jg_sun", "glow": Color("ffcc4a")},
 	"serpent": {"rock": Color("4a6a58"), "floor": Color("6e9a7e"), "ore": Color("34c88a"), "ore2": Color("b8ffe0"), "suit": Color("ffd23f"), "water": Color("1c3630"), "deco": "jg_serpent", "glow": Color("5affb8")},
 	"temple_heart": {"rock": Color("5a4450"), "floor": Color("9a7a5a"), "ore": Color("ff3d5a"), "ore2": Color("ffd23f"), "suit": Color("2de2c5"), "water": Color("241a28"), "deco": "jg_heart", "glow": Color("ff8a6a")},
+	# The Jungle's sites 11..15 (2026-10-14): the sealed halls under the
+	# temple heart, jade, then emerald, sky-blue feathers, rain crystal and
+	# the golden throne hall of the sun god.
+	"jade_jaguar": {"rock": Color("3e5a4e"), "floor": Color("6a9278"), "ore": Color("3fcf8e"), "ore2": Color("d8ffe8"), "suit": Color("ff8a3d"), "water": Color("1a332a"), "deco": "jg_jade", "glow": Color("6affb0")},
+	"emerald_scarab": {"rock": Color("3a5440"), "floor": Color("6a8a5a"), "ore": Color("22b86a"), "ore2": Color("ffd23f"), "suit": Color("ff5ab4"), "water": Color("17301e"), "deco": "jg_scarab", "glow": Color("9aff6a")},
+	"sky_feather": {"rock": Color("365a64"), "floor": Color("6a98a0"), "ore": Color("2ec4e8"), "ore2": Color("ff4a5a"), "suit": Color("ffd23f"), "water": Color("15323a"), "deco": "jg_feather", "glow": Color("7ae8ff")},
+	"rain_crystal": {"rock": Color("3e4a6e"), "floor": Color("7080aa"), "ore": Color("8ac8ff"), "ore2": Color("e8f6ff"), "suit": Color("ff8a3d"), "water": Color("1a2240"), "deco": "jg_rain", "glow": Color("a8dcff")},
+	"sun_crown": {"rock": Color("6a4430"), "floor": Color("b0844a"), "ore": Color("ffc93c"), "ore2": Color("ff5a3d"), "suit": Color("2de2c5"), "water": Color("3a1e14"), "deco": "jg_crown", "glow": Color("ffe07a")},
 }
 
 
@@ -125,9 +133,13 @@ static var site_ids: Array[String] = ["shells", "coral", "pearl", "copper", "eme
 static var DEPTH_STYLE: Array[Dictionary] = _styles_for(site_ids)
 
 
+## A world with fewer sites than Balance.DEPTHS repeats its last one, so
+## every row (shown or hidden) has a look.
 static func set_world_sites(ids: Array[String], tier: int = 0) -> void:
 	site_ids = ids.duplicate()
-	DEPTH_STYLE = _styles_for(ids, tier)
+	while not ids.is_empty() and site_ids.size() < Balance.DEPTHS.size():
+		site_ids.append(ids[ids.size() - 1])
+	DEPTH_STYLE = _styles_for(site_ids, tier)
 
 
 ## The world's water from the surface down (OceanLook sets it per ocean).

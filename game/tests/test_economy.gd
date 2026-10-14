@@ -453,7 +453,7 @@ func test_corrupted_save() -> void:
 func test_prestige() -> void:
 	var gs := _fresh()
 	gs.coins = 1e30
-	check(Balance.DEPTHS.size() == 10, "10 work sites")
+	check(gs.site_count() == 10 and Balance.SITES == 10, "10 work sites (the Jungle 15)")
 	check(not gs.can_prestige() and not gs.prestige_gate_open(), "the gate needs the whole location")
 	check(gs.prestige_gate_depth() == Balance.DEPTHS[1]["id"], "the gate names the next closed site")
 	check(near(gs.prestige_cost(), gs.next_location_cost()), "the price is the location price")

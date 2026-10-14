@@ -14,7 +14,7 @@ const WHATS_NEW := ["pass", "challenge", "ach", "clubs", "season", "puzzle_board
 ## What the "What's new" dialog of this NEWS_VERSION lists.
 const NEWS_NOW := ["jungle", "stars", "board", "pass"]
 ## The update's notes shown on top of "What's new" (NEWS_NOTE_<n>).
-const NEWS_NOTES := 6
+const NEWS_NOTES := 7
 ## Long enough in the game to be told about news (new players learn as they go).
 const NEWS_AFTER_SEC := 300.0
 

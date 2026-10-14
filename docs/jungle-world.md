@@ -29,7 +29,7 @@ Work branch: `jungle` work merged into `worlds`, ships to
   satchel). Gear 1..4: 1 safari helmet + vest; 2 climbing gear (rope,
   head lamp, gloves); 3 bright jungle suit (leaf pattern, glowing trim);
   4 golden temple armour (sun-disc chest plate).
-- Ten sites (keys d0..d9, name keys `SITE_<ID>`), ore art kind = id:
+- Fifteen sites since 2026-10-14 (keys d0..d14, name keys `SITE_<ID>`; see §4), ore art kind = id:
   `clay` Clay Shards, `cocoa` Cocoa Pods, `turquoise` Turquoise Vein,
   `old_coins` Ancient Coins, `mask` Stone Masks, `tiger_eye` Tiger's Eye,
   `idol` Golden Idols, `sun_disc` Sun Discs, `serpent` Feathered Serpent,
@@ -51,8 +51,8 @@ Work branch: `jungle` work merged into `worlds`, ships to
 
 After the last world opens, every world can be "starred" again and again:
 
-- A world whose gate checklist is done (all 10 sites, 10 foremen, the
-  5 managers) offers "Get a star" for a coin price. The player chooses
+- A world whose gate checklist is done (all its sites and foremen: 10, the
+  Jungle 15; the 5 managers) offers "Get a star" for a coin price. The player chooses
   which world, and when (no timer).
 - Getting a star restarts that world's run (coins, levels, foremen, gear)
   like a new world; the lift, boat, plant and vault managers stay.
@@ -73,3 +73,35 @@ After the last world opens, every world can be "starred" again and again:
 | chars  | worker_looks.gd, chars.gd, i18n/evo.csv, content.gd SKINS jungle entries, tests/evo_sheet.gd |
 | rooms+map | factory_art.gd, office_art.gd, factory_room.gd, office_room.gd, map_art.gd, map_view.gd, mini_map.gd, i18n/rooms.csv, i18n/map.csv |
 | fun    | tile_worlds.gd, tile_art.gd, puzzle_screen.gd, fishing_scene.gd, fishing_screen.gd, fish_art.gd, rod_art.gd, i18n/fishing.csv, i18n/puzzle.csv |
+
+## 4. The longest world: 15 sites (2026-10-14, branch crown2)
+
+Mark asked for "deeper upgrades, heavy progress" in the Jungle. Only the
+Jungle grows; the other worlds keep 10 sites.
+
+- `Balance.site_count(L)` (10, the Jungle `LONG_SITES` = 15) and
+  `GameState.site_count()`; `stage_keys()` is per world now (not static).
+  `Balance.DEPTHS` holds all 15 steps; a 10-site world uses the first 10.
+- Sites 11..15 (d10..d14): `jade_jaguar` Jade Jaguars, `emerald_scarab`
+  Emerald Scarabs, `sky_feather` Quetzal Feathers, `rain_crystal` Rain
+  Crystals, `sun_crown` Crown of the Sun God (the finale). Ore art in
+  `OreArt.jungle_deep_piece / jungle_deep_centerpiece`, hall decor in
+  `DepthRow._draw_decor_jungle_deep` (decos `jg_jade`, `jg_scarab`,
+  `jg_feather`, `jg_rain`, `jg_crown`), colors in `Art.SITE_STYLE`.
+- Economy: values x7 and level prices x10 per site like before; the unlock
+  and foreman prices of sites 11..15 grow gently (5e9 .. 2.5e10 unlock at
+  location 0 scale, foreman x2): late in a run the lift/boat/plant chain
+  limits income, so steep gates would be walls. The gate and the star need
+  all 15 sites and foremen. sim.py minutes: Ocean 88, Volcano 103, Acid
+  124, Moon 133 (unchanged), Jungle 149 -> 256; Jungle star runs ~67 ->
+  ~99 min (first), ~51 -> ~80 (second).
+- No extra level/gear tiers: site levels have no cap (x2 every 25 levels
+  already) and gear has 4 drawn looks, so "deeper upgrades" = 5 more sites.
+- Saves: no version bump. Levels are keyed by site; an old jungle save
+  loads with d10..d14 closed and keeps everything. The `location` setter
+  fills missing keys (`_ensure_keys`). The mine builds 15 rows and hides
+  the ones a world doesn't have (`World.site_rows`, `_sync_rows`).
+- Tests: `test_worlds.test_jungle_sites` (old save, closed new sites,
+  ocean <-> jungle switching, the jungle's star with 15 sites).
+- Perf: phone jungle mine ~11 ms median (was ~10 with 10 open sites),
+  worst ~25-35 ms headless.

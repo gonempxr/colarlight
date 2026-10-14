@@ -15,15 +15,18 @@ const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "ne
 ## Kinds that give off light (a soft pulsing glow behind them).
 const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
 		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
-		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]
+		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]
 ## Kinds that sit in a mound of rock.
 const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust",
 		"turquoise", "tiger_eye"]
 ## Kinds with a big centerpiece of their own (loose pieces lie in front of it).
 const CENTERPIECE: Array[String] = ["gold", "kraken", "atlantis", "pearl", "vent", "whale", "mirror", "dragon", "crown", "void", "time", "heart",
-		"phoenix", "goo_king", "alien_egg", "ufo", "clay", "cocoa", "old_coins", "mask", "idol", "sun_disc", "serpent", "temple_heart"]
+		"phoenix", "goo_king", "alien_egg", "ufo", "clay", "cocoa", "old_coins", "mask", "idol", "sun_disc", "serpent", "temple_heart",
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]
 ## The jungle's kinds (temple ruins): drawn by jungle_piece / jungle_centerpiece.
-const JUNGLE: Array[String] = ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart"]
+const JUNGLE: Array[String] = ["clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown"]
 
 
 static func kind_of(depth: int) -> String:
@@ -70,6 +73,8 @@ static func deposit(ci: CanvasItem, base: Vector2, size: float, depth: int, seed
 			centerpiece(ci, kind, base, s, st, t, seed)
 		"clay", "cocoa", "old_coins", "mask", "idol", "sun_disc", "serpent", "temple_heart":
 			jungle_centerpiece(ci, kind, base, s, st, t, seed)
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown":
+			jungle_deep_centerpiece(ci, kind, base, s, st, t, seed)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var order: Array[int] = []
@@ -159,6 +164,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			world_piece(ci, kind, ore, ore2, t, i)
 		"clay", "cocoa", "turquoise", "old_coins", "mask", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart":
 			jungle_piece(ci, kind, ore, ore2, t, i)
+		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown":
+			jungle_deep_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)
@@ -181,8 +188,10 @@ static func chunk(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: flo
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.3, 0.0, st, 0.0, 1)
 		"clay", "old_coins", "sun_disc":
 			piece(ci, kind, Vector2(0, 18 * s), s * 1.25, 0.0, st, 0.0, 0)
-		"cocoa", "idol", "serpent":
+		"cocoa", "idol", "serpent", "sky_feather":
 			piece(ci, kind, Vector2(0, 20 * s), s * 1.05, 0.0, st, 0.0, 0)
+		"jade_jaguar", "emerald_scarab", "rain_crystal", "sun_crown":
+			piece(ci, kind, Vector2(0, 18 * s), s * 1.25, 0.0, st, 0.0, 0)
 		"crown", "void", "heart":
 			piece(ci, kind, Vector2(0, 16 * s), s * 1.3, 0.0, st, 0.0, 0)
 		_:
@@ -197,7 +206,8 @@ static func chip(ci: CanvasItem, at: Vector2, size: float, depth: int, rot: floa
 	var c: Color = st["ore"]
 	Art.push(ci, at, rot, Vector2(size, size) / 4.0)
 	match kind:
-		"star", "moon", "glow", "storm", "crown", "heart", "radiant", "comet", "void", "dust", "old_coins", "idol", "sun_disc", "temple_heart":
+		"star", "moon", "glow", "storm", "crown", "heart", "radiant", "comet", "void", "dust", "old_coins", "idol", "sun_disc", "temple_heart", \
+				"rain_crystal", "sun_crown":
 			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5.0, 2.2, 4), st["ore2"], 1.2, 0.0)
 		"slime", "bubble", "venom", "goo_king":
 			Art.t_circle(ci, Vector2.ZERO, 3.0, c, 1.2, 0.0)
@@ -232,7 +242,8 @@ static func _tilt(kind: String) -> float:
 		"glow", "gold", "atlantis", "jade", "moon", "pearl", "copper", "fossil", "lava", "meteor", "star", "kraken", \
 				"vent", "whale", "dragon", "crown", "void", "time", "heart", "ash", "fire_opal", "slime", "moss", "bubble", \
 				"venom", "goo_king", "dust", "comet", "alien_egg", "ufo", "clay", "cocoa", "turquoise", "old_coins", "mask", \
-				"tiger_eye", "idol", "sun_disc", "serpent", "temple_heart":
+				"tiger_eye", "idol", "sun_disc", "serpent", "temple_heart", "jade_jaguar", "emerald_scarab", "sky_feather", \
+				"rain_crystal", "sun_crown":
 			return 0.35
 	return 1.0
 
@@ -1888,3 +1899,196 @@ static var _STEPS_TRIM := PackedVector2Array([Vector2(-15, -10), Vector2(15, -10
 static var _CHEST_LID := PackedVector2Array([Vector2(-24, -25), Vector2(24, -25), Vector2(26, -40), Vector2(-22, -44)])
 static var _CHEST_GLYPH := PackedVector2Array([Vector2(-18, -6), Vector2(-18, -19), Vector2(-10, -19), Vector2(-10, -10), Vector2(-14, -10),
 		Vector2(-14, -14)])
+
+
+# --- The jungle's sealed halls (sites 11..15, 2026-10-14) ---------------------------------
+#
+# Jade jaguars, emerald scarabs, quetzal feathers, rain crystals and the
+# crown of the sun god. Few, reused shapes: the jungle mine is the busiest
+# view, so each piece stays a handful of polygons.
+
+
+static func jungle_deep_piece(ci: CanvasItem, kind: String, c: Color, c2: Color, t: float, i: int) -> void:
+	match kind:
+		"jade_jaguar":
+			_jaguar_head(ci, c, c2, i)
+		"emerald_scarab":
+			_scarab(ci, c, c2, i)
+		"sky_feather":
+			_q_feather(ci, c, c2, i)
+		"rain_crystal":
+			_rain_drop(ci, c, c2, i)
+		"sun_crown":
+			if i % 3 == 2:
+				_old_coin(ci, JG_GOLD, Color("fff1a8"), i)
+			else:
+				_god_crown(ci, c, c2, i)
+
+
+static func jungle_deep_centerpiece(ci: CanvasItem, kind: String, base: Vector2, s: float, st: Dictionary, t: float, seed: int) -> void:
+	var c: Color = st["ore"]
+	var c2: Color = st["ore2"]
+	match kind:
+		"jade_jaguar":
+			# A jade jaguar head on a stepped pedestal, gold collar.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.2)
+			Art.toon(ci, _STEPS, JG_STONE, 2.2, 0.4)
+			Art.t_rect(ci, Rect2(-13, -15, 26, 5), 2, JG_GOLD, 1.8, 0.3)
+			Art.push(ci, Vector2(0, -13), 0.0, Vector2(1.3, 1.3))
+			_jaguar_head(ci, c, c2, 0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"emerald_scarab":
+			# A big scarab rolling a little golden sun.
+			Art.push(ci, base + Vector2(4 * s, 2), 0.0, Vector2(s, s) * 1.45)
+			var bob := snappedf(sin(t * 1.6 + seed) * 1.5, 0.5)
+			Art.t_circle(ci, Vector2(0, -36 + bob), 6.5, JG_GOLD, 1.8, 0.4)
+			Art.toon(ci, Art.star_pts(Vector2(-2, -38 + bob), 2.6, 0.8, 4), Color(1, 1, 1, 0.9), 0.0, 0.0)
+			_scarab(ci, c, c2, 0)
+			Art.pop(ci)
+		"sky_feather":
+			# A feather headdress: five quetzal plumes on a golden band.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.25)
+			var sway := snappedf(sin(t * 1.4 + seed) * 0.05, 0.01)
+			for k in 5:
+				Art.push(ci, Vector2(0, -8), (k - 2) * 0.32 + sway, Vector2(1.0, 1.0 - absf(k - 2) * 0.1))
+				_q_feather(ci, c, c2, k)
+				Art.pop(ci)
+			Art.t_rect(ci, Rect2(-14, -10, 28, 9), 3, JG_GOLD, 2.0, 0.4)
+			for k in 3:
+				Art.flat(ci, Art.circle_pts(Vector2(-8 + k * 8, -5.5), 2.2, 8), [Color("ff3d6e"), JG_JADE, Color("3fb0ff")][k])
+			Art.pop(ci)
+		"rain_crystal":
+			# A cluster of rain crystals; a drop falls from the tallest.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.2)
+			for p: Vector3 in [Vector3(-11, 0.75, -0.35), Vector3(11, 0.8, 0.3), Vector3(0, 1.25, 0.0)]:
+				Art.push(ci, Vector2(p.x, 0), p.z, Vector2(p.y, p.y))
+				_rain_drop(ci, c, c2, 0)
+				Art.pop(ci)
+			var fall := snappedf(fposmod(t * 0.7 + seed * 0.13, 1.0), 0.1)
+			Art.push(ci, Vector2(14, -38 + fall * 30.0), 0.0, Vector2.ONE * 0.22)
+			Art.toon(ci, _RAIN, Color(c2, 1.0 - fall * 0.6), 4.0, 0.0)
+			Art.pop(ci)
+			Art.pop(ci)
+		"sun_crown":
+			# The grand finale: the sun god's crown on a red cushion,
+			# its sun of rays turning behind it.
+			Art.push(ci, base + Vector2(0, 2), 0.0, Vector2(s, s) * 1.3)
+			Art.push(ci, Vector2(0, -24), t * 0.25)
+			Art.toon(ci, _SUN_RAYS, Color(JG_GOLD, 0.85), 1.6, 0.0)
+			Art.pop(ci)
+			Art.toon(ci, _GOD_CUSHION, c2, 2.0, 0.5)
+			Art.push(ci, Vector2(0, -6), 0.0, Vector2(1.15, 1.15))
+			_god_crown(ci, c, Color("ff3d6e"), 0)
+			Art.pop(ci)
+			var tw := snappedf(0.5 + 0.5 * sin(t * 3.0 + seed), 0.1)
+			Art.push(ci, Vector2(-10, -38), 0.0, Vector2.ONE * (0.6 + tw * 0.5))
+			Art.toon(ci, Art.star_pts(Vector2.ZERO, 5, 1.4, 4), Color(1, 1, 1, 0.95), 0.0, 0.0)
+			Art.pop(ci)
+			Art.pop(ci)
+
+
+## A little jade jaguar head: round ears, gold eyes, a dark nose and spots.
+static func _jaguar_head(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	for x: float in [-11.0, 11.0]:
+		Art.t_circle(ci, Vector2(x, -29), 5.5, c, 1.8, 0.3)
+		Art.flat(ci, Art.circle_pts(Vector2(x, -29), 2.6, 8), Art.shade_of(c, 0.35))
+	Art.toon(ci, _JAG_HEAD, c, 2.2, 0.6)
+	Art.toon(ci, _JAG_MUZZLE, c2, 1.4, 0.0)
+	for p: Vector2 in _JAG_SPOTS:
+		Art.flat(ci, Art.circle_pts(p, 1.7, 6), Art.shade_of(c, 0.45))
+	for x: float in [-5.5, 5.5]:
+		Art.flat(ci, Art.ellipse_pts(Vector2(x, -18), Vector2(2.6, 2.0), 8), JG_GOLD)
+		Art.flat(ci, Art.ellipse_pts(Vector2(x, -18), Vector2(0.8, 1.8), 6), Art.INK)
+	Art.flat(ci, _JAG_NOSE, Art.INK)
+	Art.line_c(ci, _JAG_MOUTH, Art.INK, 1.2)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-8, -24), Vector2(1.6, 3.4), 8, 0.5), Color(1, 1, 1, 0.55))
+	Art.pop(ci)
+
+
+static var _JAG_HEAD := Art.smooth_pts(PackedVector2Array([Vector2(-12, -28), Vector2(0, -31), Vector2(12, -28), Vector2(15, -16),
+		Vector2(10, -4), Vector2(0, 0), Vector2(-10, -4), Vector2(-15, -16)]), 3)
+static var _JAG_MUZZLE := Art.smooth_pts(PackedVector2Array([Vector2(-6, -12), Vector2(0, -14), Vector2(6, -12), Vector2(5, -5),
+		Vector2(0, -3), Vector2(-5, -5)]), 2)
+static var _JAG_NOSE := PackedVector2Array([Vector2(-2.6, -12.5), Vector2(2.6, -12.5), Vector2(0, -9.5)])
+static var _JAG_MOUTH := PackedVector2Array([Vector2(-3.6, -7.6), Vector2(-1.8, -5.6), Vector2(0, -7.2), Vector2(1.8, -5.6), Vector2(3.6, -7.6)])
+static var _JAG_SPOTS: Array[Vector2] = [Vector2(-9, -24), Vector2(-4, -26), Vector2(4, -26), Vector2(9, -24), Vector2(-11, -12), Vector2(11, -12)]
+
+
+## An emerald scarab: a shiny two-part shell with a gold rim, six legs.
+static func _scarab(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	for leg: PackedVector2Array in _SCARAB_LEGS:
+		Art.line_c(ci, leg, Art.INK, 2.0)
+	Art.t_ellipse(ci, Vector2(0, -27), Vector2(6.5, 4.5), Art.shade_of(c, 0.4), 1.8, 0.0)
+	Art.toon(ci, _SCARAB_SHELL, c, 2.2, 0.6)
+	Art.line_c(ci, _SCARAB_RIM, c2, 1.8)
+	Art.line_c(ci, PackedVector2Array([Vector2(0, -23), Vector2(0, -2)]), Art.shade_of(c, 0.45), 1.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-5, -15), Vector2(2.2, 6), 10, 0.15), Color(1, 1, 1, 0.5))
+	Art.toon(ci, Art.star_pts(Vector2(5, -17), 2.8, 0.8, 4), Color(1, 1, 1, 0.9), 0.0, 0.0)
+	Art.pop(ci)
+
+
+static var _SCARAB_SHELL := Art.ellipse_pts(Vector2(0, -12.5), Vector2(12, 12.5), 20)
+static var _SCARAB_RIM := Art.smooth_pts(PackedVector2Array([Vector2(-10.5, -17), Vector2(-5, -19.5), Vector2(0, -20.2), Vector2(5, -19.5),
+		Vector2(10.5, -17)]), 2)
+static var _SCARAB_LEGS: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(-9, -18), Vector2(-16, -21), Vector2(-18, -25)]),
+		PackedVector2Array([Vector2(9, -18), Vector2(16, -21), Vector2(18, -25)]),
+		PackedVector2Array([Vector2(-10, -11), Vector2(-17, -10)]),
+		PackedVector2Array([Vector2(10, -11), Vector2(17, -10)]),
+		PackedVector2Array([Vector2(-8, -4), Vector2(-14, 0)]),
+		PackedVector2Array([Vector2(8, -4), Vector2(14, 0)])]
+
+
+## A long quetzal feather (~44 tall): blue-green vane, red base, gold quill.
+static func _q_feather(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, (i % 3 - 1) * 0.12, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _QF, c, 2.0, 0.5)
+	Art.flat(ci, _QF_BASE, c2)
+	Art.flat(ci, _QF_EYE, Color("1f5a8a"))
+	Art.line_c(ci, _QF_QUILL, JG_GOLD, 1.6)
+	Art.flat(ci, Art.ellipse_pts(Vector2(-3, -28), Vector2(1.4, 6), 8, 0.2), Color(1, 1, 1, 0.45))
+	Art.pop(ci)
+
+
+static var _QF := Art.smooth_pts(PackedVector2Array([Vector2(0, 0), Vector2(5, -10), Vector2(7, -26), Vector2(4, -40),
+		Vector2(0, -44), Vector2(-4, -38), Vector2(-6, -24), Vector2(-4, -9)]), 3)
+static var _QF_BASE := Art.clipped(PackedVector2Array([Vector2(-10, 2), Vector2(10, 2), Vector2(10, -11), Vector2(-10, -8)]), _QF)
+static var _QF_EYE := Art.ellipse_pts(Vector2(0.5, -33), Vector2(2.4, 4), 10)
+static var _QF_QUILL := Art.smooth_pts(PackedVector2Array([Vector2(0, 2), Vector2(1, -16), Vector2(1, -30), Vector2(0, -40)]), 2)
+
+
+## A raindrop-shaped crystal: pale blue, a cut facet and a sparkle.
+static func _rain_drop(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, (i % 3 - 1) * 0.15, Vector2(1.0, 1.0 - (i % 2) * 0.12))
+	Art.toon(ci, _RAIN, c, 2.0, 0.5)
+	Art.flat(ci, _RAIN_FACET, c2)
+	Art.flat(ci, _RAIN_SHADE, Art.shade_of(c, 0.25))
+	Art.toon(ci, Art.star_pts(Vector2(-4, -16), 3.0, 0.9, 4), Color(1, 1, 1, 0.95), 0.0, 0.0)
+	Art.pop(ci)
+
+
+static var _RAIN := Art.smooth_pts(PackedVector2Array([Vector2(0, -40), Vector2(6, -26), Vector2(11, -14), Vector2(10, -5),
+		Vector2(0, 0), Vector2(-10, -5), Vector2(-11, -14), Vector2(-6, -26)]), 3)
+static var _RAIN_FACET := Art.clipped(PackedVector2Array([Vector2(-2, -38), Vector2(3, -20), Vector2(-3, -9), Vector2(-9, -14)]), _RAIN)
+static var _RAIN_SHADE := Art.clipped(Art.ellipse_pts(Vector2(6, -2), Vector2(9, 7), 14), _RAIN)
+
+
+## A small golden crown: three points with gems, a jewelled band.
+static func _god_crown(ci: CanvasItem, c: Color, c2: Color, i: int) -> void:
+	Art.push(ci, Vector2.ZERO, 0.0, Vector2(-1.0 if i % 2 else 1.0, 1.0))
+	Art.toon(ci, _GOD_CROWN, c, 2.2, 0.6)
+	Art.t_rect(ci, Rect2(-14, -9, 28, 8), 2, JG_GOLD_DARK, 1.8, 0.0)
+	for k in 3:
+		Art.t_circle(ci, Vector2(-11 + k * 11, -31 + absf(k - 1) * 5.0), 2.6, c2 if k == 1 else JG_JADE, 1.3, 0.0)
+		Art.flat(ci, Art.circle_pts(Vector2(-8 + k * 8, -5), 2.0, 8), [JG_JADE, c2, Color("3fb0ff")][k])
+	Art.flat(ci, Art.ellipse_pts(Vector2(-7, -17), Vector2(1.6, 4.5), 8, 0.2), Color(1, 1, 1, 0.6))
+	Art.pop(ci)
+
+
+static var _GOD_CROWN := PackedVector2Array([Vector2(-15, 0), Vector2(-15, -24), Vector2(-8, -15), Vector2(0, -29), Vector2(8, -15),
+		Vector2(15, -24), Vector2(15, 0)])
+static var _GOD_CUSHION := Art.smooth_pts(PackedVector2Array([Vector2(-24, -1), Vector2(-26, -8), Vector2(-18, -11), Vector2(18, -11),
+		Vector2(26, -8), Vector2(24, -1), Vector2(0, 1)]), 2)
