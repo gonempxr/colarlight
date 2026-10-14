@@ -351,7 +351,8 @@ func track(now: float = -1.0) -> void:
 	if str(data["seen_profile"]) == prof and float(data["seen_total"]) >= 0.0 and total > float(data["seen_total"]):
 		data["week_score"] = float(data["week_score"]) + (total - float(data["seen_total"]))
 		data["month_score"] = float(data["month_score"]) + (total - float(data["seen_total"]))
-		if lg > 0:
+		# Only the league's own fresh game counts there (Profiles.enter_league).
+		if Profiles.in_league(lg):
 			data["league_score"] = float(data["league_score"]) + (total - float(data["seen_total"]))
 		_dirty = true
 	if str(data["seen_profile"]) != prof or float(data["seen_total"]) != total:

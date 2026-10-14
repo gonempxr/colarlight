@@ -7,6 +7,11 @@ extends Node
 ## in user://p/<id>/ (game.json for GameState, progress.json for Progress).
 ## A save from before profiles (user://coralight2.json) moves into the first
 ## profile, so nobody loses progress.
+##
+## The Top League (2026-10-14, Mark) is a profile too: "league" = the league's
+## id (OnlineRules.league_id), "home" = the profile it was started from. It
+## starts from zero like a new player; the other profiles stay as they are.
+## Only coins earned in it count on the league board (Online.track).
 
 signal switched
 
@@ -14,6 +19,8 @@ const LIST_PATH := "user://profiles.cfg"
 const OLD_SAVE := "user://coralight2.json"
 const MAX_PROFILES := 6
 const NAME_MAX := 16
+## League profiles come on top of MAX_PROFILES.
+const MAX_LEAGUE_PROFILES := 3
 
 ## [{"id": String, "name": String, "avatar": Dictionary, "created": float}]
 var list: Array = []
@@ -84,7 +91,73 @@ func set_avatar(look: Dictionary) -> void:
 
 
 func can_add() -> bool:
-	return list.size() < MAX_PROFILES
+	return list.filter(func(p): return int(p.get("league", 0)) <= 0).size() < MAX_PROFILES
+
+
+# --- Top League ------------------------------------------------------------------
+
+## The profile playing league `lg` ({} when there is none yet).
+func league_profile(lg: int) -> Dictionary:
+	if lg <= 0:
+		return {}
+	for p in list:
+		if int(p.get("league", 0)) == lg:
+			return p
+	return {}
+
+
+## The current game is a league game (any league): coin ads are off there,
+## so an ad never helps on the league board (Mark, 2026-10-14).
+func league_game() -> bool:
+	return int(current().get("league", 0)) > 0
+
+
+## The Top League opens for a player whose game reached the last world
+## (the Jungle); a league game started before stays open to them.
+func can_join_league(lg: int, max_location: int) -> bool:
+	return lg > 0 and (max_location >= Balance.LAST_LOCATION or not league_profile(lg).is_empty())
+
+
+## The current profile plays league `lg`.
+func in_league(lg: int) -> bool:
+	return lg > 0 and int(current().get("league", 0)) == lg
+
+
+## Switches to league `lg`'s profile, making it first (a fresh game with the
+## current name and look). Returns its id ("" when lg is not a league).
+func enter_league(lg: int) -> String:
+	if lg <= 0:
+		return ""
+	var p := league_profile(lg)
+	if p.is_empty():
+		var home := current()
+		p = _make(str(home.get("name", "")))
+		p["avatar"] = home.get("avatar", Chars.default_avatar())
+		p["league"] = lg
+		p["home"] = current_id if int(home.get("league", 0)) <= 0 else str(home.get("home", ""))
+		list.append(p)
+		# Old leagues' profiles beyond the cap go first (never the new one).
+		while list.filter(func(q): return int(q.get("league", 0)) > 0).size() > MAX_LEAGUE_PROFILES:
+			var old = list.filter(func(q): return int(q.get("league", 0)) > 0)[0]
+			if old["id"] == current_id:
+				break
+			remove(old["id"])
+		_save()
+	select(p["id"])
+	return p["id"]
+
+
+## Back from a league profile to the profile it was started from (or the
+## first ordinary one).
+func leave_league() -> void:
+	var home := find(str(current().get("home", "")))
+	if home.is_empty() or int(home.get("league", 0)) > 0:
+		for p in list:
+			if int(p.get("league", 0)) <= 0:
+				home = p
+				break
+	if not home.is_empty():
+		select(home["id"])
 
 
 ## Adds a profile with a random look and returns its id ("" when full).
@@ -200,10 +273,15 @@ func _load() -> void:
 	if saved is Array:
 		for p in saved:
 			if p is Dictionary and p.get("id") is String and p["id"] != "":
-				list.append({"id": p["id"], "name": clean_name(str(p.get("name", ""))),
+				var item := {"id": p["id"], "name": clean_name(str(p.get("name", ""))),
 						"avatar": p.get("avatar", {}) if p.get("avatar") is Dictionary else {},
-						"created": float(p.get("created", 0.0)) if (p.get("created") is float or p.get("created") is int) else 0.0})
-			if list.size() >= MAX_PROFILES:
+						"created": float(p.get("created", 0.0)) if (p.get("created") is float or p.get("created") is int) else 0.0}
+				var lg = p.get("league", 0)
+				if (lg is int or lg is float) and int(lg) > 0:
+					item["league"] = int(lg)
+					item["home"] = str(p.get("home", "")).left(16)
+				list.append(item)
+			if list.size() >= MAX_PROFILES + MAX_LEAGUE_PROFILES:
 				break
 	current_id = str(cfg.get_value("profiles", "current", ""))
 
