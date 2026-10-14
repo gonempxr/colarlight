@@ -90,7 +90,8 @@ static func board(m: Modal, main: Node) -> void:
 		return
 	# Two rows of tabs: the races (week, season, all time), then friends and clubs.
 	for line in [[["league", "LEAGUE_TAB"], ["week", "ONLINE_WEEK"], ["month", "ONLINE_MONTH"], ["all", "ONLINE_ALL"]],
-			[["puzzle", "ONLINE_PUZZLE"], ["friends", "ONLINE_FRIENDS"], ["clubs", "ONLINE_CLUBS"]]]:
+			[["puzzle", "ONLINE_PUZZLE"], ["friends", "ONLINE_FRIENDS"], ["clubs", "ONLINE_CLUBS"]]
+				+ ([["donors", "DONORS_TAB"]] if Online.donations_shown() else [])]:
 		var tabs := HBoxContainer.new()
 		tabs.add_theme_constant_override("separation", 8)
 		for tb in line:
@@ -109,6 +110,11 @@ static func board(m: Modal, main: Node) -> void:
 		Views.fit_button_row(tabs, 22)
 		m.add(tabs)
 	GuideView.mark({"league": "board", "week": "board", "month": "season", "puzzle": "puzzle_board", "friends": "friends", "clubs": "clubs", "all": "board"}.get(tab, "board"))
+	if tab == "donors":
+		if Online.donations_shown():
+			_donors(m, main)
+			return
+		tab = "week"
 	# The Top League: a countdown until it starts.
 	if tab == "league" and int(Online.data["league"]) <= 0:
 		_league_wait(m)
@@ -352,6 +358,52 @@ static func _race(rows: Array, rank: int, mine: float) -> Control:
 	return card
 
 
+## The donation board (our own site only): how to support, the donate
+## buttons, then the donors by total (donors/{id}, added by hand).
+static func _donors(m: Modal, main: Node) -> void:
+	var card := Views.card(Color("2b2f6b"))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	card.add_child(v)
+	v.add_child(_center(Views.label(t("DONORS_TITLE"), 24, Color("ffe08a"), true)))
+	v.add_child(_center(Views.label(t("DONORS_TEXT"), 19, Color("dfe4ff"))))
+	v.add_child(_center(Views.label(t("DONORS_PARENTS"), 18, Color("ffb4a8"), true)))
+	m.add(card)
+	for link in OnlineRules.donate_links():
+		var url: String = link[1]
+		var b := m.button(t("DONATE_" + str(link[0]).to_upper()), func():
+			Sfx.play("click")
+			OS.shell_open(url), &"GoldButton")
+		b.icon = Icons.get_icon("gift", 32)
+	m.text(t("DONORS_HOW"), 18, Art.INK_SOFT)
+	var got: Dictionary = _boards.get("donors", {})
+	if got.is_empty():
+		_boards["donors"] = {"loading": true}
+		Online.fetch_donors(func(res: Dictionary):
+			_boards["donors"] = res
+			if m.is_open() and tab == "donors":
+				m.rebuild())
+		got = _boards["donors"]
+	if got.get("loading", false):
+		m.text(t("ONLINE_LOADING"), 24, Art.INK_SOFT)
+		return
+	if not got.get("ok", false):
+		_offline(m, func():
+			_boards.erase("donors")
+			m.rebuild())
+		return
+	var rows: Array = got["rows"]
+	if rows.is_empty():
+		m.text(t("DONORS_EMPTY"), 22, Art.INK)
+		return
+	m.add(_podium(rows, "euro", main))
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 5)
+	m.add(list)
+	for i in range(3, rows.size()):
+		list.add_child(_row(i + 1, rows[i], "euro"))
+
+
 ## The Top League is its own fresh game (a league profile): join it / play
 ## it, or go back to the usual game.
 static func _league_join(m: Modal, main: Node) -> void:
@@ -496,7 +548,8 @@ static func _podium(rows: Array, unit: String, main: Node) -> Control:
 			var r: Dictionary = rows[place - 1]
 			col = ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): _podium_col(ci, s, place, r, unit, tt), Vector2(0, PODIUM_H),
 					Online.row_is_king(r))
-			SocialView.on_tap(col, func(): SocialView.open_profile(main, r))
+			if not r.get("donor", false):
+				SocialView.on_tap(col, func(): SocialView.open_profile(main, r))
 		else:
 			col = ArtView.make(func(ci: CanvasItem, s: Vector2, _tt: float): _podium_col(ci, s, place, {}, unit), Vector2(0, PODIUM_H))
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -560,6 +613,8 @@ static func _podium_col(ci: CanvasItem, s: Vector2, place: int, r: Dictionary, u
 	var ic := pill.position + Vector2(14.0, 13.0)
 	if unit == "star":
 		Art.toon(ci, Art.star_pts(ic, 10.0, 4.5, 5), Art.GOLD, 2.0, 0.0)
+	elif unit == "euro":
+		Art.text(ci, ic + Vector2(0.0, 6.0), "€", 18, Color("ffe08a"), 0)
 	else:
 		Art.coin(ci, ic, 9.0)
 	Art.text(ci, Vector2(pill.position.x + 26.0 + (pw - 30.0) / 2.0, score_y), txt, 18, Art.WHITE, 0)
@@ -644,7 +699,13 @@ static func _row(place: int, row: Dictionary, unit := "coin") -> Control:
 	var ph := HBoxContainer.new()
 	ph.add_theme_constant_override("separation", 3)
 	pill.add_child(ph)
-	ph.add_child(Views.icon(unit, 26))
+	if unit == "euro":
+		var eur := Views.label("€", 20, Color("1c5fa8"), true)
+		eur.autowrap_mode = TextServer.AUTOWRAP_OFF
+		eur.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		ph.add_child(eur)
+	else:
+		ph.add_child(Views.icon(unit, 26))
 	var score := Views.label(NumFormat.short(float(row["score"])), 20, Color("1c5fa8") if not you else Art.INK, true)
 	score.autowrap_mode = TextServer.AUTOWRAP_OFF
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

@@ -98,6 +98,16 @@ service cloud.firestore {
     match /admins/{uid} {
       allow read: if isMe(uid);
     }
+    // The donation board (our own site only): donors/{id} {name, total}.
+    // The leader adds them by hand in the console (the console ignores
+    // these rules); the game only reads them.
+    match /donors/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'total'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 24
+        && request.resource.data.total is number && request.resource.data.total >= 0;
+    }
     // Banned players: {name, o, t}; their scores are refused.
     match /bans/{uid} {
       allow read: if signedIn();
@@ -363,6 +373,12 @@ service cloud.firestore {
 ```
 Rules v6 (2026-10-14) add the Top League, the crown and the minutes at no. 1
 (`league`, `crown`, `crowndays`). Old clients keep working with them.
+
+Rules v7 (2026-10-14) add the donation board (`donors`, read-only for
+players). How to add a donor in the Firebase console: Firestore → Start
+collection `donors` (once) → Add document → Auto-ID → field `name`
+(string, the nickname from the donation message) and `total` (number, all
+their donations in euro). A second donation: edit `total` of their document.
 
 No `update` / `delete` is allowed anywhere except the score rows (update only,
 going up), names (owner), clubs (member count by one) and club members

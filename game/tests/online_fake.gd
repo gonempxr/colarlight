@@ -28,6 +28,8 @@ var calls: Array[String] = []
 ## The leader's tools: is this player the leader, and the banned ids.
 var is_admin := false
 var banned := {}
+## donors/{id} {name, total}: [{name, total}, ...]
+var donors: Array = []
 
 
 ## A board with `n` made-up test rows.
@@ -49,6 +51,8 @@ func request(method: String, arg: String) -> String:
 	match method:
 		"admin":
 			return "yes" if is_admin else "no"
+		"donors":
+			return JSON.stringify({"list": donors})
 		"bans":
 			var list := []
 			for k in banned:

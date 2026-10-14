@@ -597,6 +597,24 @@ func _initialize() -> void:
 	pr.stats["bp_got"] = 3
 	_check(bp.taken("f", 1) and bp.taken("f", 3) and not bp.taken("f", 4) and not pr.stats.has("bp_got"), "old pass saves move to the new form")
 
+	# --- Donations: our own site only, a board of donors added by hand -------------------------
+	OnlineRules.donate_urls = {"kofi": "", "donationalerts": ""}
+	_check(OnlineRules.donate_links().is_empty() and not online.donations_shown(), "no donate button without a link")
+	OnlineRules.donate_urls = {"kofi": "https://ko-fi.com/x", "donationalerts": "http://bad"}
+	_check(OnlineRules.donate_links() == [["kofi", "https://ko-fi.com/x"]], "only https links become buttons")
+	_check(online.donations_shown(), "shown on our own site")
+	var dn = load("res://tests/online_fake.gd").new()
+	dn.donors = [{"name": "Маша", "total": 5}, {"name": "Petya", "total": 25.5}, {"name": "", "total": 9}, {"name": "Zero", "total": 0}, {"name": "Bad", "total": "x"}]
+	online.use_backend(dn)
+	var got_d := []
+	online.fetch_donors(func(r: Dictionary): got_d.append(r))
+	_check(got_d.size() == 1 and got_d[0]["ok"] and got_d[0]["rows"].size() == 2, "donors with a name and a sum only")
+	_check(got_d[0]["rows"][0]["name"] == "Petya" and float(got_d[0]["rows"][0]["score"]) == 25.5 and got_d[0]["rows"][1]["name"] == "Маша", "the biggest total first")
+	_check(not OnlineRules.parse_donors("error:offline")["ok"], "an error is not an empty board")
+	for dk in ["DONORS_TAB", "DONORS_TEXT", "DONORS_PARENTS", "DONORS_HOW", "DONORS_EMPTY", "DONATE_KOFI", "DONATE_DONATIONALERTS"]:
+		_check(TranslationServer.translate(dk) != dk, "words for %s" % dk)
+	OnlineRules.donate_urls = {"kofi": "", "donationalerts": ""}
+
 	# --- The Top League and the crown (no. 1 of the race) --------------------------------------
 	var ls := OnlineRules.LEAGUE_STARTS[0]
 	_check(ls == 1792127701, "the Top League starts Fri 16.10.2026 8:15 Tallinn (05:15:01 UTC, a board of its own)")

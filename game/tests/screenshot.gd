@@ -15,7 +15,7 @@ extends SceneTree
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
 ## in:N:<overlay> (any overlay in location N) | stars[:confirm|:map] |
-## board:<month|friends|clubs|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
+## board:<month|friends|clubs|donors|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
 func _initialize() -> void:
@@ -425,7 +425,12 @@ func _online_overlay(main: Node, overlay: String) -> void:
 			online.crown = {"uid": online.uid, "name": "Mark", "k": "weeks", "id": str(online.data["week"]), "score": 9e9}
 		"board":
 			ov.tab = "week"
-			for k in ["all", "month", "friends", "clubs", "puzzle", "league"]:
+			if "donors" in parts:
+				# The donation board with a few donors (links set for the picture).
+				OnlineRules.donate_urls = {"kofi": "https://ko-fi.com/coralight", "donationalerts": "https://www.donationalerts.com/r/coralight"}
+				fake.donors = [{"name": "Маша", "total": 50}, {"name": "Petya", "total": 25}, {"name": "DiverKing", "total": 15},
+					{"name": "Lena", "total": 10}, {"name": "Coral", "total": 5}]
+			for k in ["all", "month", "friends", "clubs", "puzzle", "league", "donors"]:
 				if k in parts:
 					ov.tab = k
 			if "live" in parts:
