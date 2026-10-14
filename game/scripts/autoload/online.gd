@@ -53,6 +53,10 @@ const BEGIN_SEC := 4.0
 ## How often the crown (crown/now, 2 reads) is checked, and how often its
 ## holder adds a minute at no. 1 (1 write).
 const CROWN_SEC := 90.0
+## How often a gift from the leader is looked for (one read).
+const GIFT_SEC := 300.0
+## Levels of each site in a world the leader's gift builds.
+const GIFT_LEVEL := 150
 const CROWN_TICK_SEC := 60.0
 
 ## "off" (no online here), "idle" (waiting to begin), "loading", "ready", "failed".
@@ -87,6 +91,7 @@ var bans := {}
 ## The crown as last read ({} = nobody yet / unknown).
 var crown := {}
 var _crown_left := 20.0
+var _gift_left := GIFT_SEC
 var _tick_left := CROWN_TICK_SEC
 ## The holder's minutes at no. 1 today (from the last tick).
 var crown_minutes := 0
@@ -120,6 +125,10 @@ func _process(delta: float) -> void:
 		track()
 		_keep_exclusive()
 	if state == "ready":
+		_gift_left -= delta
+		if _gift_left <= 0.0:
+			_gift_left = GIFT_SEC
+			check_gift()
 		_crown_left -= delta
 		if _crown_left <= 0.0:
 			_crown_left = CROWN_SEC
@@ -226,6 +235,7 @@ func after_ready() -> void:
 	check_season_prize()
 	check_puzzle_prize()
 	check_crown_prize()
+	check_gift()
 	check_admin()
 	load_bans()
 	submit()
@@ -277,7 +287,7 @@ func defaults() -> Dictionary:
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
 		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1, "owner": "",
-		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "fri": "", "fri_name": "", "tester": false, "cheated": false}
+		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "fri": "", "fri_name": "", "gifts": {}, "tester": false, "cheated": false}
 
 
 func load_data() -> void:
@@ -776,6 +786,47 @@ func cheat(kind: String) -> bool:
 	Progress.save_game()
 	GameState.save_game()
 	return true
+
+
+# --- The leader's gifts -------------------------------------------------------------------
+
+## The leader gives one player coins and/or opened worlds (gifts/{uid}):
+## `upto` = the world to open and play (every world before it fully built),
+## -1 = worlds untouched.
+func send_gift(row: Dictionary, coins: float, upto: int, done: Callable) -> void:
+	var id := str(row.get("uid", ""))
+	if not admin or id == "" or id == uid or not is_finite(coins) or coins < 0.0:
+		done.call("error")
+		return
+	var arg := JSON.stringify({"to": id, "id": "g%d" % int(Time.get_unix_time_from_system()), "coins": coins,
+		"upto": clampi(upto, -1, Balance.LAST_LOCATION)})
+	_request("gift_send", arg, func(res: String): done.call("ok" if res == "ok" else "error"))
+
+
+func check_gift() -> void:
+	if tester() or Profiles.league_game():
+		return
+	_request("gift_get", "", func(res: String): on_gift(res))
+
+
+## Applies a gift once (its id is remembered), then deletes it on the server.
+## Never in a league game (it waits for the ordinary one).
+func on_gift(res: String) -> void:
+	var d = JSON.parse_string(res) if res.begins_with("{") else null
+	if not d is Dictionary or Profiles.league_game():
+		return
+	var id := str(d.get("id", ""))
+	if id == "":
+		return
+	if not data["gifts"].get(id, false):
+		data["gifts"][id] = true
+		var upto := int(d.get("upto", -1)) if (d.get("upto") is float or d.get("upto") is int) else -1
+		if upto >= 0:
+			GameState.gift_worlds(upto, GIFT_LEVEL)
+		var coins := float(d.get("coins", 0.0)) if (d.get("coins") is float or d.get("coins") is int) else 0.0
+		_grant({"kind": "gift", "coins": coins if is_finite(coins) else 0.0, "n": upto + 1})
+		save_data()
+	_request("gift_done", "", func(_r: String): pass)
 
 
 # --- Promo codes ------------------------------------------------------------------------

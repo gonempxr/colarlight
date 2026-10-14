@@ -740,6 +740,21 @@ func _initialize() -> void:
 	online.data["fri"] = ""
 	online.on_fri(JSON.stringify({"uid": "someone", "name": "Neo", "k": "weeks", "id": "3"}))
 	_check(str(online.data["fri"]) == "lost" and str(online.data["fri_name"]) == "Neo", "another winner is only named")
+	# The leader's gift: coins and worlds, once per gift.
+	_check(is_equal_approx(OnlineRules.parse_amount("18ad"), 1.8e25) and OnlineRules.parse_amount("2.5K") == 2500.0 and OnlineRules.parse_amount("300") == 300.0, "amounts like 18ad are read")
+	_check(OnlineRules.parse_amount("abc") < 0.0 and OnlineRules.parse_amount("5x") < 0.0, "bad amounts are refused")
+	online.on_gift(JSON.stringify({"id": "g1", "coins": 1.8e25, "upto": 4}))
+	var g_run: Dictionary = gs.worlds_runs.get("3", {})
+	var g_full := not g_run.is_empty()
+	for gk in g_run.get("levels", {}):
+		g_full = g_full and int(g_run["levels"][gk]) >= online.GIFT_LEVEL and g_run["managers"].get(gk, false)
+	_check(gs.location == 4 and gs.max_location == 4 and g_full, "the gift opens the Jungle with the Moon and every world before fully built")
+	_check(gs.coins >= 1.8e25 * 0.99, "and gives the coins")
+	var g_c: float = gs.coins
+	online.on_gift(JSON.stringify({"id": "g1", "coins": 1.8e25, "upto": 4}))
+	_check(gs.coins == g_c, "a gift is given once")
+	for gk2 in ["GIFT_TITLE", "GIFT_SEND", "GIFT_UPTO", "THANKS_GIFT_TITLE", "THANKS_GIFT", "THANKS_GIFT_WORLDS"]:
+		_check(TranslationServer.translate(gk2) != gk2, "words for %s" % gk2)
 	online.on_fri("none")
 	var fri_ids := {}
 	for ph in OnlineRules.PROMOS:

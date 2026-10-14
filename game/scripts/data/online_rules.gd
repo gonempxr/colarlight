@@ -94,6 +94,26 @@ static func promo(text: String) -> Dictionary:
 	return PROMOS.get(hash_code(text), {})
 
 
+## "18ad", "2.5K", "300" -> the number (letters as NumFormat writes them),
+## -1 when it can't be read.
+static func parse_amount(text: String) -> float:
+	var re := RegEx.create_from_string("^([0-9]+(?:[.,][0-9]+)?)\\s*([a-zA-Z]{0,2})$")
+	var m := re.search(text.strip_edges())
+	if m == null:
+		return -1.0
+	var v := m.get_string(1).replace(",", ".").to_float()
+	var suf := m.get_string(2).to_lower()
+	var tier := 0
+	if suf.length() == 1:
+		tier = "kmbt".find(suf) + 1
+		if tier == 0:
+			return -1.0
+	elif suf.length() == 2:
+		tier = 5 + (suf.unicode_at(0) - 97) * 26 + (suf.unicode_at(1) - 97)
+	var out := v * pow(10.0, 3.0 * tier)
+	return out if is_finite(out) else -1.0
+
+
 # --- Names -------------------------------------------------------------------------
 
 ## Control characters and odd spacing out; "" when too short.

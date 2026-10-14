@@ -614,6 +614,43 @@ func get_star() -> bool:
 # --- Switching between opened worlds -------------------------------------------------
 
 ## The active world is the highest one opened (only there the gate works).
+## The leader's gift (Online.check_gift): every world before `upto` fully
+## built (all sites, foremen, managers, gear, levels at least `lv`), and
+## `upto` opened and played. Levels already higher stay; coins stay.
+func gift_worlds(upto: int, lv: int) -> void:
+	upto = clampi(upto, 0, Balance.LAST_LOCATION)
+	var back := location
+	_flush_cycles()
+	worlds_runs[str(location)] = _run_snapshot()
+	for l in range(0, upto + 1):
+		var snap = worlds_runs.get(str(l))
+		worlds_runs.erase(str(l))
+		location = l
+		if snap is Dictionary:
+			_apply_run(snap)
+		else:
+			_fresh_world_run()
+		if l < upto:
+			for k in stage_keys():
+				levels[k] = maxi(int(levels.get(k, 0)), lv)
+				managers[k] = true
+			managers[VAULT] = true
+			evo = Balance.EVO_FORMS
+			worlds_runs[str(l)] = _run_snapshot()
+	if back > upto:
+		worlds_runs[str(upto)] = _run_snapshot()
+		var mine = worlds_runs.get(str(back))
+		worlds_runs.erase(str(back))
+		location = back
+		if mine is Dictionary:
+			_apply_run(mine)
+	max_location = maxi(max_location, upto)
+	upgraded_from = {}
+	location_changed.emit(location)
+	changed.emit()
+	save_game()
+
+
 func is_max_location() -> bool:
 	return location >= max_location
 

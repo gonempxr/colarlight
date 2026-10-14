@@ -100,6 +100,18 @@ service cloud.firestore {
       allow read: if isMe(uid);
     }
     // Banned players: {name, o, t}; their scores are refused.
+    // The leader's gift to one player: gifts/{uid} {id, coins, upto, t}.
+    // Only admins write it; the player reads it, applies it once, deletes it.
+    match /gifts/{uid} {
+      allow read: if isMe(uid) || isAdmin();
+      allow delete: if isMe(uid) || isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'coins', 'upto', 't'])
+        && request.resource.data.id is string && request.resource.data.id.size() <= 40
+        && request.resource.data.coins is number && request.resource.data.coins >= 0
+        && request.resource.data.upto is number && request.resource.data.upto >= -1 && request.resource.data.upto <= 4
+        && request.resource.data.t == request.time;
+    }
     match /bans/{uid} {
       allow read: if signedIn();
       allow create, update: if isAdmin()
@@ -379,7 +391,8 @@ service cloud.firestore {
   }
 }
 ```
-Rules v7 (2026-10-14) add crown/fri, the race to Friday (the crown holder
+Rules v7 (2026-10-14) add gifts/{uid} (the leader gives a player coins and
+opened worlds, from the player's card) and crown/fri, the race to Friday (the crown holder
 at Fri 16.10 05:15 UTC wins 1000ad coins + 500 pearls, paid in-game).
 Rules v6 (2026-10-14) add the Top League, the crown and the minutes at no. 1
 (`league`, `crown`, `crowndays`). Old clients keep working with them.

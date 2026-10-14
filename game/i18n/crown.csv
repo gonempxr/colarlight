@@ -51,3 +51,14 @@ FRI_RACE,"Race to Friday: whoever is No. 1 at the finish wins %s coins! Ends in 
 FRI_WINNER,"Winner of the race to Friday: %s","Победитель гонки до пятницы: %s","Ganador de la carrera hasta el viernes: %s",周五冲刺冠军：%s
 THANKS_FRI_TITLE,Champion of the week!,Чемпион недели!,¡Campeón de la semana!,本周冠军！
 THANKS_FRI,"You were No. 1 at the Friday finish! +%s coins and %d pearls","Ты был №1 на финише в пятницу! +%s монет и %d жемчуга","¡Fuiste el n.º 1 en la meta del viernes! +%s monedas y %d perlas",你在周五终点时排名第一！+%s金币和%d珍珠
+GIFT_TITLE,Gift to this player,Подарок игроку,Regalo para este jugador,赠送给该玩家
+GIFT_COINS,"Coins, e.g. 18ad","Монеты, например 18ad","Monedas, p. ej. 18ad",金币，例如18ad
+GIFT_NO_WORLDS,Worlds: leave as is,Миры: не трогать,Mundos: sin cambios,世界：保持不变
+GIFT_UPTO,Open up to: %s,Открыть до: %s,Abrir hasta: %s,开放至：%s
+GIFT_HINT,"Reaches them within 5 minutes while they play (not in the league game). Worlds before the chosen one get fully built.","Дойдёт за 5 минут, пока игрок в игре (не в лиге). Миры до выбранного будут полностью прокачаны.","Le llega en 5 minutos mientras juega (no en la liga). Los mundos anteriores quedan construidos al completo.",玩家在线时5分钟内送达（联赛存档除外）。所选世界之前的世界将全部升级。
+GIFT_SEND,Give,Выдать,Dar,赠送
+GIFT_BAD,Type the coins (e.g. 18ad) or pick a world,Напиши монеты (например 18ad) или выбери мир,Escribe las monedas (p. ej. 18ad) o elige un mundo,请输入金币（例如18ad）或选择世界
+GIFT_DONE,Sent: %s coins,Отправлено: %s монет,Enviado: %s monedas,已发送：%s金币
+THANKS_GIFT_TITLE,A gift from the leader!,Подарок от лидера!,¡Un regalo del líder!,来自领袖的礼物！
+THANKS_GIFT,+%s coins,+%s монет,+%s monedas,+%s金币
+THANKS_GIFT_WORLDS,Worlds opened: %d,Открыто миров: %d,Mundos abiertos: %d,已开放世界：%d

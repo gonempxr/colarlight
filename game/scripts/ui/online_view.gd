@@ -886,8 +886,13 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 		else:
 			_draw_ticket(ci, s / 2.0, tt), Vector2(0, 140), true))
 	m.title({"crown": t("THANKS_CROWN_TITLE"), "week": t("THANKS_WEEK_TITLE"), "season": t("THANKS_SEASON_TITLE"), "puzzle": t("THANKS_PUZZLE_TITLE"),
-		"fri": t("THANKS_FRI_TITLE")}.get(kind, t("THANKS_TITLE")))
+		"fri": t("THANKS_FRI_TITLE"), "gift": t("THANKS_GIFT_TITLE")}.get(kind, t("THANKS_TITLE")))
 	match kind:
+		"gift":
+			if float(info.get("coins", 0.0)) > 0.0:
+				m.text(t("THANKS_GIFT") % NumFormat.short(float(info["coins"])), 26, Art.GOLD_DARK.darkened(0.2))
+			if n > 0:
+				m.text(t("THANKS_GIFT_WORLDS") % n, 24, Color("1c7fb8"))
 		"fri":
 			m.text(t("THANKS_FRI") % [NumFormat.short(float(info.get("coins", 0.0))), int(info.get("pearls", 0))], 25, Art.GOLD_DARK.darkened(0.2))
 		"crown":
@@ -906,7 +911,7 @@ static func thanks(m: Modal, main: Node, info: Dictionary) -> void:
 			m.text(t("THANKS_JOIN"), 24, Color("1c7fb8"))
 		"inviter":
 			m.text(t("THANKS_INVITER") % n, 24, Color("1c7fb8"))
-	if not kind in ["week", "season", "puzzle", "crown", "fri"]:
+	if not kind in ["week", "season", "puzzle", "crown", "fri", "gift"]:
 		var c := Views.card(Color("fff1c2"))
 		var msg := Views.label(t("THANKS_TEXT"), 25, Art.INK, true)
 		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
