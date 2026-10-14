@@ -11,6 +11,7 @@ busy save, see scripts/util/perf_probe.gd) and reads window.coralightPerf.
 with the CPU slowed 4x; "pc" is 1920x1080.
 """
 import functools
+import os
 import http.server
 import json
 import socketserver
@@ -49,7 +50,8 @@ def run(folder, which, seconds, queries):
     port = httpd.server_address[1]
     results = []
     with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--disable-gpu-vsync",
+        # PW_CHROMIUM: a ready Chromium when the pip package's own is missing.
+        browser = p.chromium.launch(executable_path=os.environ.get("PW_CHROMIUM") or None, args=["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--disable-gpu-vsync",
                                           "--disable-frame-rate-limit"])
         for name in (["phone", "pc"] if which == "all" else [which]):
             prof = dict(PROFILES[name])

@@ -6,7 +6,7 @@ extends CanvasLayer
 ##                     the average and the worst frame of the last second
 ##   ?bench=late       a busy late-game world in a throwaway save (nothing
 ##                     is saved, the player's own saves are not touched),
-##                     with the counter. Also: &world=0..3 &room=0..2
+##                     with the counter. Also: &world=0..4 &room=0..2
 ##                     &q=high|low (graphics quality for this visit only)
 ## The numbers are also put into window.coralightPerf for automated runs.
 
