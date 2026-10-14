@@ -292,6 +292,44 @@ func _initialize() -> void:
 			elif overlay.begins_with("nick"):
 				root.get_node("Profiles").set_name_of(root.get_node("Profiles").current_id, "")
 				main.ask_nickname(tr("ONLINE_NAME_TAKEN") % "Lev" if overlay == "nick:taken" else "")
+			elif overlay.begins_with("atlas"):
+				# The Atlas in a league game: a few nodes cleared, charts and
+				# runes found; ":dive" a dive's chambers, ":fight" a fight,
+				# ":boss" the citadel's fight, ":result" a won dive.
+				var pf := root.get_node("Profiles")
+				var at := root.get_node("Atlas")
+				pf.enter_league(OnlineRules.LEAGUE_STARTS[0])
+				at.autosave_enabled = false
+				at.reset()
+				at.cleared = {"a1": true, "a2": true, "a3": true, "a5": true}
+				at.charts = {"2": 2, "3": 1}
+				at.runes = {"dark": 1, "sharks": 2}
+				at.shards = 140
+				at.crew = {"tank": 2, "harpoon": 1, "lamp": 1}
+				for i in 10:
+					await process_frame
+				if "boss" in overlay:
+					at.cleared = {}
+					for id in at.NODES:
+						if id != "boss1":
+							at.cleared[id] = true
+					at.charts["6"] = 1
+					at.start_dive("boss1", [], 4, OnlineRules.week_id(root.get_node("Clock").now()))
+					at.dive["layer"] = at.dive["layers"]
+					at.dive["options"] = ["boss"]
+					at.choose(0)
+				elif "dive" in overlay or "fight" in overlay or "result" in overlay:
+					at.start_dive("a4", ["dark"], 12, OnlineRules.week_id(root.get_node("Clock").now()))
+					if "fight" in overlay:
+						var gd := 0
+						while at.dive["fight"].is_empty() and gd < 10:
+							gd += 1
+							var o: Array = at.dive["options"]
+							at.choose(o.find("monster") if "monster" in o else 0)
+					elif "result" in overlay:
+						at.dive["loot"] = {"minutes": 12.0, "pearls": 14, "shards": 36}
+						at.dive["done"] = "win"
+				main.open_atlas()
 			elif overlay.begins_with("pass"):
 				# The sea pass at level 7 with three rewards waiting.
 				var bpass = load("res://scripts/data/battle_pass.gd")
@@ -322,7 +360,7 @@ func _initialize() -> void:
 ## Online overlays with a pretend backend (tests/online_fake.gd):
 ## board[:all][:off] (the players' leaderboard), promo[:bad], invite[:off],
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the thank-you dialog); board:taken (the name is someone else's);
-## pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
+## atlas[:dive|:fight|:boss|:result] (the league Atlas in a league game) | pass (the sea pass) | pass:btn (its side button only) | guide[:new][:end] (everything in the game / what's new), board:<month|friends|clubs|puzzle>, ach (achievements), card (a player's card), club[:none] (my club / find one).
 func _online_overlay(main: Node, overlay: String) -> void:
 	var online := root.get_node("Online")
 	var parts := overlay.split(":")

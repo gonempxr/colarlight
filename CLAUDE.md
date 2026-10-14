@@ -146,6 +146,12 @@ This file is the quick picture; keep it up to date when something big changes.
 - 2026-10-14: Mark approved the beta: `main` = `worlds` 08f10fe and the main
   site = that build (rollback: `save/v3.2`, `save/site-v3.2`). Firestore
   rules v5 + v6 must be published for it (Mark).
+- 2026-10-14 (branch `atlas`, docs/league-saga.md "Built"): the Atlas of the
+  Deep act I for league games: `Atlas` autoload, `AtlasScreen`/`DiveScreen`/
+  `AtlasArt`, side button "atlas". Dives are a hard roguelike with oxygen
+  and timing-tap fights; loot = income minutes, pearls, shards, charts,
+  runes; weekly wanted monsters. Acts II-III, league points and the end-of-
+  league carry-over are not built yet.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

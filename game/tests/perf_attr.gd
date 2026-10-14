@@ -64,7 +64,7 @@ func _initialize() -> void:
 		main.show_room(room, false)
 	if float(opt["scroll"]) > 0.0:
 		main._scroller.scroll_to(float(opt["scroll"]))
-	# open=fishing|puzzle|map|evo|wardrobe|decor|rivals: a screen over the world.
+	# open=fishing|puzzle|map|evo|wardrobe|decor|rivals|atlas|fight: a screen over the world.
 	match opt.get("open", ""):
 		"fishing":
 			main.open_fishing()
@@ -80,6 +80,19 @@ func _initialize() -> void:
 			main.open_decor("sofa")
 		"rivals":
 			main.open_rivals()
+		"atlas", "fight":
+			# The league Atlas (and a dive's fight) in a league game.
+			root.get_node("Profiles").enter_league(OnlineRules.LEAGUE_STARTS[0])
+			var at = root.get_node("Atlas")
+			at.autosave_enabled = false
+			at.reset()
+			at.cleared = {"a1": true, "a2": true, "a3": true}
+			if opt["open"] == "fight":
+				at.start_dive("a2", [], 3, 1000)
+				while at.dive["fight"].is_empty() and at.dive["done"] == "":
+					var o: Array = at.dive["options"]
+					at.choose(o.find("monster") if "monster" in o else 0)
+			main.open_atlas()
 	for i in 30:
 		await process_frame
 	_vp = root.get_viewport_rid()

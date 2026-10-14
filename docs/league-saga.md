@@ -33,6 +33,40 @@ Decisions on the decision card (2026-10-14):
   name comes from the CrazyGames account (`_take_portal_name`), or a guest
   stays "Diver####" until they change it.
 
+## Built: the Atlas of the Deep, act I (2026-10-14, branch `atlas`)
+Mark's choices: the Atlas opens from the league's first day; the sonar look;
+a dive must be "interesting and hard" (not a timer).
+- `Atlas` autoload (scripts/autoload/atlas.gd), saved per profile as
+  `atlas.json` (synced by CloudSave with the other profile files). Shown
+  only in league games (`Atlas.available()` = `Profiles.league_game()`).
+- Act I map: 12 nodes + the Warden's citadel (`Atlas.NODES`, tiers 1..6).
+  A node opens when a neighbour is cleared; T1 charts are free, the others
+  drop from won dives (same tier, or +1 at 40%; Sharks rune +25%).
+- A dive = a roguelike descent: 4 layers (citadel 5) of 2-3 chambers
+  (treasure, monster, current, air pocket, mystery, wanted monster) then the
+  guardian. Oxygen: every chamber costs some, currents more; out of air =
+  half the loot, the chart is lost. Fights: a ring shrinks onto a glowing
+  weak spot, tap in the window (`Atlas.tap_window`, smaller on deeper
+  charts) to hit; a miss or a ring run out costs air. A page closed in a
+  fight loses that fight (no free retries).
+- Runes (dark, current, sharks, greed): risk for more loot; 1 slot up to T3,
+  2 after. Crew gear for shards: tank (air), harpoon (fewer taps), lamp
+  (cheaper chambers).
+- Wanted: 3 named monsters a week on the same nodes for everyone (seeded by
+  the week), met in the last chamber before the guardian; big pearls/shards.
+- Loot: coins = minutes of the game's income (so the Atlas moves the league
+  board), pearls, shards. Nothing is sold.
+- Balance (tests/test_atlas.gd simulation, crew level = tier - 1): a player
+  with 90% good taps wins 79-94% of dives, with 70% only 13-33%.
+- UI: `AtlasScreen` (sonar map, node card, runes, Dive; crew in the gear
+  dialog), `DiveScreen` (air bar, cave with the crew and the depth track,
+  chamber cards, fight, result), art in `AtlasArt`; side button "atlas" in
+  league games. Screenshots: overlay `atlas[:dive|:fight|:boss|:result]`;
+  perf: `tests/perf_attr.gd open=atlas|fight`. The rooms under it are hidden
+  (`main._covering`), so the Atlas costs less than the mine view.
+- Chinese font: rebuilt from the Debian fonts-noto-cjk SC face (see
+  tools/subset_fonts.py); kerning only, 214 KB (was 292 KB).
+
 ## The story
 The Coral Light that feeds all five worlds is going out. The Murk (Мгла)
 rises from below the deepest trench. The player's expedition goes where
