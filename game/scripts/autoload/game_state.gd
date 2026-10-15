@@ -118,6 +118,8 @@ var bosses: Dictionary = {}
 var murk := 0.0
 ## Saga story scenes already shown (SagaStory), id -> true.
 var story: Dictionary = {}
+## The boss fight party's experience (Party), class id -> XP.
+var party_xp: Dictionary = {}
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -230,6 +232,7 @@ func reset() -> void:
 	world_stars = {}
 	exchanged = {}
 	story = {}
+	party_xp = {}
 	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
@@ -1118,6 +1121,40 @@ func _grow_murk(seconds: float) -> void:
 		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()))
 
 
+## Ids of the guards beaten in this world's run.
+func beaten_bosses() -> Array:
+	var out := []
+	for k in bosses:
+		var id := MineBoss.guard(world_id(), depth_index(str(k)))
+		if id != "":
+			out.append(id)
+	return out
+
+
+## The party for a fight: [{"c", "lv", "xp"}] (Party.members, in order).
+func party() -> Array:
+	var out := []
+	for c in Party.members(beaten_bosses()):
+		var xp := int(party_xp.get(c, 0))
+		out.append({"c": c, "lv": Party.level_of(xp), "xp": xp})
+	return out
+
+
+## Experience after a fight for everyone in the party. Returns the level
+## ups: [[class, old level, new level], ...].
+func add_party_xp(won: bool) -> Array:
+	var ups := []
+	for m in party():
+		var c: String = m["c"]
+		var xp := int(m["xp"]) + (Party.XP_WIN if won else Party.XP_LOSS)
+		party_xp[c] = xp
+		var lv := Party.level_of(xp)
+		if lv > int(m["lv"]):
+			ups.append([c, int(m["lv"]), lv])
+	changed.emit()
+	return ups
+
+
 func _read_bosses(v) -> void:
 	bosses = {}
 	if v is Dictionary:
@@ -1319,6 +1356,7 @@ func save_game() -> bool:
 		"bosses": bosses,
 		"murk": murk,
 		"story": story,
+		"party_xp": party_xp,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1480,6 +1518,11 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 		for k in sto:
 			if str(k).length() <= 24 and sto[k] == true and story.size() < 64:
 				story[str(k)] = true
+	var px = data.get("party_xp")
+	if px is Dictionary:
+		for k in px:
+			if Party.CLASSES.has(str(k)):
+				party_xp[str(k)] = clampi(int(_num(px[k], 0.0)), 0, 10000000)
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

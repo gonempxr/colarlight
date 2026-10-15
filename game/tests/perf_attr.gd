@@ -95,6 +95,7 @@ func _initialize() -> void:
 			root.get_node("Profiles").enter_league(OnlineRules.LEAGUE_STARTS[0])
 			var g = root.get_node("GameState")
 			g.reset()
+			g.story = {"pre_crabblack": true}
 			for k in 3:
 				g.levels["d%d" % k] = 10
 			main.open_boss(g.next_depth())

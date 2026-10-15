@@ -144,6 +144,11 @@ func _notification(what: int) -> void:
 		_lock_label.size = Vector2(size.x - 80, 40)
 		var far := not GameState.is_open(key()) and GameState.next_depth() != key()
 		_lock_label.position = Vector2(cx - _lock_label.size.x / 2.0, LOCK_Y + 34.0 if far else 64.0)
+		if GameState.boss_at(key()) != "" and not far:
+			# A guard: name and button over the cave (the boss stands in the card column).
+			cx = (World.CAVE_L + world.scene_right()) / 2.0
+			_lock_label.size = Vector2(world.scene_right() - World.CAVE_L - 40.0, 0)
+			_lock_label.position = Vector2(cx - _lock_label.size.x / 2.0, 34.0)
 		_open_btn.size = _open_btn.custom_minimum_size
 		_open_btn.position = Vector2(cx - _open_btn.size.x / 2.0, 118)
 		_boss_btn.size = _boss_btn.custom_minimum_size
@@ -753,7 +758,7 @@ func _draw_closed(ci: CanvasItem, cave: Rect2, cave_poly: PackedVector2Array) ->
 		_cave_edge(ci, cave_poly)
 		var bc := Vector2(world.card_x() + World.CARD_W / 2.0, World.ROW_H / 2.0 + 14.0)
 		Art.glow(ci, bc, World.CARD_W * 0.75, Color(1.0, 0.35, 0.6, 0.45))
-		BossArt.draw(ci, boss, bc, World.CARD_W / 270.0, 0.0)
+		BossArt.draw(ci, boss, bc, World.CARD_W / 380.0, 0.0)
 		return
 	if is_next:
 		Props.boards(ci, Rect2(cave.position.x + 20, cave.position.y + 30, cave.size.x - 40, cave.size.y - 60))

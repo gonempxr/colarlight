@@ -165,6 +165,11 @@ This file is the quick picture; keep it up to date when something big changes.
   after each guard, seen ones saved in `GameState.story`), dark-violet
   dialogs in league games (`UiTheme.dialog_box(true)`). Relics data
   (`relics.gd`) written, not used yet.
+- 2026-10-15 (branch `mechanics`, docs/league-saga.md): fishing fixed in
+  league games (5-world arrays); boss fights are RPG party battles
+  (`Party`: Guardian/Harpooner/Medic/Alchemist, skills, XP levels saved as
+  `party_xp`; taps, crits, parries; many damage numbers); Twilight mine
+  rows drawn by `ReefArt`. Players on CrazyGames are already in the league.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

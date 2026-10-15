@@ -14,7 +14,7 @@ extends SceneTree
 ## tutorial at that step) | hint:<room> (the lightbulb's hint) | room:2:full (the office, vault overflowing) |
 ## board[:all][:off] (the players' leaderboard) | promo[:bad] (promo code) | invite[:off] (invite friends) |
 ## thanks:<founder|promo|join|inviter|week|season|crown> (the online gifts' thank-you dialog) | onlinebtn (online on: its side button) |
-## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | murk:<0..1> | story:<id>[:page] (intro, pre_<boss>, post_<boss>) | sagapage | boss[:row|:fight|:won|:lost] (a mine boss, saga games) | stars[:confirm|:map] |
+## in:N:<overlay> (any overlay in location N) | saga[:overlay] (in a league game: the saga's worlds) | murk:<0..1> | story:<id>[:page] (intro, pre_<boss>, post_<boss>) | sagapage | boss[:row|:fight|:attack|:won|:lost] (a mine boss, saga games) | stars[:confirm|:map] |
 ## board:<month|friends|clubs|donors|league[:live[:in]]> (":admin" = as the leader; league:live = the league running, :in = in its game) | card:admin (kick/ban) | ach (achievements) | card (a player's card) | club[:none] (clubs).
 ## Scenarios mid and late also open every meta feature and give pearls.
 
@@ -336,6 +336,14 @@ func _initialize() -> void:
 					for i in g.depth_index(guard):
 						if g.levels.get("d%d" % i, 0) == 0:
 							g.levels["d%d" % i] = 1
+				if overlay.ends_with("4"):
+					# Two guards beaten: the whole party of four, with some levels.
+					overlay = overlay.trim_suffix("4")
+					for i in 9:
+						g.levels["d%d" % i] = maxi(1, int(g.levels.get("d%d" % i, 0)))
+					g.bosses = {"d3": true, "d6": true}
+					g.party_xp = {"guardian": 900, "harpooner": 1500, "alchemist": 300, "medic": 450}
+					g.story["pre_shadow_eel"] = true
 				if overlay != "boss:row":
 					main.open_boss(g.next_depth())
 					for i in 4:
@@ -344,12 +352,29 @@ func _initialize() -> void:
 					if bs and overlay != "boss":
 						bs._start()
 						if overlay == "boss:fight":
-							bs._pause = 0.0
-							bs._ring_t = bs._cycle() * 0.55
+							# Mid fight: weak spot open, combo, a hero's skill ready, numbers flying.
 							bs._hp = bs._hp_max * 0.62
-							bs._combo = 4
+							bs._hp_trail = bs._hp_max * 0.7
+							bs._combo = 12
+							bs._combo_left = 0.8
 							bs._hurt = 0.6
-							bs._pops = [[bs._center() + Vector2(30, -60), "-1.2M", Color.WHITE, 0.3, 30], [bs._center() + Vector2(30, -110), TranslationServer.translate("BOSS_PERFECT"), Color("7fffb0"), 0.2, 32]]
+							bs.set_process(false)
+							bs._new_spot()
+							bs._heroes[0]["charge"] = 1.0
+							bs._heroes[1]["charge"] = 0.6
+							bs._heroes[bs._heroes.size() - 1]["hp"] = bs._heroes[bs._heroes.size() - 1]["max"] * 0.3
+							var c: Vector2 = bs._center()
+							bs._pops = [[c + Vector2(30, -60), "1.2M", Color.WHITE, 0.2, 28], [c + Vector2(-50, -20), "640K", Color("ffb46a"), 0.4, 24],
+								[c + Vector2(60, 10), "4.8M", Color("ffe066"), 0.1, 64], [c + Vector2(60, -60), TranslationServer.translate("BOSS_CRIT"), Color("ffe066"), 0.1, 50],
+								[c + Vector2(-90, 60), "380K", Color("bfe8ff"), 0.5, 38], [c + Vector2(90, -100), "415K", Color("ffb46a"), 0.7, 38]]
+							bs._fight.queue_redraw()
+							bs._hud.queue_redraw()
+						elif overlay == "boss:attack":
+							bs._attack_in = 0.0
+							bs._tick(0.01)
+							bs.set_process(false)
+							bs._wind = MineBoss.ATTACK_WIND * 0.5
+							bs._fight.queue_redraw()
 						elif overlay == "boss:won":
 							bs._hp = 0.0
 							bs._end(true)

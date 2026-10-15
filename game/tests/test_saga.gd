@@ -72,7 +72,15 @@ func _initialize() -> void:
 	var h2: float = gs.boss_hit("d3")
 	_check(h2 > h1 and is_equal_approx(gs.boss_hit("d3", true), h2 * MineBoss.PERFECT_MULT), "a stronger mine hits harder; a perfect tap twice")
 	_check(gs.boss_hit("d3") >= hp * MineBoss.MIN_HIT, "even a weak mine moves the bar")
-	_check(MineBoss.judge("crabblack", MineBoss.SPOT_AT) == 2 and MineBoss.judge("crabblack", MineBoss.SPOT_AT + 0.1) == 1 and MineBoss.judge("crabblack", 0.1) == 0, "miss, hit and perfect taps")
+	_check(MineBoss.combo_mult(1) == 1.0 and MineBoss.combo_mult(10) > 1.0 and MineBoss.combo_mult(1000) == MineBoss.COMBO_MAX, "combos grow, up to a cap")
+	# --- The party (RPG classes) ---
+	_check(Party.members([]) == ["guardian", "harpooner"] and Party.members(["crabblack", "mother_jelly"]).size() == 4, "heroes join as guards fall")
+	_check(Party.level_of(0) == 1 and Party.level_of(Party.XP_STEP) == 2 and Party.level_of(Party.XP_STEP * 3) == 3 and Party.power(3) > Party.power(1), "experience makes levels, levels make power")
+	gs.party_xp = {}
+	var ups: Array = gs.add_party_xp(true)
+	_check(int(gs.party_xp.get("guardian", 0)) == Party.XP_WIN and ups.size() == 2, "a won fight levels the party up")
+	for k in Party.CLASSES:
+		_check(TranslationServer.translate(Party.name_key(k)) != Party.name_key(k) and TranslationServer.translate(Party.skill_key(k)) != Party.skill_key(k), "words for class %s" % k)
 	var p0: int = pr.pearls
 	var c0: float = gs.total_earned
 	var got: Dictionary = gs.defeat_boss("d3")
@@ -104,6 +112,22 @@ func _initialize() -> void:
 	_check(story.pages_of("pre_nobody").is_empty() and story.pages_of("x").is_empty(), "no story for unknown ids")
 	for k in ["SAGA_TITLE", "SAGA_ACT", "SAGA_ACT2", "SAGA_ACT3", "MURK_TITLE", "MURK_TEXT", "STORY_KEEPER", "STORY_SKIP"]:
 		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	# --- A whole boss fight, played by the test ---------------------------------------------
+	gs.reset()
+	gs.story["pre_crabblack"] = true
+	for i in 3:
+		gs.levels["d%d" % i] = 70
+	for k in ["lift", "boat", "plant"]:
+		gs.levels[k] = 140
+	var played: Dictionary = await _fight(true)
+	_check(played["state"] == "won", "an active player beats Crabblack with a grown mine (%s, %.0f s left)" % [played["state"], played["left"]])
+	gs.bosses.erase("d3")
+	for i in 3:
+		gs.levels["d%d" % i] = 1
+	for k in ["lift", "boat", "plant"]:
+		gs.levels[k] = 1
+	played = await _fight(true)
+	_check(played["state"] == "lost", "even perfect play can't beat a guard with a fresh mine: upgrade first (%s)" % played["state"])
 	# --- The Murk ---------------------------------------------------------------------------
 	gs.reset()
 	_check(gs.murk == 0.0 and gs.murk_mult() == 1.0, "a fresh saga starts clear")
@@ -127,12 +151,14 @@ func _initialize() -> void:
 	_check(Murk.rise(100.0, 1) < Murk.rise(100.0, 0), "every beaten guard slows the Murk")
 	gs.murk = 0.4
 	gs.story = {"intro": true}
+	gs.party_xp = {"medic": 250}
 	gs.save_path = "user://saga_test_save.json"
 	gs.save_game()
 	gs.murk = 0.0
 	gs.story = {}
+	gs.party_xp = {}
 	gs.load_game()
-	_check(is_equal_approx(gs.murk, 0.4) and gs.story.get("intro", false), "Murk and seen story scenes are saved")
+	_check(is_equal_approx(gs.murk, 0.4) and gs.story.get("intro", false) and int(gs.party_xp.get("medic", 0)) == 250, "Murk, seen story scenes and the party are saved")
 	DirAccess.remove_absolute("user://saga_test_save.json")
 
 	pf.leave_league()
@@ -149,3 +175,35 @@ func _initialize() -> void:
 
 	print("test_saga: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)
+
+
+## Plays a fight on BossScreen for up to its full time: `active` taps the
+## boss 6 times a second, hits weak spots, parries and fires skills.
+func _fight(active: bool) -> Dictionary:
+	var gs: Node = root.get_node("GameState")
+	var bs = load("res://scripts/ui/boss_screen.gd").new()
+	bs.key = "d3"
+	bs.size = Vector2(720, 1280)
+	root.add_child(bs)
+	await process_frame
+	bs.size = Vector2(720, 1280)
+	bs.set_process(false)
+	bs._start()
+	var dt := 1.0 / 30.0
+	var n := 0
+	while bs._state == "fight" and n < int(MineBoss.FIGHT_SEC / dt) + 10:
+		bs._process(dt)
+		n += 1
+		if active and n % 5 == 0:
+			if bs._wind > 0.0:
+				bs.tap_at(bs._attack_target())
+			elif bs._spot_left > 0.0:
+				bs.tap_at(bs._center() + bs._spot * bs._scale())
+			else:
+				bs.tap_at(bs._center())
+			for i in bs._heroes.size():
+				bs.use_skill(i)
+	var out := {"state": bs._state, "left": bs._left}
+	bs.queue_free()
+	await process_frame
+	return out

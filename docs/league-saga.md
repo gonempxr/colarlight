@@ -99,6 +99,33 @@ Lovecraft" and all four "saga feeling" parts:
 - Relics (`scripts/data/relics.gd`): the data side is written (kinds,
   rarities, affixes, salvage/reroll); not used yet (needs the relic UI).
 
+## Built: RPG boss fights, reef art, fishing fix (2026-10-15)
+Mark: "design and textures are bad", "fishing bugs", "the boss fight is
+crap; make it like Japanese autoclicker RPGs (FF mobile, Seven Deadly Sins):
+lots of numbers, lots of HP, a party, classes, RPG moments". Players on
+CrazyGames are already in the league (the CG zip had it), so this goes to
+the CG zip too.
+- **Fishing in league games was broken**: per-world arrays stopped at 5
+  worlds (rods, fish colors, scene tints), world 6 read index 5: hundreds
+  of errors, no pier, no water. Rods are sized by `Balance.WORLDS`, the
+  saga fishes from the ocean's pier in its own colors (`FishingScene`).
+- **Boss fight = RPG party battle** (`BossScreen`, `Party`, `MineBoss`):
+  60 s on an arena (reef walls, god rays, lit stage). The party: Guardian
+  + Harpooner from the start, Medic joins after Crabblack, Alchemist after
+  Mother Jelly. Heroes attack by themselves (numbers fly), charge skills
+  (Harpoon storm, Shield wall, Healing wave, Ink bomb = armor break x1.5);
+  taps on the boss hit (combo up to x2), golden weak spots = crit x4, the
+  red target during the boss's wind-up = parry (stun, x2 damage). Unparried
+  attacks hurt a hero (KO possible); the whole party down = lost. XP after
+  every fight (win 120, loss 45), levels +12% damage/health each, saved as
+  `party_xp`. Boss HP x2 (more numbers), MIN_HIT 0.3% so a fresh mine can't
+  win even with perfect play (test_saga plays whole fights).
+- **Twilight mine art** (`ReefArt`): dark pillow basalt with lit caps and
+  shaded feet, glowing veins, barnacles, coral crust; deep-water halls with
+  god rays, caustics and far coral spires; dark sand with shells and glowing
+  pebbles; whale-rib mine frames; brass shaft braces. Darker site palette.
+  The guarded row: name + button over the cave, the boss fits the card column.
+
 ## The story (Atlantis -> Lovecraft)
 The Coral Light, the heart of the ocean, is fading: the Murk rises from
 below the deepest trench, where the Ancient One sleeps. The Keeper of the

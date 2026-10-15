@@ -57,7 +57,7 @@ BOSS_GUARDS,%s guards this site,%s охраняет эту шахту,%s protege
 BOSS_SEC,s,с,s,秒
 BOSS_MISS,Miss!,Мимо!,¡Fallo!,没打中！
 BOSS_PERFECT,Perfect!,Идеально!,¡Perfecto!,完美！
-BOSS_HINT,Tap when the ring hits the glowing spot! Hits in a row grow stronger.,"Тапай, когда кольцо дойдёт до светящейся точки! Удары подряд становятся сильнее.",¡Toca cuando el anillo llegue al punto brillante! Los golpes seguidos son más fuertes.,当圆圈碰到发光点时点击！连续命中会越来越强。
+BOSS_HINT,Tap the boss! Golden spots = crit ×4. Red target = tap to parry. Glowing hero card = skill!,"Тапай по боссу! Золотые точки — крит ×4. Красная цель — тапни, чтобы отбить. Светится карточка героя — жми навык!",¡Toca al jefe! Puntos dorados = crítico ×4. Diana roja = toca para bloquear. ¡Carta de héroe brillante = habilidad!,点击首领！金色弱点 = 暴击×4。红色目标 = 点击格挡。英雄卡发光 = 释放技能！
 BOSS_READY,"Health: %s
 Your hit: %s (it grows with your mine's income)
 Time: %d seconds","Здоровье: %s
@@ -104,3 +104,24 @@ STORY_POST_MOTHER_JELLY,"The jellies glow with clean light again. Deeper, diver!
 STORY_POST_SHADOW_EEL,The eel left a scale with a pattern… It's a map of Atlantis!,Угорь оставил чешую с узором… Это карта Атлантиды!,La anguila dejó una escama con un dibujo… ¡Es un mapa de la Atlántida!,鳗鱼留下了一片带花纹的鳞片……这是亚特兰蒂斯的地图！
 STORY_POST_KRAKEN,The Kraken swam off into the dark. Nobody holds the gates of Atlantis anymore.,Кракен уплыл во тьму. Ворота Атлантиды больше никто не держит.,El Kraken se fue a la oscuridad. Ya nadie guarda las puertas de la Atlántida.,海怪游进了黑暗。再也没有谁守着亚特兰蒂斯之门了。
 STORY_POST_WARDEN,Act I is done! The Twilight Zone is clean. Atlantis lies ahead; the way there opens soon. Climb the league board until then!,Акт I пройден! Сумеречная зона очищена. Впереди Атлантида — путь туда скоро откроется. А пока поднимайся в таблице лиги!,"¡Acto I superado! La Zona Crepuscular está limpia. Más adelante está la Atlántida; el camino se abre pronto. ¡Mientras, sube en la tabla de la liga!",第一幕完成！暮光之海已被净化。前方就是亚特兰蒂斯，通往那里的路很快就会开启。在此之前，冲上联赛排行榜吧！
+BOSS_COMBO,Combo %d · ×%.2f,Комбо %d · ×%.2f,Combo %d · ×%.2f,连击 %d · ×%.2f
+BOSS_CRIT,CRIT!,КРИТ!,¡CRÍTICO!,暴击！
+BOSS_PARRY,Parried!,Отбил!,¡Bloqueado!,格挡成功！
+BOSS_PARRY_TAP,Tap!,Тапни!,¡Toca!,点击！
+BOSS_BLOCK,Blocked!,Блок!,¡Bloqueo!,挡住了！
+BOSS_KO,Down!,Пал!,¡Caído!,倒下了！
+BOSS_BREAK,Armor broken,Броня сломана,Armadura rota,破甲
+BOSS_STUN,Stunned,Оглушён,Aturdido,眩晕
+CLASS_GUARDIAN,Guardian,Страж,Guardián,守卫者
+CLASS_HARPOONER,Harpooner,Гарпунщик,Arponero,鱼叉手
+CLASS_ALCHEMIST,Alchemist,Алхимик,Alquimista,炼金师
+CLASS_MEDIC,Medic,Медик,Médico,医师
+SKILL_VOLLEY,Harpoon storm!,Град гарпунов!,¡Lluvia de arpones!,鱼叉风暴！
+SKILL_SHIELD,Shield wall!,Стена щитов!,¡Muro de escudos!,盾墙！
+SKILL_HEAL,Healing wave!,Волна лечения!,¡Ola curativa!,治疗之潮！
+SKILL_BOMB,Ink bomb!,Чернильная бомба!,¡Bomba de tinta!,墨汁炸弹！
+SKILL_READY,SKILL!,НАВЫК!,¡HABILIDAD!,技能！
+PARTY_LV,Lv %d,Ур. %d,Nv %d,%d级
+PARTY_MORE,%d more heroes join as you beat the guards,Ещё героев: %d — присоединятся за победы над стражами,%d héroes más se unen al vencer a los guardianes,击败守卫，还会有 %d 位英雄加入
+PARTY_XP,The party gets +%d experience,Отряд получил +%d опыта,El grupo gana +%d de experiencia,队伍获得 +%d 经验
+PARTY_LEVEL_UP,%s: level %d → %d!,%s: ур. %d → %d!,%s: nivel %d → %d!,%s：%d级 → %d级！

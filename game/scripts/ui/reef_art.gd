@@ -21,18 +21,18 @@ static func rock(ci: CanvasItem, w: float, h: float, rock_c: Color, index: int) 
 	var low := rock_c.darkened(0.32)
 	Art.grad(ci, PackedVector2Array([Vector2.ZERO, Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), PackedColorArray([top, top, low, low]))
 	# Pillow basalt: rounded boulders packed in rows, lit from above.
-	var y := 4.0
+	var y := 8.0
 	while y < h + 20.0:
-		var x := -rng.randf_range(0.0, 40.0)
+		var x := -rng.randf_range(0.0, 50.0)
 		while x < w + 30.0:
-			var rw := rng.randf_range(34.0, 70.0)
-			var rh := rng.randf_range(20.0, 32.0)
+			var rw := rng.randf_range(70.0, 120.0)
+			var rh := rng.randf_range(34.0, 48.0)
 			var c := Vector2(x + rw / 2.0, y + rh / 2.0)
 			var depth := clampf(c.y / h, 0.0, 1.0)
 			var tone := rock_c.lerp(low, depth * 0.6).lightened(rng.randf_range(-0.04, 0.06))
 			boulder(ci, c, Vector2(rw / 2.0, rh / 2.0), tone)
-			x += rw * rng.randf_range(0.82, 0.98)
-		y += rng.randf_range(20.0, 26.0)
+			x += rw * rng.randf_range(0.85, 1.0)
+		y += rng.randf_range(34.0, 42.0)
 	# Glowing veins between the boulders.
 	for k in 2:
 		var p := Vector2(rng.randf_range(20.0, w - 120.0), rng.randf_range(20.0, h - 20.0))
@@ -49,7 +49,7 @@ static func rock(ci: CanvasItem, w: float, h: float, rock_c: Color, index: int) 
 	for k in 5:
 		coral_tuft(ci, Vector2(rng.randf_range(0.0, w), 9.0), CORAL[(k + index) % CORAL.size()], rng.randf_range(0.7, 1.15), rng.randi() % 3)
 	# Bioluminescent specks.
-	for k in 14:
+	for k in 8:
 		var p := Vector2(rng.randf_range(0.0, w), rng.randf_range(12.0, h - 6.0))
 		Art.disc(ci, p, rng.randf_range(1.0, 2.0), Color(CORAL[k % CORAL.size()].lightened(0.4), 0.6))
 	# The layer's top lip, darker where it meets the hall above.
@@ -58,15 +58,14 @@ static func rock(ci: CanvasItem, w: float, h: float, rock_c: Color, index: int) 
 
 ## One rounded boulder: body, a lit cap, a shaded foot, a soft outline.
 static func boulder(ci: CanvasItem, c: Vector2, r: Vector2, tone: Color) -> void:
-	var body := Art.ellipse_pts(c, r, 18)
+	var body := Art.ellipse_pts(c, r, 14)
 	Art.flat(ci, body, tone)
-	var cap := Art.clipped(Art.ellipse_pts(c + Vector2(-r.x * 0.12, -r.y * 0.45), Vector2(r.x * 0.8, r.y * 0.6), 16), body)
+	var cap := Art.clipped(Art.ellipse_pts(c + Vector2(-r.x * 0.12, -r.y * 0.45), Vector2(r.x * 0.8, r.y * 0.6), 12), body)
 	if cap.size() >= 3:
 		Art.flat(ci, cap, tone.lightened(0.13))
-	var foot := Art.clipped(Art.ellipse_pts(c + Vector2(r.x * 0.1, r.y * 0.62), Vector2(r.x * 0.95, r.y * 0.5), 16), body)
+	var foot := Art.clipped(Art.ellipse_pts(c + Vector2(r.x * 0.1, r.y * 0.62), Vector2(r.x * 0.95, r.y * 0.5), 12), body)
 	if foot.size() >= 3:
 		Art.flat(ci, foot, Art.shade_of(tone, 0.22))
-	Art.ring(ci, body, Color(Art.INK, 0.45), 1.6)
 
 
 static func barnacles(ci: CanvasItem, at: Vector2, n: int, seed: int) -> void:
