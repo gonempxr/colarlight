@@ -1,8 +1,9 @@
 class_name MurkVeil
 extends Control
-## "The Murk changes the world" (saga games, the mine room): a violet gloom
-## over the rooms that deepens with GameState.murk, eyes opening in the dark
-## at the edges and tentacles creeping in from the left. A beaten guard
+## "The Murk changes the world" (saga games, the mine room): a light violet
+## vignette at the edges that deepens with GameState.murk, eyes opening in
+## the dark and tentacles creeping in, all on the left (the lift shaft side)
+## so the cards and buttons stay clear and bright (Mark: no dark gameplay). A beaten guard
 ## sweeps it away with a flash of light (GameState.murk_cleansed).
 ## Cheap: a few cached shapes moved by Art.push, redrawn REDRAW_HZ times a
 ## second and only while there is Murk to show; it never takes input.
@@ -22,12 +23,6 @@ var _flash := 0.0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	GameState.murk_cleansed.connect(func(): _flash = 1.0)
-
-
-## The darkening of the rooms under the veil (a modulate costs nothing to
-## draw, unlike a full-screen layer).
-static func tint(m: float) -> Color:
-	return Color.WHITE.lerp(Color(0.62, 0.5, 0.82), clampf(m, 0.0, 1.0))
 
 
 ## The Murk as the veil shows it (steps of 0.05).
@@ -56,31 +51,31 @@ func _draw() -> void:
 static func draw_veil(ci: CanvasItem, s: Vector2, m: float, t: float, flash: float = 0.0) -> void:
 	if m > 0.0:
 		# Darker edges (a vignette).
-		var w := 40.0 + 60.0 * m
-		var dark := Color(0.08, 0.01, 0.16, 0.6 * m)
+		var w := 30.0 + 30.0 * m
+		var dark := Color(0.08, 0.01, 0.16, 0.3 * m)
 		var none := Color(dark, 0.0)
 		Art.grad(ci, PackedVector2Array([Vector2.ZERO, Vector2(w, 0), Vector2(w, s.y), Vector2(0, s.y)]), PackedColorArray([dark, none, none, dark]))
 		Art.grad(ci, PackedVector2Array([Vector2(s.x - w, 0), Vector2(s.x, 0), Vector2(s.x, s.y), Vector2(s.x - w, s.y)]), PackedColorArray([none, dark, dark, none]))
 		Art.grad(ci, PackedVector2Array([Vector2(0, s.y - w), Vector2(s.x, s.y - w), s, Vector2(0, s.y)]), PackedColorArray([none, none, dark, dark]))
 	if m >= TENTACLES_AT:
-		var n := clampi(int((m - 0.3) * 6.0), 1, 4)
+		var n := clampi(int((m - 0.3) * 4.0), 1, 2)
 		for i in n:
-			var y := s.y * (0.3 + 0.17 * i)
-			var left := i % 2 == 0
+			var y := s.y * (0.35 + 0.3 * i)
+			var left := true
 			var sway := snappedf(sin(t * 1.3 + i * 1.9) * 0.18, 0.03)
-			var k := 1.1 + 0.3 * m
+			var k := 0.8 + 0.2 * m
 			var base := Vector2(-6.0, y) if left else Vector2(s.x + 6.0, y)
 			Art.push(ci, base, (sway + 0.15) if left else (PI - sway - 0.15), Vector2(k, k if left else -k))
 			tentacle(ci)
 			Art.pop(ci)
 	if m >= EYES_AT:
-		var n := clampi(int(m * 9.0), 1, 8)
+		var n := clampi(int(m * 6.0), 1, 5)
 		for i in n:
-			var right := i % 2 == 1
-			var y := s.y * (0.18 + 0.1 * i) + (18.0 if right else 0.0)
+			var right := false
+			var y := s.y * (0.15 + 0.16 * i)
 			var x := s.x - 30.0 if right else 30.0
 			var blink := fmod(t + i * 1.7, 4.0 + i * 0.5) < 0.25
-			eye(ci, Vector2(x, y), 15.0 + 4.0 * (i % 3), blink, right)
+			eye(ci, Vector2(x, y), 12.0 + 3.0 * (i % 3), blink, right)
 	if flash > 0.0:
 		var f := snappedf(flash, 0.05)
 		Art.flat(ci, PackedVector2Array([Vector2.ZERO, Vector2(s.x, 0), s, Vector2(0, s.y)]), Color(1.0, 0.95, 0.75, 0.55 * f))

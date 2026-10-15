@@ -438,7 +438,6 @@ func _process(delta: float) -> void:
 		_saga_bar.position.y = _tabs.position.y + RoomTabs.PILL_H + 4.0
 	_place_side_buttons()
 	_veil.visible = Balance.saga and _room == MINE and not _covered
-	_scroller.modulate = MurkVeil.tint(MurkVeil.shown(GameState.murk)) if Balance.saga else Color.WHITE
 	if _veil.visible:
 		_veil.position = _area.position
 		_veil.size = _area.size
