@@ -29,6 +29,10 @@ var _shadows: Array[Vector3] = []
 func _init(world_index: int = 0, world_look: Dictionary = {}) -> void:
 	world = posmod(world_index, WorldLook.WORLDS.size())
 	look = world_look if not world_look.is_empty() else WorldLook.LOOKS[WorldLook.WORLDS[world]]
+	# The saga's worlds fish from the ocean's boat and pier in their own
+	# colors (sky and sea come from `look`).
+	if world > JUNGLE:
+		world = OCEAN
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242 + world
 	for i in 70:

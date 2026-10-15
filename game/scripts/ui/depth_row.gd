@@ -212,11 +212,14 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var rock_lo := rock.darkened(0.1)
 	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), PackedColorArray([rock_hi, rock_hi, rock_lo, rock_lo]))
 	var jungle := WorldLook.world == "jungle"
+	var reef := WorldLook.world == "twilight"
 	if WorldLook.world == "volcano":
 		_basalt(ci, w, h, rock)
 	elif jungle:
 		_temple_masonry(ci, w, h, rock)
-	for i in (0 if WorldLook.world == "volcano" or jungle else 3):
+	elif reef:
+		ReefArt.rock(ci, w, h, rock, index)
+	for i in (0 if WorldLook.world == "volcano" or jungle or reef else 3):
 		var y := 40.0 + i * 78.0
 		var band := PackedVector2Array()
 		for k in 9:
@@ -226,7 +229,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 		Art.flat(ci, band, Art.shade_of(rock, 0.1))
 	Art.flat(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, 7), Vector2(0, 7)]), Art.shade_of(rock, 0.3))
 	_wall_details(ci, w, h, rock)
-	if not jungle:
+	if not jungle and not reef:
 		_rock_texture(ci, w, h, rock)
 	# The shaft the divers use.
 	var shaft := Rect2(World.SHAFT_L, -2, World.SHAFT_R - World.SHAFT_L, h + 4)
@@ -244,6 +247,9 @@ func _draw_bg(ci: CanvasItem) -> void:
 		_magma_cave_light(ci, cave, cave_poly, inner)
 	elif jungle:
 		_temple_hall(ci, cave, cave_poly, inner, st)
+	elif reef:
+		ReefArt.hall(ci, cave, cave_poly, inner, st.get("glow", st["ore"]), index, LEDGE_Y)
+		Art.flat(ci, Art.clipped(_wall_band(cave), cave_poly), Color(Art.SHADE, 0.2))
 	else:
 		_light_beams(ci, cave, cave_poly)
 	Art.flat(ci, PackedVector2Array([Vector2(World.SHAFT_L + 4, 120), Vector2(World.SHAFT_R + 2, 120), Vector2(World.SHAFT_R + 2, CAVE_BOTTOM - 2), Vector2(World.SHAFT_L + 4, CAVE_BOTTOM - 2)]), inner)
@@ -256,6 +262,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 	# Wooden brace across the shaft (bamboo and vines in the jungle).
 	if jungle:
 		_jungle_shaft(ci, h)
+	elif reef:
+		ReefArt.shaft_brace(ci, World.SHAFT_L - 8.0, World.SHAFT_R + 8.0)
 	else:
 		Art.t_rect(ci, Rect2(World.SHAFT_L - 8, 6, World.SHAFT_R - World.SHAFT_L + 16, 12), 4, Art.WOOD_DARK, 2.5, 0.3)
 	if not GameState.is_open(key()):
@@ -267,10 +275,13 @@ func _draw_bg(ci: CanvasItem) -> void:
 		floor_pts.append(Vector2(lerpf(World.SHAFT_L + 20.0, cave.end.x, k / 9.0), LEDGE_Y - 3.0 + sin(k * 2.1 + index) * 3.0))
 	floor_pts.append(Vector2(cave.end.x + 10, CAVE_BOTTOM + 10))
 	floor_pts.append(Vector2(World.SHAFT_L, CAVE_BOTTOM + 10))
-	_back_silhouettes(ci, cave, cave_poly, inner)
+	if not reef:
+		_back_silhouettes(ci, cave, cave_poly, inner)
 	Art.flat(ci, Art.clipped(floor_pts, cave_poly), st["floor"])
 	if jungle:
 		_temple_floor(ci, cave, cave_poly, st["floor"])
+	elif reef:
+		ReefArt.floor(ci, cave, cave_poly, st["floor"], st.get("glow", st["ore"]), index, LEDGE_Y, CAVE_BOTTOM, World.SHAFT_L)
 	else:
 		_floor_texture(ci, cave, cave_poly, st["floor"])
 	if WorldLook.world == "volcano":
@@ -281,6 +292,8 @@ func _draw_bg(ci: CanvasItem) -> void:
 		_metal_frame(ci, 150, 76)
 	elif jungle:
 		_stone_portal(ci, 150, 76, st)
+	elif reef:
+		ReefArt.rib_portal(ci, 150, 76)
 	else:
 		Props.mine_frame(ci, 150, 76)
 	Art.pop(ci)

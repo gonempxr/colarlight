@@ -35,7 +35,8 @@ var bucket: Array = []
 ## species id -> {"count": int, "best": float (cm)}
 var book: Dictionary = {}
 ## Rod level index (0..19) in each world: ocean, volcano, acid, moon, ice.
-var rods: Array[int] = [0, 0, 0, 0, 0]
+## One per world in Balance.WORLDS (the saga's worlds included).
+var rods: Array[int] = _no_rods()
 ## The rod of the world the player is in now.
 var rod: int:
 	get:
@@ -69,7 +70,7 @@ func _ready() -> void:
 func reset() -> void:
 	bucket = []
 	book = {}
-	rods = [0, 0, 0, 0, 0]
+	rods = _no_rods()
 	bucket_level = 0
 	helper = 0
 	helper_timer = 0.0
@@ -122,6 +123,13 @@ func base_rate() -> float:
 
 
 ## World index 0..4 the fishing happens in (GameState's world).
+static func _no_rods() -> Array[int]:
+	var r: Array[int] = []
+	r.resize(Balance.WORLDS.size())
+	r.fill(0)
+	return r
+
+
 func world() -> int:
 	if world_override >= 0:
 		return world_override % Balance.WORLDS.size()

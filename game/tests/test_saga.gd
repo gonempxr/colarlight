@@ -43,6 +43,16 @@ func _initialize() -> void:
 		_check(TranslationServer.translate("SITE_" + gs.site_id(i).to_upper()) != "SITE_" + gs.site_id(i).to_upper(), "name of site %d" % i)
 	for k in ["WORLD_TWILIGHT", "MAP_W_TWILIGHT", "GEAR_TWILIGHT_1", "GEAR_TWILIGHT_4", "MAP_W_SUNKEN", "MAP_W_ABYSS"]:
 		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	# --- Fishing in the saga (world 5: arrays used to stop at 5 worlds) ---------------------
+	var fs: Node = root.get_node("Fishing")
+	_check(fs.rods.size() == Balance.WORLDS.size() and fs.world() == 5, "a rod slot for the saga's world")
+	var rod0: int = fs.rod
+	fs.rod = 3
+	_check(fs.rod == 3 and fs.rods[5] == 3, "the saga's rod levels up on its own")
+	fs.rod = rod0
+	var scene = load("res://scripts/fishing/fishing_scene.gd").new(5, WorldLook.look_of(0))
+	_check(scene.world == 0 and scene.look == WorldLook.look_of(0), "the saga fishes from the ocean's pier in its own colors")
+	_check(FishArt.WORLD_HUES.size() == Balance.WORLDS.size(), "fish colors for every world")
 	# --- Mine bosses ------------------------------------------------------------------------
 	_check(MineBoss.guard("twilight", 3) == "crabblack" and MineBoss.guard("twilight", 14) == "warden" and MineBoss.guard("ocean", 3) == "", "guards of the saga only")
 	for k in MineBoss.BOSSES:
