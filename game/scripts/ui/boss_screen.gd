@@ -568,17 +568,13 @@ func _draw_hud() -> void:
 	# Status tags under the bar.
 	var tx := 88.0
 	if _break > 0.0:
-		Art.text(_hud, Vector2(tx, 90), t("BOSS_BREAK"), 22, Color("e0a0ff"), 6, false)
-		tx += 130.0
+		tx = _tag_at(tx, t("BOSS_BREAK"), Color("e0a0ff"))
 	if _stun > 0.0:
-		Art.text(_hud, Vector2(tx, 90), t("BOSS_STUN"), 22, Color("bff8ff"), 6, false)
-		tx += 130.0
+		tx = _tag_at(tx, t("BOSS_STUN"), Color("bff8ff"))
 	if _bshield > 0.0:
-		Art.text(_hud, Vector2(tx, 90), t("BOSS_SHIELD"), 22, Color("ffe07a"), 6, false)
-		tx += 150.0
+		tx = _tag_at(tx, t("BOSS_SHIELD"), Color("ffe07a"))
 	if _prophecy > 0.0:
-		Art.text(_hud, Vector2(tx, 90), t("BOSS_PROPHECY"), 22, Color("ffe07a"), 6, false)
-		tx += 150.0
+		tx = _tag_at(tx, t("BOSS_PROPHECY"), Color("ffe07a"))
 	var tag := ""
 	if _fly > 0.0:
 		tag = t("BOSS_FLYING")
@@ -591,7 +587,7 @@ func _draw_hud() -> void:
 	elif _slow > 0.0:
 		tag = t("BOSS_ELDER")
 	if tag != "":
-		Art.text(_hud, Vector2(tx, 90), tag, 22, Color("9aff8a"), 6, false)
+		_tag_at(tx, tag, Color("9aff8a"))
 	# The Hydra's heads: three small bars under the big one.
 	if not _heads.is_empty():
 		var hw := (inner.size.x - 20.0) / 3.0
@@ -1187,3 +1183,20 @@ func _button(text: String, variation: StringName, action: Callable) -> void:
 	b.add_theme_font_size_override("font_size", 30)
 	b.pressed.connect(action)
 	_panel.add_child(b)
+
+
+## One status word on the HUD line at x; returns where the next one starts
+## (measured, so long words in any language never overlap). A word that
+## does not fit goes to a second line under the first.
+func _tag_at(x: float, text: String, color: Color) -> float:
+	var w := UiTheme.heavy_font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+	var y := 90.0
+	if x >= 10000.0:
+		x -= 10000.0
+		y = 116.0
+	elif x > 88.0 and x + w > _hud.size.x - 8.0:
+		x = 88.0
+		y = 116.0
+	Art.text(_hud, Vector2(x, y), text, 22, color, 6, false)
+	# Past 10000 = "now on the second line".
+	return x + w + 18.0 + (10000.0 if y > 90.0 else 0.0)

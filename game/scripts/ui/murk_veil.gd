@@ -22,7 +22,11 @@ var _flash := 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	GameState.murk_cleansed.connect(func(): _flash = 1.0)
+	# Through the tree, not the autoload name: art scripts call MurkVeil.eye()
+	# and must compile in tests that run without the autoloads.
+	var gs := get_node_or_null("/root/GameState")
+	if gs:
+		gs.murk_cleansed.connect(func(): _flash = 1.0)
 
 
 ## The Murk as the veil shows it (steps of 0.05).
@@ -36,7 +40,8 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	_flash = maxf(0.0, _flash - delta / 1.4)
-	var m := shown(GameState.murk)
+	var gs := get_node_or_null("/root/GameState")
+	var m := shown(float(gs.get("murk")) if gs else 0.0)
 	_wait -= delta
 	if m != _m or (_wait <= 0.0 and (m >= EYES_AT or _flash > 0.0)):
 		_m = m

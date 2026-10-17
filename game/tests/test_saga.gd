@@ -253,7 +253,7 @@ func _act3(gs: Node) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 3
 	_check(Relics.KINDS.find(Relics.drop(rng, "star_spawn", 15)["kind"]) >= 10, "act III bosses drop act III relics")
-	var beaten: Array = ["drowned_king"]
+	var beaten: Array = ["crabblack", "mother_jelly", "drowned_king"]
 	_check(not Party.members(beaten).has("astronomer"), "no Astronomer before the Shoggoth")
 	beaten.append("shoggoth")
 	_check(Party.members(beaten).has("astronomer") and Party.members(beaten).size() == 6, "the Astronomer joins: six heroes")
