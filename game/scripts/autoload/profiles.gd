@@ -115,8 +115,13 @@ func league_game() -> bool:
 
 ## The Top League opens for a player whose game reached the last world
 ## (the Jungle); a league game started before stays open to them.
-func can_join_league(lg: int, max_location: int) -> bool:
-	return lg > 0 and (max_location >= Balance.LAST_LOCATION or not league_profile(lg).is_empty())
+## Joining needs the Jungle opened and LEAGUE_STARS world stars in all
+## (Mark, 2026-10-17); a league game already started always stays open.
+const LEAGUE_STARS := 15
+
+
+func can_join_league(lg: int, max_location: int, stars: int = LEAGUE_STARS) -> bool:
+	return lg > 0 and ((max_location >= Balance.LAST_LOCATION and stars >= LEAGUE_STARS) or not league_profile(lg).is_empty())
 
 
 ## The current profile plays league `lg`.

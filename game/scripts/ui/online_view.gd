@@ -423,8 +423,8 @@ static func _league_join(m: Modal, main: Node) -> void:
 		v.add_child(_center(Views.label(t("LEAGUE_JOIN_TEXT"), 19, Color("dfe4ff"))))
 	m.add(card)
 	var has_game: bool = not Profiles.league_profile(lg).is_empty()
-	if not inside and not Profiles.can_join_league(lg, int(GameState.max_location)):
-		v.add_child(_center(Views.label(t("LEAGUE_LOCKED"), 20, Color("ffb4a8"), true)))
+	if not inside and not Profiles.can_join_league(lg, int(GameState.max_location), GameState.total_stars()):
+		v.add_child(_center(Views.label(t("LEAGUE_LOCKED") % [Profiles.LEAGUE_STARS, GameState.total_stars(), Profiles.LEAGUE_STARS], 20, Color("ffb4a8"), true)))
 		return
 	var label := t("LEAGUE_BACK") if inside else (t("LEAGUE_PLAY") if has_game else t("LEAGUE_JOIN"))
 	var b := m.button(label, func():

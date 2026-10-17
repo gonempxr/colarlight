@@ -727,6 +727,7 @@ func _initialize() -> void:
 	var home_name: String = profiles.player_name()
 	gs.save_game()
 	_check(not profiles.can_join_league(ls, 3) and profiles.can_join_league(ls, 4) and not profiles.can_join_league(0, 4), "the league opens after the Jungle")
+	_check(not profiles.can_join_league(ls, 4, 14) and profiles.can_join_league(ls, 4, 15) and not profiles.can_join_league(ls, 3, 40), "and with 15 world stars")
 	_check(not profiles.league_game(), "the usual game is not a league game")
 	var lgp: String = profiles.enter_league(ls)
 	_check(lgp != "" and profiles.current_id == lgp and profiles.in_league(ls) and not profiles.in_league(ls + 1), "joining the league switches to its profile")

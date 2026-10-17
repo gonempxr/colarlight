@@ -45,17 +45,17 @@ LEAGUE_IN_TEXT,You are playing in the Top League. Your usual game is saved.,Ты
 LEAGUE_BACK,Back to my game,Вернуться в свою игру,Volver a mi partida,回到我的游戏
 LEAGUE_ENTERED,Welcome to the Top League! Everyone starts from zero.,Добро пожаловать в Высшую лигу! Все начинают с нуля.,¡Bienvenido a la Liga Superior! Todos empiezan de cero.,欢迎来到顶级联赛！所有人从零开始。
 LEAGUE_BADGE,League,Лига,Liga,联赛
-LEAGUE_LOCKED,Open the Jungle Ruins to join the league.,"Открой Джунгли, чтобы вступить в лигу.",Abre las Ruinas de la Selva para unirte a la liga.,开启丛林遗迹后即可加入联赛。
+LEAGUE_LOCKED,Join with the Jungle Ruins open and %d ★ world stars. You have %d / %d ★.,Нужны открытые Джунгли и %d ★ звёзд мира. У тебя %d / %d ★.,Necesitas las Ruinas de la Selva y %d ★ estrellas de mundo. Tienes %d / %d ★.,需要开启丛林遗迹并拥有 %d ★ 世界星。你有 %d / %d ★。
 LEAGUE_NO_ADS,No x2 for ads in the league: everyone plays on equal terms.,В лиге нет x2 за рекламу: все играют на равных.,En la liga no hay x2 por anuncios: todos juegan en igualdad.,联赛中没有看广告得双倍：大家公平竞争。
-FRI_RACE,"Race to Friday: whoever is No. 1 at the finish wins %s coins! Ends in %s","Гонка до пятницы: кто будет №1 на финише, получит %s монет! До конца %s","Carrera hasta el viernes: ¡quien sea el n.º 1 al final gana %s monedas! Termina en %s",周五冲刺：终点时排名第一的玩家将赢得%s金币！剩余%s
-FRI_WINNER,"Winner of the race to Friday: %s","Победитель гонки до пятницы: %s","Ganador de la carrera hasta el viernes: %s",周五冲刺冠军：%s
+FRI_RACE,Race to Friday: whoever is No. 1 at the finish wins %s coins! Ends in %s,"Гонка до пятницы: кто будет №1 на финише, получит %s монет! До конца %s",Carrera hasta el viernes: ¡quien sea el n.º 1 al final gana %s monedas! Termina en %s,周五冲刺：终点时排名第一的玩家将赢得%s金币！剩余%s
+FRI_WINNER,Winner of the race to Friday: %s,Победитель гонки до пятницы: %s,Ganador de la carrera hasta el viernes: %s,周五冲刺冠军：%s
 THANKS_FRI_TITLE,Champion of the week!,Чемпион недели!,¡Campeón de la semana!,本周冠军！
-THANKS_FRI,"You were No. 1 at the Friday finish! +%s coins and %d pearls","Ты был №1 на финише в пятницу! +%s монет и %d жемчуга","¡Fuiste el n.º 1 en la meta del viernes! +%s monedas y %d perlas",你在周五终点时排名第一！+%s金币和%d珍珠
+THANKS_FRI,You were No. 1 at the Friday finish! +%s coins and %d pearls,Ты был №1 на финише в пятницу! +%s монет и %d жемчуга,¡Fuiste el n.º 1 en la meta del viernes! +%s monedas y %d perlas,你在周五终点时排名第一！+%s金币和%d珍珠
 GIFT_TITLE,Gift to this player,Подарок игроку,Regalo para este jugador,赠送给该玩家
 GIFT_COINS,"Coins, e.g. 18ad","Монеты, например 18ad","Monedas, p. ej. 18ad",金币，例如18ad
 GIFT_NO_WORLDS,Worlds: leave as is,Миры: не трогать,Mundos: sin cambios,世界：保持不变
 GIFT_UPTO,Open up to: %s,Открыть до: %s,Abrir hasta: %s,开放至：%s
-GIFT_HINT,"Reaches them within 5 minutes while they play (not in the league game). Worlds before the chosen one get fully built.","Дойдёт за 5 минут, пока игрок в игре (не в лиге). Миры до выбранного будут полностью прокачаны.","Le llega en 5 minutos mientras juega (no en la liga). Los mundos anteriores quedan construidos al completo.",玩家在线时5分钟内送达（联赛存档除外）。所选世界之前的世界将全部升级。
+GIFT_HINT,Reaches them within 5 minutes while they play (not in the league game). Worlds before the chosen one get fully built.,"Дойдёт за 5 минут, пока игрок в игре (не в лиге). Миры до выбранного будут полностью прокачаны.",Le llega en 5 minutos mientras juega (no en la liga). Los mundos anteriores quedan construidos al completo.,玩家在线时5分钟内送达（联赛存档除外）。所选世界之前的世界将全部升级。
 GIFT_SEND,Give,Выдать,Dar,赠送
 GIFT_BAD,Type the coins (e.g. 18ad) or pick a world,Напиши монеты (например 18ad) или выбери мир,Escribe las monedas (p. ej. 18ad) o elige un mundo,请输入金币（例如18ad）或选择世界
 GIFT_DONE,Sent: %s coins,Отправлено: %s монет,Enviado: %s monedas,已发送：%s金币
