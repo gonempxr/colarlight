@@ -11,7 +11,7 @@ extends RefCounted
 ## static part is cached as one piece (Art.cache_begin); only small things
 ## move (waterfalls, smoke, bubbles, boats).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis", "rlyeh"]
 
 ## Island states on the map.
 const DONE := 0
@@ -71,6 +71,9 @@ const LOOK := {
 	"atlantis": {"top": Color("f4eee0"), "side": Color("d8c8a0"), "under": Color("2a6ec8"), "under2": Color("4a8ee0"),
 		"med": Color("4ad8f0"), "med_rim": Color("1e6ab0"), "path": Color("ffd84a"), "tease": Color("4af0e0"),
 		"boat": Color("c7843a"), "boat2": Color("2a8ed8")},
+	"rlyeh": {"top": Color("4a5a52"), "side": Color("2e3a36"), "under": Color("1a2a26"), "under2": Color("2a3a34"),
+		"med": Color("3a8a6a"), "med_rim": Color("1e4a3a"), "path": Color("7dff6a"), "tease": Color("7dff6a"),
+		"boat": Color("2a3a36"), "boat2": Color("8a4cf0")},
 }
 
 ## Where things stand on each island (local coordinates): the mine, the
@@ -97,6 +100,9 @@ const SPOTS := {
 	"atlantis": {"mine": Vector2(-120, -10), "factory": Vector2(118, -10), "office": Vector2(150, -56),
 		"boat": [Vector2(-94, 8), Vector2(-40, 20), Vector2(24, 18), Vector2(86, 8)],
 		"nodes": [Vector2(-140, 50), Vector2(-50, 72), Vector2(42, 72), Vector2(130, 52)]},
+	"rlyeh": {"mine": Vector2(122, -28), "factory": Vector2(-24, -14), "office": Vector2(-118, -50),
+		"boat": [Vector2(104, -22), Vector2(76, -8), Vector2(40, -6), Vector2(14, -14)],
+		"nodes": [Vector2(-140, 46), Vector2(-50, 70), Vector2(42, 70), Vector2(128, 50)]},
 }
 
 ## Small hue turn for the repeats (tier 1+), so a second ocean looks new.
@@ -595,6 +601,36 @@ static func _atlantis(ci: CanvasItem) -> void:
 	_factory(ci, spots("atlantis")["factory"], 0.85, Color("f4eee0"), Color("2a8ed8"), Color("ffc93c"))
 	_raft(ci, spots("atlantis")["mine"], 0.8)
 	_star_badge(ci, Vector2(90, 52), 7, Color("4af0e0"))
+	_debris(ci, _c(lk["under"]), DEBRIS)
+
+
+## R'lyeh (saga act III): a black island of leaning cyclopean blocks, a
+## half-sunk idol of the Sleeper with glowing eyes, monoliths in a green
+## lagoon, tentacles curling out of the water; violet crystals below.
+static func _rlyeh(ci: CanvasItem) -> void:
+	_body(ci, "rlyeh", 71)
+	var lk := look("rlyeh")
+	for c in [[Vector2(-110, 110), RlyehArt.VIOLET], [Vector2(-20, 170), RlyehArt.SLIME], [Vector2(80, 150), RlyehArt.VIOLET]]:
+		var p: Vector2 = c[0]
+		Art.crystal(ci, p + Vector2(0, -4), -40.0, 12.0, -0.2, c[1], 2.4)
+		Art.glow(ci, p + Vector2(0, 30), 18.0, Color(c[1], 0.45))
+	_medium(ci, "rlyeh", [[Vector2(-96, 0), Vector2(86, 36)], [Vector2(-170, 14), Vector2(30, 16)]])
+	# Leaning blocks and monoliths.
+	Art.toon(ci, PackedVector2Array([Vector2(-20, -20), Vector2(-14, -70), Vector2(40, -86), Vector2(60, -24)]), RlyehArt.STONE, 2.8, 0.5)
+	Art.toon(ci, PackedVector2Array([Vector2(50, -30), Vector2(70, -96), Vector2(110, -84), Vector2(100, -26)]), RlyehArt.STONE.darkened(0.15), 2.8, 0.5)
+	RlyehArt.monolith(ci, Vector2(-160, -24), 70.0, 10.0, 0.18, RlyehArt.STONE)
+	RlyehArt.monolith(ci, Vector2(-60, -16), 56.0, 9.0, -0.14, RlyehArt.STONE.darkened(0.1))
+	# The idol on top.
+	RlyehArt.idol(ci, Vector2(30, -84), 1.5, Color("4a6a5a"))
+	# Tentacles out of the lagoon.
+	for k in 2:
+		Art.push(ci, Vector2(-120 + k * 60, 6), 0.0, Vector2(1.3 - k * 0.3, 1.3 - k * 0.3) * Vector2(1.0 if k == 0 else -1.0, 1.0))
+		OreArt.tentacle(ci, 1.0 + k * 2.0, Color("4a6a5a"))
+		Art.pop(ci)
+	_hut(ci, spots("rlyeh")["office"], 0.9)
+	_factory(ci, spots("rlyeh")["factory"], 0.85, Color("3a4642"), Color("8a4cf0"), Color("7dff6a"))
+	_raft(ci, spots("rlyeh")["mine"], 0.8)
+	_star_badge(ci, Vector2(90, 52), 8, RlyehArt.SLIME)
 	_debris(ci, _c(lk["under"]), DEBRIS)
 
 
@@ -1207,6 +1243,7 @@ static func island(ci: CanvasItem, world: String, state: int, t: float, tier: in
 				"jungle": _jungle(ci)
 				"twilight": _twilight(ci)
 				"atlantis": _atlantis(ci)
+				"rlyeh": _rlyeh(ci)
 				_: _ocean(ci)
 		Art.cache_end(ci, key)
 	if not dark:
@@ -1266,6 +1303,13 @@ static func _fx(ci: CanvasItem, world: String, t: float) -> void:
 			Art.glow(ci, spots("moon")["office"] + Vector2(-38, -130), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
 		"jungle":
 			_jungle_fx(ci, t)
+		"rlyeh":
+			# The idol's eyes glowing, green sparks drifting up from the rifts.
+			var b := 0.5 + 0.5 * sin(t * 1.6)
+			Art.glow(ci, Vector2(30, -150), 30.0 + 8.0 * b, Color(0.5, 1.0, 0.4, 0.2 + 0.15 * b))
+			for i in 6:
+				var f := fposmod(t * 0.25 + i / 6.0, 1.0)
+				Art.dot(ci, Vector2(-150 + i * 58 + sin(t + i) * 8, 30 - f * 130), 2.0 + (i % 2), Color(0.5, 1.0, 0.45, 0.9 * (1.0 - f)))
 		"atlantis":
 			# The temple's sun disc shining, orichalcum motes drifting up.
 			var b := 0.5 + 0.5 * sin(t * 2.0)
@@ -1596,6 +1640,7 @@ static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, 
 			"jungle": _jungle(ci)
 			"twilight": _twilight(ci)
 			"atlantis": _atlantis(ci)
+			"rlyeh": _rlyeh(ci)
 			_: _ocean(ci)
 		Art.pop(ci)
 		Art.fit_recorded(start, Vector2.ZERO, radius - 1.0, Vector2.ZERO, 1.0)

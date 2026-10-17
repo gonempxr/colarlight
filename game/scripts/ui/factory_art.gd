@@ -73,6 +73,11 @@ const LOOKS := {
 		"col": Color("e0d4b8"), "pipe": Color("c7843a"), "haz": Color("ffc93c"),
 		"floor": Color("d8c8a0"), "floor2": Color("2a6ec8"), "sky": Color("6ab8f0"), "sky2": Color("4ad8f0"),
 		"accent": Color("4af0e0"), "flame": Color("ffc93c"), "glow": Color("ffe07a"), "style": "temple"},
+	# R'lyeh (saga act III): black stone, green flames, violet glass.
+	"rlyeh": {"wall": Color("2e3a36"), "wall2": Color("24302c"), "low": Color("143a3a"), "beam": Color("4a3a6a"),
+		"col": Color("3a4a44"), "pipe": Color("4a5a52"), "haz": Color("7dff6a"),
+		"floor": Color("2a3430"), "floor2": Color("1a2420"), "sky": Color("3a6a4a"), "sky2": Color("7dff6a"),
+		"accent": Color("7dff6a"), "flame": Color("3aff9a"), "glow": Color("9aff8a"), "style": "temple"},
 }
 
 ## Machine materials per tier: body, trim, dark parts, light/glow.

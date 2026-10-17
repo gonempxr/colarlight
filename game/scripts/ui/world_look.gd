@@ -12,7 +12,7 @@ extends RefCounted
 ## the colors from here (and from Art.sea_cols, Art.DEPTH_STYLE and the
 ## DayNight sky stops that apply() sets).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis", "rlyeh"]
 
 ## Ten work sites per world (keys d0..d9), the Jungle 15 (d0..d14), deepest last.
 const SITES := {
@@ -26,6 +26,7 @@ const SITES := {
 		"bone_coral", "siren_scale", "nautilus", "abyss_opal", "kraken_tooth", "deep_star", "warden_eye", "coral_light"],
 	"atlantis": ["marble_dust", "mosaic_tile", "bronze_gear", "amphora", "trident_shard", "orichalcum", "sun_lens",
 		"automaton_core", "siren_harp", "royal_seal", "crystal_codex", "tide_engine", "poseidon_crown", "star_chart", "atlas_heart"],
+	"rlyeh": ["black_sand", "eye_stone", "elder_glyph", "deep_spawn", "madness_pearl", "cyclopean_block", "green_flame", "dream_crystal", "tentacle_ivory", "void_coral", "sleeper_idol", "star_metal", "whisper_shell", "elder_sign", "sleeper_heart"],
 }
 
 ## sea: the medium on the surface and above the first site, top to deep.
@@ -113,6 +114,18 @@ const LOOKS := {
 		"dusk": 0.45, "night_tint": Color(0.7, 0.76, 1.0),
 		"sand": Color("f4eee0"), "sand_dark": Color("d8c8a0"), "grass": Color("4ae0c8"),
 		"seabed": Color("16204a"), "weed": Color("ffc93c"), "water": true, "far": Color("8ab0e0"),
+	},
+	# The saga, act III "R'lyeh": a sick green storm sky over black water,
+	# dark basalt shores and glowing green weed (divers swim).
+	"rlyeh": {
+		"name": "WORLD_RLYEH",
+		"sea": [Color("3a8a6a"), Color("1e5a4a"), Color("143a3a"), Color("0a1a22")],
+		"shaft": [Color("3a8a6a"), Color("1e5a4a"), Color("143a3a"), Color("0a1a22")],
+		"day": [Color("1e3a3a"), Color("3a6a4a"), Color("9adf7a")],
+		"night": [Color("060c10"), Color("0e1e1e"), Color("1a3a2a")],
+		"dusk": 0.8, "night_tint": Color(0.6, 0.8, 0.7),
+		"sand": Color("4a5a52"), "sand_dark": Color("2e3a36"), "grass": Color("6aff8a"),
+		"seabed": Color("0a1414"), "weed": Color("7dff6a"), "water": true, "far": Color("3a5a4a"),
 	},
 }
 

@@ -289,7 +289,7 @@ func defaults() -> Dictionary:
 		"seen_total": -1.0, "seen_profile": "", "claimed": "", "claimed_by": "", "taken": "", "prize_week": -1,
 		"best_rank": 0, "title": 0, "title_week": -1, "month": -1, "month_score": 0.0, "season_prize": -1,
 		"club": "", "club_name": "", "pz_score": 0.0, "seen_pz": -1.0, "pz_prize": -1, "owner": "",
-		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "fri": "", "fri_name": "", "gifts": {}, "tester": false, "cheated": false}
+		"league": 0, "league_score": 0.0, "crown_prize": -1, "crown_wins": 0, "sleeper": 0, "fri": "", "fri_name": "", "gifts": {}, "tester": false, "cheated": false}
 
 
 func load_data() -> void:
@@ -417,21 +417,24 @@ func profile_info() -> String:
 		p["r"] = int(data["best_rank"])
 	if int(data["crown_wins"]) > 0:
 		p["k"] = int(data["crown_wins"])
+	if int(data.get("sleeper", 0)) > 0:
+		p["s"] = int(data["sleeper"])
 	return JSON.stringify(p)
 
 
 ## A profile card's fields from a row's "p" (anything odd is dropped).
 static func parse_profile(p: String) -> Dictionary:
 	var d = JSON.parse_string(p) if p.begins_with("{") and p.length() <= 300 else null
-	var out := {"t": 0, "b": 0, "wo": 1, "c": "", "f": 0, "r": 0, "k": 0}
+	var out := {"t": 0, "b": 0, "wo": 1, "c": "", "f": 0, "r": 0, "k": 0, "s": 0}
 	if not d is Dictionary:
 		return out
-	for k in ["t", "b", "wo", "f", "r", "k"]:
+	for k in ["t", "b", "wo", "f", "r", "k", "s"]:
 		if d.get(k) is float or d.get(k) is int:
 			out[k] = maxi(0, int(d[k]))
 	out["t"] = mini(int(out["t"]), 3)
 	out["wo"] = clampi(int(out["wo"]), 1, Balance.LAST_LOCATION + 1)
 	out["k"] = mini(int(out["k"]), 999)
+	out["s"] = mini(int(out["s"]), 999)
 	out["b"] = mini(int(out["b"]), 99)
 	if d.get("c") is String:
 		out["c"] = OnlineRules.strip_name(str(d["c"]))
@@ -640,6 +643,27 @@ func check_admin() -> void:
 
 
 ## The donation board: done.call({"ok": bool, "rows": [...]}) (OnlineRules.parse_donors).
+## The saga's Ancient One beaten once more: the "Heart of the Sleeper"
+## trophy on my card (kept for every profile on this device).
+func add_sleeper() -> void:
+	data["sleeper"] = int(data.get("sleeper", 0)) + 1
+	save_data()
+	submit_soon()
+
+
+## The world boss (WorldBoss): sends my total damage for league `league`.
+func wb_hit(league: int, dmg: float, done: Callable = Callable()) -> void:
+	var arg := JSON.stringify({"l": league, "name": board_name(), "dmg": snappedf(clampf(dmg, 0.0, 1e7), 0.1)})
+	_request("wb_hit", arg, func(res: String):
+		if done.is_valid():
+			done.call(res))
+
+
+## The world boss board of league `league` -> WorldBoss.parse_board.
+func wb_board(league: int, done: Callable) -> void:
+	_request("wb_board", JSON.stringify({"l": league}), func(res: String): done.call(WorldBoss.parse_board(res)))
+
+
 func fetch_donors(done: Callable) -> void:
 	_request("donors", "", func(res: String): done.call(OnlineRules.parse_donors(res)))
 

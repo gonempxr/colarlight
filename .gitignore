@@ -5,3 +5,7 @@ balance/__pycache__/
 deliver/
 screenshots/
 __pycache__/
+# Skipper — machine-local artifacts (hook scratch + derived index), never commit
+.claude/.skipper-*
+.skipper/*
+!.skipper/receipts/

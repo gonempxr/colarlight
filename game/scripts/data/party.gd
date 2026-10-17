@@ -19,8 +19,10 @@ const CLASSES := {
 	"alchemist": {"atk": 0.12, "every": 1.4, "hp": 0.8, "skill": "bomb", "charge": 13.0, "suit": Color("c25aff"), "joins": "mother_jelly"},
 	# Act II: the Oracle of Atlantis joins once the Drowned King is beaten.
 	"oracle": {"atk": 0.1, "every": 1.3, "hp": 0.9, "skill": "prophecy", "charge": 14.0, "suit": Color("ffd84a"), "joins": "drowned_king"},
+	# Act III: the Astronomer joins once the Shoggoth is beaten.
+	"astronomer": {"atk": 0.1, "every": 1.4, "hp": 0.9, "skill": "elder_sign", "charge": 13.0, "suit": Color("7a8aff"), "joins": "shoggoth"},
 }
-const ORDER: Array[String] = ["guardian", "harpooner", "oracle", "alchemist", "medic"]
+const ORDER: Array[String] = ["guardian", "harpooner", "oracle", "astronomer", "alchemist", "medic"]
 
 ## Skills: volley = VOLLEY_SHOTS harpoons of VOLLEY_SHARE each; shield =
 ## the next boss attack does nothing; heal = HEAL_SHARE of everyone's
@@ -35,6 +37,9 @@ const BREAK_MULT := 1.5
 const BREAK_SEC := 5.0
 ## prophecy = every tap is a critical hit for PROPHECY_SEC.
 const PROPHECY_SEC := 5.0
+## elder_sign = the boss's attacks come ELDER_SLOW times slower for ELDER_SEC.
+const ELDER_SEC := 7.0
+const ELDER_SLOW := 2.0
 ## A boss attack takes this share of the hit hero's full health
 ## (ANGRY_HIT once the boss is under half health).
 const BOSS_HIT := 0.3

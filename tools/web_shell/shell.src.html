@@ -1147,6 +1147,24 @@ window.coralightFirebase = (function () {
 				store(d);
 				return later('ok');
 			},
+			// The world boss (rules v9: my damage only grows, by 1000 at most).
+			wb_hit: function (a) {
+				const d = fix(load());
+				const col = ((d.wb = d.wb || {})[a.l] = d.wb[a.l] || {});
+				const old = (col[uid] && col[uid].dmg) || 0;
+				if (a.dmg < old || a.dmg - old > 1000) {
+					return deny();
+				}
+				col[uid] = { name: a.name, dmg: a.dmg };
+				store(d);
+				return later('ok');
+			},
+			wb_board: function (a) {
+				const col = (fix(load()).wb || {})[a.l] || {};
+				const rows = Object.keys(col).map(function (k) { return { uid: k, name: col[k].name, dmg: col[k].dmg }; });
+				rows.push({ uid: 'test-wb-1', name: 'Kraken fan', dmg: 120000 }, { uid: 'test-wb-2', name: 'Deep diver', dmg: 64000 });
+				return later(JSON.stringify({ rows: rows }));
+			},
 			// The donation board: a few made-up donors for testing.
 			donors: function () {
 				return later(JSON.stringify({ list: [{ name: 'Test donor', total: 20 }, { name: 'Coral fan', total: 5 }] }));
@@ -1565,6 +1583,21 @@ window.coralightFirebase = (function () {
 			gift_done: function () {
 				return F.db.collection('gifts').doc(me()).delete().then(function () { return 'ok'; });
 			},
+			// The world boss: worldboss/{league}/hits/{uid} {name, dmg, t} (rules v9).
+			wb_hit: function (a) {
+				return F.db.collection('worldboss').doc(String(a.l)).collection('hits').doc(me())
+					.set({ name: String(a.name || '').slice(0, 24), dmg: Number(a.dmg) || 0, t: ts() }).then(function () { return 'ok'; });
+			},
+			wb_board: function (a) {
+				return F.db.collection('worldboss').doc(String(a.l)).collection('hits').orderBy('dmg', 'desc').limit(300).get().then(function (snap) {
+					const rows = [];
+					snap.forEach(function (d) {
+						const x = d.data();
+						rows.push({ uid: d.id, name: String(x.name || '').slice(0, 24), dmg: Number(x.dmg) || 0 });
+					});
+					return JSON.stringify({ rows: rows });
+				});
+			},
 			// The donation board (our own site only): donors/{id} {name, total},
 			// added by hand by the leader in the Firebase console.
 			donors: function () {
@@ -1731,6 +1764,8 @@ window.coralightFirebase = (function () {
 		kick: function (arg) { return api.kick(JSON.parse(arg)); },
 		unban: function (arg) { return api.unban(JSON.parse(arg)); },
 		donors: function () { return api.donors(); },
+		wb_hit: function (arg) { return api.wb_hit(JSON.parse(arg)); },
+		wb_board: function (arg) { return api.wb_board(JSON.parse(arg)); },
 		link: function (arg) { return linkFor(arg); },
 		share: function (arg) { return online.share(JSON.parse(arg)); },
 	};

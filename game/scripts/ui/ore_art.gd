@@ -19,13 +19,18 @@ const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "ne
 		"warden_eye": "void", "coral_light": "heart",
 		# Atlantis (act II): own art for the city's things, the rest kin.
 		"marble_dust": "dust", "orichalcum": "crystal", "sun_lens": "sun_disc", "royal_seal": "old_coins",
-		"crystal_codex": "jade", "tide_engine": "time", "poseidon_crown": "crown", "star_chart": "star", "atlas_heart": "heart"}
+		"crystal_codex": "jade", "tide_engine": "time", "poseidon_crown": "crown", "star_chart": "star", "atlas_heart": "heart",
+		# R'lyeh (act III): own art for the drowned city's horrors, the rest kin.
+		"black_sand": "dust", "cyclopean_block": "obsidian", "dream_crystal": "crystal", "void_coral": "void",
+		"star_metal": "meteor", "whisper_shell": "lantern_shell", "elder_sign": "star", "sleeper_heart": "heart"}
 ## Atlantis' own piece kinds (AtlantisArt.ore_piece).
 const ATLANTIS: Array[String] = ["mosaic_tile", "bronze_gear", "amphora", "trident_shard", "automaton_core", "siren_harp"]
+## R'lyeh's own piece kinds (RlyehArt.ore_piece).
+const RLYEH: Array[String] = ["eye_stone", "elder_glyph", "deep_spawn", "madness_pearl", "green_flame", "tentacle_ivory", "sleeper_idol"]
 ## The Twilight Zone's own piece kinds (twilight_piece).
 const TWILIGHT: Array[String] = ["lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale"]
 ## Kinds that give off light (a soft pulsing glow behind them).
-const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
+const GLOWING: Array[String] = ["eye_stone", "elder_glyph", "madness_pearl", "green_flame", "sleeper_idol", "lava", "moon", "glow", "atlantis", "meteor", "star", "kraken",
 		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
 		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
 		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown",
@@ -183,6 +188,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			twilight_piece(ci, kind, ore, ore2, t, i)
 		"mosaic_tile", "bronze_gear", "amphora", "trident_shard", "automaton_core", "siren_harp":
 			AtlantisArt.ore_piece(ci, kind, ore, ore2, t, i)
+		"eye_stone", "elder_glyph", "deep_spawn", "madness_pearl", "green_flame", "tentacle_ivory", "sleeper_idol":
+			RlyehArt.ore_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)

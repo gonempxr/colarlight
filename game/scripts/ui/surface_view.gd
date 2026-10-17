@@ -1125,6 +1125,12 @@ func _paint_far(ci: CanvasItem) -> void:
 				Art.pop(ci)
 		"jungle":
 			WorldArt.jungle_hills(ci, w, sy, DayNight.far_color(0.0, sp), DayNight.far_color(0.7, sp).darkened(0.12), DayNight.daylight(sp))
+		"rlyeh":
+			# Far black monoliths leaning in the storm.
+			for f: Vector3 in [Vector3(0.1, 90, 0.0), Vector3(0.3, 60, 0.4), Vector3(0.78, 110, 0.2), Vector3(0.92, 70, 0.6)]:
+				var b := Vector2(w * f.x, sy)
+				var lean := (f.z - 0.3) * 0.5
+				Art.flat(ci, PackedVector2Array([b + Vector2(-14, 0), b + Vector2(-8 + lean * f.y, -f.y), b + Vector2(10 + lean * f.y, -f.y - 10), b + Vector2(14, 0)]), DayNight.far_color(f.z, sp))
 		"atlantis":
 			# Far ruins: broken colonnades and a golden dome on the horizon.
 			for f: Vector3 in [Vector3(0.12, 70, 0.0), Vector3(0.82, 90, 0.3)]:

@@ -24,9 +24,9 @@ extends RefCounted
 ## swing, upright). Workers whose legs are a tail, tentacles, a blob or a
 ## wisp glide instead of stepping.
 
-const WORLDS := ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis"]
+const WORLDS := ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis", "rlyeh"]
 ## Worlds whose workers swim (the rest walk).
-const WATER_WORLDS := [0, 5, 6]
+const WATER_WORLDS := [0, 5, 6, 7]
 ## Gear levels per world.
 const GEARS := 4
 ## Look codes per world (gear + 4 * slot, slot 0..15).
@@ -38,7 +38,7 @@ const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b0
 ## Color of each gear level's badge (level 1..4).
 const GEAR_COLORS: Array[Color] = [Color("8ec9f0"), Color("5cd05f"), Color("ff9a2e"), Color("ffc93c")]
 ## Soft rim light of each world's silhouettes.
-const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff"), Color("ffd86a"), Color("ff7ae6"), Color("ffd23f")]
+const RIM: Array[Color] = [Color("5af0ff"), Color("ff8a2a"), Color("9cff3a"), Color("d0c8ff"), Color("ffd86a"), Color("ff7ae6"), Color("ffd23f"), Color("7dff6a")]
 ## Heads of the gear looks are a bit bigger than the old forms' (the
 ## reference sheets: big round heads on small bodies).
 const GEAR_HEAD := 1.16
@@ -696,6 +696,32 @@ const GEAR_ATLANTIS: Array[Dictionary] = [
 	"orb": Color("4af0e0"), "fx": ["sparkles", "glow"], "glow": Color("4af0e0"), "mk": ["suit", "arm_c", "leg_c"]},
 ]
 
+## The saga's act III (R'lyeh): dark suits with green sigils, glowing lamps.
+const GEAR_RLYEH: Array[Dictionary] = [
+	# 1 a black suit with green trim, a brass helmet and a lamp-green visor
+	{"head": "brass", "hc": Color("6a7a5a"), "suit": Color("1e2a2a"), "trim": Color("7dff6a"), "belt": Color("3a2a1a"),
+	"glove": Color("0e1414"), "cuff": Color("7dff6a"), "legs": "fins", "leg_c": Color("1e2a2a"), "boot": Color("3a4a3a"),
+	"back": ["tank"], "tank_c": Color("4a5a4a"), "tool": "pick", "tc": Color("9aa89a"), "th": Color("3a2a1a"),
+	"fx": ["bubbles"], "mk": ["suit", "arm_c", "leg_c"]},
+	# 2 a striped suit with an eye sigil, twin tanks, a glowing visor
+	{"head": "hood", "hc": Color("2a3a3a"), "visor": Color("7dff6a"), "suit": Color("16302a"), "pattern": "stripes",
+	"pc": Color("3aff9a"), "trim": Color("8a4cf0"), "belt": Color("8a4cf0"), "glove": Color("0a1a16"), "cuff": Color("3aff9a"),
+	"legs": "fins", "leg_c": Color("16302a"), "boot": Color("8a4cf0"), "back": ["twin_tanks", "hose"], "tank_c": Color("2a3a3a"),
+	"tool": "pick", "tc": Color("7dff6a"), "th": Color("2a1a3a"), "fx": ["bubbles", "glow"], "glow": Color("7dff6a"),
+	"mk": ["suit", "arm_c", "leg_c"]},
+	# 3 a violet helmet with green runes, star-metal cuffs
+	{"head": "brass", "hc": Color("8a4cf0"), "suit": Color("142420"), "trim": Color("7dff6a"), "belt": Color("4a3a6a"),
+	"glove": Color("0a1210"), "cuff": Color("c8d0ff"), "legs": "fins", "leg_c": Color("142420"), "boot": Color("4a3a6a"),
+	"back": ["tank", "hose"], "tank_c": Color("8a4cf0"), "tool": "pick", "tc": Color("c8d0ff"), "th": Color("7dff6a"),
+	"fx": ["bubbles", "glow"], "glow": Color("3aff9a"), "mk": ["suit", "arm_c", "leg_c"]},
+	# 4 the Elder Knight: a glass dome, star-metal plate with the Elder Sign
+	{"head": "dome", "hc": Color("d8ffe8"), "torso": "armor", "suit": Color("0e1a18"), "plate": Color("c8d0ff"),
+	"emblem": "star", "ec": Color("7dff6a"), "belt": Color("8a4cf0"), "arms": "pauldron", "arm_c": Color("0e1a18"),
+	"glove": Color("c8d0ff"), "cuff": Color("7dff6a"), "legs": "fins", "leg_c": Color("0e1a18"), "boot": Color("8a4cf0"),
+	"back": ["twin_tanks"], "tank_c": Color("8a4cf0"), "tool": "trident", "tc": Color("7dff6a"), "th": Color("0e1a18"),
+	"orb": Color("7dff6a"), "fx": ["sparkles", "glow"], "glow": Color("7dff6a"), "mk": ["suit", "arm_c", "leg_c"]},
+]
+
 const SKIN_ART := {
 	"ocean_shells": {"main": Color("3a8ae8"), "motif": "shells", "mc": Color("eaf6ff"), "mc2": Color("9ad0ff")},
 	"ocean_jelly": {"main": Color("9a5ae8"), "motif": "jelly", "mc": Color("e8d0ff"), "mc2": Color("c8a0ff")},
@@ -746,7 +772,7 @@ static func _spec(w: int, form: int) -> Dictionary:
 	if s != null:
 		return s
 	w = clampi(w, 0, WORLDS.size() - 1)
-	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON, GEAR_JUNGLE, GEAR_TWILIGHT, GEAR_ATLANTIS]
+	var gears: Array = [GEAR_OCEAN, GEAR_VOLCANO, GEAR_ACID, GEAR_MOON, GEAR_JUNGLE, GEAR_TWILIGHT, GEAR_ATLANTIS, GEAR_RLYEH]
 	var g: Dictionary = gears[w][gear_of(form)]
 	var d: Dictionary = DEFAULT.duplicate()
 	d.merge(g, true)

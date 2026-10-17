@@ -173,6 +173,8 @@ static func build(m: Modal, main: Node) -> void:
 		row.add_child(p)
 		card.add_child(row)
 		m.add(card)
+	if GameState.location >= 2:
+		_world_boss(m, main)
 	# Atlantis' tides.
 	if GameState.has_tides():
 		var tc := Views.card(Color("e2f2ff"))
@@ -193,3 +195,62 @@ static func build(m: Modal, main: Node) -> void:
 	m.button(t("SAGA_STORY_BTN"), func():
 		m.close()
 		main.open_story("intro"), &"PurpleButton")
+
+
+## The league's world boss (WorldBoss) on the saga page: the league's
+## progress, my taps, the top divers, Fight and the reward. The board comes
+## from Online (fetched again after BOARD_SEC).
+static var _wb := {}
+static var _wb_at := -1000.0
+const BOARD_SEC := 30.0
+
+
+static func _world_boss(m: Modal, main: Node) -> void:
+	var league := OnlineRules.league_id(GameState.now())
+	var now := Time.get_ticks_msec() / 1000.0
+	if Online.available() and now - _wb_at > BOARD_SEC:
+		_wb_at = now
+		Online.wb_board(league, func(r: Dictionary):
+			_wb = r
+			if m.is_open():
+				m.rebuild())
+	var card := Views.card(Color("dff5e4"))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	head.add_child(ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): BossArt.portrait(ci, "ancient_one", s / 2.0, 30.0, tt), Vector2(64, 64)))
+	var name := Views.label(t("WB_TITLE"), 24, Color("1e6a3a"), true)
+	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.add_child(name)
+	col.add_child(head)
+	var total := float(_wb.get("total", 0.0))
+	col.add_child(Views.bar(minf(total, WorldBoss.HP), WorldBoss.HP, t("WB_LEAGUE") % [NumFormat.short(total), NumFormat.short(WorldBoss.HP)]))
+	var mine := float(GameState.wb["dmg"]) if int(GameState.wb["l"]) == league else 0.0
+	var info := Views.label(t("WB_TEXT") % [roundi(mine), WorldBoss.PEARLS], 20, Art.INK)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(info)
+	var rows: Array = _wb.get("rows", [])
+	for i in mini(5, rows.size()):
+		col.add_child(Views.label("%d. %s  %s" % [i + 1, rows[i]["name"], NumFormat.short(rows[i]["dmg"])], 19, Art.INK_SOFT))
+	if not Online.available():
+		col.add_child(Views.label(t("WB_OFFLINE"), 19, Color("b04040")))
+	elif total >= WorldBoss.HP and mine > 0.0 and not GameState.wb["claimed"]:
+		var b := Button.new()
+		b.text = t("WB_CLAIM") % WorldBoss.PEARLS
+		b.theme_type_variation = &"GoldButton"
+		b.custom_minimum_size.y = 64
+		b.pressed.connect(func():
+			GameState.wb_claim(total, league)
+			m.rebuild())
+		col.add_child(b)
+	elif total < WorldBoss.HP:
+		var b := Button.new()
+		b.text = t("WB_FIGHT")
+		b.theme_type_variation = &"PurpleButton"
+		b.custom_minimum_size.y = 64
+		b.pressed.connect(func(): main.open_world_boss())
+		col.add_child(b)
+	card.add_child(col)
+	m.add(card)

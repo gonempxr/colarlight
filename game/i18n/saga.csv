@@ -24,8 +24,8 @@ SITE_KRAKEN_TOOTH,Kraken Tooth,Зуб кракена,Diente de Kraken,海怪之�
 SITE_DEEP_STAR,Deep Star,Глубинная звезда,Estrella Profunda,深海之星
 SITE_WARDEN_EYE,Warden's Eye,Глаз Стража,Ojo del Guardián,守卫之眼
 SITE_CORAL_LIGHT,Shard of Coral Light,Осколок Кораллового Света,Fragmento de Luz de Coral,珊瑚之光碎片
-SAGA_SOON_TITLE,Act III is coming!,Скоро Акт III!,¡Pronto el Acto III!,第三幕即将到来！
-SAGA_SOON_TEXT,R'lyeh opens soon. Beat the guardians of Atlantis and climb the league board!,Скоро откроется Р'льех. Побеждай стражей Атлантиды и поднимайся в таблице лиги!,R'lyeh abre pronto. ¡Vence a los guardianes de la Atlántida y sube en la tabla de la liga!,拉莱耶即将开放。打败亚特兰蒂斯的守卫，在联赛榜上往上爬！
+SAGA_SOON_TITLE,Nightmare awaits,Впереди Кошмар,Te espera la Pesadilla,梦魇在等待
+SAGA_SOON_TEXT,"Beat the Ancient One to open Nightmare: the saga starts over, stronger and endless.","Победи Древнего, чтобы открыть Кошмар: сага начнётся заново, сильнее и бесконечно.","Vence al Antiguo para abrir la Pesadilla: la saga vuelve a empezar, más fuerte y sin fin.",击败远古者开启梦魇：传奇重新开始，更强，永无止境。
 FISHING_ROD_TWILIGHT,Abyss Glow rod,Удочка Сияния Бездны,Caña del Brillo Abisal,深渊之光鱼竿
 ROD_TWILIGHT_1,A violet rod with a pink float,Фиолетовая удочка с розовым поплавком,Caña violeta con flotador rosa,紫色鱼竿，配粉色浮漂
 ROD_TWILIGHT_2,A soft grip,Мягкая рукоять,Mango suave,柔软的握把
@@ -212,7 +212,7 @@ STORY_POST_AUTOMATON,The gears stopped. The gates of Atlantis are open!,Шест
 STORY_POST_SIREN_QUEEN,The song is over. A new hero joins you soon: the Oracle sees the future.,Песня смолкла. Скоро к тебе придёт новый герой: Оракул видит будущее.,La canción terminó. Pronto se une un nuevo héroe: el Oráculo ve el futuro.,歌声停了。很快会有新英雄加入：神谕者能预见未来。
 STORY_POST_DROWNED_KING,The king is free at last. The Oracle joins your party! Her prophecy turns every tap into a crit.,Царь наконец свободен. Оракул вступает в отряд! Её пророчество превращает каждый тап в крит.,El rey por fin es libre. ¡El Oráculo se une al grupo! Su profecía convierte cada toque en crítico.,国王终于解脱了。神谕者加入了你的队伍！她的预言让每次点击都变成暴击。
 STORY_POST_HYDRA,No more heads grow back. Only the Colossus is left.,Головы больше не отрастают. Остался только Колосс.,Ya no crecen más cabezas. Solo queda el Coloso.,再也没有头长回来了。只剩下巨像了。
-STORY_POST_COLOSSUS,Act II is done! Atlantis shines again. But the Colossus guarded a gate going down… to R'lyeh. The way there opens soon.,Акт II пройден! Атлантида снова сияет. Но Колосс сторожил ворота вниз… в Р'льех. Путь туда скоро откроется.,¡Acto II superado! La Atlántida brilla de nuevo. Pero el Coloso guardaba una puerta hacia abajo… hacia R'lyeh. El camino se abre pronto.,第二幕完成！亚特兰蒂斯重放光芒。但巨像守护着一道向下的门……通往拉莱耶。那条路很快就会开启。
+STORY_POST_COLOSSUS,Act II is done! Atlantis shines again. The Colossus guarded a gate going down… to R'lyeh. Open it on the map when you are ready.,"Акт II пройден! Атлантида снова сияет. Колосс сторожил ворота вниз… в Р'льех. Открой его на карте, когда будешь готов.",¡Acto II superado! La Atlántida brilla de nuevo. El Coloso guardaba una puerta hacia abajo… hacia R'lyeh. Ábrela en el mapa cuando estés listo.,第二幕完成！亚特兰蒂斯重放光芒。巨像守护着一道向下的门……通往拉莱耶。准备好后在地图上开启它。
 ROD_ATLANTIS_1,A marble rod with a gold float,Мраморная удочка с золотым поплавком,Caña de mármol con flotador dorado,带金色浮漂的大理石鱼竿
 ROD_ATLANTIS_2,A bronze grip,Бронзовая рукоять,Mango de bronce,青铜握把
 ROD_ATLANTIS_3,A golden line,Золотая леска,Sedal dorado,金色鱼线
@@ -233,3 +233,96 @@ ROD_ATLANTIS_17,A crown reel,Катушка-корона,Carrete de corona,王�
 ROD_ATLANTIS_18,A siren float,Поплавок сирены,Flotador de sirena,海妖浮漂
 ROD_ATLANTIS_19,Glowing runes,Светящиеся руны,Runas brillantes,发光符文
 ROD_ATLANTIS_20,The Heart of Atlantis,Сердце Атлантиды,El Corazón de la Atlántida,亚特兰蒂斯之心
+WORLD_RLYEH,R'lyeh,Р'льех,R'lyeh,拉莱耶
+MAP_W_RLYEH,R'lyeh,Р'льех,R'lyeh,拉莱耶
+WORLD_RLYEH_FLAVOR,"The drowned city of the Ancient One: black stone at wrong angles, eyes in the walls.","Затонувший город Древнего: чёрный камень под неправильными углами, глаза в стенах.","La ciudad hundida del Antiguo: piedra negra en ángulos imposibles, ojos en los muros.",远古者的沉没之城：角度扭曲的黑色巨石，墙上长着眼睛。
+MAP_HINT_RLYEH,Act III of the saga: the Ancient One sleeps here.,Акт III саги: здесь спит Древний.,Acto III de la saga: aquí duerme el Antiguo.,传奇第三幕：远古者在此沉睡。
+GEAR_RLYEH_1,Dark Diver,Тёмный ныряльщик,Buzo oscuro,暗影潜水员
+GEAR_RLYEH_2,Sigil Diver,Ныряльщик знаков,Buzo de sellos,符印潜水员
+GEAR_RLYEH_3,Star Diver,Звёздный ныряльщик,Buzo estelar,星辰潜水员
+GEAR_RLYEH_4,Elder Knight,Рыцарь Древних,Caballero Antiguo,远古骑士
+SITE_BLACK_SAND,Black Sand,Чёрный песок,Arena negra,黑沙
+SITE_EYE_STONE,Eye Stones,Камни-глаза,Piedras ojo,眼石
+SITE_ELDER_GLYPH,Elder Glyphs,Древние знаки,Glifos antiguos,远古符文
+SITE_DEEP_SPAWN,Deep Spawn,Порождения глубин,Crías abisales,深渊幼体
+SITE_MADNESS_PEARL,Pearls of Madness,Жемчуг безумия,Perlas de locura,疯狂珍珠
+SITE_CYCLOPEAN_BLOCK,Cyclopean Blocks,Циклопические блоки,Bloques ciclópeos,巨石块
+SITE_GREEN_FLAME,Green Flame,Зелёное пламя,Llama verde,绿焰
+SITE_DREAM_CRYSTAL,Dream Crystals,Кристаллы снов,Cristales de sueño,梦境水晶
+SITE_TENTACLE_IVORY,Tentacle Ivory,Кость щупалец,Marfil de tentáculo,触手象牙
+SITE_VOID_CORAL,Void Coral,Коралл пустоты,Coral del vacío,虚空珊瑚
+SITE_SLEEPER_IDOL,Sleeper Idols,Идолы Спящего,Ídolos del Durmiente,沉睡者神像
+SITE_STAR_METAL,Star Metal,Звёздный металл,Metal estelar,星辰金属
+SITE_WHISPER_SHELL,Whisper Shells,Шепчущие раковины,Conchas susurrantes,低语贝壳
+SITE_ELDER_SIGN,Elder Sign,Знак Древних,Signo Antiguo,远古印记
+SITE_SLEEPER_HEART,Heart of the Sleeper,Сердце Спящего,Corazón del Durmiente,沉睡者之心
+FISHING_ROD_RLYEH,Elder Sign rod,Удочка «Знак Древних»,Caña Signo Antiguo,远古印记鱼竿
+BOSS_DEEP_ONE_PRIEST,The Deep One Priest,Жрец Глубоководных,El Sacerdote Profundo,深潜者祭司
+BOSS_SHOGGOTH,The Shoggoth,Шоггот,El Shoggoth,修格斯
+BOSS_DAGON_PRIEST,The Priest of Dagon,Жрец Дагона,El Sacerdote de Dagón,大衮祭司
+BOSS_STAR_SPAWN,The Star-Spawn,Звёздное отродье,El Engendro Estelar,星之眷族
+BOSS_ANCIENT_ONE,The Ancient One,Древний,El Antiguo,远古者
+BOSS_SUMMON,Deep Ones come!,Глубоководные идут!,¡Vienen los Profundos!,深潜者来了！
+BOSS_ADD_DOWN,One down!,Один готов!,¡Uno menos!,干掉一个！
+BOSS_ADDS,Guards: %d (skills hit the boss),Охрана: %d (навыки бьют босса),Guardias: %d (las habilidades golpean al jefe),护卫：%d（技能直击首领）
+BOSS_REGEN,Heals itself! Bomb stops it,Лечится! Бомба остановит,¡Se cura! La bomba lo detiene,会自愈！炸弹能阻止
+BOSS_CURSED,Cursed!,Проклят!,¡Maldito!,被诅咒！
+BOSS_FLIES,It flies up!,Взлетает!,¡Sale volando!,它飞起来了！
+BOSS_LANDS,Down! Hit it now!,Спустился! Бей!,¡Bajó! ¡Golpéalo!,落下了！快打！
+BOSS_FLYING,Out of reach: wait,Не достать: жди,Fuera de alcance: espera,够不着：等一等
+BOSS_PHASE,Phase %d!,Фаза %d!,¡Fase %d!,第%d阶段！
+BOSS_ELDER,Elder Sign: slow attacks,Знак Древних: удары медленнее,Signo Antiguo: ataques lentos,远古印记：攻击变慢
+CLASS_ASTRONOMER,Astronomer,Астроном,Astrónomo,占星师
+SKILL_ELDER_SIGN,Elder Sign!,Знак Древних!,¡Signo Antiguo!,远古印记！
+RELIC_K_ELDER_STONE,Elder Stone,Древний камень,Piedra antigua,远古之石
+RELIC_K_DREAM_LENS,Dream Lens,Линза снов,Lente de sueños,梦境透镜
+RELIC_K_SHOGGOTH_EYE,Shoggoth Eye,Глаз шоггота,Ojo de shoggoth,修格斯之眼
+RELIC_K_DAGON_SCALE,Dagon's Scale,Чешуя Дагона,Escama de Dagón,大衮之鳞
+RELIC_K_STAR_SHARD,Star Shard,Осколок звезды,Fragmento estelar,星辰碎片
+WB_TITLE,World boss: the Ancient One,Мировой босс: Древний,Jefe mundial: el Antiguo,世界首领：远古者
+WB_LEAGUE,League: %s / %s,Лига: %s / %s,Liga: %s / %s,联赛：%s / %s
+WB_TEXT,"The whole league fights one Ancient One. Your hits so far: %d taps. When the league wins, everyone who fought gets %d pearls and a legendary relic.","Вся лига бьёт одного Древнего. Твой вклад: %d тапов. Когда лига победит, все участники получат %d жемчужин и легендарную реликвию.","Toda la liga lucha contra un Antiguo. Tu daño: %d toques. Cuando la liga gane, todos los que lucharon reciben %d perlas y una reliquia legendaria.",整个联赛共同对抗一个远古者。你的贡献：%d 次点击。联赛获胜后，所有参战者获得 %d 颗珍珠和一件传说遗物。
+WB_OFFLINE,Needs the internet (online on).,Нужен интернет (онлайн включён).,Necesita internet (en línea activado).,需要联网（开启在线）。
+WB_CLAIM,Take %d pearls + relic,Забрать %d жемчужин + реликвию,Tomar %d perlas + reliquia,领取 %d 珍珠 + 遗物
+WB_FIGHT,Fight!,В бой!,¡A luchar!,出战！
+WB_READY,The Ancient One can't be beaten alone. Hit it as hard as you can for %d seconds: up to %d taps count for the league.,Древнего не победить в одиночку. Бей изо всех сил %d секунд: в зачёт лиги идёт до %d тапов.,Al Antiguo no se le vence solo. Golpéalo con todo durante %d segundos: cuentan hasta %d toques para la liga.,远古者无法独自击败。全力攻击 %d 秒：最多 %d 次点击计入联赛。
+WB_DONE,You hit for %d taps! Your total: %d.,Ты нанёс %d тапов! Всего у тебя: %d.,¡Golpeaste %d toques! Tu total: %d.,你打出了 %d 次点击！总计：%d。
+WB_TAPS,%d taps,%d тапов,%d toques,%d 次点击
+CARD_SLEEPER,Heart of the Sleeper ×%d,Сердце Спящего ×%d,Corazón del Durmiente ×%d,沉睡者之心 ×%d
+NIGHTMARE_TITLE,Nightmare,Кошмар,Pesadilla,梦魇
+NIGHTMARE_TEXT,"Nightmare: each world can start over with a star. Guards come back stronger, pay more pearls and drop better relics. It never ends.","Кошмар: каждый мир можно начать заново со звездой. Стражи возвращаются сильнее, платят больше жемчуга и дают реликвии лучше. Это бесконечно.","Pesadilla: cada mundo puede reiniciarse con una estrella. Los guardianes vuelven más fuertes, dan más perlas y mejores reliquias. Nunca termina.",梦魇：每个世界都可以带着星星重新开始。守卫会变得更强，给更多珍珠和更好的遗物。永无止境。
+NIGHTMARE_LOCKED,Nightmare opens after the Ancient One is beaten.,Кошмар откроется после победы над Древним.,La Pesadilla se abre tras vencer al Antiguo.,击败远古者后开启梦魇。
+STORY_ACT3_1,"R'lyeh. The city of the Ancient One. Its angles are wrong and its walls look back at you. Stay close to the light, diver.","Р'льех. Город Древнего. Здесь неправильные углы, а стены смотрят на тебя. Держись света, ныряльщик.","R'lyeh. La ciudad del Antiguo. Sus ángulos están mal y sus muros te miran. Quédate cerca de la luz, buzo.",拉莱耶。远古者之城。这里的角度是扭曲的，墙壁在注视着你。靠近光，潜水员。
+STORY_ACT3_2,"Rifts tear open in the mines and tentacles steal the ore. Tap the rift to close it. While a rift is open, the Murk rises twice as fast!","В шахтах открываются разломы, и щупальца крадут руду. Тапай по разлому, чтобы закрыть его. Пока он открыт, скверна растёт вдвое быстрее!","Se abren grietas en las minas y los tentáculos roban el mineral. Toca la grieta para cerrarla. ¡Mientras esté abierta, la Bruma crece el doble de rápido!",矿井里会裂开裂缝，触手会偷走矿石。点击裂缝把它关上。裂缝打开时，暗潮增长速度翻倍！
+STORY_ACT3_3,The Ancient One is dreaming. The whole league fights it together: every diver who reaches R'lyeh can strike. Look for it on the saga page.,"Древний видит сны. С ним сражается вся лига: каждый, кто дошёл до Р'льеха, может ударить. Ищи его на странице саги.",El Antiguo sueña. Toda la liga lucha contra él: cada buzo que llega a R'lyeh puede golpear. Búscalo en la página de la saga.,远古者在做梦。整个联赛一起与它战斗：每个到达拉莱耶的潜水员都能出手。在传奇页面找到它。
+STORY_ACT3_4,"The first guard is the Deep One Priest. He calls his kin to shield him; hit them first, or use skills to strike him directly.",Первый страж — Жрец Глубоководных. Он зовёт сородичей на защиту: бей сначала их или бей его навыками напрямую.,El primer guardián es el Sacerdote Profundo. Llama a los suyos para protegerse: golpéalos primero o usa habilidades para darle directamente.,第一位守卫是深潜者祭司。他会召唤同族保护自己：先打它们，或用技能直接攻击他。
+STORY_PRE_DEEP_ONE_PRIEST,The Deep One Priest calls his kin. Plain hits go to his guards; skills reach him.,"Жрец Глубоководных зовёт сородичей. Обычные удары достаются охране, навыки — ему.",El Sacerdote Profundo llama a los suyos. Los golpes normales van a sus guardias; las habilidades le llegan a él.,深潜者祭司召唤同族。普通攻击打在护卫身上，技能能打到他。
+STORY_PRE_SHOGGOTH,A Shoggoth! It heals all the time. Only the Alchemist's bomb stops it for a while.,Шоггот! Он всё время лечится. Остановить это может только бомба Алхимика.,¡Un shoggoth! Se cura todo el tiempo. Solo la bomba del Alquimista lo detiene un rato.,修格斯！它一直在自愈。只有炼金师的炸弹能让它暂停。
+STORY_PRE_DAGON_PRIEST,The Priest of Dagon curses heroes: their health drains away. The Medic's healing lifts the curse.,Жрец Дагона проклинает героев: их здоровье утекает. Лечение Медика снимает проклятие.,El Sacerdote de Dagón maldice a los héroes: pierden salud. La curación del Médico quita la maldición.,大衮祭司会诅咒英雄：他们的生命会流失。医疗兵的治疗能解除诅咒。
+STORY_PRE_STAR_SPAWN,"The Star-Spawn flies up out of reach. Wait for it to come down, then hit hard!","Звёздное отродье взлетает, где его не достать. Дождись, когда спустится, и бей!",El Engendro Estelar sube fuera de alcance. Espera a que baje y golpea fuerte.,星之眷族会飞到够不着的地方。等它落下，然后狠狠地打！
+STORY_PRE_ANCIENT_ONE,"The Ancient One wakes. Three phases: its eyes, its tentacles that hit everyone, and then fully awake. Everything we did leads here.","Древний просыпается. Три фазы: глаза, щупальца, бьющие всех, и полное пробуждение. Всё, что мы делали, вело сюда.","El Antiguo despierta. Tres fases: sus ojos, sus tentáculos que golpean a todos y luego el despertar total. Todo lo que hicimos lleva hasta aquí.",远古者苏醒了。三个阶段：它的眼睛，攻击所有人的触手，然后完全苏醒。我们所做的一切都通向这里。
+STORY_POST_DEEP_ONE_PRIEST,His kin swam away into the dark. The city lies open.,Его сородичи уплыли во тьму. Город открыт.,Los suyos se alejaron en la oscuridad. La ciudad está abierta.,他的同族游进了黑暗。城市敞开了。
+STORY_POST_SHOGGOTH,It's gone. And a new hero joins: the Astronomer! The Elder Sign slows the enemy's blows.,Его больше нет. И к тебе пришёл новый герой: Астроном! Знак Древних замедляет удары врага.,Desapareció. ¡Y se une un nuevo héroe: el Astrónomo! El Signo Antiguo frena los golpes enemigos.,它消失了。新英雄加入了：占星师！远古印记会减慢敌人的攻击。
+STORY_POST_DAGON_PRIEST,The curse is broken. Dagon will not answer his priest again.,Проклятие снято. Дагон больше не ответит своему жрецу.,La maldición se rompió. Dagón no volverá a responder a su sacerdote.,诅咒解除了。大衮不会再回应他的祭司。
+STORY_POST_STAR_SPAWN,It fell from the stars and will not rise again. Only the Ancient One is left.,Оно упало со звёзд и больше не поднимется. Остался только Древний.,Cayó de las estrellas y no volverá a alzarse. Solo queda el Antiguo.,它从星辰坠落，再也不会升起。只剩下远古者了。
+STORY_POST_ANCIENT_ONE,You did it! The Ancient One sleeps again and the Coral Light shines over the whole ocean. You carry the Heart of the Sleeper now. But dreams come back… Nightmare is open.,"Ты сделал это! Древний снова спит, и Коралловый Свет сияет над всем океаном. Теперь у тебя Сердце Спящего. Но сны возвращаются… Открыт Кошмар.",¡Lo lograste! El Antiguo vuelve a dormir y la Luz de Coral brilla sobre todo el océano. Ahora llevas el Corazón del Durmiente. Pero los sueños vuelven… La Pesadilla está abierta.,你做到了！远古者再次沉睡，珊瑚之光照亮了整个海洋。你现在拥有沉睡者之心。但噩梦还会回来……梦魇已开启。
+ROD_RLYEH_1,A black rod with a green float,Чёрная удочка с зелёным поплавком,Caña negra con flotador verde,带绿色浮漂的黑色鱼竿
+ROD_RLYEH_2,A dark grip,Тёмная рукоять,Mango oscuro,暗色握把
+ROD_RLYEH_3,A glowing line,Светящаяся леска,Sedal brillante,发光鱼线
+ROD_RLYEH_4,A longer rod,Удочка длиннее,Caña más larga,更长的鱼竿
+ROD_RLYEH_5,An eye reel,Катушка-глаз,Carrete ojo,眼睛绕线轮
+ROD_RLYEH_6,Sigil rings,Кольца со знаками,Anillas con sellos,符印导环
+ROD_RLYEH_7,A tentacle float,Поплавок-щупальце,Flotador de tentáculo,触手浮漂
+ROD_RLYEH_8,A violet reel,Фиолетовая катушка,Carrete violeta,紫色绕线轮
+ROD_RLYEH_9,Bone trim,Костяная отделка,Adorno de hueso,骨质装饰
+ROD_RLYEH_10,A green flame on the tip,Зелёное пламя на кончике,Llama verde en la punta,竿尖绿焰
+ROD_RLYEH_11,A twin reel,Двойная катушка,Carrete doble,双绕线轮
+ROD_RLYEH_12,Glyph wraps,Обмотка с глифами,Forro de glifos,符文缠绕
+ROD_RLYEH_13,An ivory grip,Костяная рукоять,Mango de marfil,象牙握把
+ROD_RLYEH_14,A star-metal tip,Кончик из звёздного металла,Punta de metal estelar,星辰金属竿尖
+ROD_RLYEH_15,An idol on the tip,Идол на кончике,Ídolo en la punta,竿尖神像
+ROD_RLYEH_16,Void wraps,Обмотка пустоты,Forro del vacío,虚空缠绕
+ROD_RLYEH_17,A crown of eyes,Корона глаз,Corona de ojos,眼之王冠
+ROD_RLYEH_18,A dreaming float,Поплавок снов,Flotador soñador,梦境浮漂
+ROD_RLYEH_19,Whispering runes,Шепчущие руны,Runas susurrantes,低语符文
+ROD_RLYEH_20,The Heart of the Sleeper,Сердце Спящего,El Corazón del Durmiente,沉睡者之心

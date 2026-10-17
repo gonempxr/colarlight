@@ -1440,6 +1440,22 @@ func open_boss(key: String) -> void:
 			_show_next_news())
 
 
+## The league's world boss (WorldBoss, act III) on the boss screen.
+func open_world_boss() -> void:
+	if is_instance_valid(_boss) or is_instance_valid(_story):
+		return
+	_modal.close()
+	_boss = BossScreen.new()
+	_boss.main = self
+	_boss.key = WorldBoss.KEY
+	_boss.world = true
+	add_child(_boss)
+	move_child(_boss, _fx.get_index())
+	_boss.tree_exited.connect(func():
+		_boss = null
+		_show_next_news())
+
+
 var _story: Control
 ## The story scene due after the boss screen closes ("post_<boss>").
 var _post_story := ""
@@ -1469,6 +1485,8 @@ func _saga_intro() -> void:
 		open_story("intro")
 	elif Balance.saga and GameState.location >= 1 and not GameState.story.has("act2"):
 		open_story("act2")
+	elif Balance.saga and GameState.location >= 2 and not GameState.story.has("act3"):
+		open_story("act3")
 
 
 func open_rivals() -> void:

@@ -11,6 +11,8 @@ var months := {}
 var puzzle_weeks := {}
 ## League id -> board; the crown {uid, name, k, id}; day -> {uid: {name, score (minutes)}}.
 var leagues := {}
+## World boss hits: league -> uid -> {name, dmg}.
+var wb := {}
 var crown := {}
 var crown_days := {}
 ## Club id -> {name, owner, m: {uid: {name, score, w}}}; week -> {club id: {name, s, n}}.
@@ -53,6 +55,23 @@ func request(method: String, arg: String) -> String:
 			return "yes" if is_admin else "no"
 		"donors":
 			return JSON.stringify({"list": donors})
+		"wb_hit":
+			var a: Dictionary = JSON.parse_string(arg)
+			var col: Dictionary = wb.get(int(a["l"]), {})
+			var old := float(col.get(uid, {}).get("dmg", 0.0))
+			var dmg := float(a["dmg"])
+			if dmg < old or dmg - old > 1000.0:
+				return "error:permission-denied"
+			col[uid] = {"name": str(a["name"]), "dmg": dmg}
+			wb[int(a["l"])] = col
+			return "ok"
+		"wb_board":
+			var a: Dictionary = JSON.parse_string(arg)
+			var rows := []
+			var col: Dictionary = wb.get(int(a["l"]), {})
+			for k in col:
+				rows.append({"uid": k, "name": col[k]["name"], "dmg": col[k]["dmg"]})
+			return JSON.stringify({"rows": rows})
 		"bans":
 			var list := []
 			for k in banned:

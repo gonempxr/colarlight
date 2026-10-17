@@ -34,7 +34,7 @@ func _initialize() -> void:
 	_check(Balance.saga and gs.world_id() == "twilight" and int(gs.location) == 0, "a league game starts in the Twilight Zone")
 	_check(Balance.site_count(0) == 15 and gs.site_count() == 15 and gs.site_id(14) == "coral_light", "fifteen saga sites")
 	_check(Balance.tier_of(0) == 0 and Balance.loc_scale(0) == 1.0, "from the first numbers (a fresh start)")
-	_check(Balance.last_location() == Balance.SAGA_LAST and Balance.SAGA_LAST == 1 and not gs.is_last_location(), "act II follows act I")
+	_check(Balance.last_location() == Balance.SAGA_LAST and Balance.SAGA_LAST == 2 and not gs.is_last_location(), "acts II and III follow act I")
 	_check(WorldLook.world_of(0) == "twilight" and MapArt.world_of(0) == "twilight" and MapArt.soon_worlds() == MapArt.SAGA_SOON, "looks and map follow the saga")
 	WorldLook.apply(0)
 	_check(WorldLook.world == "twilight" and WorldLook.is_water(), "the Twilight Zone is under water (divers swim)")
@@ -163,6 +163,7 @@ func _initialize() -> void:
 
 	# --- Act II: Atlantis ---------------------------------------------------------------------
 	_act2(gs)
+	_act3(gs)
 
 	pf.leave_league()
 	_check(pf.current_id == home and not Balance.saga and gs.world_id() == "ocean", "back home: the usual worlds")
@@ -182,10 +183,10 @@ func _initialize() -> void:
 
 func _act2(gs: Node) -> void:
 	var n := Balance.WORLDS.size()
-	_check(n == 7 and Balance.world_of(1)["id"] == "atlantis", "seven worlds; the saga's location 1 is Atlantis")
+	_check(n == 8 and Balance.world_of(1)["id"] == "atlantis", "eight worlds; the saga's location 1 is Atlantis")
 	# Every per-world table covers all worlds (the league's fishing bug came from 5-world arrays).
-	_check(WorldLook.WORLDS.size() == n and MapArt.WORLDS.size() == n and WorkerLooks.WORLDS.size() == n, "looks, map and workers for 7 worlds")
-	_check(FishArt.WORLD_HUES.size() == n and RodArt.KEYS.size() == n and TileWorlds.COLORS.has(n - 1), "fish, rods and tiles for 7 worlds")
+	_check(WorldLook.WORLDS.size() == n and MapArt.WORLDS.size() == n and WorkerLooks.WORLDS.size() == n, "looks, map and workers for every world")
+	_check(FishArt.WORLD_HUES.size() == n and RodArt.KEYS.size() == n and TileWorlds.COLORS.has(n - 1), "fish, rods and tiles for every world")
 	for w in Balance.WORLDS:
 		var id := str(w["id"])
 		_check(WorldLook.LOOKS.has(id) and FactoryArt.LOOKS.has(id) and MapArt.LOOK.has(id), "looks of %s" % id)
@@ -230,6 +231,61 @@ func _act2(gs: Node) -> void:
 	gs.relic_shards = 0
 	gs.load_game()
 	_check(gs.relics.size() == 1 and str(gs.relics[0]["hero"]) == "harpooner" and gs.relic_shards == Relics.SALVAGE[0] and gs.world_id() == "atlantis", "relics, shards and the act are saved")
+	DirAccess.remove_absolute("user://saga_test_save.json")
+	gs.reset()
+	WorldLook.apply(0)
+
+
+func _act3(gs: Node) -> void:
+	gs.reset()
+	gs.location = 2
+	gs.max_location = 2
+	WorldLook.apply(2)
+	_check(gs.world_id() == "rlyeh" and gs.site_count() == 15 and WorldLook.world == "rlyeh" and gs.is_last_location(), "R'lyeh: 15 sites, the saga's last act")
+	for i in 15:
+		var k: String = "SITE_" + gs.site_id(i).to_upper()
+		_check(TranslationServer.translate(k) != k and Art.SITE_STYLE.has(gs.site_id(i)), "name and look of site %s" % gs.site_id(i))
+	for k in ["WORLD_RLYEH", "MAP_W_RLYEH", "FISHING_ROD_RLYEH", "GEAR_RLYEH_4", "WB_TITLE", "CARD_SLEEPER", "NIGHTMARE_TITLE", "STORY_ACT3_1"]:
+		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	_check(MineBoss.guard("rlyeh", 3) == "deep_one_priest" and MineBoss.guard("rlyeh", 14) == "ancient_one", "R'lyeh's five guards")
+	for b in ["deep_one_priest", "shoggoth", "dagon_priest", "star_spawn", "ancient_one"]:
+		_check(Relics.BOSS_RARITY.has(b) and MineBoss.BOSSES[b].has("rule"), "relic and rule for %s" % b)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	_check(Relics.KINDS.find(Relics.drop(rng, "star_spawn", 15)["kind"]) >= 10, "act III bosses drop act III relics")
+	var beaten: Array = ["drowned_king"]
+	_check(not Party.members(beaten).has("astronomer"), "no Astronomer before the Shoggoth")
+	beaten.append("shoggoth")
+	_check(Party.members(beaten).has("astronomer") and Party.members(beaten).size() == 6, "the Astronomer joins: six heroes")
+	# Rifts: open in a working mine, steal income, close after taps.
+	gs.levels["d0"] = 10
+	_check(gs.has_rifts(), "R'lyeh has rifts")
+	var r0: float = gs.rate("d0")
+	gs._tick_rifts(Rifts.EVERY + 1.0)
+	_check(gs.rifts.has("d0") and is_equal_approx(gs.rate("d0"), r0 * Rifts.STEAL), "a rift opens and steals income")
+	for i in Rifts.TAPS:
+		gs.tap_clock += 1.0
+		gs.tap("d0")
+	_check(not gs.rifts.has("d0"), "taps close the rift")
+	# World boss: my damage is capped per fight, the reward is given once.
+	_check(is_equal_approx(gs.wb_add(1e9, 42), WorldBoss.CAP) and is_equal_approx(gs.wb_add(10.0, 42), WorldBoss.CAP + 10.0), "a fight adds at most CAP")
+	_check(gs.wb_claim(WorldBoss.HP - 1.0, 42).is_empty(), "no reward before the boss falls")
+	var got: Dictionary = gs.wb_claim(WorldBoss.HP, 42)
+	_check(int(got.get("pearls", 0)) == WorldBoss.PEARLS and gs.wb_claim(WorldBoss.HP, 42).is_empty(), "the reward is given once")
+	gs.wb_add(5.0, 43)
+	_check(is_equal_approx(float(gs.wb["dmg"]), 5.0) and not gs.wb["claimed"], "a new league starts from zero")
+	var board := WorldBoss.parse_board('{"rows":[{"name":"A","dmg":2e8},{"name":"B","dmg":100}]}')
+	_check(is_equal_approx(float(board.get("total", 0.0)), 1e7 + 100.0), "the board caps one player's damage")
+	# Nightmare: stars open only after the Ancient One.
+	_check(not gs.stars_unlocked(), "no Nightmare before the finale")
+	gs.saga_done = true
+	_check(gs.stars_unlocked(), "Nightmare opens after the Ancient One")
+	gs.save_path = "user://saga_test_save.json"
+	gs.save_game()
+	gs.saga_done = false
+	gs.wb = {"l": 0, "dmg": 0.0, "claimed": false}
+	gs.load_game()
+	_check(gs.saga_done and int(gs.wb["l"]) == 43, "the finale and the world boss are saved")
 	DirAccess.remove_absolute("user://saga_test_save.json")
 	gs.reset()
 	WorldLook.apply(0)

@@ -40,6 +40,8 @@ const LOOKS := [
 	{"bg": ["7a4ae0", "2c55b4", "1c1c62"], "floor": "f4c8ea", "frame": "c98ccb", "back": "1e1752", "plant": "ff6ad8"},
 	# Atlantis (saga act II): clear blue water, marble sand, gold weed.
 	{"bg": ["4ad8f0", "2a8ed8", "142a6a"], "floor": "f4eee0", "frame": "d8c8a0", "back": "16204a", "plant": "ffc93c"},
+	# R'lyeh (saga act III): murky green water, black sand, glowing weed.
+	{"bg": ["3a8a6a", "1e5a4a", "0a1a22"], "floor": "4a5a52", "frame": "2e3a36", "back": "0a1414", "plant": "7dff6a"},
 ]
 const JUNGLE := 4
 const NO_CELL := Vector2i(-1, -1)

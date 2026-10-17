@@ -36,6 +36,10 @@ const WORLDS: Array[Dictionary] = [
 	{"id": "atlantis", "name": "WORLD_ATLANTIS", "char": "abyss_diver",
 		"sites": ["marble_dust", "mosaic_tile", "bronze_gear", "amphora", "trident_shard", "orichalcum", "sun_lens",
 			"automaton_core", "siren_harp", "royal_seal", "crystal_codex", "tide_engine", "poseidon_crown", "star_chart", "atlas_heart"]},
+	# Act III: R'lyeh, the drowned city of the Ancient One (opens once the Colossus falls).
+	{"id": "rlyeh", "name": "WORLD_RLYEH", "char": "abyss_diver",
+		"sites": ["black_sand", "eye_stone", "elder_glyph", "deep_spawn", "madness_pearl", "cyclopean_block", "green_flame",
+			"dream_crystal", "tentacle_ivory", "void_coral", "sleeper_idol", "star_metal", "whisper_shell", "elder_sign", "sleeper_heart"]},
 ]
 
 ## The usual game cycles through the first REGULAR worlds (location L is
@@ -43,10 +47,10 @@ const WORLDS: Array[Dictionary] = [
 ## by Profiles for league profiles) plays the saga instead: location L is
 ## world SAGA_FIRST + L, from the first site's numbers (a fresh start), with
 ## every saga world's 15 sites. SAGA_LAST = the last saga location built
-## (1: act II, Atlantis).
+## (2: act III, R'lyeh).
 const REGULAR := 5
 const SAGA_FIRST := 5
-const SAGA_LAST := 1
+const SAGA_LAST := 2
 static var saga := false
 
 ## The site ladder every location uses (the first 10 steps; the Jungle all 15) (ids are the ocean ones;

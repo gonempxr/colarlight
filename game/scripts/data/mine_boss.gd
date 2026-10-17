@@ -44,6 +44,7 @@ const DIVERS := 3
 const GUARDS := {
 	"twilight": {3: "crabblack", 6: "mother_jelly", 9: "shadow_eel", 12: "kraken", 14: "warden"},
 	"atlantis": {3: "automaton", 6: "siren_queen", 9: "drowned_king", 12: "hydra", 14: "colossus"},
+	"rlyeh": {3: "deep_one_priest", 6: "shoggoth", 9: "dagon_priest", 12: "star_spawn", 14: "ancient_one"},
 }
 
 ## Per boss: HP as a share of the site's unlock price, the pearls it pays,
@@ -67,6 +68,19 @@ const BOSSES := {
 	"drowned_king": {"hp": 3.0, "pearls": 80, "coins_sec": 100.0, "spot_every": 2.1, "spot_life": 1.05, "rule": "sweep"},
 	"hydra": {"hp": 3.2, "pearls": 90, "coins_sec": 110.0, "spot_every": 2.0, "spot_life": 1.0, "rule": "heads"},
 	"colossus": {"hp": 3.6, "pearls": 150, "coins_sec": 150.0, "spot_every": 1.8, "spot_life": 0.95, "rule": "colossus"},
+	# Act III: R'lyeh.
+	#   summon - calls Deep One adds now and then; taps and shots hit them
+	#            first (skills go through to the boss);
+	#   regen  - heals itself all the time, a bomb (the Alchemist) stops it;
+	#   curse  - curses a hero (health drains) until the Medic heals;
+	#   flight - flies up out of reach now and then (no hits, no attacks);
+	#   phases - the Ancient One: eyes (1), tentacles hit everyone (2),
+	#            awake: tentacles and faster blows (3).
+	"deep_one_priest": {"hp": 3.4, "pearls": 90, "coins_sec": 110.0, "spot_every": 2.2, "spot_life": 1.1, "rule": "summon"},
+	"shoggoth": {"hp": 3.6, "pearls": 100, "coins_sec": 120.0, "spot_every": 2.1, "spot_life": 1.05, "rule": "regen"},
+	"dagon_priest": {"hp": 3.8, "pearls": 110, "coins_sec": 130.0, "spot_every": 2.0, "spot_life": 1.0, "rule": "curse"},
+	"star_spawn": {"hp": 4.0, "pearls": 120, "coins_sec": 140.0, "spot_every": 1.9, "spot_life": 0.95, "rule": "flight"},
+	"ancient_one": {"hp": 5.0, "pearls": 250, "coins_sec": 200.0, "spot_every": 1.7, "spot_life": 0.9, "rule": "phases"},
 }
 
 

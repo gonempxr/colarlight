@@ -14,6 +14,7 @@ signal finished
 const STORIES := {
 	"intro": [["keeper", "STORY_INTRO_1"], ["murk", "STORY_INTRO_2"], ["boss:crabblack", "STORY_INTRO_3"], ["acts", "STORY_INTRO_4"]],
 	"act2": [["atlantis", "STORY_ACT2_1"], ["tides", "STORY_ACT2_2"], ["relics", "STORY_ACT2_3"], ["boss:automaton", "STORY_ACT2_4"]],
+	"act3": [["rlyeh", "STORY_ACT3_1"], ["rifts", "STORY_ACT3_2"], ["boss:ancient_one", "STORY_ACT3_3"], ["boss:deep_one_priest", "STORY_ACT3_4"]],
 }
 const TYPE_CPS := 55.0
 
@@ -208,6 +209,23 @@ static func draw_picture(ci: CanvasItem, s: Vector2, pic: String, tt: float) -> 
 		_acts(ci, r.size, k, tt)
 	elif pic == "atlantis":
 		_atlantis(ci, r.size, c, k, tt)
+	elif pic == "rlyeh":
+		Art.glow(ci, c + Vector2(0, -40 * k), 150.0 * k, Color("7dff6a", 0.22))
+		for i in 4:
+			RlyehArt.monolith(ci, Vector2(r.size.x * (0.1 + i * 0.27), r.size.y - 16.0), (90.0 + (i % 2) * 50.0) * k, 14.0 * k, (i - 1.5) * 0.12, RlyehArt.STONE)
+		RlyehArt.idol(ci, Vector2(c.x, r.size.y - 30.0 * k), 2.6 * k, Color("4a6a5a"))
+		MurkVeil.eye(ci, Vector2(30, 40) * k, 10.0 * k, fmod(tt, 3.0) < 0.2, false)
+		keeper(ci, Vector2(r.size.x - 62 * k, r.size.y - 56 * k), 0.5 * k, tt)
+	elif pic == "rifts":
+		var rc := Vector2(c.x - 40 * k, r.size.y - 50.0 * k)
+		Art.glow(ci, rc, 120.0 * k, Color("7dff6a", 0.3))
+		Art.toon(ci, PackedVector2Array([rc + Vector2(-70, 8) * k, rc + Vector2(-20, -20) * k, rc + Vector2(10, -6) * k, rc + Vector2(60, -24) * k,
+			rc + Vector2(74, 4) * k, rc + Vector2(16, 24) * k]), Color("0a0a12"), 3.0, 0.0, Color("7dff6a"))
+		for i in 3:
+			Art.push(ci, rc + Vector2(-40 + i * 40, 0) * k, (i - 1) * 0.5, Vector2(2.6, 2.6) * k)
+			OreArt.tentacle(ci, tt * 1.4 + i * 2.0, Color("4a6a5a"))
+			Art.pop(ci)
+		keeper(ci, Vector2(r.size.x - 62 * k, r.size.y - 56 * k), 0.5 * k, tt)
 	elif pic == "tides":
 		_tides(ci, r.size, c, k, tt)
 	elif pic == "relics":

@@ -172,6 +172,8 @@ static func profile(m: Modal, row: Dictionary, main: Node = null) -> void:
 		lines.append(["star", t("CARD_BEST") % int(p["r"])])
 	if int(p["f"]) > 0:
 		lines.append(["gift", t("CARD_FOUNDER") % int(p["f"])])
+	if int(p.get("s", 0)) > 0:
+		lines.append(["star", t("CARD_SLEEPER") % int(p["s"])])
 	for ln in lines:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 10)

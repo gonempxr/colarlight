@@ -26,8 +26,11 @@ static func gifts() -> Array:
 
 static func build(m: Modal, main: Node, confirm: bool = false) -> void:
 	var gs := GameState
-	m.title(t("STAR_TITLE"))
-	m.banner(UiTheme.BANNER_GOLD)
+	m.title(t("NIGHTMARE_TITLE") if Balance.saga else t("STAR_TITLE"))
+	m.banner(UiTheme.BANNER_PURPLE if Balance.saga else UiTheme.BANNER_GOLD)
+	if Balance.saga:
+		var nm := m.text(t("NIGHTMARE_TEXT") if gs.saga_done else t("NIGHTMARE_LOCKED"), 20, Color("6a3cc0"))
+		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not gs.stars_unlocked():
 		m.text(t("STAR_LOCKED"), 22, Art.INK_SOFT)
 		m.button(t("THANKS_OK"), func(): Sfx.play("click"); m.close(), &"BlueButton")

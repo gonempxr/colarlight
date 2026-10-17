@@ -218,7 +218,9 @@ func _draw_bg(ci: CanvasItem) -> void:
 	Art.grad(ci, PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]), PackedColorArray([rock_hi, rock_hi, rock_lo, rock_lo]))
 	var jungle := WorldLook.world == "jungle"
 	var reef := WorldLook.world == "twilight"
-	var atl := WorldLook.world == "atlantis"
+	# Atlantis and R'lyeh draw their rows with their own kit (same calls).
+	var kit = AtlantisArt if WorldLook.world == "atlantis" else (RlyehArt if WorldLook.world == "rlyeh" else null)
+	var atl: bool = kit != null
 	if WorldLook.world == "volcano":
 		_basalt(ci, w, h, rock)
 	elif jungle:
@@ -226,7 +228,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 	elif reef:
 		ReefArt.rock(ci, w, h, rock, index)
 	elif atl:
-		AtlantisArt.rock(ci, w, h, rock, index)
+		kit.rock(ci, w, h, rock, index)
 	for i in (0 if WorldLook.world == "volcano" or jungle or reef or atl else 3):
 		var y := 40.0 + i * 78.0
 		var band := PackedVector2Array()
@@ -259,7 +261,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 		ReefArt.hall(ci, cave, cave_poly, inner, st.get("glow", st["ore"]), index, LEDGE_Y)
 		Art.flat(ci, Art.clipped(_wall_band(cave), cave_poly), Color(Art.SHADE, 0.2))
 	elif atl:
-		AtlantisArt.hall(ci, cave, cave_poly, inner, st.get("glow", st["ore"]), index, LEDGE_Y)
+		kit.hall(ci, cave, cave_poly, inner, st.get("glow", st["ore"]), index, LEDGE_Y)
 	else:
 		_light_beams(ci, cave, cave_poly)
 	Art.flat(ci, PackedVector2Array([Vector2(World.SHAFT_L + 4, 120), Vector2(World.SHAFT_R + 2, 120), Vector2(World.SHAFT_R + 2, CAVE_BOTTOM - 2), Vector2(World.SHAFT_L + 4, CAVE_BOTTOM - 2)]), inner)
@@ -275,7 +277,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 	elif reef:
 		ReefArt.shaft_brace(ci, World.SHAFT_L - 8.0, World.SHAFT_R + 8.0)
 	elif atl:
-		AtlantisArt.shaft_brace(ci, World.SHAFT_L - 8.0, World.SHAFT_R + 8.0)
+		kit.shaft_brace(ci, World.SHAFT_L - 8.0, World.SHAFT_R + 8.0)
 	else:
 		Art.t_rect(ci, Rect2(World.SHAFT_L - 8, 6, World.SHAFT_R - World.SHAFT_L + 16, 12), 4, Art.WOOD_DARK, 2.5, 0.3)
 	if not GameState.is_open(key()):
@@ -295,7 +297,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 	elif reef:
 		ReefArt.floor(ci, cave, cave_poly, st["floor"], st.get("glow", st["ore"]), index, LEDGE_Y, CAVE_BOTTOM, World.SHAFT_L)
 	elif atl:
-		AtlantisArt.floor(ci, cave, cave_poly, st["floor"], st.get("glow", st["ore"]), index, LEDGE_Y, CAVE_BOTTOM, World.SHAFT_L)
+		kit.floor(ci, cave, cave_poly, st["floor"], st.get("glow", st["ore"]), index, LEDGE_Y, CAVE_BOTTOM, World.SHAFT_L)
 	else:
 		_floor_texture(ci, cave, cave_poly, st["floor"])
 	if WorldLook.world == "volcano":
@@ -309,7 +311,7 @@ func _draw_bg(ci: CanvasItem) -> void:
 	elif reef:
 		ReefArt.rib_portal(ci, 150, 76)
 	elif atl:
-		AtlantisArt.arch_portal(ci, 150, 76)
+		kit.arch_portal(ci, 150, 76)
 	else:
 		Props.mine_frame(ci, 150, 76)
 	Art.pop(ci)
@@ -503,6 +505,26 @@ func _draw() -> void:
 		OreArt.deposit(self, Vector2(cave.end.x - 22, LEDGE_Y - 40), 46, index, index * 7 + 1, tt, 3, false)
 		OreArt.deposit(self, Vector2(dp.x, LEDGE_Y + 2), 70, index, index * 31 + 3, tt, 5)
 		Art.cache_end(self, ck, true)
+	if GameState.rifts.has(key()):
+		_draw_rift(dp)
+
+
+## R'lyeh's rift (Rifts) over the ore: a torn crack, tentacles grabbing
+## the vein, a pulsing ring to tap and one pip per tap still needed.
+func _draw_rift(dp: Vector2) -> void:
+	var c := Vector2(dp.x - 10.0, LEDGE_Y - 30.0)
+	var pulse := snappedf(0.5 + 0.5 * sin(_t * 5.0), 0.25)
+	Art.glow(self, c, 70.0, Color(0.45, 1.0, 0.4, 0.25 + 0.15 * pulse), 12)
+	Art.toon(self, PackedVector2Array([c + Vector2(-34, 4), c + Vector2(-10, -14), c + Vector2(4, -4), c + Vector2(30, -18), c + Vector2(36, 2),
+		c + Vector2(8, 16), c + Vector2(-8, 8)]), Color("0a0a12"), 3.0, 0.0, Color("7dff6a"))
+	for k in 3:
+		Art.push(self, c + Vector2(-20 + k * 20, 4), (k - 1) * 0.5, Vector2(1.4, 1.4) * (1.0 if k != 1 else 1.2))
+		OreArt.tentacle(self, _t * 1.6 + k * 2.0, Color("4a6a5a"))
+		Art.pop(self)
+	Art.ring(self, Art.circle_pts(c, 46.0 + 6.0 * pulse, 28), Color(0.5, 1.0, 0.45, 0.8), 3.0)
+	var left := int(GameState.rifts[key()])
+	for k in left:
+		Art.t_circle(self, c + Vector2((k - (left - 1) / 2.0) * 16.0, 60.0), 5.0, Color("7dff6a"), 1.8, 0.0)
 
 
 ## Edge of the cave, drawn again over the vein so the glow stays inside.
@@ -519,7 +541,8 @@ func _draw_decor(st: Dictionary, cave: Rect2) -> void:
 	var x1 := cave.end.x - 140.0
 	var mid := (x0 + x1) / 2.0
 	if _draw_decor_world(st, cave) or _draw_decor_jungle(st, cave) or _draw_decor_twilight(st, cave) \
-			or AtlantisArt.decor(self, st, x0, x1, mid, y, CAVE_TOP + 4.0, _t, index):
+			or AtlantisArt.decor(self, st, x0, x1, mid, y, CAVE_TOP + 4.0, _t, index) \
+			or RlyehArt.decor(self, st, x0, x1, mid, y, CAVE_TOP + 4.0, _t, index):
 		return
 	match st["deco"]:
 		"shells":

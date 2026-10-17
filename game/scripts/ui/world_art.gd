@@ -108,6 +108,8 @@ static func cloud_colors(world: String, day: float) -> Array:
 			return [Color("ffd6f2").lerp(Color("6a5ab8"), 1.0 - day), Color("c47ad8").lerp(Color("3a2a7a"), 1.0 - day)]
 		"atlantis":
 			return [Color("fff6e0").lerp(Color("5a6aa8"), 1.0 - day), Color("bcd8f4").lerp(Color("2a3a7a"), 1.0 - day)]
+		"rlyeh":
+			return [Color("8aa890").lerp(Color("2a3a3a"), 1.0 - day), Color("4a6a5a").lerp(Color("142424"), 1.0 - day)]
 	return []
 
 
@@ -544,6 +546,17 @@ static func landmark(ci: CanvasItem, world: String, rock: Color, haze: Color, li
 			Art.toon(ci, PackedVector2Array([Vector2(-44, -96), Vector2(0, -118), Vector2(44, -96)]), marble, 2.0, 0.0, ink)
 			var sun := Props.LAMP_OFF.lerp(Color("ffd84a"), Props._q(maxf(lit, 0.4), 6.0))
 			Art.toon(ci, Art.circle_pts(Vector2(0, -132), 9.0, 16), sun, 2.0, 0.0, ink)
+		"rlyeh":
+			# A leaning black monolith on a rock, a green eye glowing on it
+			# (brighter at night).
+			var isle := Art.smooth_pts(PackedVector2Array([Vector2(-70, 2), Vector2(-40, -18), Vector2(0, -24), Vector2(40, -16), Vector2(72, 2)]), 4)
+			Art.flat(ci, isle, rock)
+			var ink := INK.lerp(haze, 0.3)
+			var stone := Color("3a4642").lerp(haze, 0.3)
+			Art.toon(ci, PackedVector2Array([Vector2(-20, -18), Vector2(-4, -120), Vector2(22, -112), Vector2(18, -18)]), stone, 2.0, 0.0, ink)
+			Art.toon(ci, PackedVector2Array([Vector2(24, -18), Vector2(40, -70), Vector2(52, -66), Vector2(46, -16)]), stone.darkened(0.1), 2.0, 0.0, ink)
+			var eye := Props.LAMP_OFF.lerp(Color("7dff6a"), Props._q(maxf(lit, 0.35), 6.0))
+			Art.toon(ci, Art.ellipse_pts(Vector2(6, -132), Vector2(11, 6), 14), eye, 2.0, 0.0, ink)
 		"twilight":
 			# The Coral Light's beacon: a coral tower on a reef, its shard
 			# glowing at the top (brighter at night).

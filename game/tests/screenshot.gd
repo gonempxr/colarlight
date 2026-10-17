@@ -44,7 +44,7 @@ func _initialize() -> void:
 	gs.save_path = "user://screenshot_save.json"
 	gs.reset()
 	# Saga shots: story scenes count as seen unless one is the shot.
-	for k in ["intro", "act2"] + MineBoss.BOSSES.keys().map(func(b): return "pre_" + b) + MineBoss.BOSSES.keys().map(func(b): return "post_" + b):
+	for k in ["intro", "act2", "act3"] + MineBoss.BOSSES.keys().map(func(b): return "pre_" + b) + MineBoss.BOSSES.keys().map(func(b): return "post_" + b):
 		gs.story[k] = true
 	var pr := root.get_node("Progress")
 	pr.autosave_enabled = false

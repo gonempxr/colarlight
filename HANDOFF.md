@@ -122,3 +122,31 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
   - the boat and plant cards cover the sky, so the late tall plant stages are partly hidden;
   - the sunset can happen behind the boat.
 - **Sound** has never been checked by ear.
+
+## Handoff 2026-10-17 (Mark moves to another account)
+- `worlds` = 73e9a7d: leaderboard fix (rules v8) + Act II "Atlantis" DONE,
+  tested, on beta + CG zip (gh-pages a7a362b). Main site untouched.
+- Branch `rlyeh` (from 73e9a7d) = Act III "R'lyeh" + Nightmare, WORK IN
+  PROGRESS, not merged, not on beta. Built: world 8 `rlyeh` (15 sites,
+  `RlyehArt`, `BossArtRlyeh`), guards deep_one_priest/shoggoth/dagon_priest/
+  star_spawn/ancient_one with rules summon/regen/curse/flight/phases (Ancient
+  One 3 phases) in `BossScreen`; Astronomer = 6th hero (Elder Sign slows the
+  boss); rifts (`Rifts`, `GameState.rifts`, tap 6x to close, steal 75%,
+  Murk x2); league world boss (`WorldBoss`, `Online.wb_hit/wb_board`,
+  card on the saga page, Firestore `worldboss/{league}/hits`, rules v9);
+  Nightmare = stars open only after the Ancient One (`GameState.saga_done`,
+  pearls x(1+0.5*stars)); act3 story; strings in 4 languages; font subset.
+  check_scripts: 0 broken.
+- Left for `rlyeh`: `tools/run_tests.sh fast` shows test_saga + test_fishing
+  (+1 more) failing with "Identifier not found: GameState" at compile time:
+  some script they load now names the GameState autoload directly (likely a
+  new act III script pulled in by class name: Rifts/WorldBoss/RlyehArt/
+  BossArtRlyeh) — tests must `load()` it, or move the autoload use out.
+  Then: run all tests, screenshots (`saga:in:2:-`, `saga:in:2:guard:3..14`,
+  saga page with the world boss card, act3 story), merge into `worlds`,
+  publish beta + CG zip, update CLAUDE.md + docs/league-saga.md "Built".
+- Mark must: publish Firestore rules v8 now
+  (/mnt/project-files/firebase/firestore-rules-v8.txt); after Act III ships,
+  v9 (/mnt/project-files/firebase/firestore-rules-v9.txt, includes v8);
+  upload the CG zip (gh-pages `crazygames/coralight-crazygames.zip`) to
+  CrazyGames; say "yes" before anything goes to the main site.

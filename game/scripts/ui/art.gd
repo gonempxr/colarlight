@@ -144,6 +144,24 @@ const SITE_STYLE := {
 	"tide_engine": {"rock": Color("72788a"), "floor": Color("8e8886"), "ore": Color("4ad8f0"), "ore2": Color("ffc93c"), "suit": Color("e0603c"), "water": Color("143a8c"), "deco": "at_gears", "glow": Color("4ad8f0")},
 	"poseidon_crown": {"rock": Color("666e86"), "floor": Color("827e82"), "ore": Color("ffc93c"), "ore2": Color("4af0e0"), "suit": Color("2a8ed8"), "water": Color("123282"), "deco": "at_statue", "glow": Color("ffe07a")},
 	"star_chart": {"rock": Color("5a6482"), "floor": Color("76747e"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("4af0e0"), "water": Color("102a78"), "deco": "at_stars", "glow": Color("ffe07a")},
+	# The saga, act III "R'lyeh": black-green cyclopean stone at wrong angles
+	# (RlyehArt) with eyes and tentacles, sick green glow turning violet in
+	# the deep, murky green water; horrors as ores.
+	"black_sand": {"rock": Color("3a4642"), "floor": Color("4a5a52"), "ore": Color("2a3430"), "ore2": Color("7dff6a"), "suit": Color("7dff6a"), "water": Color("2a6a56"), "deco": "rl_monoliths", "glow": Color("7dff6a")},
+	"eye_stone": {"rock": Color("38443f"), "floor": Color("46564e"), "ore": Color("e8e0c8"), "ore2": Color("7dff6a"), "suit": Color("8a4cf0"), "water": Color("266250"), "deco": "rl_eyes", "glow": Color("9aff8a")},
+	"elder_glyph": {"rock": Color("36423c"), "floor": Color("44524a"), "ore": Color("7dff6a"), "ore2": Color("2a3430"), "suit": Color("8a4cf0"), "water": Color("235a4a"), "deco": "rl_glyphs", "glow": Color("7dff6a")},
+	"deep_spawn": {"rock": Color("343f3a"), "floor": Color("424e46"), "ore": Color("4aa88a"), "ore2": Color("e8ff9a"), "suit": Color("ff5a7a"), "water": Color("205446"), "deco": "rl_tentacles", "glow": Color("6aff9a")},
+	"madness_pearl": {"rock": Color("323c38"), "floor": Color("404a44"), "ore": Color("c8a0ff"), "ore2": Color("7dff6a"), "suit": Color("7dff6a"), "water": Color("1e4e42"), "deco": "rl_eyes", "glow": Color("c8a0ff")},
+	"cyclopean_block": {"rock": Color("303a36"), "floor": Color("3e4842"), "ore": Color("4a5a52"), "ore2": Color("7dff6a"), "suit": Color("ffd23f"), "water": Color("1c483e"), "deco": "rl_monoliths", "glow": Color("7dff6a")},
+	"green_flame": {"rock": Color("2e3834"), "floor": Color("3c4640"), "ore": Color("3aff9a"), "ore2": Color("e8ffe0"), "suit": Color("8a4cf0"), "water": Color("1a423a"), "deco": "rl_flames", "glow": Color("3aff9a")},
+	"dream_crystal": {"rock": Color("2c3634"), "floor": Color("3a4440"), "ore": Color("b88aff"), "ore2": Color("e8d8ff"), "suit": Color("7dff6a"), "water": Color("183e38"), "deco": "crystals", "glow": Color("b88aff")},
+	"tentacle_ivory": {"rock": Color("2a3432"), "floor": Color("38423e"), "ore": Color("f0e8d0"), "ore2": Color("8a4cf0"), "suit": Color("7dff6a"), "water": Color("163a36"), "deco": "rl_tentacles", "glow": Color("b88aff")},
+	"void_coral": {"rock": Color("283230"), "floor": Color("36403c"), "ore": Color("6a3ac8"), "ore2": Color("7dff6a"), "suit": Color("ffd23f"), "water": Color("143634"), "deco": "rl_glyphs", "glow": Color("8a4cf0")},
+	"sleeper_idol": {"rock": Color("262e2e"), "floor": Color("343c3a"), "ore": Color("4a6a5a"), "ore2": Color("7dff6a"), "suit": Color("ff5a7a"), "water": Color("123232"), "deco": "rl_idol", "glow": Color("7dff6a")},
+	"star_metal": {"rock": Color("242c2e"), "floor": Color("323a3a"), "ore": Color("c8d0ff"), "ore2": Color("7dff6a"), "suit": Color("8a4cf0"), "water": Color("102e32"), "deco": "rl_stars", "glow": Color("c8d0ff")},
+	"whisper_shell": {"rock": Color("222a2e"), "floor": Color("30383a"), "ore": Color("e8e0c8"), "ore2": Color("b88aff"), "suit": Color("7dff6a"), "water": Color("0e2a30"), "deco": "rl_flames", "glow": Color("b88aff")},
+	"elder_sign": {"rock": Color("20262e"), "floor": Color("2e343a"), "ore": Color("7dff6a"), "ore2": Color("ffd23f"), "suit": Color("c8d0ff"), "water": Color("0c262e"), "deco": "rl_stars", "glow": Color("ffd23f")},
+	"sleeper_heart": {"rock": Color("1e222e"), "floor": Color("2c2e3a"), "ore": Color("ff5a7a"), "ore2": Color("7dff6a"), "suit": Color("7dff6a"), "water": Color("0a202c"), "deco": "heart", "glow": Color("ff5a7a")},
 	"atlas_heart": {"rock": Color("4e5a7e"), "floor": Color("6a6a7a"), "ore": Color("4af0e0"), "ore2": Color("ffc93c"), "suit": Color("ffd23f"), "water": Color("0e226e"), "deco": "heart", "glow": Color("9afcff")},
 }
 

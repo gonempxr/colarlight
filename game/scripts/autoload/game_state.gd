@@ -127,8 +127,16 @@ var relics: Array = []
 var relic_shards := 0
 ## Worn relics' totals per stat (cached, see _relic_totals()).
 var _relic_tot: Dictionary = {}
-## True while offline time is paid: no tides then.
+## True while offline time is paid: no tides or rifts then.
 var _calm := false
+## The saga's Ancient One was beaten (Nightmare open).
+var saga_done := false
+## The world boss (WorldBoss): this league's id, my damage in taps, the
+## reward taken.
+var wb := {"l": 0, "dmg": 0.0, "claimed": false}
+## R'lyeh's open rifts: site key -> taps still needed (Rifts; not saved).
+var rifts: Dictionary = {}
+var _rift_in := Rifts.EVERY
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -233,6 +241,8 @@ func _notification(what: int) -> void:
 
 
 func reset() -> void:
+	rifts = {}
+	_rift_in = Rifts.EVERY
 	coins = 0.0
 	total_earned = 0.0
 	location = 0
@@ -244,6 +254,8 @@ func reset() -> void:
 	party_xp = {}
 	relics = []
 	relic_shards = 0
+	wb = {"l": 0, "dmg": 0.0, "claimed": false}
+	saga_done = false
 	_relic_tot = {}
 	_away_report = {}
 	legacy_mult = 1.0
@@ -541,7 +553,8 @@ func star_mult() -> float:
 
 ## Stars open up once the last world is open.
 func stars_unlocked() -> bool:
-	return max_location >= Balance.last_location()
+	# In the saga stars are "Nightmare": open once the Ancient One is beaten.
+	return max_location >= Balance.last_location() and (saga_done or not Balance.saga)
 
 
 func star_cost() -> float:
@@ -893,12 +906,40 @@ func rate(key: String) -> float:
 			r *= 1.0 + relic("chain")
 		if has_tides():
 			r *= Tides.mult(now(), "dives" if i >= 0 else group)
+		if i >= 0 and not _calm and rifts.has(key):
+			r *= Rifts.STEAL
 	return r
 
 
 ## Atlantis' tides are on (the saga's act II world, not while away).
 func has_tides() -> bool:
 	return Balance.saga and not _calm and world_id() == Tides.WORLD
+
+
+## R'lyeh's rifts can open (the saga's act III world, live play only).
+func has_rifts() -> bool:
+	return Balance.saga and not _calm and world_id() == Rifts.WORLD
+
+
+## Live play in R'lyeh: counts down to the next rift and opens it in a
+## random working mine without one.
+func _tick_rifts(seconds: float) -> void:
+	if not has_rifts():
+		if not rifts.is_empty() and not _calm:
+			rifts = {}
+		return
+	_rift_in -= seconds
+	if _rift_in > 0.0:
+		return
+	_rift_in = Rifts.EVERY
+	var free := []
+	for i in site_count():
+		var k := "d%d" % i
+		if is_open(k) and not rifts.has(k):
+			free.append(k)
+	if not free.is_empty():
+		rifts[free[randi() % free.size()]] = Rifts.TAPS
+		changed.emit()
 
 
 func dives_rate() -> float:
@@ -1128,22 +1169,37 @@ func defeat_boss(key: String) -> Dictionary:
 	var c := income_rate() * float(d["coins_sec"])
 	if c > 0.0:
 		_earn(c)
+	# Nightmare (saga stars): every star makes the guards pay half again.
+	var pearls := int(d["pearls"])
+	if Balance.saga:
+		pearls = roundi(pearls * (1.0 + 0.5 * stars_of(location)))
 	var pr := get_node_or_null("/root/Progress")
 	if pr:
-		pr.add_pearls(int(d["pearls"]))
+		pr.add_pearls(pearls)
+	if id == "ancient_one":
+		# The saga's finale: Nightmare opens, the trophy goes to the player's
+		# online card (every profile, the usual game too).
+		saga_done = true
+		var on := get_node_or_null("/root/Online")
+		if on:
+			on.add_sleeper()
 	# A relic drops (kept, or melted into shards when the bag is full).
 	var rel := {}
 	if Balance.saga:
 		var rng := RandomNumberGenerator.new()
 		rng.randomize()
 		rel = Relics.drop(rng, id, site_count())
+		if stars_of(location) > 0 and int(rel["rarity"]) < 3:
+			# Nightmare guards drop one rarity higher.
+			rel["rarity"] = int(rel["rarity"]) + 1
+			rel["affixes"] = Relics.roll_affixes(rng, int(rel["rarity"]), site_count())
 		if not add_relic(rel):
 			relic_shards += Relics.SALVAGE[int(rel["rarity"])]
 			rel["melted"] = true
 			rel["shards"] = Relics.SALVAGE[int(rel["rarity"])]
 	boss_defeated.emit(key, id)
 	changed.emit()
-	return {"boss": id, "pearls": int(d["pearls"]), "coins": c, "relic": rel}
+	return {"boss": id, "pearls": pearls, "coins": c, "relic": rel}
 
 
 ## Income factor of the Murk (1 outside the saga).
@@ -1153,7 +1209,8 @@ func murk_mult() -> float:
 
 func _grow_murk(seconds: float) -> void:
 	if Balance.saga:
-		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()) * (1.0 - relic("murk")))
+		var fast := Rifts.MURK_MULT if not rifts.is_empty() and has_rifts() else 1.0
+		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()) * (1.0 - relic("murk")) * fast)
 
 
 ## Ids of the guards beaten in this world's run.
@@ -1286,6 +1343,37 @@ func reroll_relic(i: int) -> bool:
 	return true
 
 
+## A world boss fight gave `units` taps of damage in league `league`.
+## Returns my total for that league.
+func wb_add(units: float, league: int) -> float:
+	if int(wb["l"]) != league:
+		wb = {"l": league, "dmg": 0.0, "claimed": false}
+	wb["dmg"] = float(wb["dmg"]) + clampf(units, 0.0, WorldBoss.CAP)
+	changed.emit()
+	save_game()
+	return float(wb["dmg"])
+
+
+## The league beat the world boss (`total` >= WorldBoss.HP) and I took part:
+## pearls and a legendary relic, once. Returns {"pearls", "relic"} or {}.
+func wb_claim(total: float, league: int) -> Dictionary:
+	if int(wb["l"]) != league or float(wb["dmg"]) <= 0.0 or wb["claimed"] or total < WorldBoss.HP:
+		return {}
+	wb["claimed"] = true
+	var pr := get_node_or_null("/root/Progress")
+	if pr:
+		pr.add_pearls(WorldBoss.PEARLS)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var rel := Relics.roll(rng, 3, site_count(), Relics.KINDS.slice(10))
+	if not add_relic(rel):
+		relic_shards += Relics.SALVAGE[3]
+		rel["melted"] = true
+		rel["shards"] = Relics.SALVAGE[3]
+	save_game()
+	return {"pearls": WorldBoss.PEARLS, "relic": rel}
+
+
 func _relics_changed() -> void:
 	_relic_tot = {}
 	changed.emit()
@@ -1356,6 +1444,12 @@ func tap(key: String) -> bool:
 		_add_rush()
 	if Balance.saga:
 		murk = maxf(0.0, murk - Murk.TAP_CLEAR * (1.0 + relic("tap")))
+		if rifts.has(key):
+			# Each tap pushes the tentacles back; the last one closes the rift.
+			rifts[key] = int(rifts[key]) - 1
+			if int(rifts[key]) <= 0:
+				rifts.erase(key)
+				changed.emit()
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
 		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * (1.0 + relic("tap")) * cycle_time(key)
@@ -1374,6 +1468,8 @@ func advance(seconds: float) -> void:
 		return
 	tap_clock += seconds
 	_grow_murk(seconds)
+	if seconds < 5.0:
+		_tick_rifts(seconds)
 	rush_meter = maxf(0.0, rush_meter - RUSH_DECAY * seconds)
 	var speed := RUSH_SPEED if rush_left > 0.0 else 1.0
 	rush_left = maxf(0.0, rush_left - seconds)
@@ -1517,6 +1613,8 @@ func save_game() -> bool:
 		"party_xp": party_xp,
 		"relics": relics,
 		"relic_shards": relic_shards,
+		"wb": wb,
+		"saga_done": saga_done,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1684,6 +1782,11 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 			if Party.CLASSES.has(str(k)):
 				party_xp[str(k)] = clampi(int(_num(px[k], 0.0)), 0, 10000000)
 	_read_relics(data.get("relics"), data.get("relic_shards"))
+	saga_done = data.get("saga_done") == true
+	var w = data.get("wb")
+	wb = {"l": 0, "dmg": 0.0, "claimed": false}
+	if w is Dictionary:
+		wb = {"l": int(_num(w.get("l"), 0.0)), "dmg": clampf(_num(w.get("dmg"), 0.0), 0.0, 1e7), "claimed": w.get("claimed") == true}
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

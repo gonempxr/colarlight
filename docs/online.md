@@ -398,9 +398,32 @@ service cloud.firestore {
         && request.resource.data.t == request.time
         && existsAfter(/databases/$(database)/documents/invites/$(request.resource.data.code)/joined/$(uid));
     }
+
+    // The saga's world boss (act III): one Ancient One per Top League id.
+    // worldboss/{league}/hits/{uid} {name, dmg, t}: the player's damage in
+    // "taps" (own strength), growing by at most 1000 per write.
+    match /worldboss/{id}/hits/{uid} {
+      allow read: if signedIn();
+      allow delete: if isAdmin();
+      allow create, update: if isMe(uid) && !banned()
+        && id.matches('^[0-9]{9,11}$')
+        && request.resource.data.keys().hasOnly(['name', 'dmg', 't'])
+        && request.resource.data.keys().hasAll(['name', 'dmg', 't'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 24
+        && ownName(request.resource.data.name)
+        && request.resource.data.dmg is number
+        && request.resource.data.dmg >= 0 && request.resource.data.dmg <= 10000000
+        && request.resource.data.t == request.time
+        && (resource == null
+          ? request.resource.data.dmg <= 1000
+          : (request.resource.data.dmg >= resource.data.dmg
+            && request.resource.data.dmg - resource.data.dmg <= 1000));
+    }
   }
 }
 ```
+Rules v9 (2026-10-17) add the world boss (`worldboss/{league}/hits`).
 Rules v8 (2026-10-17) raise the score limit from 1e60 to 1e300: with world
 stars every strong player hit 1e60 and the boards showed the same "990ao"
 for all of them. Older clients keep sending capped scores; new ones send

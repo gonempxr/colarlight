@@ -13,7 +13,8 @@ const BAG := 12
 const RARITY_KEYS := ["RELIC_R0", "RELIC_R1", "RELIC_R2", "RELIC_R3"]
 const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b06cf0"), Color("ffc93c")]
 const KINDS := ["shell_charm", "angler_lamp", "jelly_crown", "kraken_ring", "warden_eye",
-	"trident_charm", "orichalcum_ring", "siren_comb", "kings_seal", "hydra_fang"]
+	"trident_charm", "orichalcum_ring", "siren_comb", "kings_seal", "hydra_fang",
+	"elder_stone", "dream_lens", "shoggoth_eye", "dagon_scale", "star_shard"]
 
 ## stat -> [low, high] at common; rarer relics roll higher (x (1 + rarity * 0.6)).
 ##   all     +% all income          site    +% one site's output
@@ -24,13 +25,14 @@ const STATS := {
 	"all": [0.04, 0.08], "site": [0.25, 0.5], "chain": [0.08, 0.16], "boss": [0.15, 0.3],
 	"murk": [0.1, 0.2], "xp": [0.15, 0.3], "tap": [0.2, 0.4],
 }
-## Caps of a worn total (up to 15 relics on 5 heroes).
+## Caps of a worn total (up to 18 relics on 6 heroes).
 const CAPS := {"murk": 0.8, "all": 1.5, "site": 3.0, "chain": 2.0, "boss": 3.0, "xp": 2.0, "tap": 2.0}
 const SALVAGE: Array[int] = [5, 12, 25, 50]
 const REROLL: Array[int] = [10, 20, 40, 80]
 ## Base rarity of each boss's drop (+1 at UPGRADE_CHANCE).
 const BOSS_RARITY := {"crabblack": 0, "mother_jelly": 1, "shadow_eel": 1, "kraken": 2, "warden": 3,
-	"automaton": 1, "siren_queen": 1, "drowned_king": 2, "hydra": 2, "colossus": 3}
+	"automaton": 1, "siren_queen": 1, "drowned_king": 2, "hydra": 2, "colossus": 3,
+	"deep_one_priest": 1, "shoggoth": 2, "dagon_priest": 2, "star_spawn": 2, "ancient_one": 3}
 const UPGRADE_CHANCE := 0.25
 
 
@@ -60,9 +62,9 @@ static func drop(rng: RandomNumberGenerator, boss: String, sites: int = 15) -> D
 	var r := int(BOSS_RARITY.get(boss, 0))
 	if rng.randf() < UPGRADE_CHANCE:
 		r += 1
-	# Act I's guards drop act I's kinds, act II's the city's.
-	var act2 := BOSS_RARITY.keys().find(boss) >= 5
-	return roll(rng, r, sites, KINDS.slice(5) if act2 else KINDS.slice(0, 5))
+	# Each act's guards drop that act's five kinds.
+	var act := clampi(BOSS_RARITY.keys().find(boss) / 5, 0, KINDS.size() / 5 - 1)
+	return roll(rng, r, sites, KINDS.slice(act * 5, act * 5 + 5))
 
 
 ## Sum of `stat` over the worn relics (site: only those for site `site`).
