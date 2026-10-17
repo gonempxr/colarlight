@@ -39,9 +39,11 @@ const SAVE_PATH := "user://online.json"
 ## (The rules refuse a second write within 30 s.)
 const SUBMIT_SEC := 300.0
 const SUBMIT_GAP_SEC := 60.0
-## The Firestore rules accept scores up to 1e60 (docs/online.md); world stars
-## can push the totals past it, so the boards stop just under it.
-const SCORE_CAP := 9.9e59
+## The Firestore rules (v8, docs/online.md) accept scores up to 1e300. World
+## stars push totals far past the old 1e60 (15 Jungle stars ~1e75), and with
+## that cap every star player showed the same "990ao". Under older rules the
+## web shell sends min(score, 9.9e59) when the full number is refused.
+const SCORE_CAP := 9.9e299
 ## A board read is kept this long (50 reads each; 50 000 a day are free).
 const BOARD_CACHE_SEC := 60.0
 const TIMEOUT_SEC := 12.0

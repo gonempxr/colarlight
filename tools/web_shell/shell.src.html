@@ -1276,13 +1276,21 @@ window.coralightFirebase = (function () {
 			// Two separate writes: a refused weekly score (a clock on the
 			// wrong week) must not stop the all-time one.
 			submit: function (a) {
-				// Old rules (before the profile card) refuse "p": try again without it.
+				// Rules before v8 cap scores at 1e60, and old rules (before the
+				// profile card) refuse "p": when refused, try again with both.
 				const put = function (ref, score) {
 					return ref.set(scoreRow(a, score)).catch(function (e) {
-						if (!a.p || !denied(e)) {
+						if (!denied(e)) {
 							throw e;
 						}
-						return ref.set(scoreRow({ name: a.name, a: a.a }, score));
+						const low = Math.min(score, 9.9e59);
+						const noP = function (e2) {
+							if (!a.p || !denied(e2)) {
+								throw e2;
+							}
+							return ref.set(scoreRow({ name: a.name, a: a.a }, low));
+						};
+						return low < score ? ref.set(scoreRow(a, low)).catch(noP) : noP(e);
 					});
 				};
 				const all = put(F.db.collection('lb_all').doc(me()), a.all);
@@ -1290,7 +1298,7 @@ window.coralightFirebase = (function () {
 				// The season row and the club member row: extras that
 				// never hold back the main two.
 				if (a.m) {
-					monthCol(a.m).doc(me()).set(scoreRow(a, a.month)).catch(function () {});
+					put(monthCol(a.m).doc(me()), a.month).catch(function () {});
 				}
 				if (a.pz > 0) {
 					puzzleCol(a.w).doc(me()).set(scoreRow(a, a.pz)).catch(function () {});

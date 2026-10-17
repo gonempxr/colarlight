@@ -38,7 +38,7 @@ This file is the quick picture; keep it up to date when something big changes.
   "Soon!"). Opened worlds can be switched between (p-switch). Endgame:
   world stars ★ (docs/jungle-world.md §2, `StarView`, `GameState.get_star`):
   any finished world restarts with x1000 numbers, +25% income everywhere per
-  star, max 50 per world; boards cap scores under 1e60 (`Online.SCORE_CAP`).
+  star, max 50 per world; boards cap scores under 1e300 (`Online.SCORE_CAP`, rules v8).
 - Workers: gear levels + skins by rarity per world (Evolution/Gear card).
 - Meta: pearls, quests (per world), daily gift, login streak, chests,
   match-3 puzzle → artifacts → museum, wardrobe (pets, hats, outfits,
@@ -177,12 +177,12 @@ This file is the quick picture; keep it up to date when something big changes.
   "Acts II and III"): open by progress; Act II Atlantis (relics UI, Oracle,
   tides, bosses with rules); Act III R'lyeh (Ancient One 3 phases, rifts,
   world boss, Astronomer); then Nightmare (endless). NOT built yet.
-  OPEN BUG (Mark): leaderboard "doesn't show players' real money". Not
-  diagnosed. Facts: boards show coins EARNED (week/month/league) or
-  total earned ever (all time), never the wallet; scores are capped at
-  `Online.SCORE_CAP` 9.9e59 (shows "990ao") and Firestore rules cap 1e60, so
-  star players above that all show the same number. Ask Mark for a board
-  screenshot + the player's wallet before changing anything.
+  Leaderboard bug (Mark, fixed 2026-10-17): boards show coins EARNED
+  (week/month/league) or total earned ever (all time), never the wallet.
+  Scores were capped at 9.9e59 (Firestore rule 1e60), and every player with
+  world stars passes that (15 Jungle stars ~1e75), so they all showed
+  "990ao". Now `Online.SCORE_CAP` = 9.9e299 + rules v8 (cap 1e300); the
+  shell retries with 9.9e59 while v7 is still published. Mark must publish v8.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

@@ -145,7 +145,7 @@ service cloud.firestore {
         && (!('p' in d) || (d.p is string && d.p.size() <= 200))
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
         && d.a is string && d.a.size() <= 300
-        && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000.0
+        && d.score is number && d.score >= 0 && d.score <= 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0
         && d.t == request.time
         && ownName(d.name)
         && !banned()
@@ -401,6 +401,10 @@ service cloud.firestore {
   }
 }
 ```
+Rules v8 (2026-10-17) raise the score limit from 1e60 to 1e300: with world
+stars every strong player hit 1e60 and the boards showed the same "990ao"
+for all of them. Older clients keep sending capped scores; new ones send
+the real number (and fall back to 9.9e59 while v7 is still published).
 Rules v7 (2026-10-14) add gifts/{uid} (the leader gives a player coins and
 opened worlds, from the player's card) and crown/fri, the race to Friday (the crown holder
 at Fri 16.10 05:15 UTC wins 1000ad coins + 500 pearls, paid in-game).
