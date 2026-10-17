@@ -67,14 +67,14 @@ func _complete_location() -> void:
 
 
 func test_balance_tables() -> void:
-	check(Balance.REGULAR == 5 and Balance.WORLDS.size() == 6 and Balance.SAGA_FIRST == 5, "five usual worlds and the saga's")
+	check(Balance.REGULAR == 5 and Balance.WORLDS.size() == 7 and Balance.SAGA_FIRST == 5, "five usual worlds and the saga's two acts")
 	var ids := []
 	for w in Balance.WORLDS:
 		ids.append(w["id"])
-		var want := 15 if w["id"] in ["jungle", "twilight"] else 10
+		var want := 15 if w["id"] in ["jungle", "twilight", "atlantis"] else 10
 		check(w["sites"].size() == want, "%s has %d sites" % [w["id"], want])
 		check(str(w["name"]) == "WORLD_" + str(w["id"]).to_upper(), "%s name key" % w["id"])
-	check(ids == ["ocean", "volcano", "acid", "moon", "jungle", "twilight"], "worlds in order")
+	check(ids == ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis"], "worlds in order")
 	check(Balance.DEPTHS.size() == 15, "one 15-step ladder (10 for most worlds)")
 	var rising := true
 	for i in range(1, 15):

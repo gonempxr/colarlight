@@ -24,8 +24,8 @@ SITE_KRAKEN_TOOTH,Kraken Tooth,Зуб кракена,Diente de Kraken,海怪之�
 SITE_DEEP_STAR,Deep Star,Глубинная звезда,Estrella Profunda,深海之星
 SITE_WARDEN_EYE,Warden's Eye,Глаз Стража,Ojo del Guardián,守卫之眼
 SITE_CORAL_LIGHT,Shard of Coral Light,Осколок Кораллового Света,Fragmento de Luz de Coral,珊瑚之光碎片
-SAGA_SOON_TITLE,Act II is coming!,Скоро Акт II!,¡Pronto el Acto II!,第二幕即将到来！
-SAGA_SOON_TEXT,Atlantis opens soon. Beat the guardians of the Twilight Zone and climb the league board!,Скоро откроется Атлантида. Побеждай стражей Сумеречной зоны и поднимайся в таблице лиги!,La Atlántida abre pronto. ¡Vence a los guardianes de la Zona Crepuscular y sube en la tabla de la liga!,亚特兰蒂斯即将开放。打败暮光之海的守卫，在联赛榜上往上爬！
+SAGA_SOON_TITLE,Act III is coming!,Скоро Акт III!,¡Pronto el Acto III!,第三幕即将到来！
+SAGA_SOON_TEXT,R'lyeh opens soon. Beat the guardians of Atlantis and climb the league board!,Скоро откроется Р'льех. Побеждай стражей Атлантиды и поднимайся в таблице лиги!,R'lyeh abre pronto. ¡Vence a los guardianes de la Atlántida y sube en la tabla de la liga!,拉莱耶即将开放。打败亚特兰蒂斯的守卫，在联赛榜上往上爬！
 FISHING_ROD_TWILIGHT,Abyss Glow rod,Удочка Сияния Бездны,Caña del Brillo Abisal,深渊之光鱼竿
 ROD_TWILIGHT_1,A violet rod with a pink float,Фиолетовая удочка с розовым поплавком,Caña violeta con flotador rosa,紫色鱼竿，配粉色浮漂
 ROD_TWILIGHT_2,A soft grip,Мягкая рукоять,Mango suave,柔软的握把
@@ -103,7 +103,7 @@ STORY_POST_CRABBLACK,The Murk pulls back! The mine is open. But I can feel it: t
 STORY_POST_MOTHER_JELLY,"The jellies glow with clean light again. Deeper, diver!","Медузы снова светятся чистым светом. Глубже, ныряльщик!","Las medusas vuelven a brillar con luz limpia. ¡Más hondo, buzo!",水母们又发出了纯净的光。继续深潜吧，潜水员！
 STORY_POST_SHADOW_EEL,The eel left a scale with a pattern… It's a map of Atlantis!,Угорь оставил чешую с узором… Это карта Атлантиды!,La anguila dejó una escama con un dibujo… ¡Es un mapa de la Atlántida!,鳗鱼留下了一片带花纹的鳞片……这是亚特兰蒂斯的地图！
 STORY_POST_KRAKEN,The Kraken swam off into the dark. Nobody holds the gates of Atlantis anymore.,Кракен уплыл во тьму. Ворота Атлантиды больше никто не держит.,El Kraken se fue a la oscuridad. Ya nadie guarda las puertas de la Atlántida.,海怪游进了黑暗。再也没有谁守着亚特兰蒂斯之门了。
-STORY_POST_WARDEN,Act I is done! The Twilight Zone is clean. Atlantis lies ahead; the way there opens soon. Climb the league board until then!,Акт I пройден! Сумеречная зона очищена. Впереди Атлантида — путь туда скоро откроется. А пока поднимайся в таблице лиги!,"¡Acto I superado! La Zona Crepuscular está limpia. Más adelante está la Atlántida; el camino se abre pronto. ¡Mientras, sube en la tabla de la liga!",第一幕完成！暮光之海已被净化。前方就是亚特兰蒂斯，通往那里的路很快就会开启。在此之前，冲上联赛排行榜吧！
+STORY_POST_WARDEN,Act I is done! The Twilight Zone is clean. Atlantis lies ahead: open it on the map when you are ready.,"Акт I пройден! Сумеречная зона очищена. Впереди Атлантида: открой её на карте, когда будешь готов.",¡Acto I superado! La Zona Crepuscular está limpia. Más adelante está la Atlántida: ábrela en el mapa cuando estés listo.,第一幕完成！暮光之海已被净化。前方就是亚特兰蒂斯：准备好后在地图上开启它。
 BOSS_COMBO,Combo %d · ×%.2f,Комбо %d · ×%.2f,Combo %d · ×%.2f,连击 %d · ×%.2f
 BOSS_CRIT,CRIT!,КРИТ!,¡CRÍTICO!,暴击！
 BOSS_PARRY,Parried!,Отбил!,¡Bloqueado!,格挡成功！
@@ -125,3 +125,111 @@ PARTY_LV,Lv %d,Ур. %d,Nv %d,%d级
 PARTY_MORE,%d more heroes join as you beat the guards,Ещё героев: %d — присоединятся за победы над стражами,%d héroes más se unen al vencer a los guardianes,击败守卫，还会有 %d 位英雄加入
 PARTY_XP,The party gets +%d experience,Отряд получил +%d опыта,El grupo gana +%d de experiencia,队伍获得 +%d 经验
 PARTY_LEVEL_UP,%s: level %d → %d!,%s: ур. %d → %d!,%s: nivel %d → %d!,%s：%d级 → %d级！
+WORLD_ATLANTIS,Atlantis,Атлантида,Atlántida,亚特兰蒂斯
+MAP_W_ATLANTIS,Atlantis,Атлантида,Atlántida,亚特兰蒂斯
+WORLD_ATLANTIS_FLAVOR,"A sunken city of marble and gold, where bronze machines still turn.","Затонувший город из мрамора и золота, где до сих пор крутятся бронзовые машины.","Una ciudad hundida de mármol y oro, donde aún giran máquinas de bronce.",大理石与黄金的沉没之城，青铜机械仍在转动。
+MAP_HINT_ATLANTIS,Act II of the saga: the sunken city and its five guards.,Акт II саги: затонувший город и пять его стражей.,Acto II de la saga: la ciudad hundida y sus cinco guardianes.,传奇第二幕：沉没之城和它的五位守卫。
+GEAR_ATLANTIS_1,Marble Diver,Мраморный ныряльщик,Buzo de mármol,大理石潜水员
+GEAR_ATLANTIS_2,Bronze Diver,Бронзовый ныряльщик,Buzo de bronce,青铜潜水员
+GEAR_ATLANTIS_3,Golden Diver,Золотой ныряльщик,Buzo dorado,黄金潜水员
+GEAR_ATLANTIS_4,Orichalcum Knight,Рыцарь орихалка,Caballero de oricalco,山铜骑士
+SITE_MARBLE_DUST,Marble Dust,Мраморная пыль,Polvo de mármol,大理石粉
+SITE_MOSAIC_TILE,Mosaic Tiles,Плитки мозаики,Teselas de mosaico,马赛克瓷砖
+SITE_BRONZE_GEAR,Bronze Gears,Бронзовые шестерни,Engranajes de bronce,青铜齿轮
+SITE_AMPHORA,Amphoras,Амфоры,Ánforas,双耳瓶
+SITE_TRIDENT_SHARD,Trident Shards,Осколки трезубца,Fragmentos del tridente,三叉戟碎片
+SITE_ORICHALCUM,Orichalcum,Орихалк,Oricalco,山铜
+SITE_SUN_LENS,Sun Lenses,Солнечные линзы,Lentes solares,太阳透镜
+SITE_AUTOMATON_CORE,Automaton Cores,Ядра автоматонов,Núcleos de autómata,自动人偶核心
+SITE_SIREN_HARP,Siren Harps,Арфы сирен,Arpas de sirena,海妖竖琴
+SITE_ROYAL_SEAL,Royal Seals,Царские печати,Sellos reales,王室印章
+SITE_CRYSTAL_CODEX,Crystal Codex,Хрустальный кодекс,Códice de cristal,水晶法典
+SITE_TIDE_ENGINE,Tide Engine,Машина приливов,Motor de mareas,潮汐引擎
+SITE_POSEIDON_CROWN,Poseidon's Crown,Корона Посейдона,Corona de Poseidón,波塞冬之冠
+SITE_STAR_CHART,Star Charts,Звёздные карты,Cartas estelares,星图
+SITE_ATLAS_HEART,Heart of Atlantis,Сердце Атлантиды,Corazón de la Atlántida,亚特兰蒂斯之心
+FISHING_ROD_ATLANTIS,Golden Trident rod,Удочка «Золотой трезубец»,Caña Tridente Dorado,金色三叉戟鱼竿
+BOSS_AUTOMATON,The Bronze Automaton,Бронзовый автоматон,El Autómata de Bronce,青铜自动人偶
+BOSS_SIREN_QUEEN,The Siren Queen,Королева сирен,La Reina Sirena,海妖女王
+BOSS_DROWNED_KING,The Drowned King,Утонувший царь,El Rey Ahogado,溺亡之王
+BOSS_HYDRA,The Hydra,Гидра,La Hidra,九头蛇
+BOSS_COLOSSUS,The Colossus of the Gate,Колосс-привратник,El Coloso de la Puerta,守门巨像
+BOSS_SHIELD,Shield! Only skills hurt it,Щит! Бьют только навыки,¡Escudo! Solo dañan las habilidades,护盾！只有技能能造成伤害
+BOSS_SHIELD_UP,SHIELD UP!,ЩИТ!,¡ESCUDO!,护盾开启！
+BOSS_IMMUNE,Blocked,Блок,Bloqueado,被挡住
+BOSS_CHARMED,Charmed!,Очарован!,¡Hechizado!,被魅惑！
+BOSS_FREED,Free!,Свободен!,¡Libre!,解除！
+BOSS_HEAD_CUT,Head off!,Голова срублена!,¡Cabeza cortada!,砍掉一个头！
+BOSS_REGROW,It grows back!,Отросла!,¡Vuelve a crecer!,又长回来了！
+BOSS_PROPHECY,Prophecy: every tap is a crit,Пророчество: каждый тап — крит,Profecía: cada toque es crítico,预言：每次点击都暴击
+CLASS_ORACLE,Oracle,Оракул,Oráculo,神谕者
+SKILL_PROPHECY,Prophecy!,Пророчество!,¡Profecía!,预言！
+RELIC_BTN,Relics (%d),Реликвии (%d),Reliquias (%d),遗物（%d）
+RELIC_TITLE,Relics,Реликвии,Reliquias,遗物
+RELIC_SHARDS,Shards: %d,Осколки: %d,Fragmentos: %d,碎片：%d
+RELIC_TOTAL,Worn:,Надето:,Equipado:,已装备：
+RELIC_NONE,nothing yet,пока ничего,nada aún,暂无
+RELIC_BAG,Bag %d/%d,Сумка %d/%d,Bolsa %d/%d,背包 %d/%d
+RELIC_EMPTY,Empty. Every guard you beat drops a relic.,Пусто. Каждый побеждённый страж оставляет реликвию.,Vacía. Cada guardián vencido suelta una reliquia.,空的。每打败一个守卫都会掉落一件遗物。
+RELIC_WEAR,Wear,Надеть,Equipar,装备
+RELIC_CANCEL,Cancel,Отмена,Cancelar,取消
+RELIC_PUT,Put here,Сюда,Aquí,放这里
+RELIC_OFF,Take off,Снять,Quitar,卸下
+RELIC_REROLL,Reroll %d,Сменить %d,Cambiar %d,重铸 %d
+RELIC_MELT,Melt +%d,Плавить +%d,Fundir +%d,熔化 +%d
+RELIC_FOUND,New relic!,Новая реликвия!,¡Nueva reliquia!,新遗物！
+RELIC_MELTED,The bag is full: melted into %d shards,Сумка полна: переплавлено в %d осколков,La bolsa está llena: fundida en %d fragmentos,背包已满：熔成了 %d 个碎片
+RELIC_S_ALL,+%d%% all income,+%d%% ко всему доходу,+%d%% a todos los ingresos,全部收入 +%d%%
+RELIC_S_SITE,+%d%% %s,+%d%% %s,+%d%% %s,+%d%% %s
+RELIC_S_CHAIN,"+%d%% lift, boats and plants","+%d%% лифт, лодки и заводы","+%d%% ascensor, barcos y plantas",电梯、船和工厂 +%d%%
+RELIC_S_BOSS,+%d%% damage to guards,+%d%% урона стражам,+%d%% daño a guardianes,对守卫伤害 +%d%%
+RELIC_S_MURK,The Murk grows %d%% slower,Скверна растёт на %d%% медленнее,La Bruma crece un %d%% más lento,暗潮增长减慢 %d%%
+RELIC_S_XP,+%d%% party experience,+%d%% опыта отряда,+%d%% experiencia del grupo,队伍经验 +%d%%
+RELIC_S_TAP,+%d%% tap power,+%d%% к силе тапа,+%d%% fuerza del toque,点击力量 +%d%%
+RELIC_K_SHELL_CHARM,Shell Charm,Амулет-ракушка,Amuleto de concha,贝壳护符
+RELIC_K_ANGLER_LAMP,Angler Lamp,Фонарь удильщика,Farol de rape,鮟鱇灯
+RELIC_K_JELLY_CROWN,Jelly Crown,Медузья корона,Corona de medusa,水母王冠
+RELIC_K_KRAKEN_RING,Kraken Ring,Кольцо кракена,Anillo del kraken,海怪之戒
+RELIC_K_WARDEN_EYE,Warden's Eye,Око Стража,Ojo del Guardián,守卫之眼
+RELIC_K_TRIDENT_CHARM,Trident Charm,Амулет-трезубец,Amuleto tridente,三叉戟护符
+RELIC_K_ORICHALCUM_RING,Orichalcum Ring,Кольцо из орихалка,Anillo de oricalco,山铜之戒
+RELIC_K_SIREN_COMB,Siren Comb,Гребень сирены,Peine de sirena,海妖之梳
+RELIC_K_KINGS_SEAL,King's Seal,Печать царя,Sello del rey,国王印章
+RELIC_K_HYDRA_FANG,Hydra Fang,Клык гидры,Colmillo de hidra,九头蛇之牙
+TIDE_HIGH_BAR,High %s,Прилив %s,Pleamar %s,涨潮 %s
+TIDE_LOW_BAR,Low %s,Отлив %s,Bajamar %s,退潮 %s
+TIDE_TEXT,Atlantis has tides: every %d min the sea turns. High tide: the lift and boats carry ×%d. Low tide: the mines dig ×%d. Away time counts without tides.,"В Атлантиде приливы: каждые %d мин море меняется. Прилив: лифт и лодки возят ×%d. Отлив: шахты копают ×%d. Пока тебя нет, приливы не считаются.",La Atlántida tiene mareas: cada %d min el mar cambia. Pleamar: el ascensor y los barcos llevan ×%d. Bajamar: las minas cavan ×%d. El tiempo fuera cuenta sin mareas.,亚特兰蒂斯有潮汐：每 %d 分钟海水变换一次。涨潮：电梯和船运送 ×%d。退潮：矿井挖掘 ×%d。离线时间不计潮汐。
+STORY_ACT2_1,"Here it is: Atlantis! The city sank a thousand years ago, but its machines still work. The Murk got here first, so be careful.","Вот она — Атлантида! Город ушёл под воду тысячу лет назад, но его машины всё ещё работают. Скверна пришла сюда раньше нас, будь осторожен.","¡Aquí está la Atlántida! La ciudad se hundió hace mil años, pero sus máquinas aún funcionan. La Bruma llegó antes que nosotros, ten cuidado.",这就是亚特兰蒂斯！这座城市一千年前沉入海底，但它的机械仍在运转。暗潮比我们先到了，要小心。
+STORY_ACT2_2,The city breathes with the tides. At high tide the lift and boats carry twice as much; at low tide the mines dig twice as fast. Watch the bar at the top.,"Город дышит приливами. В прилив лифт и лодки возят вдвое больше, в отлив шахты копают вдвое быстрее. Смотри на полоску сверху.",La ciudad respira con las mareas. En pleamar el ascensor y los barcos llevan el doble; en bajamar las minas cavan el doble. Mira la barra de arriba.,这座城市随潮汐呼吸。涨潮时电梯和船运送翻倍；退潮时矿井挖掘翻倍。留意顶部的状态条。
+STORY_ACT2_3,Every guard you beat leaves a relic. Give them to your heroes: three each. Melt the extra ones into shards and reroll the rest.,"Каждый побеждённый страж оставляет реликвию. Надевай их на героев, по три на каждого. Лишние переплавляй в осколки и перебрасывай свойства.","Cada guardián vencido deja una reliquia. Dáselas a tus héroes, tres a cada uno. Funde las que sobren en fragmentos y cambia sus propiedades.",每打败一个守卫都会留下一件遗物。把它们交给你的英雄，每人三件。多余的熔成碎片，用来重铸属性。
+STORY_ACT2_4,"The first guard is a bronze automaton. When its shield is up, only your heroes' skills can hurt it. Save them!","Первый страж — бронзовый автоматон. Когда у него поднят щит, ранить его могут только навыки героев. Береги их!","El primer guardián es un autómata de bronce. Con el escudo alzado, solo las habilidades de tus héroes lo dañan. ¡Guárdalas!",第一位守卫是青铜自动人偶。它举起护盾时，只有英雄的技能能伤到它。省着点用！
+STORY_PRE_AUTOMATON,The Bronze Automaton. It guarded the gates for a thousand years. Shield up? Use skills!,Бронзовый автоматон. Тысячу лет он охранял ворота. Поднял щит? Бей навыками!,El Autómata de Bronce. Guardó las puertas mil años. ¿Escudo arriba? ¡Usa habilidades!,青铜自动人偶。它守护城门已有千年。护盾升起了？用技能！
+STORY_PRE_SIREN_QUEEN,The Siren Queen. Her song charms heroes. Parry her attack to wake them up!,"Королева сирен. Её песня очаровывает героев. Отрази её удар, чтобы они очнулись!",La Reina Sirena. Su canto hechiza a los héroes. ¡Para su ataque para despertarlos!,海妖女王。她的歌声会魅惑英雄。格挡她的攻击来唤醒他们！
+STORY_PRE_DROWNED_KING,The Drowned King. His trident hits the whole party at once. Keep the healer close!,Утонувший царь. Его трезубец бьёт по всему отряду сразу. Держи лекаря рядом!,El Rey Ahogado. Su tridente golpea a todo el grupo. ¡Ten cerca al sanador!,溺亡之王。他的三叉戟会同时攻击整个队伍。让治疗者待在身边！
+STORY_PRE_HYDRA,The Hydra! Three heads. Cut one off and it grows back unless you finish the others fast.,"Гидра! Три головы. Срубишь одну — отрастёт, если не добить остальные быстро.",¡La Hidra! Tres cabezas. Corta una y volverá a crecer si no acabas rápido con las demás.,九头蛇！三个头。砍掉一个，如果不尽快解决其他的，它就会长回来。
+STORY_PRE_COLOSSUS,"The Colossus of the Gate. Slow, but every blow shakes the sea. Behind it lies the way to R'lyeh…","Колосс-привратник. Медленный, но каждый удар сотрясает море. За ним — путь в Р'льех…","El Coloso de la Puerta. Lento, pero cada golpe sacude el mar. Tras él está el camino a R'lyeh…",守门巨像。动作缓慢，但每一击都震动大海。它身后就是通往拉莱耶的路……
+STORY_POST_AUTOMATON,The gears stopped. The gates of Atlantis are open!,Шестерни остановились. Ворота Атлантиды открыты!,Los engranajes se pararon. ¡Las puertas de la Atlántida están abiertas!,齿轮停下了。亚特兰蒂斯的城门打开了！
+STORY_POST_SIREN_QUEEN,The song is over. A new hero joins you soon: the Oracle sees the future.,Песня смолкла. Скоро к тебе придёт новый герой: Оракул видит будущее.,La canción terminó. Pronto se une un nuevo héroe: el Oráculo ve el futuro.,歌声停了。很快会有新英雄加入：神谕者能预见未来。
+STORY_POST_DROWNED_KING,The king is free at last. The Oracle joins your party! Her prophecy turns every tap into a crit.,Царь наконец свободен. Оракул вступает в отряд! Её пророчество превращает каждый тап в крит.,El rey por fin es libre. ¡El Oráculo se une al grupo! Su profecía convierte cada toque en crítico.,国王终于解脱了。神谕者加入了你的队伍！她的预言让每次点击都变成暴击。
+STORY_POST_HYDRA,No more heads grow back. Only the Colossus is left.,Головы больше не отрастают. Остался только Колосс.,Ya no crecen más cabezas. Solo queda el Coloso.,再也没有头长回来了。只剩下巨像了。
+STORY_POST_COLOSSUS,Act II is done! Atlantis shines again. But the Colossus guarded a gate going down… to R'lyeh. The way there opens soon.,Акт II пройден! Атлантида снова сияет. Но Колосс сторожил ворота вниз… в Р'льех. Путь туда скоро откроется.,¡Acto II superado! La Atlántida brilla de nuevo. Pero el Coloso guardaba una puerta hacia abajo… hacia R'lyeh. El camino se abre pronto.,第二幕完成！亚特兰蒂斯重放光芒。但巨像守护着一道向下的门……通往拉莱耶。那条路很快就会开启。
+ROD_ATLANTIS_1,A marble rod with a gold float,Мраморная удочка с золотым поплавком,Caña de mármol con flotador dorado,带金色浮漂的大理石鱼竿
+ROD_ATLANTIS_2,A bronze grip,Бронзовая рукоять,Mango de bronce,青铜握把
+ROD_ATLANTIS_3,A golden line,Золотая леска,Sedal dorado,金色鱼线
+ROD_ATLANTIS_4,A longer rod,Удочка длиннее,Caña más larga,更长的鱼竿
+ROD_ATLANTIS_5,A gear reel,Катушка-шестерня,Carrete de engranaje,齿轮绕线轮
+ROD_ATLANTIS_6,Meander rings,Кольца с меандром,Anillas con meandro,回纹导环
+ROD_ATLANTIS_7,An amphora float,Поплавок-амфора,Flotador de ánfora,双耳瓶浮漂
+ROD_ATLANTIS_8,A pearl reel,Жемчужная катушка,Carrete de perla,珍珠绕线轮
+ROD_ATLANTIS_9,Laurel trim,Лавровая отделка,Adorno de laurel,月桂装饰
+ROD_ATLANTIS_10,A sun lens on the tip,Солнечная линза на кончике,Lente solar en la punta,竿尖太阳透镜
+ROD_ATLANTIS_11,A twin reel,Двойная катушка,Carrete doble,双绕线轮
+ROD_ATLANTIS_12,Mosaic wraps,Мозаичная обмотка,Forro de mosaico,马赛克缠绕
+ROD_ATLANTIS_13,A shell grip,Рукоять-ракушка,Mango de concha,贝壳握把
+ROD_ATLANTIS_14,An orichalcum tip,Кончик из орихалка,Punta de oricalco,山铜竿尖
+ROD_ATLANTIS_15,A trident tip,Кончик-трезубец,Punta de tridente,三叉戟竿尖
+ROD_ATLANTIS_16,Star wraps,Звёздная обмотка,Forro de estrellas,星纹缠绕
+ROD_ATLANTIS_17,A crown reel,Катушка-корона,Carrete de corona,王冠绕线轮
+ROD_ATLANTIS_18,A siren float,Поплавок сирены,Flotador de sirena,海妖浮漂
+ROD_ATLANTIS_19,Glowing runes,Светящиеся руны,Runas brillantes,发光符文
+ROD_ATLANTIS_20,The Heart of Atlantis,Сердце Атлантиды,El Corazón de la Atlántida,亚特兰蒂斯之心

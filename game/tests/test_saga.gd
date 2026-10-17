@@ -34,7 +34,7 @@ func _initialize() -> void:
 	_check(Balance.saga and gs.world_id() == "twilight" and int(gs.location) == 0, "a league game starts in the Twilight Zone")
 	_check(Balance.site_count(0) == 15 and gs.site_count() == 15 and gs.site_id(14) == "coral_light", "fifteen saga sites")
 	_check(Balance.tier_of(0) == 0 and Balance.loc_scale(0) == 1.0, "from the first numbers (a fresh start)")
-	_check(Balance.last_location() == Balance.SAGA_LAST and gs.is_last_location(), "act I is the last part for now")
+	_check(Balance.last_location() == Balance.SAGA_LAST and Balance.SAGA_LAST == 1 and not gs.is_last_location(), "act II follows act I")
 	_check(WorldLook.world_of(0) == "twilight" and MapArt.world_of(0) == "twilight" and MapArt.soon_worlds() == MapArt.SAGA_SOON, "looks and map follow the saga")
 	WorldLook.apply(0)
 	_check(WorldLook.world == "twilight" and WorldLook.is_water(), "the Twilight Zone is under water (divers swim)")
@@ -100,7 +100,7 @@ func _initialize() -> void:
 	DirAccess.remove_absolute("user://saga_test_save.json")
 	# --- Story scenes ---------------------------------------------------------------------
 	var story = load("res://scripts/ui/saga_story.gd")
-	var ids := ["intro"]
+	var ids := ["intro", "act2"]
 	for b in MineBoss.BOSSES:
 		ids.append("pre_" + b)
 		ids.append("post_" + b)
@@ -161,6 +161,9 @@ func _initialize() -> void:
 	_check(is_equal_approx(gs.murk, 0.4) and gs.story.get("intro", false) and int(gs.party_xp.get("medic", 0)) == 250, "Murk, seen story scenes and the party are saved")
 	DirAccess.remove_absolute("user://saga_test_save.json")
 
+	# --- Act II: Atlantis ---------------------------------------------------------------------
+	_act2(gs)
+
 	pf.leave_league()
 	_check(pf.current_id == home and not Balance.saga and gs.world_id() == "ocean", "back home: the usual worlds")
 	gs.reset()
@@ -175,6 +178,61 @@ func _initialize() -> void:
 
 	print("test_saga: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)
+
+
+func _act2(gs: Node) -> void:
+	var n := Balance.WORLDS.size()
+	_check(n == 7 and Balance.world_of(1)["id"] == "atlantis", "seven worlds; the saga's location 1 is Atlantis")
+	# Every per-world table covers all worlds (the league's fishing bug came from 5-world arrays).
+	_check(WorldLook.WORLDS.size() == n and MapArt.WORLDS.size() == n and WorkerLooks.WORLDS.size() == n, "looks, map and workers for 7 worlds")
+	_check(FishArt.WORLD_HUES.size() == n and RodArt.KEYS.size() == n and TileWorlds.COLORS.has(n - 1), "fish, rods and tiles for 7 worlds")
+	for w in Balance.WORLDS:
+		var id := str(w["id"])
+		_check(WorldLook.LOOKS.has(id) and FactoryArt.LOOKS.has(id) and MapArt.LOOK.has(id), "looks of %s" % id)
+	gs.reset()
+	gs.location = 1
+	gs.max_location = 1
+	WorldLook.apply(1)
+	_check(gs.world_id() == "atlantis" and gs.site_count() == 15 and WorldLook.world == "atlantis" and WorldLook.is_water(), "Atlantis: 15 sites under water")
+	for i in 15:
+		var k: String = "SITE_" + gs.site_id(i).to_upper()
+		_check(TranslationServer.translate(k) != k and Art.SITE_STYLE.has(gs.site_id(i)), "name and look of site %s" % gs.site_id(i))
+	for k in ["WORLD_ATLANTIS", "MAP_W_ATLANTIS", "MAP_HINT_ATLANTIS", "FISHING_ROD_ATLANTIS", "ROD_ATLANTIS_20", "GEAR_ATLANTIS_4", "TIDE_TEXT", "TIDE_HIGH_BAR", "RELIC_TITLE", "RELIC_S_XP", "BOSS_SHIELD", "BOSS_PROPHECY"]:
+		_check(TranslationServer.translate(k) != k, "words for %s" % k)
+	_check(MineBoss.guard("atlantis", 3) == "automaton" and MineBoss.guard("atlantis", 14) == "colossus", "Atlantis' five guards")
+	for b in ["automaton", "siren_queen", "drowned_king", "hydra", "colossus"]:
+		_check(Relics.BOSS_RARITY.has(b) and MineBoss.BOSSES[b].has("rule") or b == "colossus", "relic and rule for %s" % b)
+	# The party keeps act I's heroes; the Oracle joins after the Drowned King.
+	var beaten: Array = gs.saga_beaten()
+	_check(beaten.has("warden") and Party.members(beaten).size() == 4 and not Party.members(beaten).has("oracle"), "act I's heroes come along")
+	beaten.append("drowned_king")
+	_check(Party.members(beaten).has("oracle") and Party.members(beaten).size() == 5, "the Oracle joins")
+	# Tides.
+	_check(Tides.high(10.0) and not Tides.high(100.0) and Tides.left(10.0) == 80.0, "a 3-minute tide cycle")
+	_check(Tides.mult(10.0, "lift") == 2.0 and Tides.mult(10.0, "dives") == 1.0 and Tides.mult(100.0, "dives") == 2.0 and Tides.mult(100.0, "boat") == 1.0, "high tide: lift and boats; low tide: mines")
+	_check(gs.has_tides(), "Atlantis has tides")
+	# Relics: a drop, wearing, totals, saving.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var rel := Relics.drop(rng, "hydra", 15)
+	_check(int(rel["rarity"]) >= 2 and rel["affixes"].size() == int(rel["rarity"]) + 1 and Relics.KINDS.find(rel["kind"]) >= 5, "the Hydra drops a rare city relic")
+	_check(gs.add_relic({"kind": "siren_comb", "rarity": 0, "affixes": [{"stat": "all", "v": 0.1}]}), "a relic goes to the bag")
+	_check(gs.relic("all") == 0.0 and gs.wear_relic(0, "guardian") and is_equal_approx(gs.relic("all"), 0.1), "worn relics count")
+	_check(not gs.wear_relic(0, "oracle"), "only party members wear relics")
+	var m0: float = gs.income_mult()
+	gs.salvage_relic(0)
+	_check(gs.relics.is_empty() and gs.relic_shards == Relics.SALVAGE[0] and gs.income_mult() < m0, "melting gives shards and drops the bonus")
+	gs.add_relic(rel)
+	gs.wear_relic(0, "harpooner")
+	gs.save_path = "user://saga_test_save.json"
+	gs.save_game()
+	gs.relics = []
+	gs.relic_shards = 0
+	gs.load_game()
+	_check(gs.relics.size() == 1 and str(gs.relics[0]["hero"]) == "harpooner" and gs.relic_shards == Relics.SALVAGE[0] and gs.world_id() == "atlantis", "relics, shards and the act are saved")
+	DirAccess.remove_absolute("user://saga_test_save.json")
+	gs.reset()
+	WorldLook.apply(0)
 
 
 ## Plays a fight on BossScreen for up to its full time: `active` taps the

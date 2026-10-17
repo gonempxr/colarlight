@@ -31,6 +31,14 @@ static func guards() -> Array:
 	return out
 
 
+const ROMAN: Array[String] = ["I", "II", "III"]
+
+
+## The act being played (0 = act I): the saga's location.
+static func act() -> int:
+	return clampi(int(GameState.location), 0, ROMAN.size() - 1)
+
+
 static func beaten_count() -> int:
 	var n := 0
 	for g in guards():
@@ -51,7 +59,8 @@ func _ready() -> void:
 func _process(_d: float) -> void:
 	if not is_visible_in_tree():
 		return
-	var sig := [MurkVeil.shown(GameState.murk), GameState.bosses.size(), size, TranslationServer.get_locale()]
+	var sig := [MurkVeil.shown(GameState.murk), GameState.bosses.size(), size, TranslationServer.get_locale(),
+		int(Tides.left(GameState.now())) if GameState.has_tides() else -1]
 	if sig != _sig:
 		_sig = sig
 		queue_redraw()
@@ -67,7 +76,7 @@ static func draw_bar(ci: CanvasItem, s: Vector2) -> void:
 	Art.ring(ci, Art.rrect_pts(r.grow(-4.0), r.size.y / 2.0 - 4.0), Color(RIM, 0.55), 2.0)
 	var cy := r.position.y + r.size.y / 2.0
 	# The act.
-	Art.text(ci, Vector2(r.position.x + 58, cy + 9), t("SAGA_ACT") % "I", 26, GOLD, 6)
+	Art.text(ci, Vector2(r.position.x + 58, cy + 9), t("SAGA_ACT") % ROMAN[act()], 26, GOLD, 6)
 	# The Murk on the right: an eye and a share.
 	var m := MurkVeil.shown(GameState.murk)
 	var mx := r.end.x - 100.0
@@ -79,6 +88,15 @@ static func draw_bar(ci: CanvasItem, s: Vector2) -> void:
 	if gs.is_empty():
 		return
 	var x0 := r.position.x + 130.0
+	# Atlantis' tide: which half and how long it lasts.
+	if GameState.has_tides():
+		var now := GameState.now()
+		var up := Tides.high(now)
+		var tr := Rect2(Vector2(x0 - 12.0, cy - 17.0), Vector2(150.0, 34.0))
+		Art.t_rect(ci, tr, 17.0, Color("2a8ed8") if up else Color("c8a04a"), 2.5, 0.0)
+		var l := int(Tides.left(now))
+		Art.text(ci, Vector2(tr.position.x + tr.size.x / 2.0, cy + 8), t("TIDE_HIGH_BAR" if up else "TIDE_LOW_BAR") % ("%d:%02d" % [l / 60, l % 60]), 20, Art.WHITE, 5)
+		x0 += 160.0
 	var x1 := mx - 40.0
 	var step := (x1 - x0) / maxf(1.0, gs.size() - 1)
 	Art.line(ci, Vector2(x0, cy), Vector2(x1, cy), Color(RIM, 0.6), 3.0)
@@ -109,8 +127,11 @@ static func draw_bar(ci: CanvasItem, s: Vector2) -> void:
 static func build(m: Modal, main: Node) -> void:
 	m.title(t("SAGA_TITLE"))
 	m.banner(UiTheme.BANNER_PURPLE)
-	var acts := [["I", "SAGA_ACT1", true], ["II", "SAGA_ACT2", false], ["III", "SAGA_ACT3", false]]
-	for a in acts:
+	var acts := [["I", "SAGA_ACT1"], ["II", "SAGA_ACT2"], ["III", "SAGA_ACT3"]]
+	for i in acts.size():
+		var a: Array = acts[i]
+		# [roman, name, now?]; done acts read "beaten".
+		a.append(i == act())
 		var card := Views.card(Color("efe6ff") if a[2] else Color("e2dcec"))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -120,7 +141,10 @@ static func build(m: Modal, main: Node) -> void:
 		var name := Views.label(t(a[1]), 24, Art.INK if a[2] else Art.INK_SOFT, true)
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name)
-		row.add_child(Views.pill(t("SAGA_NOW") if a[2] else t("SAGA_LATER"), Color("8a4cf0") if a[2] else Color("9aa3bd")))
+		if i < act():
+			row.add_child(Views.pill(t("SAGA_BEATEN"), Color("2fae5a")))
+		else:
+			row.add_child(Views.pill(t("SAGA_NOW") if a[2] else t("SAGA_LATER"), Color("8a4cf0") if a[2] else Color("9aa3bd")))
 		card.add_child(row)
 		m.add(card)
 	# The guards.
@@ -149,6 +173,13 @@ static func build(m: Modal, main: Node) -> void:
 		row.add_child(p)
 		card.add_child(row)
 		m.add(card)
+	# Atlantis' tides.
+	if GameState.has_tides():
+		var tc := Views.card(Color("e2f2ff"))
+		var tl := Views.label(t("TIDE_TEXT") % [int(Tides.CYCLE / 60.0), int(Tides.MULT), int(Tides.MULT)], 21, Art.INK)
+		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tc.add_child(tl)
+		m.add(tc)
 	# The Murk.
 	var mk := Views.card(Color("f1e8ff"))
 	var col := VBoxContainer.new()
@@ -158,6 +189,7 @@ static func build(m: Modal, main: Node) -> void:
 	col.add_child(txt)
 	mk.add_child(col)
 	m.add(mk)
+	m.button(t("RELIC_BTN") % GameState.relics.size(), func(): m.open(func(mm): RelicView.build(mm, main)), &"GoldButton")
 	m.button(t("SAGA_STORY_BTN"), func():
 		m.close()
 		main.open_story("intro"), &"PurpleButton")

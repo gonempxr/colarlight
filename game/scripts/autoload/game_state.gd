@@ -120,6 +120,15 @@ var murk := 0.0
 var story: Dictionary = {}
 ## The boss fight party's experience (Party), class id -> XP.
 var party_xp: Dictionary = {}
+## Relics (Relics, the saga's loot) owned: relic dicts; "hero" = the class
+## wearing it ("" in the bag). Kept for the whole league game.
+var relics: Array = []
+## Shards from melted relics (pay for rerolls).
+var relic_shards := 0
+## Worn relics' totals per stat (cached, see _relic_totals()).
+var _relic_tot: Dictionary = {}
+## True while offline time is paid: no tides then.
+var _calm := false
 ## Worker gear levels bought in this location (0..Balance.EVO_FORMS): the
 ## workers wear gear level evo + 1 (1..4).
 var evo := 0
@@ -233,6 +242,9 @@ func reset() -> void:
 	exchanged = {}
 	story = {}
 	party_xp = {}
+	relics = []
+	relic_shards = 0
+	_relic_tot = {}
 	_away_report = {}
 	legacy_mult = 1.0
 	gear_refund = 0.0
@@ -361,7 +373,7 @@ func is_open(key: String) -> bool:
 ## forms, room decor, the legacy of old Dives, the x2 boost and artifacts.
 func income_mult() -> float:
 	return _scale * Balance.evo_mult(evo) * float(bonus.get("decor", 1.0)) * float(bonus.get("skin", 1.0)) * legacy_mult * star_mult() \
-			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0)) * murk_mult()
+			* (2.0 if _boosted else 1.0) * (2.0 if x2_day else 1.0) * float(bonus.get("all", 1.0)) * murk_mult() * (1.0 + relic("all"))
 
 
 # --- Worlds and locations --------------------------------------------------------
@@ -873,7 +885,20 @@ func rate(key: String) -> float:
 		r *= float(bonus.get("dives", 1.0))
 		if has_manager(key):
 			r *= Balance.FOREMAN_MULT
+	if Balance.saga:
+		var i := depth_index(key)
+		if i >= 0:
+			r *= 1.0 + relic("site", i)
+		elif key != VAULT:
+			r *= 1.0 + relic("chain")
+		if has_tides():
+			r *= Tides.mult(now(), "dives" if i >= 0 else group)
 	return r
+
+
+## Atlantis' tides are on (the saga's act II world, not while away).
+func has_tides() -> bool:
+	return Balance.saga and not _calm and world_id() == Tides.WORLD
 
 
 func dives_rate() -> float:
@@ -1086,7 +1111,7 @@ func boss_hp(key: String) -> float:
 ## least a small share of the boss's health.
 func boss_hit(key: String, perfect: bool = false) -> float:
 	var hit := maxf(income_rate() * MineBoss.HIT_SEC, boss_hp(key) * MineBoss.MIN_HIT)
-	return hit * (MineBoss.PERFECT_MULT if perfect else 1.0)
+	return hit * (MineBoss.PERFECT_MULT if perfect else 1.0) * (1.0 + relic("boss"))
 
 
 ## The guard of `key` is beaten: the site can be opened. Pays its pearls
@@ -1106,9 +1131,19 @@ func defeat_boss(key: String) -> Dictionary:
 	var pr := get_node_or_null("/root/Progress")
 	if pr:
 		pr.add_pearls(int(d["pearls"]))
+	# A relic drops (kept, or melted into shards when the bag is full).
+	var rel := {}
+	if Balance.saga:
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		rel = Relics.drop(rng, id, site_count())
+		if not add_relic(rel):
+			relic_shards += Relics.SALVAGE[int(rel["rarity"])]
+			rel["melted"] = true
+			rel["shards"] = Relics.SALVAGE[int(rel["rarity"])]
 	boss_defeated.emit(key, id)
 	changed.emit()
-	return {"boss": id, "pearls": int(d["pearls"]), "coins": c}
+	return {"boss": id, "pearls": int(d["pearls"]), "coins": c, "relic": rel}
 
 
 ## Income factor of the Murk (1 outside the saga).
@@ -1118,7 +1153,7 @@ func murk_mult() -> float:
 
 func _grow_murk(seconds: float) -> void:
 	if Balance.saga:
-		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()))
+		murk = minf(1.0, murk + Murk.rise(seconds, bosses.size()) * (1.0 - relic("murk")))
 
 
 ## Ids of the guards beaten in this world's run.
@@ -1131,10 +1166,21 @@ func beaten_bosses() -> Array:
 	return out
 
 
+## Guards beaten so far in the saga: this run's, and every guard of the
+## acts before (an act opens only after its last guard).
+func saga_beaten() -> Array:
+	var out := beaten_bosses()
+	if Balance.saga:
+		for l in range(0, location):
+			for b in MineBoss.GUARDS.get(str(Balance.world_of(l)["id"]), {}).values():
+				out.append(str(b))
+	return out
+
+
 ## The party for a fight: [{"c", "lv", "xp"}] (Party.members, in order).
 func party() -> Array:
 	var out := []
-	for c in Party.members(beaten_bosses()):
+	for c in Party.members(saga_beaten()):
 		var xp := int(party_xp.get(c, 0))
 		out.append({"c": c, "lv": Party.level_of(xp), "xp": xp})
 	return out
@@ -1146,13 +1192,123 @@ func add_party_xp(won: bool) -> Array:
 	var ups := []
 	for m in party():
 		var c: String = m["c"]
-		var xp := int(m["xp"]) + (Party.XP_WIN if won else Party.XP_LOSS)
+		var xp := int(m["xp"]) + roundi((Party.XP_WIN if won else Party.XP_LOSS) * (1.0 + relic("xp")))
 		party_xp[c] = xp
 		var lv := Party.level_of(xp)
 		if lv > int(m["lv"]):
 			ups.append([c, int(m["lv"]), lv])
 	changed.emit()
 	return ups
+
+
+# --- Relics (the saga's loot) ------------------------------------------------------------
+
+## The worn relics' total of `stat` (site: for site index `site`).
+func relic(stat: String, site: int = -1) -> float:
+	if relics.is_empty():
+		return 0.0
+	if _relic_tot.is_empty():
+		_relic_tot = {"_": true}
+		var worn := worn_relics()
+		for st in Relics.STATS:
+			if st != "site":
+				_relic_tot[st] = Relics.total(worn, st)
+		for i in Balance.DEPTHS.size():
+			_relic_tot["site%d" % i] = Relics.total(worn, "site", i)
+	return float(_relic_tot.get("site%d" % site if stat == "site" else stat, 0.0))
+
+
+func worn_relics(hero: String = "") -> Array:
+	return relics.filter(func(r): return str(r.get("hero", "")) != "" and (hero == "" or str(r["hero"]) == hero))
+
+
+func bag_relics() -> Array:
+	return relics.filter(func(r): return str(r.get("hero", "")) == "")
+
+
+## Keeps a new relic in the bag (false: the bag is full).
+func add_relic(rel: Dictionary) -> bool:
+	if rel.is_empty() or bag_relics().size() >= Relics.BAG:
+		return false
+	rel["hero"] = ""
+	relics.append(rel)
+	_relics_changed()
+	return true
+
+
+## Puts relic `i` on `hero` (its first free slot; false when full or not in
+## the party).
+func wear_relic(i: int, hero: String) -> bool:
+	if i < 0 or i >= relics.size() or not hero in Party.members(saga_beaten()):
+		return false
+	if str(relics[i].get("hero", "")) == hero:
+		return true
+	if worn_relics(hero).size() >= Relics.SLOTS:
+		return false
+	relics[i]["hero"] = hero
+	_relics_changed()
+	return true
+
+
+func take_off_relic(i: int) -> bool:
+	if i < 0 or i >= relics.size() or str(relics[i].get("hero", "")) == "":
+		return false
+	if bag_relics().size() >= Relics.BAG:
+		return false
+	relics[i]["hero"] = ""
+	_relics_changed()
+	return true
+
+
+## Melts relic `i` into shards. Returns the shards (0: nothing done).
+func salvage_relic(i: int) -> int:
+	if i < 0 or i >= relics.size():
+		return 0
+	var n: int = Relics.SALVAGE[int(relics[i]["rarity"])]
+	relics.remove_at(i)
+	relic_shards += n
+	_relics_changed()
+	return n
+
+
+## Rolls relic `i`'s properties again for shards.
+func reroll_relic(i: int) -> bool:
+	if i < 0 or i >= relics.size():
+		return false
+	var cost: int = Relics.REROLL[int(relics[i]["rarity"])]
+	if relic_shards < cost:
+		return false
+	relic_shards -= cost
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	relics[i]["affixes"] = Relics.roll_affixes(rng, int(relics[i]["rarity"]), site_count())
+	_relics_changed()
+	return true
+
+
+func _relics_changed() -> void:
+	_relic_tot = {}
+	changed.emit()
+	save_game()
+
+
+func _read_relics(v, shards) -> void:
+	relics = []
+	_relic_tot = {}
+	relic_shards = clampi(int(_num(shards, 0.0)), 0, 1000000)
+	if not v is Array:
+		return
+	var per := {}
+	for x in v:
+		var r := Relics.clean(x)
+		if r.is_empty() or relics.size() >= Relics.BAG + Relics.SLOTS * Party.CLASSES.size():
+			continue
+		var h := str(x.get("hero", "")) if x is Dictionary else ""
+		if not Party.CLASSES.has(h) or int(per.get(h, 0)) >= Relics.SLOTS:
+			h = ""
+		per[h] = int(per.get(h, 0)) + 1
+		r["hero"] = h
+		relics.append(r)
 
 
 func _read_bosses(v) -> void:
@@ -1199,10 +1355,10 @@ func tap(key: String) -> bool:
 	if _taps.allow("rush", tap_clock):
 		_add_rush()
 	if Balance.saga:
-		murk = maxf(0.0, murk - Murk.TAP_CLEAR)
+		murk = maxf(0.0, murk - Murk.TAP_CLEAR * (1.0 + relic("tap")))
 	tapped.emit(key)
 	if _timer[key] >= 0.0:
-		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * cycle_time(key)
+		_timer[key] += Balance.TAP_BOOST * float(bonus.get("tap", 1.0)) * (1.0 + relic("tap")) * cycle_time(key)
 		return true
 	return _start_cycle(key)
 
@@ -1307,6 +1463,7 @@ func _add_rush() -> void:
 ## instead of cycles so 8 hours cost a few thousand cheap steps.
 func simulate_offline(seconds: float) -> float:
 	var earned := 0.0
+	_calm = true
 	var dives := dives_rate()
 	var lift := lift_rate() if has_manager("lift") else 0.0
 	var boat := 0.0
@@ -1317,6 +1474,7 @@ func simulate_offline(seconds: float) -> float:
 				boat += rate(k)
 			else:
 				plant += rate(k)
+	_calm = false
 	var left := seconds
 	while left > 0.0:
 		var dt := minf(OFFLINE_STEP, left)
@@ -1357,6 +1515,8 @@ func save_game() -> bool:
 		"murk": murk,
 		"story": story,
 		"party_xp": party_xp,
+		"relics": relics,
+		"relic_shards": relic_shards,
 		"gear": evo,
 		"vault": vault,
 		"legacy_mult": legacy_mult,
@@ -1523,6 +1683,7 @@ func _load_worlds(data: Dictionary, version: int) -> void:
 		for k in px:
 			if Party.CLASSES.has(str(k)):
 				party_xp[str(k)] = clampi(int(_num(px[k], 0.0)), 0, 10000000)
+	_read_relics(data.get("relics"), data.get("relic_shards"))
 	_rescale()
 	var runs = data.get("worlds_runs")
 	if not runs is Dictionary:

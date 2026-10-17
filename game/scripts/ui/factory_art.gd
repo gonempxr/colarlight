@@ -67,6 +67,12 @@ const LOOKS := {
 		"col": Color("6a4ab8"), "pipe": Color("ff6ad8"), "haz": Color("6af8ff"),
 		"floor": Color("a088cc"), "floor2": Color("8a70b8"), "sky": Color("c75ad6"), "sky2": Color("3ee8e0"),
 		"accent": Color("6af8ff"), "flame": Color("ff6ad8"), "glow": Color("9afcff"), "style": "tiles"},
+	# Atlantis (saga act II): a marble hall with gold beams, bronze pipes,
+	# orichalcum glow; the window shows the clear blue sea.
+	"atlantis": {"wall": Color("f4eee0"), "wall2": Color("e8dcc4"), "low": Color("2a8ed8"), "beam": Color("c7843a"),
+		"col": Color("e0d4b8"), "pipe": Color("c7843a"), "haz": Color("ffc93c"),
+		"floor": Color("d8c8a0"), "floor2": Color("2a6ec8"), "sky": Color("6ab8f0"), "sky2": Color("4ad8f0"),
+		"accent": Color("4af0e0"), "flame": Color("ffc93c"), "glow": Color("ffe07a"), "style": "temple"},
 }
 
 ## Machine materials per tier: body, trim, dark parts, light/glow.

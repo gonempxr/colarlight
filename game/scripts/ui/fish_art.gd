@@ -24,7 +24,7 @@ static var world := 0
 const JUNGLE := 4
 ## Hue ranges the colors are squeezed into, per world (the jungle maps hues
 ## with TROPICAL instead).
-const WORLD_HUES := [Vector2(0.0, 1.0), Vector2(-0.03, 0.13), Vector2(0.17, 0.42), Vector2(0.5, 0.86), Vector2(0.0, 1.0), Vector2(0.48, 0.95)]
+const WORLD_HUES := [Vector2(0.0, 1.0), Vector2(-0.03, 0.13), Vector2(0.17, 0.42), Vector2(0.5, 0.86), Vector2(0.0, 1.0), Vector2(0.48, 0.95), Vector2(0.1, 0.62)]
 ## Jungle river fish: [from hue, to hue] stops. Reds turn coral, yellows
 ## stay sunny, greens go lime, blues become turquoise, purples magenta.
 const TROPICAL := [Vector2(0.0, -0.03), Vector2(0.06, 0.05), Vector2(0.15, 0.13), Vector2(0.3, 0.27), Vector2(0.45, 0.42),
@@ -96,7 +96,7 @@ static func _tropical(h: float) -> float:
 
 
 static func _world_back(ci: CanvasItem, t: float) -> void:
-	var g: Color = [Color.WHITE, Color(1.0, 0.55, 0.15, 0.12), Color(0.6, 1.0, 0.3, 0.1), Color(0.55, 0.8, 1.0, 0.14), Color(0.3, 1.0, 0.85, 0.12), Color(0.8, 0.5, 1.0, 0.14)][world]
+	var g: Color = [Color.WHITE, Color(1.0, 0.55, 0.15, 0.12), Color(0.6, 1.0, 0.3, 0.1), Color(0.55, 0.8, 1.0, 0.14), Color(0.3, 1.0, 0.85, 0.12), Color(0.8, 0.5, 1.0, 0.14), Color(1.0, 0.85, 0.4, 0.14)][world]
 	Art.flat(ci, Art.ellipse_pts(Vector2.ZERO, Vector2(56, 32), 20), g)
 
 

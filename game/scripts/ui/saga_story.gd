@@ -13,6 +13,7 @@ signal finished
 ## boss:<id>, won:<id>.
 const STORIES := {
 	"intro": [["keeper", "STORY_INTRO_1"], ["murk", "STORY_INTRO_2"], ["boss:crabblack", "STORY_INTRO_3"], ["acts", "STORY_INTRO_4"]],
+	"act2": [["atlantis", "STORY_ACT2_1"], ["tides", "STORY_ACT2_2"], ["relics", "STORY_ACT2_3"], ["boss:automaton", "STORY_ACT2_4"]],
 }
 const TYPE_CPS := 55.0
 
@@ -205,6 +206,18 @@ static func draw_picture(ci: CanvasItem, s: Vector2, pic: String, tt: float) -> 
 		_murk_scene(ci, r.size, c, k, tt)
 	elif pic == "acts":
 		_acts(ci, r.size, k, tt)
+	elif pic == "atlantis":
+		_atlantis(ci, r.size, c, k, tt)
+	elif pic == "tides":
+		_tides(ci, r.size, c, k, tt)
+	elif pic == "relics":
+		Art.glow(ci, c, 160.0 * k, Color("ffd84a", 0.3))
+		for i in 3:
+			var a := tt * 0.8 + i * TAU / 3.0
+			Art.push(ci, c + Vector2(cos(a) * 95.0, sin(a) * 34.0 - 20.0) * k, 0.0)
+			RelicView.draw_icon(ci, Vector2.ZERO, (26.0 + i * 4.0) * k, {"kind": Relics.KINDS[5 + i], "rarity": i + 1}, tt)
+			Art.pop(ci)
+		keeper(ci, Vector2(r.size.x - 70 * k, r.size.y - 60 * k), 0.55 * k, tt)
 	elif pic.begins_with("boss:"):
 		Art.glow(ci, c, 170.0 * k, Color("b04cff", 0.35))
 		BossArt.draw(ci, pic.trim_prefix("boss:"), c + Vector2(0, 10 * k), 0.95 * k, tt, 0.0, 0.5)
@@ -224,6 +237,46 @@ static func draw_picture(ci: CanvasItem, s: Vector2, pic: String, tt: float) -> 
 			Art.flat(ci, Art.star_pts(c + Vector2(cos(a) * 60.0, -50.0 + sin(a) * 16.0) * k, 12.0 * k, 5.0 * k, 5), Color("ffd45a"))
 		keeper(ci, Vector2(r.size.x - 70 * k, r.size.y - 60 * k), 0.55 * k, tt)
 	Art.pop(ci)
+
+
+## Act II: the sunken city, columns and a golden dome under sun rays.
+static func _atlantis(ci: CanvasItem, s: Vector2, c: Vector2, k: float, tt: float) -> void:
+	for i in 5:
+		var x := s.x * (0.12 + i * 0.2)
+		Art.grad(ci, PackedVector2Array([Vector2(x - 10, 0), Vector2(x + 10, 0), Vector2(x + 50, s.y), Vector2(x - 30, s.y)]),
+			PackedColorArray([Color(1, 0.9, 0.55, 0.3), Color(1, 0.9, 0.55, 0.3), Color(1, 1, 1, 0), Color(1, 1, 1, 0)]))
+	var base := Vector2(c.x, s.y - 40.0 * k)
+	Art.glow(ci, base + Vector2(0, -120 * k), 130.0 * k, Color("ffd84a", 0.3 + 0.05 * sin(tt * 2.0)))
+	var dome := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * i / 12.0
+		dome.append(base + Vector2(cos(a) * 92.0, -130.0 + sin(a) * 60.0) * k)
+	Art.toon(ci, dome, AtlantisArt.GOLD, 3.0, 0.0)
+	Art.t_rect(ci, Rect2(base + Vector2(-108, -134) * k, Vector2(216, 14) * k), 4.0, AtlantisArt.MARBLE, 3.0, 0.0)
+	for i in 6:
+		AtlantisArt.column(ci, base + Vector2(-90 + i * 36, 0) * k, 120.0 * k, 9.0 * k, AtlantisArt.MARBLE, i == 4)
+	Art.t_rect(ci, Rect2(base + Vector2(-118, 0) * k, Vector2(236, 14) * k), 4.0, AtlantisArt.MARBLE_DARK, 3.0, 0.0)
+	keeper(ci, Vector2(s.x - 62 * k, s.y - 56 * k), 0.5 * k, tt)
+
+
+## Act II: the tide rises and falls (lift and boats / the mines).
+static func _tides(ci: CanvasItem, s: Vector2, c: Vector2, k: float, tt: float) -> void:
+	Art.dot(ci, Vector2(s.x * 0.8, s.y * 0.2), 26.0 * k, Color("fff4c8"))
+	var lvl := s.y * (0.45 + 0.12 * sin(tt * 0.9))
+	var top := PackedVector2Array()
+	for i in 21:
+		var x := s.x * i / 20.0
+		top.append(Vector2(x, lvl + sin(tt * 2.0 + i * 0.7) * 6.0 * k))
+	var water := top.duplicate()
+	water.append(Vector2(s.x, s.y))
+	water.append(Vector2(0, s.y))
+	Art.flat_now(ci, water, Color("2a8ed8", 0.55))
+	for i in top.size() - 1:
+		Art.line(ci, top[i], top[i + 1], Color(1, 1, 1, 0.8), 3.0 * k)
+	for i in 4:
+		AtlantisArt.column(ci, Vector2(s.x * (0.12 + i * 0.12), s.y - 10.0), (60.0 + i * 18.0) * k, 7.0 * k, AtlantisArt.MARBLE, i == 1)
+	AtlantisArt.cog(ci, Vector2(s.x * 0.68, s.y - 50.0 * k), 34.0 * k, 10, AtlantisArt.BRONZE, tt)
+	keeper(ci, Vector2(s.x - 62 * k, s.y - 56 * k), 0.5 * k, tt)
 
 
 static func _seabed(ci: CanvasItem, s: Vector2) -> void:

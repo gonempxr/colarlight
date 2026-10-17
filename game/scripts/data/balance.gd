@@ -32,6 +32,10 @@ const WORLDS: Array[Dictionary] = [
 	{"id": "twilight", "name": "WORLD_TWILIGHT", "char": "abyss_diver",
 		"sites": ["glow_sand", "lantern_shell", "jelly_pearl", "anchor_iron", "ghost_coin", "angler_light", "ink_crystal",
 			"bone_coral", "siren_scale", "nautilus", "abyss_opal", "kraken_tooth", "deep_star", "warden_eye", "coral_light"]},
+	# Act II: the sunken city (opens once the Twilight Warden is beaten).
+	{"id": "atlantis", "name": "WORLD_ATLANTIS", "char": "abyss_diver",
+		"sites": ["marble_dust", "mosaic_tile", "bronze_gear", "amphora", "trident_shard", "orichalcum", "sun_lens",
+			"automaton_core", "siren_harp", "royal_seal", "crystal_codex", "tide_engine", "poseidon_crown", "star_chart", "atlas_heart"]},
 ]
 
 ## The usual game cycles through the first REGULAR worlds (location L is
@@ -39,10 +43,10 @@ const WORLDS: Array[Dictionary] = [
 ## by Profiles for league profiles) plays the saga instead: location L is
 ## world SAGA_FIRST + L, from the first site's numbers (a fresh start), with
 ## every saga world's 15 sites. SAGA_LAST = the last saga location built
-## (act I only for now).
+## (1: act II, Atlantis).
 const REGULAR := 5
 const SAGA_FIRST := 5
-const SAGA_LAST := 0
+const SAGA_LAST := 1
 static var saga := false
 
 ## The site ladder every location uses (the first 10 steps; the Jungle all 15) (ids are the ocean ones;

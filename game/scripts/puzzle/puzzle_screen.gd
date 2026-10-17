@@ -38,6 +38,8 @@ const LOOKS := [
 	{"bg": ["bff0c8", "5cc68a", "1f6a4c"], "floor": "5a8a3a", "frame": "d9bb7c", "back": "173d34", "plant": "3fbf4a"},
 	# The Twilight Zone (saga act I): violet dusk water, rosy sand, pink weed.
 	{"bg": ["7a4ae0", "2c55b4", "1c1c62"], "floor": "f4c8ea", "frame": "c98ccb", "back": "1e1752", "plant": "ff6ad8"},
+	# Atlantis (saga act II): clear blue water, marble sand, gold weed.
+	{"bg": ["4ad8f0", "2a8ed8", "142a6a"], "floor": "f4eee0", "frame": "d8c8a0", "back": "16204a", "plant": "ffc93c"},
 ]
 const JUNGLE := 4
 const NO_CELL := Vector2i(-1, -1)

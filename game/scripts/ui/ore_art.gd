@@ -16,7 +16,12 @@ const KIND_OF := {"magma": "lava", "crater_ice": "ice", "moonstone": "moon", "ne
 		# others recolored kin (iron nuggets, ink crystals, bone coral, ...).
 		"glow_sand": "moon", "anchor_iron": "copper", "ink_crystal": "crystal", "bone_coral": "coral",
 		"nautilus": "fossil", "abyss_opal": "sapphire", "kraken_tooth": "kraken", "deep_star": "star",
-		"warden_eye": "void", "coral_light": "heart"}
+		"warden_eye": "void", "coral_light": "heart",
+		# Atlantis (act II): own art for the city's things, the rest kin.
+		"marble_dust": "dust", "orichalcum": "crystal", "sun_lens": "sun_disc", "royal_seal": "old_coins",
+		"crystal_codex": "jade", "tide_engine": "time", "poseidon_crown": "crown", "star_chart": "star", "atlas_heart": "heart"}
+## Atlantis' own piece kinds (AtlantisArt.ore_piece).
+const ATLANTIS: Array[String] = ["mosaic_tile", "bronze_gear", "amphora", "trident_shard", "automaton_core", "siren_harp"]
 ## The Twilight Zone's own piece kinds (twilight_piece).
 const TWILIGHT: Array[String] = ["lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale"]
 ## Kinds that give off light (a soft pulsing glow behind them).
@@ -24,7 +29,7 @@ const GLOWING: Array[String] = ["lava", "moon", "glow", "atlantis", "meteor", "s
 		"vent", "storm", "dragon", "void", "time", "heart", "ember", "phoenix", "radiant", "slime", "comet", "alien_egg",
 		"ufo", "fire_opal", "goo_king", "turquoise", "old_coins", "tiger_eye", "idol", "sun_disc", "serpent", "temple_heart",
 		"jade_jaguar", "emerald_scarab", "sky_feather", "rain_crystal", "sun_crown",
-		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale"]
+		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale", "trident_shard", "automaton_core", "siren_harp"]
 ## Kinds that sit in a mound of rock.
 const IN_ROCK: Array[String] = ["copper", "lava", "fossil", "meteor", "obsidian", "storm", "ash", "garnet", "moss", "dust",
 		"turquoise", "tiger_eye"]
@@ -176,6 +181,8 @@ static func piece(ci: CanvasItem, kind: String, at: Vector2, s: float, rot: floa
 			jungle_deep_piece(ci, kind, ore, ore2, t, i)
 		"lantern_shell", "jelly_pearl", "ghost_coin", "angler_light", "siren_scale":
 			twilight_piece(ci, kind, ore, ore2, t, i)
+		"mosaic_tile", "bronze_gear", "amphora", "trident_shard", "automaton_core", "siren_harp":
+			AtlantisArt.ore_piece(ci, kind, ore, ore2, t, i)
 		_:
 			Art.crystal(ci, Vector2.ZERO, 40, 8, 0.0, ore, 2.0)
 	Art.pop(ci)

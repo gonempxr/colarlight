@@ -12,30 +12,32 @@ const SLOTS := 3
 const BAG := 12
 const RARITY_KEYS := ["RELIC_R0", "RELIC_R1", "RELIC_R2", "RELIC_R3"]
 const RARITY_COLORS: Array[Color] = [Color("b8c4d8"), Color("4fb3ee"), Color("b06cf0"), Color("ffc93c")]
-const KINDS := ["shell_charm", "angler_lamp", "jelly_crown", "kraken_ring", "warden_eye"]
+const KINDS := ["shell_charm", "angler_lamp", "jelly_crown", "kraken_ring", "warden_eye",
+	"trident_charm", "orichalcum_ring", "siren_comb", "kings_seal", "hydra_fang"]
 
 ## stat -> [low, high] at common; rarer relics roll higher (x (1 + rarity * 0.6)).
 ##   all     +% all income          site    +% one site's output
 ##   chain   +% lift, boats, plants  boss    +% damage to bosses
-##   murk    the Murk grows slower   luck    mine events come more often
-##   tap     taps push harder
+##   murk    the Murk grows slower   xp      more party experience
+##   tap     taps push harder (and clear more Murk)
 const STATS := {
 	"all": [0.04, 0.08], "site": [0.25, 0.5], "chain": [0.08, 0.16], "boss": [0.15, 0.3],
-	"murk": [0.1, 0.2], "luck": [0.15, 0.3], "tap": [0.2, 0.4],
+	"murk": [0.1, 0.2], "xp": [0.15, 0.3], "tap": [0.2, 0.4],
 }
-## Caps of a worn total.
-const CAPS := {"murk": 0.8}
+## Caps of a worn total (up to 15 relics on 5 heroes).
+const CAPS := {"murk": 0.8, "all": 1.5, "site": 3.0, "chain": 2.0, "boss": 3.0, "xp": 2.0, "tap": 2.0}
 const SALVAGE: Array[int] = [5, 12, 25, 50]
 const REROLL: Array[int] = [10, 20, 40, 80]
 ## Base rarity of each boss's drop (+1 at UPGRADE_CHANCE).
-const BOSS_RARITY := {"crabblack": 0, "mother_jelly": 1, "shadow_eel": 1, "kraken": 2, "warden": 3}
+const BOSS_RARITY := {"crabblack": 0, "mother_jelly": 1, "shadow_eel": 1, "kraken": 2, "warden": 3,
+	"automaton": 1, "siren_queen": 1, "drowned_king": 2, "hydra": 2, "colossus": 3}
 const UPGRADE_CHANCE := 0.25
 
 
 ## A new relic of `rarity` (kind and properties rolled with `rng`).
-static func roll(rng: RandomNumberGenerator, rarity: int, sites: int = 15) -> Dictionary:
+static func roll(rng: RandomNumberGenerator, rarity: int, sites: int = 15, kinds: Array = KINDS) -> Dictionary:
 	rarity = clampi(rarity, 0, 3)
-	return {"kind": KINDS[rng.randi() % KINDS.size()], "rarity": rarity, "affixes": roll_affixes(rng, rarity, sites)}
+	return {"kind": kinds[rng.randi() % kinds.size()], "rarity": rarity, "affixes": roll_affixes(rng, rarity, sites)}
 
 
 static func roll_affixes(rng: RandomNumberGenerator, rarity: int, sites: int = 15) -> Array:
@@ -58,7 +60,9 @@ static func drop(rng: RandomNumberGenerator, boss: String, sites: int = 15) -> D
 	var r := int(BOSS_RARITY.get(boss, 0))
 	if rng.randf() < UPGRADE_CHANCE:
 		r += 1
-	return roll(rng, r, sites)
+	# Act I's guards drop act I's kinds, act II's the city's.
+	var act2 := BOSS_RARITY.keys().find(boss) >= 5
+	return roll(rng, r, sites, KINDS.slice(5) if act2 else KINDS.slice(0, 5))
 
 
 ## Sum of `stat` over the worn relics (site: only those for site `site`).

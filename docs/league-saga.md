@@ -195,6 +195,11 @@ The saga starts over with a star (like world stars): stronger guards,
 bigger rewards, endless. Trophy "Heart of the Sleeper" + a title carry
 over to the usual game (never coins).
 
+Built 2026-10-17 (worlds): all of Act II above. Notes: a relic's "site"
+property counts for that site index in whatever act you are in; relic
+"luck" became "xp" (party experience); act I guards drop act I relic kinds,
+act II guards the city's; a full bag melts the drop into shards.
+
 ### Build order
 Act II first (plumbing, art, bosses, story, Oracle, relics UI, tides), then
 Act III (world, bosses, rifts, Astronomer, world boss, Nightmare).

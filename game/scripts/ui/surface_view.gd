@@ -1125,6 +1125,17 @@ func _paint_far(ci: CanvasItem) -> void:
 				Art.pop(ci)
 		"jungle":
 			WorldArt.jungle_hills(ci, w, sy, DayNight.far_color(0.0, sp), DayNight.far_color(0.7, sp).darkened(0.12), DayNight.daylight(sp))
+		"atlantis":
+			# Far ruins: broken colonnades and a golden dome on the horizon.
+			for f: Vector3 in [Vector3(0.12, 70, 0.0), Vector3(0.82, 90, 0.3)]:
+				var b := Vector2(w * f.x, sy)
+				var c := DayNight.far_color(f.z, sp)
+				for k in 4:
+					var hk := f.y * (1.0 if k % 3 != 2 else 0.6)
+					Art.flat(ci, PackedVector2Array([b + Vector2(-34 + k * 22, 0), b + Vector2(-34 + k * 22, -hk), b + Vector2(-26 + k * 22, -hk), b + Vector2(-26 + k * 22, 0)]), c)
+				Art.flat(ci, PackedVector2Array([b + Vector2(-40, -f.y), b + Vector2(36, -f.y), b + Vector2(36, -f.y - 8), b + Vector2(-40, -f.y - 8)]), c)
+			var dm := Vector2(w * 0.5, sy)
+			Art.flat(ci, Art.ellipse_pts(dm + Vector2(0, -30), Vector2(40, 34), 18).slice(0, 10) + PackedVector2Array([dm + Vector2(-40, 0), dm + Vector2(40, 0)]), DayNight.far_color(0.5, sp).lerp(Color("ffc93c"), 0.25))
 		"twilight":
 			# Far coral spires with glowing tips over the dusk sea.
 			for f: Vector3 in [Vector3(0.1, 110, 0.0), Vector3(0.26, 70, 0.3), Vector3(0.8, 130, 0.2), Vector3(0.93, 80, 0.5)]:

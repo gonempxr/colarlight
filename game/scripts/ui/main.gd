@@ -249,6 +249,7 @@ func _ready() -> void:
 	add_child(_tabs)
 	_saga_bar = SagaBar.new()
 	_saga_bar.pressed.connect(func(): _modal.open(func(m): SagaBar.build(m, self)))
+	GameState.location_changed.connect(func(_l): if is_inside_tree(): _saga_intro.call_deferred())
 	add_child(_saga_bar)
 	_hud = Hud.new()
 	_hud.settings_pressed.connect(_open_settings)
@@ -1466,6 +1467,8 @@ func open_story(id: String, done: Callable = Callable()) -> void:
 func _saga_intro() -> void:
 	if Balance.saga and not GameState.story.has("intro"):
 		open_story("intro")
+	elif Balance.saga and GameState.location >= 1 and not GameState.story.has("act2"):
+		open_story("act2")
 
 
 func open_rivals() -> void:

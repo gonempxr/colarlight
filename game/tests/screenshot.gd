@@ -44,7 +44,7 @@ func _initialize() -> void:
 	gs.save_path = "user://screenshot_save.json"
 	gs.reset()
 	# Saga shots: story scenes count as seen unless one is the shot.
-	for k in ["intro"] + MineBoss.BOSSES.keys().map(func(b): return "pre_" + b) + MineBoss.BOSSES.keys().map(func(b): return "post_" + b):
+	for k in ["intro", "act2"] + MineBoss.BOSSES.keys().map(func(b): return "pre_" + b) + MineBoss.BOSSES.keys().map(func(b): return "post_" + b):
 		gs.story[k] = true
 	var pr := root.get_node("Progress")
 	pr.autosave_enabled = false
@@ -320,6 +320,54 @@ func _initialize() -> void:
 			elif overlay == "sagapage":
 				root.get_node("GameState").murk = 0.35
 				main._modal.open(func(m): load("res://scripts/ui/saga_bar.gd").build(m, main))
+			elif overlay == "relics":
+				# The relics screen with a few relics worn and in the bag.
+				var g := root.get_node("GameState")
+				g.bosses = {"d3": true, "d6": true}
+				var rng := RandomNumberGenerator.new()
+				rng.seed = 3
+				for b in ["crabblack", "kraken", "hydra", "colossus", "siren_queen"]:
+					g.add_relic(Relics.drop(rng, b, 15))
+				g.wear_relic(0, "guardian")
+				g.wear_relic(1, "guardian")
+				g.wear_relic(2, "harpooner")
+				g.relic_shards = 37
+				main._modal.open(func(m): load("res://scripts/ui/relic_view.gd").build(m, main))
+			elif overlay.begins_with("guard:"):
+				# One guard's fight mid-way with its rule showing: "guard:<site>[:won]".
+				var g := root.get_node("GameState")
+				var at := int(overlay.get_slice(":", 1))
+				for i in at:
+					g.levels["d%d" % i] = maxi(3, int(g.levels.get("d%d" % i, 0)))
+					if MineBoss.guard(g.world_id(), i) != "":
+						g.bosses["d%d" % i] = true
+				g.story["pre_" + MineBoss.guard(g.world_id(), at)] = true
+				g.party_xp = {"guardian": 900, "harpooner": 1500, "alchemist": 300, "medic": 450, "oracle": 200}
+				if is_instance_valid(main._story):
+					main._story.queue_free()
+					main._story = null
+				main.open_boss("d%d" % at)
+				for i in 4:
+					await process_frame
+				var bs: Node = main._boss
+				bs._start()
+				if overlay.ends_with(":won"):
+					bs._hp = 0.0
+					bs._end(true)
+				else:
+					bs._hp = bs._hp_max * 0.55
+					bs._hp_trail = bs._hp_max * 0.6
+					bs._bshield = 2.0 if bs._rule == "shield" else 0.0
+					bs._prophecy = 3.0 if "oracle" in g.party().map(func(m): return m["c"]) else 0.0
+					if bs._rule == "heads":
+						bs._heads[1]["hp"] = 0.0
+						bs._heads[1]["regrow"] = 2.0
+					if bs._rule == "charm":
+						bs._heroes[1]["charm"] = true
+					bs._heroes[0]["charge"] = 1.0
+					bs.set_process(false)
+					bs._fight.queue_redraw()
+					bs._hud.queue_redraw()
 			elif overlay.begins_with("boss"):
 				# A mine boss (saga games): the guarded row ("boss:row"), the
 				# fight screen (ready, ":fight", ":won", ":lost").

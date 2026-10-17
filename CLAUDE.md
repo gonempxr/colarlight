@@ -176,7 +176,15 @@ This file is the quick picture; keep it up to date when something big changes.
   (`Profiles.LEAGUE_STARS`). Acts II-III design agreed (docs/league-saga.md
   "Acts II and III"): open by progress; Act II Atlantis (relics UI, Oracle,
   tides, bosses with rules); Act III R'lyeh (Ancient One 3 phases, rifts,
-  world boss, Astronomer); then Nightmare (endless). NOT built yet.
+  world boss, Astronomer); then Nightmare (endless).
+  Act II BUILT 2026-10-17 (worlds, beta + CG zip): world 7 `atlantis`
+  (`Balance.SAGA_LAST` = 1, art in `AtlantisArt`/`TileAtlantis`/
+  `BossArtAtlantis`), guards with `rule` in `MineBoss.BOSSES` (shield,
+  charm, sweep, heads; colossus = slow heavy hits) run in `BossScreen`;
+  Oracle = 5th hero (prophecy: taps crit); relics (`Relics`,
+  `GameState.relics/relic_shards`, screen `RelicView` from the saga page);
+  `Tides` (180 s, x2; off for offline time); story "act2". Party carries
+  over acts via `GameState.saga_beaten()`. Act III NOT built yet.
   Leaderboard bug (Mark, fixed 2026-10-17): boards show coins EARNED
   (week/month/league) or total earned ever (all time), never the wallet.
   Scores were capped at 9.9e59 (Firestore rule 1e60), and every player with

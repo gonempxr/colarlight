@@ -127,6 +127,24 @@ const SITE_STYLE := {
 	"deep_star": {"rock": Color("1a1448"), "floor": Color("48386e"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("ff6ad8"), "water": Color("0a1454"), "deco": "tw_stars", "glow": Color("ffe07a")},
 	"warden_eye": {"rock": Color("1e1240"), "floor": Color("4a3266"), "ore": Color("ff4a7a"), "ore2": Color("ffd23f"), "suit": Color("6af8ff"), "water": Color("0c104c"), "deco": "tw_eyes", "glow": Color("ff5a8a")},
 	"coral_light": {"rock": Color("161244"), "floor": Color("3e3a7a"), "ore": Color("6af8ff"), "ore2": Color("ff9af0"), "suit": Color("ffc93c"), "water": Color("0a0e46"), "deco": "heart", "glow": Color("9afcff")},
+	# The saga, act II "Atlantis" (league games): white marble blocks with gold
+	# seams (AtlantisArt) turning blue-grey deeper down, mosaic floors, clear
+	# water from bright blue to deep navy; gold, bronze and orichalcum ores.
+	"marble_dust": {"rock": Color("e8e0d0"), "floor": Color("f4eee0"), "ore": Color("f8f4ea"), "ore2": Color("d8c8a0"), "suit": Color("2a8ed8"), "water": Color("3ab8e8"), "deco": "at_columns", "glow": Color("fff6d8")},
+	"mosaic_tile": {"rock": Color("e2d9c6"), "floor": Color("eee6d4"), "ore": Color("e0603c"), "ore2": Color("2a8ed8"), "suit": Color("ffc93c"), "water": Color("36ade2"), "deco": "at_mosaic", "glow": Color("ffc93c")},
+	"bronze_gear": {"rock": Color("dcd2bc"), "floor": Color("e8dfca"), "ore": Color("c7843a"), "ore2": Color("ffd84a"), "suit": Color("2a8ed8"), "water": Color("32a2dc"), "deco": "at_gears", "glow": Color("ffd84a")},
+	"amphora": {"rock": Color("d6cab2"), "floor": Color("e2d6be"), "ore": Color("e0703c"), "ore2": Color("2a2a3a"), "suit": Color("2a8ed8"), "water": Color("2e96d4"), "deco": "at_amphoras", "glow": Color("ffb86a")},
+	"trident_shard": {"rock": Color("cec2aa"), "floor": Color("dccfb4"), "ore": Color("ffc93c"), "ore2": Color("4af0e0"), "suit": Color("2a8ed8"), "water": Color("2a8ace"), "deco": "at_trident", "glow": Color("4af0e0")},
+	"orichalcum": {"rock": Color("c4bba6"), "floor": Color("d4c8ae"), "ore": Color("4af0e0"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("267ec6"), "deco": "crystals", "glow": Color("4af0e0")},
+	"sun_lens": {"rock": Color("b8b2a2"), "floor": Color("ccc0a6"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("2a8ed8"), "water": Color("2272be"), "deco": "glow", "glow": Color("ffe07a")},
+	"automaton_core": {"rock": Color("aaa69c"), "floor": Color("bfb49e"), "ore": Color("c7843a"), "ore2": Color("4af0e0"), "suit": Color("ffc93c"), "water": Color("1e66b4"), "deco": "at_gears", "glow": Color("4af0e0")},
+	"siren_harp": {"rock": Color("9c9c98"), "floor": Color("b2a898"), "ore": Color("ffc93c"), "ore2": Color("8af8ff"), "suit": Color("e0603c"), "water": Color("1a5aaa"), "deco": "at_harp", "glow": Color("8af8ff")},
+	"royal_seal": {"rock": Color("8e9092"), "floor": Color("a69c92"), "ore": Color("ffc93c"), "ore2": Color("fff1a8"), "suit": Color("4af0e0"), "water": Color("184ea0"), "deco": "at_seals", "glow": Color("ffd84a")},
+	"crystal_codex": {"rock": Color("80848e"), "floor": Color("9a928c"), "ore": Color("6af8ff"), "ore2": Color("e8ffff"), "suit": Color("ffc93c"), "water": Color("164496"), "deco": "crystals", "glow": Color("9afcff")},
+	"tide_engine": {"rock": Color("72788a"), "floor": Color("8e8886"), "ore": Color("4ad8f0"), "ore2": Color("ffc93c"), "suit": Color("e0603c"), "water": Color("143a8c"), "deco": "at_gears", "glow": Color("4ad8f0")},
+	"poseidon_crown": {"rock": Color("666e86"), "floor": Color("827e82"), "ore": Color("ffc93c"), "ore2": Color("4af0e0"), "suit": Color("2a8ed8"), "water": Color("123282"), "deco": "at_statue", "glow": Color("ffe07a")},
+	"star_chart": {"rock": Color("5a6482"), "floor": Color("76747e"), "ore": Color("ffd23f"), "ore2": Color("fff6c0"), "suit": Color("4af0e0"), "water": Color("102a78"), "deco": "at_stars", "glow": Color("ffe07a")},
+	"atlas_heart": {"rock": Color("4e5a7e"), "floor": Color("6a6a7a"), "ore": Color("4af0e0"), "ore2": Color("ffc93c"), "suit": Color("ffd23f"), "water": Color("0e226e"), "deco": "heart", "glow": Color("9afcff")},
 }
 
 

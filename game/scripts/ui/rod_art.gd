@@ -25,9 +25,10 @@ const MOON := 3
 const JUNGLE := 4
 ## The saga's act I: the ocean's rods in the Twilight Zone's colors.
 const TWILIGHT := 5
+const ATLANTIS := 6
 ## The palette the ocean rods are drawn in (OCEAN, or TWILIGHT).
 static var _pw := 0
-const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON", "JUNGLE", "TWILIGHT"]
+const KEYS: Array[String] = ["OCEAN", "VOLCANO", "ACID", "MOON", "JUNGLE", "TWILIGHT", "ATLANTIS"]
 const LEVELS := 20
 const UNIT := 110.0
 const SIL := Color("b4b2cc")
@@ -178,6 +179,7 @@ const PAL := [
 	{"blank": Color("c9d3e6"), "blank2": Color("e2e8f4"), "handle": Color("3a3f6e"), "accent": Color("8a6cf0"), "reel": Color("dfe6f5"), "metal": Color("aab4cc"), "glow": Color("7ff0ff")},
 	{"blank": Color("cdb85a"), "blank2": Color("3fbf8a"), "handle": Color("c8a46a"), "accent": Color("3fbf4a"), "reel": Color("c98249"), "metal": Color("ffc93c"), "glow": Color("ffd84a")},
 	{"blank": Color("7a4ae0"), "blank2": Color("a07ae8"), "handle": Color("2a1a6a"), "accent": Color("ff6ad8"), "reel": Color("6af8ff"), "metal": Color("e8d8ff"), "glow": Color("ff7ae6")},
+	{"blank": Color("2a8ed8"), "blank2": Color("f2ecdf"), "handle": Color("8a5424"), "accent": Color("ffc93c"), "reel": Color("c7843a"), "metal": Color("ffd84a"), "glow": Color("4af0e0")},
 ]
 
 
@@ -239,8 +241,8 @@ static func rod(ci: CanvasItem, pts: PackedVector2Array, world: int, level: int,
 		OCEAN:
 			_pw = OCEAN
 			_ocean(ci, lv, t)
-		TWILIGHT:
-			_pw = TWILIGHT
+		TWILIGHT, ATLANTIS:
+			_pw = posmod(world, KEYS.size())
 			_ocean(ci, lv, t)
 			_pw = OCEAN
 		VOLCANO:

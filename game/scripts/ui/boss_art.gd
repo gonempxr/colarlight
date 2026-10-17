@@ -30,7 +30,8 @@ static func draw(ci: CanvasItem, id: String, at: Vector2, k: float, t: float, hu
 		"kraken":
 			_kraken(ci, t, hurt, anger)
 		_:
-			_warden(ci, t, hurt, anger)
+			if not BossArtAtlantis.draw(ci, id, t, hurt, anger):
+				_warden(ci, t, hurt, anger)
 	Art.pop(ci)
 
 

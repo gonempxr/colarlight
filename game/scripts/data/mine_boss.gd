@@ -43,6 +43,7 @@ const DIVERS := 3
 ## world id -> {site index: boss id}.
 const GUARDS := {
 	"twilight": {3: "crabblack", 6: "mother_jelly", 9: "shadow_eel", 12: "kraken", 14: "warden"},
+	"atlantis": {3: "automaton", 6: "siren_queen", 9: "drowned_king", 12: "hydra", 14: "colossus"},
 }
 
 ## Per boss: HP as a share of the site's unlock price, the pearls it pays,
@@ -54,6 +55,18 @@ const BOSSES := {
 	"shadow_eel": {"hp": 2.2, "pearls": 40, "coins_sec": 90.0, "spot_every": 2.2, "spot_life": 1.15},
 	"kraken": {"hp": 2.5, "pearls": 55, "coins_sec": 90.0, "spot_every": 2.0, "spot_life": 1.05},
 	"warden": {"hp": 3.0, "pearls": 100, "coins_sec": 120.0, "spot_every": 1.8, "spot_life": 0.95},
+	# Act II: Atlantis. Each guard has a rule (`rule`, BossScreen):
+	#   shield  - a shield phase now and then: only hero skills hurt it;
+	#   charm   - its song charms a hero (no attacks) until a parry breaks it;
+	#   sweep   - its attacks hit the whole party (less each);
+	#   heads   - three heads with their own health; a cut head regrows
+	#             while another lives;
+	#   colossus - slow, huge blows (a parry is worth more), the act's end.
+	"automaton": {"hp": 2.6, "pearls": 60, "coins_sec": 90.0, "spot_every": 2.4, "spot_life": 1.2, "rule": "shield"},
+	"siren_queen": {"hp": 2.8, "pearls": 70, "coins_sec": 90.0, "spot_every": 2.2, "spot_life": 1.1, "rule": "charm"},
+	"drowned_king": {"hp": 3.0, "pearls": 80, "coins_sec": 100.0, "spot_every": 2.1, "spot_life": 1.05, "rule": "sweep"},
+	"hydra": {"hp": 3.2, "pearls": 90, "coins_sec": 110.0, "spot_every": 2.0, "spot_life": 1.0, "rule": "heads"},
+	"colossus": {"hp": 3.6, "pearls": 150, "coins_sec": 150.0, "spot_every": 1.8, "spot_life": 0.95, "rule": "colossus"},
 }
 
 

@@ -17,19 +17,24 @@ const CLASSES := {
 	"guardian": {"atk": 0.08, "every": 1.5, "hp": 1.8, "skill": "shield", "charge": 11.0, "suit": Color("4a8af0"), "joins": ""},
 	"medic": {"atk": 0.06, "every": 1.6, "hp": 0.9, "skill": "heal", "charge": 12.0, "suit": Color("4ae08a"), "joins": "crabblack"},
 	"alchemist": {"atk": 0.12, "every": 1.4, "hp": 0.8, "skill": "bomb", "charge": 13.0, "suit": Color("c25aff"), "joins": "mother_jelly"},
+	# Act II: the Oracle of Atlantis joins once the Drowned King is beaten.
+	"oracle": {"atk": 0.1, "every": 1.3, "hp": 0.9, "skill": "prophecy", "charge": 14.0, "suit": Color("ffd84a"), "joins": "drowned_king"},
 }
-const ORDER: Array[String] = ["guardian", "harpooner", "alchemist", "medic"]
+const ORDER: Array[String] = ["guardian", "harpooner", "oracle", "alchemist", "medic"]
 
 ## Skills: volley = VOLLEY_SHOTS harpoons of VOLLEY_SHARE each; shield =
 ## the next boss attack does nothing; heal = HEAL_SHARE of everyone's
 ## health back (and the fallen stand up); bomb = BOMB_SHARE at once and the
-## boss takes BREAK_MULT damage for BREAK_SEC.
+## boss takes BREAK_MULT damage for BREAK_SEC; prophecy (the Oracle) = see
+## PROPHECY_SEC.
 const VOLLEY_SHOTS := 8
 const VOLLEY_SHARE := 0.45
 const HEAL_SHARE := 0.45
 const BOMB_SHARE := 3.0
 const BREAK_MULT := 1.5
 const BREAK_SEC := 5.0
+## prophecy = every tap is a critical hit for PROPHECY_SEC.
+const PROPHECY_SEC := 5.0
 ## A boss attack takes this share of the hit hero's full health
 ## (ANGRY_HIT once the boss is under half health).
 const BOSS_HIT := 0.3

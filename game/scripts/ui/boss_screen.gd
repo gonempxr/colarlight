@@ -22,6 +22,21 @@ const HERO_HP := 1200.0
 const TAP_CHARGE := 0.012
 ## The heroes' size on the arena.
 const HERO_K := 1.35
+## Act II rules (MineBoss "rule"): the Automaton's shield phase (only
+## skills hurt), the Siren's charm, the Drowned King's sweep, the Hydra's
+## heads, the Colossus' slow, heavy blows.
+const SHIELD_EVERY := 9.0
+const SHIELD_SEC := 4.0
+const CHARM_EVERY := 8.0
+const SWEEP_HIT := 0.2
+const SWEEP_ANGRY := 0.3
+const REGROW_SEC := 8.0
+const REGROW_SHARE := 0.5
+const COLOSSUS_SLOW := 1.4
+const COLOSSUS_WIND := 2.0
+const COLOSSUS_HIT := 0.55
+const COLOSSUS_ANGRY := 0.75
+const COLOSSUS_STUN := 1.6
 
 var main: Node
 ## The guarded site ("d3"...).
@@ -52,6 +67,17 @@ var _break := 0.0
 var _shield := false
 ## The heroes: [{c, lv, hp, max, charge, wait, ko, hurt}].
 var _heroes: Array = []
+## The boss's rule ("" for act I's guards).
+var _rule := ""
+## Automaton: shield up for this long / next shield in.
+var _bshield := 0.0
+var _bshield_in := SHIELD_EVERY
+## Siren Queen: next charm in.
+var _charm_in := CHARM_EVERY
+## Oracle's prophecy: every tap a critical hit for this long.
+var _prophecy := 0.0
+## Hydra: [{"hp", "max", "regrow"}] x 3.
+var _heads: Array = []
 ## Shots in flight: [from, to, age, damage, color, kind].
 var _shots: Array = []
 var _taps: Array[float] = []
@@ -76,9 +102,11 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_rng.randomize()
 	_boss = GameState.boss_at(key)
+	_rule = str(MineBoss.data(_boss).get("rule", ""))
 	_hp_max = maxf(1.0, GameState.boss_hp(key))
 	_hp = _hp_max
 	_hp_trail = _hp
+	_reset_heads()
 	_make_party()
 	var bg := ArtView.make(func(ci: CanvasItem, s: Vector2, tt: float): draw_arena(ci, s, tt), Vector2.ZERO, true)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -124,7 +152,14 @@ func _make_party() -> void:
 		var d: Dictionary = Party.CLASSES[m["c"]]
 		var mx := HERO_HP * float(d["hp"]) * Party.power(int(m["lv"]))
 		_heroes.append({"c": m["c"], "lv": int(m["lv"]), "hp": mx, "max": mx, "charge": 0.0,
-			"wait": 0.3 + _heroes.size() * 0.25, "ko": false, "hurt": 0.0, "swing": 0.0})
+			"wait": 0.3 + _heroes.size() * 0.25, "ko": false, "hurt": 0.0, "swing": 0.0, "charm": false})
+
+
+func _reset_heads() -> void:
+	_heads = []
+	if _rule == "heads":
+		for i in 3:
+			_heads.append({"hp": _hp_max / 3.0, "max": _hp_max / 3.0, "regrow": 0.0})
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -183,7 +218,7 @@ func _scale() -> float:
 
 func _hero_pos(i: int) -> Vector2:
 	var n := float(_heroes.size())
-	var step := minf(size.x * (0.3 if n <= 2.0 else 0.235), 240.0)
+	var step := minf(size.x * (0.3 if n <= 2.0 else (0.235 if n <= 4.0 else 0.19)), 240.0)
 	return Vector2(size.x / 2.0 + (i - (n - 1.0) / 2.0) * step, size.y * 0.64 + (i % 2) * 18.0)
 
 
@@ -275,8 +310,14 @@ func _draw_fight() -> void:
 		elif _wind > 0.0:
 			Art.glow(ci, c, 230.0 * k, Color(1.0, 0.2, 0.3, snappedf(0.25 + 0.2 * sin(_t * 18.0), 0.05)))
 		Art.push(ci, c, -0.12 if _wind > 0.0 else 0.0)
+		BossArtAtlantis.shielded = _bshield > 0.0
+		BossArtAtlantis.heads = _heads.map(func(h): return float(h["hp"]) > 0.0) if not _heads.is_empty() else [true, true, true]
 		BossArt.draw(ci, _boss, Vector2.ZERO, k, _t * (0.3 if _stun > 0.0 else 1.0), _hurt, maxf(anger, 1.0 if _wind > 0.0 else 0.0))
+		BossArtAtlantis.shielded = false
+		BossArtAtlantis.heads = [true, true, true]
 		Art.pop(ci)
+		if _prophecy > 0.0:
+			Art.glow(ci, c, 190.0 * k, Color(1.0, 0.85, 0.3, 0.22))
 		if _stun > 0.0:
 			for i in 3:
 				var a := _t * 4.0 + i * TAU / 3.0
@@ -293,7 +334,7 @@ func _draw_fight() -> void:
 		var p := a.lerp(b, f)
 		var d := (b - a).normalized()
 		var col: Color = h[4]
-		if h[5] == "harpoon":
+		if h[5] == "harpoon" or h[5] == "volley":
 			Art.line(ci, p - d * 28.0, p, Color("e8e2d0"), 3.5)
 			Art.flat(ci, PackedVector2Array([p + d * 9.0, p + d.orthogonal() * 5.0, p - d.orthogonal() * 5.0]), Color("d9a441"))
 		else:
@@ -316,7 +357,7 @@ func _draw_heroes(ci: CanvasItem, k: float) -> void:
 	var form := int(GameState.evo)
 	# Four heroes on a phone stand a little smaller.
 	if _heroes.size() >= 4 and size.x < 800.0:
-		k *= 0.85
+		k *= 0.85 if _heroes.size() == 4 else 0.74
 	for i in _heroes.size():
 		var h: Dictionary = _heroes[i]
 		var p := _hero_pos(i)
@@ -350,11 +391,22 @@ func _draw_heroes(ci: CanvasItem, k: float) -> void:
 		var f := clampf(float(h["hp"]) / float(h["max"]), 0.0, 1.0)
 		if f > 0.02:
 			Art.flat(ci, Art.rrect_pts(Rect2(bar.position + Vector2(2, 2), Vector2((bar.size.x - 4.0) * f, bar.size.y - 4.0)), 3.0 * k), Color("4ae08a") if f > 0.35 else Color("ff5a5a"))
-		if _wind > 0.0 and i == _target:
+		if _wind > 0.0 and (i == _target or _rule == "sweep"):
 			Art.text(ci, p + Vector2(0, -122.0 * k), "!", int(48 * k), Color("ff5a6a"), 8)
+		if h["charm"]:
+			# Charmed by the siren's song: hearts over the head, no attacks.
+			for j in 3:
+				var a := _t * 2.0 + j * TAU / 3.0
+				var hp := p + Vector2(cos(a) * 30.0, -140.0 + sin(a) * 8.0) * k
+				Art.toon(ci, _heart_pts(Vector2(snappedf(hp.x, 1.0), snappedf(hp.y, 1.0)), 9.0 * k), Color("ff7ad0"), 2.0, 0.0)
 
 
-## What each class holds: a shield, a harpoon gun, a flask, a med kit.
+static func _heart_pts(c: Vector2, r: float) -> PackedVector2Array:
+	return Art.smooth_pts(PackedVector2Array([c + Vector2(0, r), c + Vector2(-r, -r * 0.1), c + Vector2(-r * 0.6, -r * 0.8), c + Vector2(0, -r * 0.4),
+		c + Vector2(r * 0.6, -r * 0.8), c + Vector2(r, -r * 0.1)]), 3)
+
+
+## What each class holds: a shield, a harpoon gun, a flask, a med kit, an orb.
 func _hero_prop(ci: CanvasItem, c: String, at: Vector2, k: float, facing: float) -> void:
 	Art.push(ci, at, 0.0, Vector2(k * facing, k))
 	match c:
@@ -368,6 +420,11 @@ func _hero_prop(ci: CanvasItem, c: String, at: Vector2, k: float, facing: float)
 			Art.glow(ci, Vector2(6, -6), 20.0, Color(0.8, 0.4, 1.0, 0.5), 10)
 			Art.t_circle(ci, Vector2(6, -2), 11.0, Color("c25aff"), 2.4, 0.5)
 			Art.t_rect(ci, Rect2(2, -20, 8, 10), 2.0, Color("e8e2d0"), 2.0, 0.0)
+		"oracle":
+			Art.line(ci, Vector2(0, 20), Vector2(14, -30), Color("8a5424"), 4.0)
+			Art.glow(ci, Vector2(16, -34), 18.0, Color(1.0, 0.85, 0.3, 0.55), 10)
+			Art.t_circle(ci, Vector2(16, -34), 9.0, Color("ffe07a"), 2.2, 0.4)
+			Art.t_circle(ci, Vector2(16, -34), 3.5, Color("4af0e0"), 0.0, 0.0)
 		"medic":
 			Art.t_rect(ci, Rect2(-4, -14, 28, 22), 4.0, Art.WHITE, 2.4, 0.3)
 			Art.t_rect(ci, Rect2(7, -11, 6, 16), 1.0, Color("ff4a5a"), 0.0, 0.0)
@@ -425,6 +482,24 @@ func _draw_hud() -> void:
 		tx += 130.0
 	if _stun > 0.0:
 		Art.text(_hud, Vector2(tx, 90), t("BOSS_STUN"), 22, Color("bff8ff"), 6, false)
+		tx += 130.0
+	if _bshield > 0.0:
+		Art.text(_hud, Vector2(tx, 90), t("BOSS_SHIELD"), 22, Color("ffe07a"), 6, false)
+		tx += 150.0
+	if _prophecy > 0.0:
+		Art.text(_hud, Vector2(tx, 90), t("BOSS_PROPHECY"), 22, Color("ffe07a"), 6, false)
+	# The Hydra's heads: three small bars under the big one.
+	if not _heads.is_empty():
+		var hw := (inner.size.x - 20.0) / 3.0
+		for i in 3:
+			var hr := Rect2(inner.position.x + i * (hw + 10.0), bar.end.y + 2.0, hw, 10.0)
+			var h: Dictionary = _heads[i]
+			Art.t_rect(_hud, hr, 4.0, Color("2a1050"), 1.6, 0.0)
+			var hf := clampf(float(h["hp"]) / float(h["max"]), 0.0, 1.0)
+			if hf > 0.02:
+				Art.flat(_hud, Art.rrect_pts(Rect2(hr.position + Vector2(1.5, 1.5), Vector2((hr.size.x - 3.0) * hf, hr.size.y - 3.0)), 3.0), Color("6ae07a"))
+			elif float(h["regrow"]) > 0.0:
+				Art.flat(_hud, Art.rrect_pts(Rect2(hr.position + Vector2(1.5, 1.5), Vector2((hr.size.x - 3.0) * (1.0 - float(h["regrow"]) / REGROW_SEC), hr.size.y - 3.0)), 3.0), Color(1.0, 0.4, 0.4, 0.6))
 	var cc := Vector2(s.x - 40, 84)
 	var cf := clampf(_left / MineBoss.FIGHT_SEC, 0.0, 1.0)
 	Art.t_circle(_hud, cc, 24.0, Color("10204a"), 3.0, 0.0)
@@ -470,6 +545,8 @@ func _tick(delta: float) -> void:
 		_combo = 0
 	_stun = maxf(0.0, _stun - delta)
 	_break = maxf(0.0, _break - delta)
+	_prophecy = maxf(0.0, _prophecy - delta)
+	_tick_rule(delta)
 	if _spot_left > 0.0:
 		_spot_left -= delta
 	else:
@@ -486,7 +563,7 @@ func _tick(delta: float) -> void:
 			var alive := _alive()
 			if not alive.is_empty():
 				_target = alive[_rng.randi() % alive.size()]
-				_wind = MineBoss.ATTACK_WIND
+				_wind = COLOSSUS_WIND if _rule == "colossus" else MineBoss.ATTACK_WIND
 				_spot_left = 0.0
 	# The heroes attack and charge their skills.
 	for i in _heroes.size():
@@ -494,6 +571,8 @@ func _tick(delta: float) -> void:
 		if h["ko"]:
 			continue
 		var d: Dictionary = Party.CLASSES[h["c"]]
+		if h["charm"]:
+			continue
 		h["charge"] = minf(1.0, float(h["charge"]) + delta / float(d["charge"]))
 		h["wait"] = float(h["wait"]) - delta
 		if float(h["wait"]) <= 0.0:
@@ -505,10 +584,55 @@ func _tick(delta: float) -> void:
 		s[2] = float(s[2]) + delta
 		if float(s[2]) >= 0.3 and s.size() == 6:
 			s.append(true)
-			_damage(float(s[3]), s[1], Color(s[4]).lightened(0.5), 38, false)
+			_damage(float(s[3]), s[1], Color(s[4]).lightened(0.5), 38, false, s[5] == "volley")
 	_shots = _shots.filter(func(s): return float(s[2]) < 0.34)
 	if _state == "fight" and _left <= 0.0:
 		_end(false)
+
+
+## Act II's rules over time: the shield phase, the charm, regrowing heads.
+func _tick_rule(delta: float) -> void:
+	match _rule:
+		"shield":
+			if _bshield > 0.0:
+				_bshield -= delta
+				if _bshield <= 0.0:
+					_bshield_in = SHIELD_EVERY
+			else:
+				_bshield_in -= delta
+				if _bshield_in <= 0.0:
+					_bshield = SHIELD_SEC
+					_pops.append([_center() + Vector2(0, -170.0 * _scale()), t("BOSS_SHIELD_UP"), Color("ffe07a"), 0.0, 40])
+					Sfx.play("deny")
+		"charm":
+			_charm_in -= delta
+			if _charm_in <= 0.0:
+				_charm_in = CHARM_EVERY * (0.8 if _hp < _hp_max * 0.5 else 1.0)
+				var free := _alive().filter(func(i): return not _heroes[i]["charm"])
+				if not free.is_empty():
+					var i: int = free[_rng.randi() % free.size()]
+					_heroes[i]["charm"] = true
+					_pops.append([_hero_pos(i) + Vector2(0, -150), t("BOSS_CHARMED"), Color("ff9ad8"), 0.0, 36])
+					Sfx.play("deny")
+		"heads":
+			var living := _heads.filter(func(h): return float(h["hp"]) > 0.0).size()
+			for i in _heads.size():
+				var h: Dictionary = _heads[i]
+				if float(h["regrow"]) > 0.0:
+					h["regrow"] = float(h["regrow"]) - delta
+					if float(h["regrow"]) <= 0.0 and living > 0:
+						h["regrow"] = 0.0
+						h["hp"] = float(h["max"]) * REGROW_SHARE
+						_pops.append([_center() + Vector2(-120.0 + i * 120.0, -150.0) * _scale(), t("BOSS_REGROW"), Color("ff8a8a"), 0.0, 34])
+						Sfx.play("deny")
+			_hp = _heads_hp()
+
+
+func _heads_hp() -> float:
+	var sum := 0.0
+	for h in _heads:
+		sum += float(h["hp"])
+	return sum
 
 
 func _shoot(i: int, dmg: float, col: Color, kind: String) -> void:
@@ -550,7 +674,10 @@ func tap_at(at: Vector2) -> void:
 		_hit(at, MineBoss.CRIT_MULT, true)
 		return
 	if at.distance_to(c) <= HIT_R * k:
-		_hit(at, 1.0, false)
+		if _prophecy > 0.0:
+			_hit(at, MineBoss.CRIT_MULT, true)
+		else:
+			_hit(at, 1.0, false)
 
 
 func _hit(at: Vector2, mult: float, crit: bool) -> void:
@@ -570,11 +697,31 @@ func _hit(at: Vector2, mult: float, crit: bool) -> void:
 		Sfx.play("tap")
 
 
-func _damage(dmg: float, at: Vector2, col: Color, px: int, big: bool) -> void:
+func _damage(dmg: float, at: Vector2, col: Color, px: int, big: bool, skill: bool = false) -> void:
 	if _state != "fight":
 		return
+	if _bshield > 0.0 and not skill:
+		# The Automaton's shield: only skills get through.
+		if _rng.randf() < 0.35:
+			_pops.append([at + Vector2(_rng.randf_range(-24, 24), -10), t("BOSS_IMMUNE"), Color("ffe07a"), 0.0, 30])
+		return
 	dmg *= (MineBoss.STUN_MULT if _stun > 0.0 else 1.0) * (Party.BREAK_MULT if _break > 0.0 else 1.0)
-	_hp = maxf(0.0, _hp - dmg)
+	if not _heads.is_empty():
+		# The Hydra: hits go to the weakest head still up.
+		var best := -1
+		for i in _heads.size():
+			if float(_heads[i]["hp"]) > 0.0 and (best < 0 or float(_heads[i]["hp"]) < float(_heads[best]["hp"])):
+				best = i
+		if best >= 0:
+			var h: Dictionary = _heads[best]
+			h["hp"] = maxf(0.0, float(h["hp"]) - dmg)
+			if float(h["hp"]) <= 0.0:
+				h["regrow"] = REGROW_SEC
+				_pops.append([_center() + Vector2(-120.0 + best * 120.0, -120.0) * _scale(), t("BOSS_HEAD_CUT"), Color("ffe066"), 0.0, 44])
+				_shake = 1.0
+		_hp = _heads_hp()
+	else:
+		_hp = maxf(0.0, _hp - dmg)
 	_hurt = 1.0 if big else maxf(_hurt, 0.5)
 	_pops.append([at + Vector2(_rng.randf_range(-24, 24), -10), NumFormat.short(dmg), col, 0.0, px])
 	for i in (10 if big else 4):
@@ -586,15 +733,20 @@ func _damage(dmg: float, at: Vector2, col: Color, px: int, big: bool) -> void:
 
 func _parry() -> void:
 	_wind = 0.0
-	_attack_in = MineBoss.ATTACK_EVERY
-	_stun = MineBoss.STUN_SEC
+	_attack_in = MineBoss.ATTACK_EVERY * (COLOSSUS_SLOW if _rule == "colossus" else 1.0)
+	_stun = MineBoss.STUN_SEC * (COLOSSUS_STUN if _rule == "colossus" else 1.0)
+	# A parry breaks the siren's charm.
+	for h in _heroes:
+		if h["charm"]:
+			h["charm"] = false
+			_pops.append([_attack_target() + Vector2(0, 30), t("BOSS_FREED"), Color("7fffb0"), 0.0, 34])
 	_shake = 1.0
 	_pops.append([_attack_target() + Vector2(0, -30), t("BOSS_PARRY"), Color("7fffb0"), 0.0, 52])
 	Sfx.play("milestone")
 
 
 func _attack_lands() -> void:
-	_attack_in = MineBoss.ATTACK_EVERY * (0.8 if _hp < _hp_max * 0.5 else 1.0)
+	_attack_in = MineBoss.ATTACK_EVERY * (0.8 if _hp < _hp_max * 0.5 else 1.0) * (COLOSSUS_SLOW if _rule == "colossus" else 1.0)
 	_shake = 1.0
 	_combo = 0
 	if _shield:
@@ -603,18 +755,31 @@ func _attack_lands() -> void:
 		_pops.append([_hero_pos(maxi(0, g)) + Vector2(0, -90), t("BOSS_BLOCK"), Color("9fd0ff"), 0.0, 34])
 		Sfx.play("tap")
 		return
+	if _rule == "sweep":
+		# The Drowned King's wave hits everyone standing.
+		for i in _alive():
+			_hurt_hero(i, SWEEP_ANGRY if _hp < _hp_max * 0.5 else SWEEP_HIT)
+		return
 	if _target >= _heroes.size() or _heroes[_target]["ko"]:
 		return
-	var h: Dictionary = _heroes[_target]
-	var dmg := float(h["max"]) * (Party.ANGRY_HIT if _hp < _hp_max * 0.5 else Party.BOSS_HIT)
+	var share := Party.ANGRY_HIT if _hp < _hp_max * 0.5 else Party.BOSS_HIT
+	if _rule == "colossus":
+		share = COLOSSUS_ANGRY if _hp < _hp_max * 0.5 else COLOSSUS_HIT
+	_hurt_hero(_target, share)
+
+
+## The boss hits hero `i` for `share` of its full health.
+func _hurt_hero(i: int, share: float) -> void:
+	var h: Dictionary = _heroes[i]
+	var dmg := float(h["max"]) * share
 	h["hp"] = maxf(0.0, float(h["hp"]) - dmg)
 	h["hurt"] = 1.0
-	_pops.append([_hero_pos(_target) + Vector2(0, -60), "-" + NumFormat.short(dmg), Color("ff6a7a"), 0.0, 44])
+	_pops.append([_hero_pos(i) + Vector2(0, -60), "-" + NumFormat.short(dmg), Color("ff6a7a"), 0.0, 44])
 	Sfx.play("deny")
 	if float(h["hp"]) <= 0.0:
 		h["ko"] = true
 		h["charge"] = 0.0
-		_pops.append([_hero_pos(_target) + Vector2(0, -100), t("BOSS_KO"), Color("ff6a7a"), 0.0, 30])
+		_pops.append([_hero_pos(i) + Vector2(0, -100), t("BOSS_KO"), Color("ff6a7a"), 0.0, 30])
 		if _alive().is_empty():
 			_end(false)
 
@@ -645,7 +810,7 @@ func use_skill(i: int) -> void:
 		"volley":
 			for n in Party.VOLLEY_SHOTS:
 				var to := _center() + Vector2(_rng.randf_range(-100, 100), _rng.randf_range(-90, 60)) * _scale()
-				_shots.append([_hero_pos(i) + Vector2(_rng.randf_range(-30, 30), -24), to, -n * 0.07, hit * Party.VOLLEY_SHARE * power, Color("ffb46a"), "harpoon"])
+				_shots.append([_hero_pos(i) + Vector2(_rng.randf_range(-30, 30), -24), to, -n * 0.07, hit * Party.VOLLEY_SHARE * power, Color("ffb46a"), "volley"])
 		"shield":
 			_shield = true
 		"heal":
@@ -657,7 +822,9 @@ func use_skill(i: int) -> void:
 				_pops.append([_hero_pos(j) + Vector2(0, -90), "+" + NumFormat.short(add), Color("7fffb0"), 0.0, 40])
 		"bomb":
 			_break = Party.BREAK_SEC
-			_damage(hit * Party.BOMB_SHARE * power, _center(), Color("e0a0ff"), 76, true)
+			_damage(hit * Party.BOMB_SHARE * power, _center(), Color("e0a0ff"), 76, true, true)
+		"prophecy":
+			_prophecy = Party.PROPHECY_SEC
 
 
 func _start() -> void:
@@ -670,6 +837,11 @@ func _start() -> void:
 	_break = 0.0
 	_wind = 0.0
 	_shield = false
+	_bshield = 0.0
+	_bshield_in = SHIELD_EVERY * 0.6
+	_charm_in = CHARM_EVERY * 0.6
+	_prophecy = 0.0
+	_reset_heads()
 	_spot_left = 0.0
 	_spot_wait = 0.8
 	_attack_in = MineBoss.ATTACK_EVERY * 0.6
@@ -716,6 +888,9 @@ func _show_panel() -> void:
 			var got := GameState.defeat_boss(key)
 			var text := t("BOSS_WON") % [int(got.get("pearls", 0)), NumFormat.short(float(got.get("coins", 0.0)))]
 			_card(text, Color("7fffb0"))
+			var rel: Dictionary = got.get("relic", {})
+			if not rel.is_empty():
+				_panel.add_child(RelicView.drop_card(rel))
 			_xp_card(true)
 			_button(t("BOSS_COLLECT"), &"GoldButton", close)
 		"lost":

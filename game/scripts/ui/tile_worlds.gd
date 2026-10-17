@@ -19,6 +19,7 @@ const COLORS := {
 	3: [Color("e8f4ff"), Color("ff9a4a"), Color("ffe04a"), Color("6ee05a"), Color("d8553a"), Color("a77bff")],
 	4: [Color("ffe03a"), Color("3a9cff"), Color("ff4a86"), Color("9a6234"), Color("ffa21e"), Color("2fd27a")],
 	5: [Color("ff7ae6"), Color("ffd23f"), Color("ece0ff"), Color("2ae0c0"), Color("ff9a3d"), Color("8a5aff")],
+	6: [Color("e0603c"), Color("ffc93c"), Color("4af0e0"), Color("c7843a"), Color("2a8ed8"), Color("f4eee0")],
 }
 
 
@@ -56,6 +57,7 @@ static func draw(ci: CanvasItem, world: int, slot: int, t: float, lift: float) -
 		53: _seahorse(ci, t, col)
 		54: _nautilus(ci, t, col)
 		55: _abyss_crystal(ci, t, col)
+		60, 61, 62, 63, 64, 65: TileAtlantis.piece(ci, slot, t, col)
 
 
 static func _shine(ci: CanvasItem, c: Vector2, radii: Vector2, rot: float, a: float = 0.8) -> void:
@@ -349,6 +351,7 @@ static func block_colors(world: int) -> Array:
 		3: return [Color("c8ccd8"), Color("8f95a8")]
 		4: return [Color("d9bb7c"), Color("a8844a")]
 		5: return [Color("c98ccb"), Color("8a5aa8")]
+		6: return [Color("e8dcc4"), Color("b8a47a")]
 	return [Art.SAND, Art.SAND_DARK]
 
 
@@ -360,6 +363,7 @@ static func bubble_colors(world: int) -> Array:
 		3: return [Color(0.75, 0.65, 1.0, 0.32), Color("5a3fb0")]
 		4: return [Color(0.55, 1.0, 0.75, 0.22), Color("2f8a3a")]
 		5: return [Color(1.0, 0.6, 0.95, 0.3), Color("a03ab0")]
+		6: return [Color(0.5, 0.95, 1.0, 0.3), Color("1e6ab0")]
 	return [Color(0.72, 0.93, 1.0, 0.3), Color("2f7fc0")]
 
 

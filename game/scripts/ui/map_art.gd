@@ -11,7 +11,7 @@ extends RefCounted
 ## static part is cached as one piece (Art.cache_begin); only small things
 ## move (waterfalls, smoke, bubbles, boats).
 
-const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight"]
+const WORLDS: Array[String] = ["ocean", "volcano", "acid", "moon", "jungle", "twilight", "atlantis"]
 
 ## Island states on the map.
 const DONE := 0
@@ -26,8 +26,8 @@ const SOON := 4
 ## its silhouette exists). "sky" (a city in the clouds) keeps its drawing
 ## for a later update.
 const SOON_WORLDS: Array[String] = ["ice"]
-## The saga's next parts (league games): "coming soon" islands after act I.
-const SAGA_SOON: Array[String] = ["sunken", "abyss"]
+## The saga's next parts (league games): "coming soon" islands after act II.
+const SAGA_SOON: Array[String] = ["abyss"]
 ## The glow around their silhouettes, a hint of what they hold.
 const SOON_TEASE := {"ice": Color("9fe8ff"), "sky": Color("ffd27a"), "sunken": Color("6af8ff"), "abyss": Color("ff5a8a")}
 
@@ -68,6 +68,9 @@ const LOOK := {
 	"twilight": {"top": Color("f4c8ea"), "side": Color("a07ad6"), "under": Color("5a3ec8"), "under2": Color("7a5ae0"),
 		"med": Color("3ee8e0"), "med_rim": Color("1f8ac2"), "path": Color("ff9af0"), "tease": Color("ff7ae6"),
 		"boat": Color("6a4ae0"), "boat2": Color("ff6ad8")},
+	"atlantis": {"top": Color("f4eee0"), "side": Color("d8c8a0"), "under": Color("2a6ec8"), "under2": Color("4a8ee0"),
+		"med": Color("4ad8f0"), "med_rim": Color("1e6ab0"), "path": Color("ffd84a"), "tease": Color("4af0e0"),
+		"boat": Color("c7843a"), "boat2": Color("2a8ed8")},
 }
 
 ## Where things stand on each island (local coordinates): the mine, the
@@ -91,6 +94,9 @@ const SPOTS := {
 	"twilight": {"mine": Vector2(122, -28), "factory": Vector2(-24, -14), "office": Vector2(-118, -50),
 		"boat": [Vector2(104, -22), Vector2(76, -8), Vector2(40, -6), Vector2(14, -14)],
 		"nodes": [Vector2(-140, 46), Vector2(-50, 70), Vector2(42, 70), Vector2(128, 50)]},
+	"atlantis": {"mine": Vector2(-120, -10), "factory": Vector2(118, -10), "office": Vector2(150, -56),
+		"boat": [Vector2(-94, 8), Vector2(-40, 20), Vector2(24, 18), Vector2(86, 8)],
+		"nodes": [Vector2(-140, 50), Vector2(-50, 72), Vector2(42, 72), Vector2(130, 52)]},
 }
 
 ## Small hue turn for the repeats (tier 1+), so a second ocean looks new.
@@ -543,6 +549,52 @@ static func _twilight(ci: CanvasItem) -> void:
 	_factory(ci, spots("twilight")["factory"], 0.85, Color("fff0fa"), Color("6a4ae0"), Color("ff6ad8"))
 	_raft(ci, spots("twilight")["mine"], 0.8)
 	_star_badge(ci, Vector2(90, 52), 7, Color("ffd23f"))
+	_debris(ci, _c(lk["under"]), DEBRIS)
+
+## Atlantis (saga act II): a white marble island with a temple of gold
+## capitals, a golden dome, a fallen statue holding a trident and a clear
+## lagoon; orichalcum crystals and bronze cogs hang from below.
+static func _atlantis(ci: CanvasItem) -> void:
+	_body(ci, "atlantis", 61)
+	var lk := look("atlantis")
+	for c in [[Vector2(-110, 110), Color("4af0e0")], [Vector2(-20, 170), Color("ffc93c")], [Vector2(80, 150), Color("4af0e0")]]:
+		var p: Vector2 = c[0]
+		Art.crystal(ci, p + Vector2(0, -4), -40.0, 12.0, 0.15, c[1], 2.4)
+		Art.glow(ci, p + Vector2(0, 30), 18.0, Color(c[1], 0.45))
+	AtlantisArt.cog(ci, Vector2(130, 100), 22.0, 10, AtlantisArt.BRONZE, 0.3)
+	_medium(ci, "atlantis", [[Vector2(-96, 0), Vector2(86, 36)], [Vector2(-170, 14), Vector2(30, 16)]])
+	for p in [Vector2(-130, -6), Vector2(-80, 8), Vector2(-50, -10)]:
+		Art.dot(ci, p, 2.5, Color(1, 1, 1, 0.85))
+	# The temple: steps, six columns, a pediment with a sun disc.
+	var tb := Vector2(36, -30)
+	Art.t_rect(ci, Rect2(tb + Vector2(-78, -2), Vector2(156, 14)), 3, AtlantisArt.MARBLE_DARK, 2.6, 0.4)
+	Art.t_rect(ci, Rect2(tb + Vector2(-70, -12), Vector2(140, 12)), 3, AtlantisArt.MARBLE, 2.6, 0.4)
+	for k in 6:
+		AtlantisArt.column(ci, tb + Vector2(-58 + k * 23.2, -12), 62.0, 6.0, AtlantisArt.MARBLE)
+	Art.t_rect(ci, Rect2(tb + Vector2(-74, -88), Vector2(148, 14)), 3, AtlantisArt.MARBLE, 2.6, 0.4)
+	Art.toon(ci, PackedVector2Array([tb + Vector2(-78, -88), tb + Vector2(0, -122), tb + Vector2(78, -88)]), AtlantisArt.MARBLE, 2.8, 0.5)
+	Art.t_circle(ci, tb + Vector2(0, -100), 7.0, AtlantisArt.GOLD, 2.0, 0.0)
+	# The golden dome behind it.
+	var dc := Vector2(-40, -66)
+	Art.toon(ci, Art.ellipse_pts(dc, Vector2(30, 28), 20).slice(0, 11) + PackedVector2Array([dc + Vector2(-30, 10), dc + Vector2(30, 10)]), AtlantisArt.GOLD, 2.6, 0.6)
+	Art.t_rect(ci, Rect2(dc + Vector2(-34, 6), Vector2(68, 14)), 2, AtlantisArt.MARBLE, 2.4, 0.4)
+	# The fallen statue: a big marble head and a trident in the sand.
+	var hd := Vector2(-150, -40)
+	Art.toon(ci, Art.ellipse_pts(hd, Vector2(24, 20), 16, -0.3), AtlantisArt.MARBLE, 2.6, 0.5)
+	Art.line(ci, hd + Vector2(-10, -2), hd + Vector2(-3, -4), Art.INK, 2.2)
+	Art.line(ci, hd + Vector2(4, -6), hd + Vector2(11, -8), Art.INK, 2.2)
+	for k in 4:
+		Art.t_ellipse(ci, hd + Vector2(-16 + k * 10, -18 + absf(k - 1.5) * 3), Vector2(5, 2.5), AtlantisArt.GOLD, 1.2, 0.0, 0.5 - k * 0.3)
+	var tr := Vector2(150, -16)
+	Art.t_rect(ci, Rect2(tr + Vector2(-3, -80), Vector2(6, 80)), 2, AtlantisArt.GOLD, 2.0, 0.3)
+	for dx: float in [-12.0, 0.0, 12.0]:
+		var tip := tr + Vector2(dx, -108 if dx == 0.0 else -98)
+		Art.toon(ci, PackedVector2Array([tr + Vector2(dx - 3, -80), tip + Vector2(-3, 9), tip, tip + Vector2(3, 9), tr + Vector2(dx + 3, -80)]), AtlantisArt.GOLD, 2.0, 0.4)
+	Art.t_rect(ci, Rect2(tr + Vector2(-17, -84), Vector2(34, 6)), 2, AtlantisArt.GOLD.darkened(0.1), 1.8, 0.2)
+	_hut(ci, spots("atlantis")["office"], 0.9)
+	_factory(ci, spots("atlantis")["factory"], 0.85, Color("f4eee0"), Color("2a8ed8"), Color("ffc93c"))
+	_raft(ci, spots("atlantis")["mine"], 0.8)
+	_star_badge(ci, Vector2(90, 52), 7, Color("4af0e0"))
 	_debris(ci, _c(lk["under"]), DEBRIS)
 
 
@@ -1154,6 +1206,7 @@ static func island(ci: CanvasItem, world: String, state: int, t: float, tier: in
 				"moon": _moon(ci)
 				"jungle": _jungle(ci)
 				"twilight": _twilight(ci)
+				"atlantis": _atlantis(ci)
 				_: _ocean(ci)
 		Art.cache_end(ci, key)
 	if not dark:
@@ -1213,6 +1266,13 @@ static func _fx(ci: CanvasItem, world: String, t: float) -> void:
 			Art.glow(ci, spots("moon")["office"] + Vector2(-38, -130), 14, Color(0.5, 0.95, 1.0, 0.3 * b))
 		"jungle":
 			_jungle_fx(ci, t)
+		"atlantis":
+			# The temple's sun disc shining, orichalcum motes drifting up.
+			var b := 0.5 + 0.5 * sin(t * 2.0)
+			Art.glow(ci, Vector2(36, -130), 30.0 + 8.0 * b, Color(1.0, 0.85, 0.35, 0.22 + 0.15 * b))
+			for i in 6:
+				var f := fposmod(t * 0.3 + i / 6.0, 1.0)
+				Art.dot(ci, Vector2(-160 + i * 60 + sin(t + i) * 8, 30 - f * 130), 2.0 + (i % 2), Color(0.3, 0.95, 0.9, 0.9 * (1.0 - f)))
 		"twilight":
 			# The Coral Light's beam breathing, motes of light drifting up.
 			var b := 0.5 + 0.5 * sin(t * 2.0)
@@ -1535,6 +1595,7 @@ static func mini(ci: CanvasItem, center: Vector2, radius: float, world: String, 
 			"moon": _moon(ci)
 			"jungle": _jungle(ci)
 			"twilight": _twilight(ci)
+			"atlantis": _atlantis(ci)
 			_: _ocean(ci)
 		Art.pop(ci)
 		Art.fit_recorded(start, Vector2.ZERO, radius - 1.0, Vector2.ZERO, 1.0)
