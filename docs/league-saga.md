@@ -146,6 +146,59 @@ Deep has guarded the Light for forty years and leads the player down.
 - Each act = one saga world (15 sites, 5 guards), opened after the last
   guard of the previous act (`Balance.SAGA_LAST` grows).
 
+## Acts II and III: the agreed design (Mark, 2026-10-17)
+Answers: acts open **by progress** (beat the last guard -> the next act's
+world opens at once); Act II gets relics, the Oracle, tides and bosses with
+special rules; Act III gets the Ancient One in 3 phases, rifts in the
+mines, a **world boss** (all league players hit one shared Ancient One) and
+the Astronomer; after the Ancient One: **Nightmare**, the saga again with
+stars, endless. The Murk stays in every act and grows harsher.
+
+### Act II: Atlantis (world 7, `atlantis`)
+Sunken city of the ancients: white marble, gold domes, mosaics, brass
+machines, blue orichalcum glow. Surface: a temple island and a fallen
+statue with a trident.
+- Sites: marble_dust, mosaic_tile, bronze_gear, amphora, trident_shard,
+  orichalcum, sun_lens, automaton_core, siren_harp, royal_seal,
+  crystal_codex, tide_engine, poseidon_crown, star_chart, atlas_heart.
+- Guards (sites 4, 7, 10, 13, 15), each with a rule:
+  - Bronze Automaton: a shield phase, only hero skills hurt it.
+  - Siren Queen: her song charms a hero (skips attacks); a parry breaks it.
+  - Drowned King: his attacks hit the whole party.
+  - Hydra: three heads with their own health; a cut head regrows while
+    another lives.
+  - Colossus Gatekeeper: the act's end; behind it the gate to R'lyeh.
+- Oracle (5th hero, joins after the Drowned King): "Prophecy", 5 s of
+  certain crits.
+- Relics (`relics.gd`): guards drop them; 3 slots per hero; rarities;
+  random properties; salvage into shards; reroll for shards. Earned only.
+- Tides: a 3-minute cycle; high tide = lift and boats x2, low tide =
+  mines x2.
+
+### Act III: R'lyeh (world 8, `rlyeh`)
+Green-black stone with wrong angles, eyes in the walls, tentacles, sick
+green glow; black monoliths in a storm, strange stars, a sleeping giant.
+- Sites: black_sand, eye_stone, elder_glyph, deep_spawn, madness_pearl,
+  cyclopean_block, green_flame, dream_crystal, tentacle_ivory, void_coral,
+  sleeper_idol, star_metal, whisper_shell, elder_sign, sleeper_heart.
+- Guards: Deep One Priest (summons adds), Shoggoth (regenerates), Priest of
+  Dagon (curse: health drain, the Medic clears it), Star-Spawn (flies off:
+  windows to hit), the Ancient One (3 phases: eyes, tentacles, awakened).
+- Astronomer (6th hero): "Elder Sign" slows the boss's attacks.
+- Rifts: tentacles open in the mines and steal ore until tapped; the Murk
+  rises twice as fast.
+- World boss: one shared Ancient One for the whole league (Firestore,
+  new rules), damage board, rewards for everyone who took part.
+
+### After the Ancient One: Nightmare
+The saga starts over with a star (like world stars): stronger guards,
+bigger rewards, endless. Trophy "Heart of the Sleeper" + a title carry
+over to the usual game (never coins).
+
+### Build order
+Act II first (plumbing, art, bosses, story, Oracle, relics UI, tides), then
+Act III (world, bosses, rifts, Astronomer, world boss, Nightmare).
+
 ## Earlier idea (replaced): the Atlas of the Deep
 - **Sea charts** (waystones), tiers 1-16. A chart is a short expedition
   (10-20 min): a special mine with a goal. Finishing it drops charts, mostly
