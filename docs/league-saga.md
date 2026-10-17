@@ -200,6 +200,16 @@ property counts for that site index in whatever act you are in; relic
 "luck" became "xp" (party experience); act I guards drop act I relic kinds,
 act II guards the city's; a full bag melts the drop into shards.
 
+Built 2026-10-17 (worlds, branch `rlyeh`): all of Act III. World 8
+`rlyeh` (15 sites, `RlyehArt`, `BossArtRlyeh`); guards deep_one_priest /
+shoggoth / dagon_priest / star_spawn / ancient_one with rules summon / regen /
+curse / flight / phases (Ancient One 3 phases); Astronomer = 6th hero (Elder
+Sign slows the boss, joins after the Shoggoth); rifts (`Rifts`, tap 6x);
+league world boss (`WorldBoss`, Firestore `worldboss/{league}/hits`, rules
+v9, card on the saga page); Nightmare: stars open only after the Ancient One
+(`GameState.saga_done`); story "act3". Boss HUD status words are measured
+and wrap to a second line (`BossScreen._tag_at`).
+
 ### Build order
 Act II first (plumbing, art, bosses, story, Oracle, relics UI, tides), then
 Act III (world, bosses, rifts, Astronomer, world boss, Nightmare).

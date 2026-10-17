@@ -184,13 +184,17 @@ This file is the quick picture; keep it up to date when something big changes.
   Oracle = 5th hero (prophecy: taps crit); relics (`Relics`,
   `GameState.relics/relic_shards`, screen `RelicView` from the saga page);
   `Tides` (180 s, x2; off for offline time); story "act2". Party carries
-  over acts via `GameState.saga_beaten()`. Act III NOT built yet.
+  over acts via `GameState.saga_beaten()`. Act III BUILT 2026-10-17 too (see below).
   Leaderboard bug (Mark, fixed 2026-10-17): boards show coins EARNED
   (week/month/league) or total earned ever (all time), never the wallet.
   Scores were capped at 9.9e59 (Firestore rule 1e60), and every player with
   world stars passes that (15 Jungle stars ~1e75), so they all showed
   "990ao". Now `Online.SCORE_CAP` = 9.9e299 + rules v8 (cap 1e300); the
   shell retries with 9.9e59 while v7 is still published. Mark must publish v8.
+- 2026-10-17 Act III "R'lyeh" + Nightmare merged into worlds (branch
+  `rlyeh`), on beta + CG zip; main site untouched. Needs Firestore rules v9
+  (docs/online.md, includes v8: score cap 1e300 + world boss). Details in
+  docs/league-saga.md "Built 2026-10-17 ... Act III".
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

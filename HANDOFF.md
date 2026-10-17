@@ -123,7 +123,17 @@ Chromium and Playwright are usually preinstalled in Claude Code on the web.
   - the sunset can happen behind the boat.
 - **Sound** has never been checked by ear.
 
-## Handoff 2026-10-17 (Mark moves to another account)
+## Handoff 2026-10-17, done
+- Branch `rlyeh` (Act III "R'lyeh" + Nightmare) finished and merged into
+  `worlds`: tests green (MurkVeil reads GameState through the tree so art
+  scripts compile in tests; the Astronomer test now beats act I guards
+  first), boss HUD status words measured (`BossScreen._tag_at`), screenshots
+  checked (`saga:in:2:-`, `saga:in:2:guard:3`, `saga:in:2:guard:14`,
+  `saga:in:2:sagapage`, `saga:in:2:story:act3`). Beta + CG zip published.
+- Mark must: publish Firestore rules v9 (the block in docs/online.md;
+  includes v8), upload the CG zip; "yes" before the main site changes.
+
+## Handoff 2026-10-17 (Mark moves to another account) — history
 - `worlds` = 73e9a7d: leaderboard fix (rules v8) + Act II "Atlantis" DONE,
   tested, on beta + CG zip (gh-pages a7a362b). Main site untouched.
 - Branch `rlyeh` (from 73e9a7d) = Act III "R'lyeh" + Nightmare, WORK IN
