@@ -170,6 +170,19 @@ This file is the quick picture; keep it up to date when something big changes.
   (`Party`: Guardian/Harpooner/Medic/Alchemist, skills, XP levels saved as
   `party_xp`; taps, crits, parries; many damage numbers); Twilight mine
   rows drawn by `ReefArt`. Players on CrazyGames are already in the league.
+- 2026-10-17 (worlds 6122323, beta + CG zip): Murk no longer darkens the
+  gameplay (light edge vignette, eyes/tentacles only on the shaft side);
+  joining the league needs the Jungle AND 15 world stars
+  (`Profiles.LEAGUE_STARS`). Acts II-III design agreed (docs/league-saga.md
+  "Acts II and III"): open by progress; Act II Atlantis (relics UI, Oracle,
+  tides, bosses with rules); Act III R'lyeh (Ancient One 3 phases, rifts,
+  world boss, Astronomer); then Nightmare (endless). NOT built yet.
+  OPEN BUG (Mark): leaderboard "doesn't show players' real money". Not
+  diagnosed. Facts: boards show coins EARNED (week/month/league) or
+  total earned ever (all time), never the wallet; scores are capped at
+  `Online.SCORE_CAP` 9.9e59 (shows "990ao") and Firestore rules cap 1e60, so
+  star players above that all show the same number. Ask Mark for a board
+  screenshot + the player's wallet before changing anything.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by
