@@ -70,3 +70,16 @@ DONORS_HOW,Write your nickname in the donation message: it appears here after a 
 DONORS_EMPTY,No donations yet. Be the first!,Донатов пока нет. Будь первым!,Aún no hay donaciones. ¡Sé el primero!,还没有人支持。来做第一个吧！
 DONATE_KOFI,Donate on Ko-fi,Донат через Ko-fi,Donar en Ko-fi,通过Ko-fi支持
 DONATE_DONATIONALERTS,Donate on DonationAlerts,Донат через DonationAlerts,Donar en DonationAlerts,通过DonationAlerts支持
+TESTER_STARS_NOW,"Stars: %d in this world, %d in all.","Звёзды: %d в этом мире, %d всего.","Estrellas: %d en este mundo, %d en total.",星星：本世界 %d，共 %d。
+TESTER_FISHING,Best fishing rods everywhere,Лучшие удочки во всех мирах,Las mejores cañas en todos los mundos,所有世界的最佳鱼竿
+TESTER_PASS,Sea Pass: +10 levels,Морской пропуск: +10 уровней,Pase del Mar: +10 niveles,海洋通行证：+10级
+TESTER_MAX,Max out this world,Прокачать этот мир на максимум,Mejorar este mundo al máximo,将本世界升到满级
+TESTER_ALL_WORLDS,Open every world,Открыть все миры,Abrir todos los mundos,开启所有世界
+TESTER_STAR,+1 star to this world,+1 звезда этому миру,+1 estrella a este mundo,本世界 +1 星
+TESTER_STAR10,+10 stars to this world,+10 звёзд этому миру,+10 estrellas a este mundo,本世界 +10 星
+TESTER_SAVES,Saves,Сейвы,Partidas guardadas,存档
+TESTER_SAVE_COPY,Copy my save,Скопировать мой сейв,Copiar mi partida,复制我的存档
+TESTER_SAVE_HINT,Paste a copied save here (the game restarts)…,Вставь сюда скопированный сейв (игра перезапустится)…,Pega aquí una partida copiada (el juego se reinicia)…,在此粘贴复制的存档（游戏将重启）…
+TESTER_SAVE_LOAD,Load save,Загрузить сейв,Cargar partida,载入存档
+TESTER_SAVE_OK,Loaded! Restarting…,Загружено! Перезапуск…,¡Cargada! Reiniciando…,已载入！正在重启…
+TESTER_SAVE_BAD,This is not a save,Это не сейв,Esto no es una partida,这不是存档

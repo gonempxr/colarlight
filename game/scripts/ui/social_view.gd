@@ -296,6 +296,33 @@ static func gift_tools(v: VBoxContainer, row: Dictionary) -> void:
 ## The leader's list of banned players, each with "Unban".
 ## The leader's test mode: free coins, pearls, items and worlds, while
 ## this device stays off every board (Online.set_tester / cheat).
+## The leader's saves: copy the whole save as text, or paste one to load it.
+static func _tester_saves(m: Modal) -> void:
+	var head := Views.label(t("TESTER_SAVES"), 22, Color("a8281e"), true)
+	head.custom_minimum_size.x = 160
+	m.add(head)
+	var copy := m.button(t("TESTER_SAVE_COPY"), func(): pass, &"BlueButton")
+	copy.pressed.connect(func():
+		Sfx.play("click")
+		DisplayServer.clipboard_set(Online.save_text())
+		copy.text = t("COPIED"))
+	var box := TextEdit.new()
+	box.placeholder_text = t("TESTER_SAVE_HINT")
+	box.custom_minimum_size = Vector2(0, 110)
+	box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	box.add_theme_font_size_override("font_size", 16)
+	m.add(box)
+	var load_b := m.button(t("TESTER_SAVE_LOAD"), func(): pass, &"RedButton")
+	load_b.pressed.connect(func():
+		if Online.load_save_text(box.text):
+			Sfx.play("unlock")
+			load_b.text = t("TESTER_SAVE_OK")
+			load_b.disabled = true
+		else:
+			Sfx.play("deny")
+			load_b.text = t("TESTER_SAVE_BAD"))
+
+
 static func open_tester(main: Node) -> void:
 	main._top.open(func(m): tester(m, main))
 
@@ -312,8 +339,11 @@ static func tester(m: Modal, main: Node) -> void:
 				if m.is_open():
 					m.rebuild()), &"GoldButton")
 		return
-	for c: Array in [["coins", "TESTER_COINS"], ["pearls", "TESTER_PEARLS"], ["items", "TESTER_ITEMS"], ["world", "TESTER_WORLD"]]:
-		if c[0] == "world" and GameState.is_last_location():
+	m.text(t("TESTER_STARS_NOW") % [GameState.stars_of(GameState.location), GameState.total_stars()], 19, Art.INK)
+	for c: Array in [["coins", "TESTER_COINS"], ["pearls", "TESTER_PEARLS"], ["items", "TESTER_ITEMS"], ["fishing", "TESTER_FISHING"],
+			["pass", "TESTER_PASS"], ["max", "TESTER_MAX"], ["world", "TESTER_WORLD"], ["all_worlds", "TESTER_ALL_WORLDS"],
+			["star", "TESTER_STAR"], ["star10", "TESTER_STAR10"]]:
+		if c[0] in ["world", "all_worlds"] and GameState.is_last_location():
 			continue
 		var kind: String = c[0]
 		m.button(t(c[1]), func():
@@ -323,6 +353,7 @@ static func tester(m: Modal, main: Node) -> void:
 				m.rebuild()
 			else:
 				Sfx.play("deny"), &"GoldButton")
+	_tester_saves(m)
 	if bool(Online.data["cheated"]):
 		m.text(t("TESTER_STAYS"), 18, Art.INK_SOFT)
 	else:

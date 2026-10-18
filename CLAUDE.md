@@ -195,6 +195,11 @@ This file is the quick picture; keep it up to date when something big changes.
   `rlyeh`), on beta + CG zip; main site untouched. Needs Firestore rules v9
   (docs/online.md, includes v8: score cap 1e300 + world boss). Details in
   docs/league-saga.md "Built 2026-10-17 ... Act III".
+- 2026-10-18 leader's test mode extended (Mark only: `Online.cheat` needs
+  test mode AND `Online.admin`): + all worlds, max this world, +1/+10 stars
+  (the real `get_star` path), +10 pass levels, best rods, all skins; saves:
+  copy the whole save as text / paste one to load (`Online.save_text`,
+  `load_save_text`, page reloads). Button "Режим проверки" under the board.
 - Donations (asked 2026-10-14): only on our own site, NEVER in the
   CrazyGames build (CG allows payments only via Xsolla). Built (worlds,
   2026-10-14): board tab "Donations" ranked by total (Mark chose ranking by

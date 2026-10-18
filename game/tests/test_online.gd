@@ -818,6 +818,26 @@ func _initialize() -> void:
 	var loc0: int = gs.location
 	if not gs.is_last_location():
 		_check(online.cheat("world") and gs.location == loc0 + 1, "the next world at once")
+	_check(online.cheat("all_worlds") and gs.is_last_location() and gs.stars_unlocked(), "every world open")
+	_check(online.cheat("max") and gs.location_ready() and gs.evo == Balance.EVO_FORMS, "this world maxed out")
+	var st0: int = gs.stars_of(gs.location)
+	_check(online.cheat("star") and gs.stars_of(gs.location) == st0 + 1, "+1 star")
+	_check(online.cheat("star10") and gs.stars_of(gs.location) == st0 + 11, "+10 stars")
+	var bpass = load("res://scripts/data/battle_pass.gd")
+	var lv0: int = bpass.level()
+	_check(online.cheat("pass") and bpass.level() >= mini(bpass.LEVELS, lv0 + 10), "+10 pass levels")
+	var fsh: Node = root.get_node("Fishing")
+	_check(online.cheat("fishing") and int(fsh.rods[0]) == load("res://scripts/fishing/fish_data.gd").max_level("rod"), "best rods")
+	var saved: String = online.save_text()
+	_check(saved.begins_with("{") and JSON.parse_string(saved)["files"].size() > 0, "the save copies as text")
+	_check(not online.load_save_text("hello"), "a wrong text is not loaded")
+	var gsa: bool = gs.autosave_enabled
+	_check(online.load_save_text(saved), "a copied save loads")
+	gs.autosave_enabled = gsa
+	pr.autosave_enabled = gsa
+	online.admin = false
+	_check(not online.cheat("pearls"), "no cheats when not the leader (even in test mode)")
+	online.admin = true
 	gs.total_earned += 1.0e12
 	online._since_submit = 999.0
 	var sent := [null]
@@ -834,7 +854,7 @@ func _initialize() -> void:
 	online.set_tester(false, func(r): tr[0] = r)
 	_check(tr[0] == "ok" and not online.tester(), "without cheats it can be turned off")
 	online.admin = false
-	for tk in ["TESTER_TITLE", "TESTER_TEXT", "TESTER_COINS", "TESTER_WORLD", "TESTER_STAYS"]:
+	for tk in ["TESTER_TITLE", "TESTER_TEXT", "TESTER_COINS", "TESTER_WORLD", "TESTER_STAYS", "TESTER_STAR10", "TESTER_SAVE_LOAD", "TESTER_ALL_WORLDS"]:
 		_check(TranslationServer.translate(tk) != tk, "words for %s" % tk)
 
 	# --- The guide: every entry has words ------------------------------------------------------

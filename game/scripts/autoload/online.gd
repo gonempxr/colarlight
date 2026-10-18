@@ -792,7 +792,8 @@ func hide_self() -> void:
 ## A cheat of test mode: "coins", "pearls", "items" or "world" (finish
 ## this world and go to the next). False when test mode is off.
 func cheat(kind: String) -> bool:
-	if not tester():
+	# Only the leader (admins/ in Firebase, checked online this session).
+	if not tester() or not admin:
 		return false
 	data["cheated"] = true
 	save_data()
@@ -806,21 +807,99 @@ func cheat(kind: String) -> bool:
 			# All at once, without a toast for each.
 			for c in Content.COSMETICS:
 				Progress.owned[str(c["id"])] = true
+			for sk in Content.SKINS:
+				Progress.skins[str(sk["id"])] = true
 			for f in Content.FEATURES:
 				Progress.features[f] = true
 			Progress.changed.emit()
 		"world":
 			if GameState.is_last_location():
 				return false
-			for k in GameState.stage_keys():
-				GameState.levels[k] = maxi(int(GameState.levels.get(k, 0)), 1)
-				GameState.managers[k] = true
-			for k in GameState.AUTOMATED:
-				GameState.managers[k] = true
+			_finish_world()
 			GameState.coins += GameState.next_location_cost()
 			return GameState.advance_location()
+		"all_worlds":
+			# Every world (or saga act) up to the last, built and opened.
+			var moved := false
+			while not GameState.is_last_location():
+				_finish_world()
+				GameState.coins += GameState.next_location_cost()
+				if not GameState.advance_location():
+					break
+				moved = true
+			if not moved and GameState.location < GameState.max_location:
+				GameState.switch_location(GameState.max_location)
+			_finish_world()
+		"max":
+			# This world fully built: every site open with its foreman, the
+			# lift, boats and plants at level 300, the best gear, guards beaten.
+			_finish_world()
+			for k in GameState.stage_keys():
+				GameState.levels[k] = maxi(int(GameState.levels.get(k, 0)), 300)
+			GameState.evo = Balance.EVO_FORMS
+		"star", "star10":
+			# Stars the honest way (the run restarts with bigger numbers).
+			if not GameState.stars_unlocked():
+				cheat("all_worlds")
+			for i in (10 if kind == "star10" else 1):
+				if GameState.stars_of(GameState.location) >= Balance.MAX_STARS:
+					break
+				_finish_world()
+				GameState.coins += GameState.star_cost()
+				if not GameState.get_star():
+					break
+		"pass":
+			BattlePass.add_xp(BattlePass.XP_LEVEL * 10)
+		"fishing":
+			for i in Fishing.rods.size():
+				Fishing.rods[i] = FishData.max_level("rod")
+			Fishing.save_game()
 	Progress.save_game()
 	GameState.save_game()
+	return true
+
+
+## Test mode: this world's checklist done (every site open with its
+## foreman, the managers hired, saga guards beaten).
+func _finish_world() -> void:
+	for k in GameState.stage_keys():
+		GameState.levels[k] = maxi(int(GameState.levels.get(k, 0)), 1)
+		GameState.managers[k] = true
+	for k in GameState.AUTOMATED:
+		GameState.managers[k] = true
+	GameState.managers["vault"] = true
+	for i in GameState.site_count():
+		var key := "d%d" % i
+		if GameState.boss_at(key) != "" and not GameState.bosses.get(key, false):
+			GameState.defeat_boss(key)
+	GameState.changed.emit()
+
+
+## The whole save as text (every file the game keeps), for the leader to
+## copy and keep or move to another device.
+func save_text() -> String:
+	Progress.save_game()
+	GameState.save_game()
+	return JSON.stringify(CloudSave.collect())
+
+
+## Puts a save copied with save_text() on this device; the page reloads
+## with it. False when the text is not a save.
+func load_save_text(text: String) -> bool:
+	if not tester() or not admin:
+		return false
+	var d = JSON.parse_string(text.strip_edges())
+	if not d is Dictionary or not d.get("files") is Dictionary or (d["files"] as Dictionary).is_empty():
+		return false
+	# Nothing in memory may overwrite it before the reload.
+	GameState.autosave_enabled = false
+	Progress.autosave_enabled = false
+	d["t"] = int(Time.get_unix_time_from_system()) + 60
+	if not CloudSave.restore(JSON.stringify(d), true):
+		return false
+	CloudSave.push(true)
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("setTimeout(function(){location.reload()}, 1500)", true)
 	return true
 
 
