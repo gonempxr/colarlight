@@ -1,6 +1,9 @@
 #!/bin/bash
-# Builds a slimmer Godot 4.7.2 web export template (no 3D, unused modules off).
+# Builds a slimmer Godot 4.7.2 web export template (no 3D, unused modules off,
+# no 2D physics/navigation, unused classes off via coralight.gdbuild: 30.5 -> 23.8 MB).
+# A class the game starts to use must be taken out of coralight.gdbuild first.
 set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
 cd /tmp/claude-0/build
 [ -d godot ] || git clone -q --depth 1 -b 4.7.2-stable https://github.com/godotengine/godot.git
 [ -d emsdk ] || git clone -q --depth 1 https://github.com/emscripten-core/emsdk.git
@@ -43,5 +46,5 @@ module_occlusion_culling_enabled = "no"
 module_interactive_music_enabled = "no"
 PY
 cd godot
-scons platform=web target=template_release production=yes threads=no -j4 2>&1 | tail -20
+scons platform=web target=template_release production=yes threads=no build_profile="$HERE/coralight.gdbuild" -j4 2>&1 | tail -20
 ls -la bin/

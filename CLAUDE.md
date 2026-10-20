@@ -265,5 +265,13 @@ This file is the quick picture; keep it up to date when something big changes.
 - 2026-10-11: the polished build is live on the main site, the beta and
   `main` (Mark approved). Phones start with the bigger UI size (1.12,
   `Settings.default_scale`) until the player picks one.
+- 2026-10-20: Basic Launch (11-19.10) ended REJECTED: "did not reach the
+  performance benchmarks" = player KPIs (CTR 1.1% bottom 20%, almost no
+  returning players). Benchmarks (docs.crazygames.com/resources/basic-launch-metrics):
+  playtime 10+ min, D1 10-15%, conversion 80%+, load <10 s, build <20 MB.
+  Done: covers v4 "G" (big hero, `tools/store_art/covers_v4.py`, files
+  `docs/store/cover-G-*`), slimmer engine template (no 2D physics/nav,
+  unused classes off via `tools/web_template/coralight.gdbuild`): wasm
+  30.5 -> 23.8 MB (gz 7.7 -> 6.3 MB).
 - On CrazyGames the title screen is skipped and gameplayStart is sent after
   loadingStop (`Platform.on_portal`). Google sign-in only runs on our site.
