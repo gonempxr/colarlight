@@ -251,6 +251,10 @@ func _ready() -> void:
 	_saga_bar.pressed.connect(func(): _modal.open(func(m): SagaBar.build(m, self)))
 	GameState.location_changed.connect(func(_l): if is_inside_tree(): _saga_intro.call_deferred())
 	add_child(_saga_bar)
+	_goal_bar = GoalBar.new()
+	_goal_bar.visible = GoalBar.wanted()
+	_goal_bar.claimed.connect(func(p, from): celebrate({"pearls": p}, from))
+	add_child(_goal_bar)
 	_hud = Hud.new()
 	_hud.settings_pressed.connect(_open_settings)
 	_hud.avatar_pressed.connect(open_profile)
@@ -437,6 +441,10 @@ func _process(delta: float) -> void:
 		_hint_btn.position.y = 24.0 + drop
 		_tabs.position.y = maxf(_hud.used_height() + 10.0, drop + 10.0)
 		_saga_bar.position.y = _tabs.position.y + RoomTabs.PILL_H + 4.0
+		_goal_bar.position.y = _tabs.position.y + RoomTabs.PILL_H + 4.0
+	if GoalBar.wanted() != _goal_bar.visible:
+		_goal_bar.visible = GoalBar.wanted()
+		_layout()
 	_place_side_buttons()
 	_veil.visible = Balance.saga and _room == MINE and not _covered
 	if _veil.visible:
@@ -783,6 +791,10 @@ func _layout() -> void:
 			_saga_bar.size = Vector2(tw, SagaBar.H)
 			_saga_bar.position = Vector2(_tabs.position.x, top - 4.0)
 			top += SagaBar.H + 2.0
+		elif _goal_bar.visible:
+			_goal_bar.size = Vector2(tw, GoalBar.H)
+			_goal_bar.position = Vector2(_tabs.position.x, top - 4.0)
+			top += GoalBar.H + 2.0
 		_scroller.zoom = clampf(world_w / 960.0, 1.0, 1.7)
 		_factory.set_insets(top, 0.0)
 		_office.set_insets(top, 0.0)
@@ -804,6 +816,10 @@ func _layout() -> void:
 			_saga_bar.size = Vector2(view.x, SagaBar.H)
 			_saga_bar.position = Vector2(0, top - 4.0)
 			top += SagaBar.H - 2.0
+		elif _goal_bar.visible:
+			_goal_bar.size = Vector2(view.x - 16.0, GoalBar.H)
+			_goal_bar.position = Vector2(8.0, top)
+			top += GoalBar.H + 6.0
 		_area = Rect2(0, top, view.x, view.y - top - dock_h + 10.0)
 		_scroller.zoom = 1.0
 		_factory.set_insets(0.0, 10.0)
@@ -1413,6 +1429,7 @@ func open_pass() -> void:
 var _boss: Control
 var _veil: MurkVeil
 var _saga_bar: SagaBar
+var _goal_bar: GoalBar
 
 
 ## A mine boss fight (MineBoss) on its own screen (its story scene first,

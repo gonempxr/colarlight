@@ -56,6 +56,9 @@ var features: Dictionary = {}
 ## Features whose button still shows "NEW".
 var fresh: Dictionary = {}
 var tutorial_step := 0
+## First-session goals taken (GoalBar.GOALS; FIRST_GOALS = all of them).
+var first_goal := 0
+const FIRST_GOALS := 5
 var daily_day := 0
 var daily_last := ""
 var puzzle_level := 1
@@ -140,6 +143,7 @@ func reset() -> void:
 	features = {}
 	fresh = {}
 	tutorial_step = 0
+	first_goal = 0
 	daily_day = 0
 	daily_last = ""
 	puzzle_level = 1
@@ -972,7 +976,7 @@ func save_game() -> bool:
 		"pearls": pearls, "pearls_total": pearls_total,
 		"artifacts": artifacts, "quests": quests, "quest_loc": quest_loc, "world_quests": world_quests,
 		"owned": owned, "equipped": equipped,
-		"features": features, "fresh": fresh, "tutorial_step": tutorial_step,
+		"features": features, "fresh": fresh, "tutorial_step": tutorial_step, "first_goal": first_goal,
 		"daily_day": daily_day, "daily_last": daily_last, "puzzle_level": puzzle_level,
 		"stats": stats, "chest_ready": chest_ready, "chest_timer": chest_timer,
 		"decor": decor, "looks_seen": looks_seen, "skins": skins, "skin_on": skin_on,
@@ -1039,6 +1043,8 @@ func load_game() -> bool:
 			if id == "" or (is_owned(id) and Content.cosmetic(id).get("slot") == slot):
 				equipped[slot] = id
 	tutorial_step = maxi(0, _int(d.get("tutorial_step")))
+	# Saves from before the goals: players past the start skip them.
+	first_goal = clampi(_int(d.get("first_goal", 0 if tutorial_step < 5 else FIRST_GOALS)), 0, FIRST_GOALS)
 	if _int(d.get("version")) < 2:
 		tutorial_step = TUTORIAL_V1_TO_V2[mini(tutorial_step, TUTORIAL_V1_TO_V2.size() - 1)]
 	daily_day = maxi(0, _int(d.get("daily_day")))
