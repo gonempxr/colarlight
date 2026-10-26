@@ -12,6 +12,8 @@ extends Control
 const STEPS := ["tap_divers", "tap_lift", "tap_boat", "tap_plant", "upgrade", "hire_lift", "hire_boat", "hire_plant", "open_depth",
 		"hire_vault", "evo", "map"]
 const DONE := 12
+## From this step on the plant's coins wait in the office vault.
+const VAULT_STEP := 9
 
 var main: Node
 var _t := 0.0
@@ -53,6 +55,10 @@ func _ready() -> void:
 	# Players from before the tutorial existed skip it.
 	if Progress.tutorial_step == 0 and GameState.total_earned > 3000.0:
 		Progress.advance_tutorial(DONE)
+	# A brand-new player: coins go straight to the wallet (no trip to the
+	# office) until the tutorial gets to the accountant.
+	if Progress.tutorial_step < VAULT_STEP and GameState.total_earned <= 0.0:
+		GameState.vault_on = false
 	GameState.tapped.connect(_on_tapped)
 	GameState.upgraded.connect(func(k, _c): if k == "d0" and _step() == 4: _next())
 	GameState.manager_hired.connect(func(k):
@@ -246,6 +252,8 @@ func _control_point(c: Control) -> Vector2:
 func _process(delta: float) -> void:
 	_t += delta
 	var s := _step()
+	if s >= VAULT_STEP and not GameState.vault_on:
+		GameState.vault_on = true
 	var active: bool = s < DONE and not main._modal.visible and not main.is_busy()
 	if active:
 		_skip_done()

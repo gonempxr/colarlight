@@ -144,6 +144,9 @@ var evo := 0
 var gear_refund := 0.0
 ## Finished coins waiting in room 3 to be collected.
 var vault := 0.0
+## False in a new player's first minutes: plant coins go straight to the
+## wallet until the tutorial brings in the office (Tutor, step hire_vault).
+var vault_on := true
 ## Permanent income multiplier from the old Dive Deeper count (v3 saves).
 var legacy_mult := 1.0
 ## Old name of the location counter (the Dive count), kept for older code.
@@ -1536,7 +1539,7 @@ func _finish_cycle(key: String) -> void:
 ## offline earnings go straight to the wallet.
 func _earn(amount: float, to_vault: bool = false) -> void:
 	total_earned += amount
-	if to_vault and not has_manager(VAULT):
+	if to_vault and vault_on and not has_manager(VAULT):
 		vault += amount
 		vault_changed.emit()
 	else:
@@ -1617,6 +1620,7 @@ func save_game() -> bool:
 		"saga_done": saga_done,
 		"gear": evo,
 		"vault": vault,
+		"vault_on": vault_on,
 		"legacy_mult": legacy_mult,
 		"levels": levels,
 		"managers": managers,
@@ -1721,6 +1725,7 @@ func _apply_save(data: Dictionary) -> void:
 			coins += g[1]
 			gear_refund = g[1]
 		vault = maxf(0.0, _num(data.get("vault"), 0.0))
+	vault_on = data.get("vault_on", true) != false
 	# Saves from before the lift: it gets set up below, after the rest.
 	var old_save: bool = saved_levels is Dictionary and not saved_levels.has("lift")
 	if saved_levels is Dictionary:

@@ -152,6 +152,12 @@ func test_chain_moves_ore_to_coins() -> void:
 	check(near(gs.vault, gs.total_earned), "earned tracked when made")
 	var v: float = gs.vault
 	check(near(gs.collect_vault(), v) and near(gs.coins, v) and gs.vault == 0.0, "collecting moves the vault to the wallet")
+	# A new player's first minutes: no vault yet, coins go to the wallet.
+	gs.vault_on = false
+	var before: float = gs.coins
+	gs._earn(5.0, true)
+	check(gs.vault == 0.0 and near(gs.coins, before + 5.0), "without the vault plant coins go to the wallet")
+	gs.vault_on = true
 	gs.free()
 
 

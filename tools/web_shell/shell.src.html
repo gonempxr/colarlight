@@ -1958,6 +1958,10 @@ const engine = new Engine(GODOT_CONFIG);
 		setProgress(0, 0);
 		// On CrazyGames (and for a player signed in with Google) the saved
 		// progress must be read before the game starts.
+		// The engine (the big download) starts loading now, in parallel:
+		// only the start waits for the saves.
+		engine.config.update({ 'onProgress': setProgress });
+		engine.init(GODOT_CONFIG['executable']).catch(function () { /* startGame reports it */ });
 		const sdkWait = new Promise(function (resolve) {
 			const t0 = Date.now();
 			const look = function () {
